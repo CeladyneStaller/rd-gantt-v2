@@ -1,5 +1,13 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=./q-tracker-division.html">
 <title>Division Tracker</title>
-<a href="./q-tracker-division.html">Open the Division Tracker</a>
+<script>
+  /* Forward to the tracker, preserving any ?query (e.g. ?token=… for embeds) and
+     #hash. A meta-refresh can't carry the current query, so this has to be JS.
+     location.replace() avoids leaving the redirect in history. */
+  location.replace('./q-tracker-division.html' + location.search + location.hash);
+</script>
+<noscript>
+  <meta http-equiv="refresh" content="0; url=./q-tracker-division.html">
+  <a href="./q-tracker-division.html">Open the Division Tracker</a>
+</noscript>
