@@ -1,0 +1,2427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Division Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;background:#f7f7f5;color:#1a1a1a;padding:2rem;}
+.wrap{max-width:940px;margin:0 auto;position:relative;}
+.sync-bar{position:absolute;top:0;right:0;display:flex;align-items:center;gap:8px;font-size:12px;line-height:1;z-index:10;}
+.sync-bar .ts{padding:4px 8px;border-radius:5px;font-weight:600;font-variant-numeric:tabular-nums;}
+.sync-bar .ts.fresh{background:#EAF3DE;color:#3B6D11;}
+.sync-bar .ts.stale{background:#FCEBEB;color:#A32D2D;}
+.sync-bar .ts.idle {background:#f0f0ee;color:#666;}
+.sync-bar .ts.syncing{background:#FFF5D9;color:#8a6608;}
+.sync-bar button.sync-btn{padding:4px 10px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#185FA5;}
+.sync-bar button.sync-btn:hover{background:#f4f8fc;border-color:#185FA5;}
+.sync-bar button.sync-btn:disabled{opacity:.55;cursor:wait;}
+h1{font-size:16px;font-weight:500;margin-bottom:1.25rem;}
+h1 span{font-size:12px;font-weight:400;color:#888;}
+.lbl{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#666;display:block;margin-bottom:4px;}
+.setup-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:1.25rem;align-items:end;}
+
+/* Division view toggle */
+.view-toggle{display:inline-flex;border:.5px solid #ccc;border-radius:8px;overflow:hidden;margin-bottom:1.1rem;flex-wrap:wrap;}
+.view-toggle button{border:none;border-right:.5px solid #ddd;border-radius:0;height:36px;padding:0 18px;font-size:13px;font-weight:500;color:#666;background:#fff;}
+.view-toggle button:last-child{border-right:none;}
+.view-toggle button:hover{background:#f4f8fc;}
+.view-toggle button.active{background:#185FA5;color:#fff;}
+.view-toggle button.active:hover{background:#0C447C;}
+input[type=text],input[type=date],select,textarea{font-family:inherit;font-size:12px;color:#1a1a1a;background:#fff;border:.5px solid #ccc;border-radius:6px;padding:6px 10px;width:100%;outline:none;}
+input[type=text],input[type=date],select{height:34px;}
+input:focus,select:focus,textarea:focus{border-color:#185FA5;}
+button{font-family:inherit;font-size:12px;cursor:pointer;border-radius:6px;padding:0 14px;border:.5px solid #ccc;background:#fff;color:#1a1a1a;height:34px;white-space:nowrap;}
+button:hover{background:#f0f0ee;}
+.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5;}
+.btn-primary:hover{background:#0C447C;}
+.btn-primary.arm{background:#A35A17;border-color:#A35A17;}
+.btn-primary.arm:hover{background:#834711;}
+.btn-sm{height:26px;font-size:11px;padding:0 10px;}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.25rem;}
+.mc{background:#efefed;border-radius:8px;padding:1rem;}
+.mc-label{font-size:11px;color:#666;margin-bottom:6px;}
+.mc-val{font-size:24px;font-weight:500;line-height:1;}
+.mc-sub{font-size:11px;color:#888;margin-top:5px;}
+.sdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+/* Bars */
+.bar-area{background:#fff;border:.5px solid #ddd;border-radius:10px;padding:.875rem 1rem;margin-bottom:1rem;}
+.bar-legend{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+.bar-title{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#888;font-weight:500;margin-right:6px;}
+.bl-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#888;}
+.bl-dot{width:8px;height:8px;border-radius:2px;}
+.bars{display:flex;gap:6px;align-items:flex-end;height:64px;}
+.bw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;}
+.b{width:100%;border-radius:2px 2px 0 0;min-height:2px;}
+.bwk{font-size:9px;color:#aaa;font-family:monospace;text-align:center;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bwv{font-size:9px;color:#999;font-variant-numeric:tabular-nums;}
+
+/* Panels */
+.full-col{margin-bottom:1rem;}
+.panel{background:#fff;border:.5px solid #ddd;border-radius:10px;padding:.875rem 1rem;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;padding-bottom:.5rem;border-bottom:.5px solid #eee;}
+.panel-title{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#888;font-weight:500;}
+.panel-title .pt-count{color:#bbb;margin-left:6px;font-weight:400;}
+.item-list{display:flex;flex-direction:column;gap:6px;min-height:36px;}
+.empty-msg{font-size:12px;color:#bbb;padding:4px 0;}
+
+/* Product → Generation grouping layers (+ Division layer in Overall view) */
+.grp-division:not(:first-child){margin-top:22px;}
+.grp-division-hdr{font-size:13px;font-weight:700;color:#1a1a1a;letter-spacing:.02em;padding:0 0 7px;margin-bottom:11px;border-bottom:2px solid #d6d6d3;display:flex;align-items:center;gap:8px;}
+.grp-division-hdr .grp-count{color:#bbb;font-weight:400;font-size:10px;letter-spacing:0;}
+.grp-product:not(:first-child){margin-top:14px;}
+.grp-product-hdr{font-size:11px;font-weight:600;color:#1a1a1a;text-transform:uppercase;letter-spacing:.04em;padding:0 0 6px;margin-bottom:8px;border-bottom:1px solid #e3e3e1;display:flex;align-items:center;gap:7px;}
+.grp-product-hdr .grp-count{color:#bbb;font-weight:400;font-size:10px;letter-spacing:0;text-transform:none;}
+/* Indent products only when nested under a division (Overall view) */
+.grp-division .grp-product{margin-left:2px;padding-left:12px;border-left:3px solid #e7e7e5;}
+.grp-division-hdr + .grp-product{margin-top:4px;}
+.grp-gen{margin-left:2px;padding-left:11px;border-left:2px solid #ececea;}
+.grp-gen:not(:first-child){margin-top:10px;}
+.grp-gen-hdr{font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;}
+.grp-gen-hdr .grp-count{color:#ccc;font-weight:400;letter-spacing:0;}
+.grp-items{display:flex;flex-direction:column;gap:6px;}
+
+/* Initiative cards */
+.init-card{background:#f7f7f5;border-radius:7px;padding:9px 11px;}
+.init-card-top{display:flex;align-items:center;gap:10px;}
+.init-name{flex:1;font-size:12px;font-weight:500;line-height:1.4;min-width:0;}
+.init-sub{font-size:10px;color:#999;margin-top:2px;}
+.init-card-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.init-bar-track{height:5px;background:#e3e3e1;border-radius:3px;margin-top:8px;overflow:hidden;}
+.init-bar-fill{height:100%;border-radius:3px;}
+
+/* Milestone rows */
+.ms-row{display:flex;align-items:center;gap:10px;background:#f7f7f5;border-radius:6px;padding:7px 11px;}
+.ms-name{flex:1;font-size:12px;line-height:1.4;min-width:0;}
+.ms-owner{font-size:10px;color:#aaa;margin-top:1px;}
+.ms-date{font-size:11px;font-variant-numeric:tabular-nums;flex-shrink:0;white-space:nowrap;}
+.ms-status{font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;flex-shrink:0;white-space:nowrap;}
+.ms-row.ms-overdue-row{background:#FDF3F2;}
+.ms-overdue-date{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+.ms-orig{text-decoration:line-through;color:#b0a3a1;}
+.ms-arrow{color:#b0a3a1;}
+.ms-newdue{color:#A32D2D;font-weight:600;}
+.ms-delay{font-size:9px;font-weight:600;color:#A32D2D;background:#FBE3E1;padding:1px 6px;border-radius:8px;}
+.st-done{background:#EAF3DE;color:#3B6D11;}
+.st-overdue{background:#FCEBEB;color:#A32D2D;}
+.st-active{background:#E6F1FB;color:#0C447C;}
+.st-upcoming{background:#f0f0ee;color:#777;}
+.date-overdue{color:#A32D2D;font-weight:500;}
+.date-soon{color:#854F0B;}
+.date-future{color:#555;}
+
+/* Score pill + tag (reused from rpn-badge / gate-tag) */
+.score-pill{font-size:10px;font-weight:600;font-family:monospace;padding:2px 7px;border-radius:3px;flex-shrink:0;white-space:nowrap;color:#fff;}
+.score-pill.muted{background:#e3e3e1!important;color:#999!important;}
+.init-tag{font-size:10px;font-weight:500;font-family:monospace;color:#0C447C;background:#E6F1FB;border-radius:3px;padding:2px 6px;flex-shrink:0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.init-tag.unassigned{color:#888;background:#ececea;}
+
+/* OKR cards (reused FMEA card + table markup) */
+.okr-card{background:#fff;border:.5px solid #ddd;border-radius:9px;overflow:hidden;}
+/* clickable cards (click to view/edit) */
+.init-card,.okr-card{cursor:pointer;transition:box-shadow .12s ease,transform .12s ease;}
+.init-card:hover,.okr-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.10);transform:translateY(-1px);}
+.ms-row{cursor:pointer;transition:filter .12s ease;}
+.ms-row:hover{filter:brightness(.98);}
+/* read-only info panel inside the edit modal */
+.add-info{background:#f7f7f5;border:.5px solid #e4e4e0;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;}
+.add-info .ai-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px;}
+.add-info .ai-meta{color:#777;font-size:11px;}
+.add-info .ai-krs{display:flex;flex-direction:column;gap:4px;}
+.add-info .ai-kr{display:flex;align-items:center;gap:7px;}
+.add-info .ai-kr-name{flex:1;color:#444;}
+.add-info .ai-kr-name.sub{padding-left:12px;color:#666;}
+.add-info .ai-empty{color:#aaa;}
+.add-info .ai-list{display:flex;flex-direction:column;gap:4px;}
+.add-info .ai-li{display:flex;align-items:center;gap:7px;}
+.add-info .ai-li-name{flex:1;color:#444;}
+.okr-obj-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f0f0ee;border-bottom:1px solid #ddd;}
+.okr-obj-text{flex:1;font-size:12px;font-weight:500;line-height:1.4;min-width:0;}
+.okr-top-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.okr-table-wrap{overflow-x:auto;}
+.okr-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+.okr-table colgroup col.col-kr{width:30%;}
+.okr-table colgroup col.col-sub{width:auto;}
+.okr-table colgroup col.col-score{width:96px;}
+.okr-table th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#aaa;font-weight:500;text-align:left;padding:6px 8px 5px;border-bottom:.5px solid #eee;white-space:nowrap;}
+.okr-table td{padding:7px 8px;vertical-align:top;border-bottom:.5px solid #f0f0ee;line-height:1.45;}
+.okr-table tr:last-child td{border-bottom:none;}
+.okr-table tr.kr-sep td{border-top:1px dashed #e0e0de;}
+.okr-table tr.kr-sep:first-child td{border-top:none;}
+.cell-kr{font-weight:500;font-size:11px;color:#1a1a1a;border-left:3px solid #EF9F27;padding-left:9px;}
+.cell-sub{font-size:11px;color:#1a1a1a;border-left:2px solid #B5D4F4;padding-left:9px;}
+.cell-score{text-align:center;}
+.cell-empty{color:#ccc;font-size:11px;}
+.kpi-readout{font-size:10px;color:#888;margin-top:3px;line-height:1.5;}
+.kpi-readout .kpi-name{color:#aaa;}
+.kr-type-tag{font-size:9px;color:#bbb;font-weight:400;font-family:monospace;margin-left:5px;}
+
+/* Footer toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;margin-top:1.25rem;padding-top:1rem;border-top:.5px solid #e5e5e3;}
+.toolbar .spacer{flex:1;}
+.sync-dot{font-size:11px;font-weight:600;opacity:0;transition:opacity .2s;}
+.sync-dot.show{opacity:1;}
+.sync-dot.syncing{color:#8a6608;}
+.sync-dot.synced{color:#3B6D11;}
+.sync-dot.error{color:#A32D2D;}
+
+/* Setup / empty state */
+.setup-hint{background:#fff;border:.5px dashed #ccc;border-radius:10px;padding:2rem;text-align:center;color:#888;font-size:12px;line-height:1.7;}
+.setup-hint b{color:#555;font-weight:600;}
+
+/* Settings modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding-top:8vh;z-index:100;}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:1.25rem 1.4rem;width:460px;max-width:92vw;max-height:84vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.18);}
+.modal-title{font-size:14px;font-weight:600;margin-bottom:1rem;}
+.modal-field{margin-bottom:.9rem;}
+.modal-sep{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#999;font-weight:600;margin:1.1rem 0 .7rem;padding-bottom:.3rem;border-bottom:.5px solid #eee;}
+.modal-note{font-size:11px;color:#999;line-height:1.6;margin-top:.4rem;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:1.1rem;}
+.gs-status{font-size:11px;margin-top:.6rem;min-height:14px;}
+.gs-status.error{color:#A32D2D;}
+.gs-status.success{color:#3B6D11;}
+.gs-status.info{color:#777;}
+.add-types{display:flex;gap:6px;margin-bottom:1rem;}
+.add-type{flex:1;font-size:12px;padding:7px 4px;border:1px solid #d8d8d4;background:#fff;border-radius:7px;cursor:pointer;color:#555;}
+.add-type.active{background:#185FA5;border-color:#185FA5;color:#fff;font-weight:600;}
+.add-type:disabled{opacity:.4;cursor:not-allowed;}
+.add-row{display:flex;gap:10px;}
+.add-grp-kr .lbl{margin-top:.2rem;}
+.add-inline-note,.add-warn{font-size:11px;line-height:1.5;}
+.add-inline-note{color:#A35A17;background:#FBF1E5;border-radius:6px;padding:6px 9px;margin-bottom:.9rem;}
+.add-warn{color:#A35A17;margin-top:.5rem;}
+#add-overlay select,#add-overlay input{width:100%;box-sizing:border-box;}
+
+@media (max-width:760px){
+  body{padding:1rem;}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .setup-row{grid-template-columns:1fr 1fr;}
+  .sync-bar{position:static;justify-content:flex-end;margin-bottom:10px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="sync-bar">
+  <span id="sync-ts" class="ts idle" title="Last pulled from Gantt">never</span>
+  <button class="sync-btn" id="sync-btn" onclick="manualSync()" title="Pull now">&#8635; Sync now</button>
+</div>
+<h1>Division tracker <span id="div-display"></span></h1>
+
+<div class="view-toggle" id="view-toggle" style="display:none;"></div>
+
+<div class="setup-row">
+  <div><span class="lbl">Quarter</span>
+    <select id="sel-quarter" onchange="onSelectorChange()"></select>
+  </div>
+  <div><span class="lbl">Year</span>
+    <select id="sel-year" onchange="onSelectorChange()"></select>
+  </div>
+  <div><button onclick="openSettings()" title="Gantt data source">&#9881; Source</button></div>
+  <div><button id="add-btn" class="btn-primary" onclick="openAddModal()" title="Add to your Gantt data" style="display:none;">&#43; Add</button></div>
+</div>
+
+<div id="needs-setup" class="setup-hint" style="display:none;">
+  <b>Connect your Gantt bins to begin.</b><br>
+  Click <b>&#9881; Source</b> and add your API key, the overall/hub bin, and at least one divisional bin.<br>
+  This dashboard is read-only &mdash; it pulls each division and never writes back.
+</div>
+
+<div id="dashboard" style="display:none;">
+<div class="metrics">
+  <div class="mc"><div class="mc-label">Division OKR attainment</div><div class="mc-val" id="m-attain">&#8212;</div><div class="mc-sub" id="m-attain-sub">No OKR data</div></div>
+  <div class="mc"><div class="mc-label">Objectives on track</div><div class="mc-val" id="m-ontrack">&#8212;</div><div class="mc-sub" id="m-ontrack-sub">&ge;70% attainment</div></div>
+  <div class="mc"><div class="mc-label">Initiative health</div><div class="mc-val" id="m-init">&#8212;</div><div class="mc-sub" id="m-init-sub">No initiatives</div></div>
+  <div class="mc"><div class="mc-label">Milestone hit rate</div><div class="mc-val" id="m-ms">&#8212;</div><div class="mc-sub" id="m-ms-sub">No milestones due</div></div>
+  <div class="mc"><div class="mc-label">Overall signal</div><div class="mc-val" id="m-sig" style="font-size:14px;padding-top:5px;">&#8212;</div><div class="mc-sub" id="m-sig-sub">Add data to generate signal</div></div>
+</div>
+
+<div class="bar-area" id="bar-area" style="display:none;">
+  <div class="bar-legend">
+    <span class="bar-title">Attainment by initiative</span>
+    <div class="bl-item"><div class="bl-dot" style="background:#639922;"></div>&ge;70%</div>
+    <div class="bl-item"><div class="bl-dot" style="background:#BA7517;"></div>40&ndash;69%</div>
+    <div class="bl-item"><div class="bl-dot" style="background:#E24B4A;"></div>&lt;40%</div>
+    <div class="bl-item"><div class="bl-dot" style="background:#ddd;"></div>No scored objectives</div>
+  </div>
+  <div class="bars" id="bars"></div>
+</div>
+
+<div class="full-col">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Initiatives<span class="pt-count" id="init-count"></span></span>
+    </div>
+    <div class="item-list" id="init-list"></div>
+  </div>
+</div>
+
+<div class="full-col">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Milestones<span class="pt-count" id="ms-count"></span></span>
+    </div>
+    <div class="item-list" id="ms-list"></div>
+  </div>
+</div>
+
+<div class="full-col">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">OKRs<span class="pt-count" id="okr-count"></span></span>
+    </div>
+    <div class="item-list" id="okr-list"></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span id="sync-dot" class="sync-dot"></span>
+  <span class="spacer"></span>
+  <button onclick="openSettings()">&#9881; Gantt source</button>
+  <button onclick="exportSnapshot()">Download snapshot</button>
+</div>
+</div><!-- /dashboard -->
+</div><!-- /wrap -->
+
+<!-- Settings modal -->
+<div class="overlay" id="settings-overlay">
+  <div class="modal">
+    <div class="modal-title">Gantt data sources</div>
+    <div class="modal-field"><span class="lbl">API key (X-Master-Key)</span>
+      <input type="text" id="gs-apikey" placeholder="$2a$10$..." autocomplete="off">
+    </div>
+    <div class="modal-field"><span class="lbl">Overall / hub Gantt bin <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; product names &amp; associations</span></span>
+      <input type="text" id="gs-hubbin" placeholder="overall Gantt bin ID (optional)" autocomplete="off">
+    </div>
+    <div class="modal-sep">Divisional Gantt bins <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; the projects &amp; OKRs</span></div>
+    <div class="modal-field"><span class="lbl">Fuel Cell</span>
+      <input type="text" id="gs-fc" placeholder="Fuel Cell bin ID" autocomplete="off">
+    </div>
+    <div class="modal-field"><span class="lbl">Electrolyzer</span>
+      <input type="text" id="gs-el" placeholder="Electrolyzer bin ID" autocomplete="off">
+    </div>
+    <div class="modal-field"><span class="lbl">Exploration <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; optional</span></span>
+      <input type="text" id="gs-exp" placeholder="Exploration bin ID (leave blank if none)" autocomplete="off">
+    </div>
+    <div class="modal-sep">Write broker <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; optional, serializes saves</span></div>
+    <div class="modal-field"><span class="lbl">Broker URL</span>
+      <input type="text" id="gs-brokerurl" placeholder="https://your-broker.up.railway.app (blank = write JSONBin directly)" autocomplete="off">
+    </div>
+    <div class="modal-field"><span class="lbl">Broker token</span>
+      <input type="text" id="gs-brokertoken" placeholder="bearer token for the broker" autocomplete="off">
+    </div>
+    <div class="modal-note">
+      Credentials are stored only in this browser (localStorage), never written into the file. Reads always go straight to the bins.
+      With a Broker URL set, your saves route through it (which serializes concurrent writes and holds the JSONBin key); leave it blank to write the bins directly.
+      The hub bin supplies the initiatives, the milestones, the objective&rarr;initiative consolidation, and product/generation names;
+      each divisional bin supplies that division's objectives and KRs. A division's button only appears once its bin is set.
+    </div>
+    <div class="gs-status" id="gs-status"></div>
+    <div class="modal-actions">
+      <button onclick="closeSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save &amp; pull</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="add-overlay">
+  <div class="modal">
+    <div class="modal-title" id="add-modal-title">Add to your Gantt</div>
+    <div class="add-types" id="add-types">
+      <button type="button" data-type="objective"  class="add-type active" onclick="setAddType('objective')">Objective</button>
+      <button type="button" data-type="initiative"  class="add-type" onclick="setAddType('initiative')">Initiative</button>
+      <button type="button" data-type="milestone"   class="add-type" onclick="setAddType('milestone')">Milestone</button>
+    </div>
+    <div id="add-hub-note" class="add-inline-note" style="display:none;">Add a hub bin in Source to create initiatives and milestones.</div>
+    <div class="add-info" id="add-info" style="display:none;"></div>
+
+    <div class="modal-field"><span class="lbl">Name</span>
+      <input type="text" id="add-name" placeholder="What is it called?" autocomplete="off">
+    </div>
+    <div class="add-row">
+      <div class="modal-field" style="flex:1;"><span class="lbl">Division</span>
+        <select id="add-division" onchange="addDivisionChanged()"></select>
+      </div>
+    </div>
+    <div class="add-row">
+      <div class="modal-field" style="flex:1;"><span class="lbl">Product line</span>
+        <select id="add-product" onchange="addProductChanged()"></select>
+      </div>
+      <div class="modal-field" style="flex:1;"><span class="lbl">Generation</span>
+        <select id="add-generation" onchange="addGenerationChanged()"></select>
+      </div>
+    </div>
+
+    <div class="modal-field add-grp-initiative"><span class="lbl">Initiative</span>
+      <select id="add-initiative"></select>
+    </div>
+    <div class="add-row add-grp-owner">
+      <div class="modal-field" style="flex:1;"><span class="lbl">Owner (optional)</span>
+        <select id="add-owner"></select>
+      </div>
+    </div>
+
+    <div class="add-row add-grp-dates">
+      <div class="modal-field" style="flex:1;"><span class="lbl">Start</span>
+        <input type="date" id="add-start">
+      </div>
+      <div class="modal-field" style="flex:1;"><span class="lbl">End</span>
+        <input type="date" id="add-end">
+      </div>
+    </div>
+    <div class="add-row add-grp-due">
+      <div class="modal-field" style="flex:1;"><span class="lbl">Due date</span>
+        <input type="date" id="add-due">
+      </div>
+    </div>
+
+    <div class="add-grp-kr">
+      <span class="lbl">Key result (optional)</span>
+      <div class="add-row">
+        <input type="text" id="add-kr-name" placeholder="e.g. Reach 0.6 V at 2 A/cm²" style="flex:3;">
+        <input type="number" id="add-kr-pct" placeholder="%" min="0" max="100" style="flex:1;min-width:60px;">
+      </div>
+    </div>
+
+    <div class="modal-note add-warn" id="add-warn">Adds write to your live Gantt data &mdash; the same bins your Gantt tools use.</div>
+    <div class="gs-status" id="add-status"></div>
+    <div class="modal-actions">
+      <button onclick="closeAddModal()">Cancel</button>
+      <button class="btn-primary" id="add-submit" onclick="submitAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   DIVISION TRACKER  —  read-only rollup of a whole division from the Gantt bin
+   --------------------------------------------------------------------------
+   Pulls every objective / initiative / milestone in a division and renders:
+     • Initiatives  (name + rolled-up attainment; initiatives carry no targets)
+     • Milestones   (date + status)
+     • OKRs         (objective → KR → sub-KR, with attainment scores)
+   Nothing is ever written back to the Gantt.
+   ========================================================================== */
+
+var DIV_LABELS  = { fuelcell:'Fuel Cell', electrolyzer:'Electrolyzer', exploration:'Exploration' };
+var DIV_SHORT   = { fuelcell:'FC', electrolyzer:'EZ', exploration:'EX' };
+/* Divisional sources. `source` mirrors the overall Gantt's EXTERNAL_BINS source
+   code; ids from each bin are prefixed with source+'_' so importProductAssoc
+   (keyed by the Gantt's prefixed ids) lines up. */
+var SOURCE_BINS = [
+  { division:'electrolyzer', source:'el',  label:'Electrolyzer' },
+  { division:'fuelcell',     source:'fc',  label:'Fuel Cell' },
+  { division:'exploration',  source:'exp', label:'Exploration' }
+];
+var SETTINGS_KEY = 'qdivision-gantt';
+var CACHE_KEY    = 'qdivision-cache';
+
+/* ======================================================================== */
+/* ==CORE_START==  (pure, DOM-free — runnable headless by the test harness) */
+/* ======================================================================== */
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* Defensive date readers — Gantt projects use .start/.end but tolerate aliases */
+function pStart(p){ return (p && (p.start || p.startDate)) || ''; }
+function pEnd(p){ return (p && (p.end || p.endDate || p.date)) || ''; }
+
+/* ── Product / model name resolution ─────────────────────────────────────
+   Products/models are referenced by id (e.g. "product-1773938849898"), not by
+   display name. buildProductIndex deep-scans the hub Gantt payload (its
+   `products` catalog, models nested inside) for any object with a string id
+   and a name-like field, producing an id→name map. applyImportAssoc then maps
+   each project's catalog ids (resolved via importProductAssoc) to those names.
+   JSON from the API is acyclic, so a simple stack walk with a count cap is safe. */
+function strOr(v){ return (typeof v === 'string' && v) ? v : ''; }
+function buildProductIndex(root){
+  var index = {};
+  if(!root || typeof root !== 'object') return index;
+  var stack = [root], count = 0;
+  while(stack.length && count < 500000){
+    var node = stack.pop(); count++;
+    if(!node || typeof node !== 'object') continue;
+    if(Array.isArray(node)){
+      for(var i=0; i<node.length; i++){ if(node[i] && typeof node[i] === 'object') stack.push(node[i]); }
+      continue;
+    }
+    if(typeof node.id === 'string' && node.id){
+      var nm = strOr(node.name) || strOr(node.label) || strOr(node.title) || strOr(node.displayName);
+      if(nm && index[node.id] === undefined) index[node.id] = nm;
+    }
+    for(var k in node){
+      if(Object.prototype.hasOwnProperty.call(node, k)){
+        var v = node[k];
+        if(v && typeof v === 'object') stack.push(v);
+      }
+    }
+  }
+  return index;
+}
+/* Merge projects from several divisional bins into one array. Each source is
+   { prefix, division, projects }. Ids and parentIds are namespaced with the
+   prefix (exactly as the overall Gantt does: "fc_", "el_", "exp_") so numeric
+   ids from different bins can't collide and the parent chain stays intact;
+   division is stamped from the source (each bin = one division). Pure. */
+function mergeSourceProjects(sources){
+  var out = [];
+  (sources || []).forEach(function(src){
+    var prefix = src.prefix || '', division = src.division || '';
+    (src.projects || []).forEach(function(p){
+      var copy = {};
+      for(var k in p){ if(Object.prototype.hasOwnProperty.call(p, k)) copy[k] = p[k]; }
+      copy.id = prefix + p.id;
+      copy.parentId = (p.parentId != null) ? (prefix + p.parentId) : null;
+      copy.division = division;
+      out.push(copy);
+    });
+  });
+  return out;
+}
+
+/* Resolve each project's product line + generation to display names.
+   Divisional projects don't carry the linkage themselves — it lives in the
+   overall Gantt's importProductAssoc (keyed by the prefixed project id, with
+   the value's catalog ids resolved through the product catalog). Mirrors the
+   Gantt's getEffectiveProductLine: use the project's own association, else walk
+   up the parent chain; the catalog index maps catalog ids → names. Anything
+   unresolved is left as-is (so it degrades to "" / raw id rather than breaking).
+   Pure. */
+function applyImportAssoc(projects, assocMap, catalogIndex){
+  assocMap = assocMap || {}; catalogIndex = catalogIndex || {};
+  var byId = {}; (projects || []).forEach(function(p){ byId[p.id] = p; });
+  function effAssoc(p){
+    var a = assocMap[p.id];
+    if(a && a.productLine) return a;
+    var seen = {}; seen[p.id] = 1;
+    var cur = byId[p.parentId];
+    while(cur && !seen[cur.id]){
+      seen[cur.id] = 1;
+      var ca = assocMap[cur.id];
+      if(ca && ca.productLine) return ca;
+      cur = byId[cur.parentId];
+    }
+    return null;
+  }
+  function nameOf(id){ return id ? (catalogIndex[id] !== undefined ? catalogIndex[id] : id) : ''; }
+  return (projects || []).map(function(p){
+    var a = effAssoc(p);
+    var plId = a ? a.productLine : (p.productLine || '');
+    var pmId = a ? (a.productModel || '') : (p.productModel || '');
+    var copy = {};
+    for(var k in p){ if(Object.prototype.hasOwnProperty.call(p, k)) copy[k] = p[k]; }
+    copy.productLine  = nameOf(plId);
+    copy.productModel = nameOf(pmId);
+    return copy;
+  });
+}
+
+/* Stamp each objective with the initiative it consolidates under, taken from
+   the overall Gantt's importAssociations ({ localInitiativeId: [prefixed
+   objective ids] }) — the same map getEffectiveParentId uses. Only links where
+   the local target is an initiative are applied. Keys are JSON strings; they're
+   coerced to the numeric local id to match the hub's native initiative ids.
+   Objectives left unstamped fall back to the parentId walk. Pure. */
+function applyInitiativeAssoc(projects, importAssociations){
+  importAssociations = importAssociations || {};
+  var byId = {}; (projects || []).forEach(function(p){ byId[p.id] = p; });
+  var objToInit = {};
+  for(var localId in importAssociations){
+    if(!Object.prototype.hasOwnProperty.call(importAssociations, localId)) continue;
+    var lid = (typeof localId === 'string' && localId !== '' && !isNaN(localId)) ? parseInt(localId, 10) : localId;
+    var local = byId[lid];
+    if(!local || local.projectType !== 'initiative') continue;
+    var linked = importAssociations[localId] || [];
+    for(var i=0; i<linked.length; i++){ objToInit[linked[i]] = local.id; }
+  }
+  return (projects || []).map(function(p){
+    if(p.projectType === 'objective' && objToInit[p.id] != null){
+      var copy = {};
+      for(var k in p){ if(Object.prototype.hasOwnProperty.call(p, k)) copy[k] = p[k]; }
+      copy._assocInitiativeId = objToInit[p.id];
+      return copy;
+    }
+    return p;
+  });
+}
+
+/* Quarter overlap window. quarter 1..4 → [start,end] ISO. Returns null window
+   meaning "no filter". A project is in-window if it overlaps the quarter. */
+function quarterWindow(year, quarter){
+  if(!year || !quarter) return null;
+  var m0 = (quarter-1)*3;               /* 0,3,6,9 */
+  var start = year + '-' + pad2(m0+1) + '-01';
+  var endMonth = m0+3;                   /* 3,6,9,12 */
+  var endY = year, em = endMonth;
+  if(em > 12){ em -= 12; endY += 1; }
+  /* last day of the quarter's final month = day before the 1st of next month */
+  var nextY = endY, nextM = em+1;
+  if(nextM > 12){ nextM -= 12; nextY += 1; }
+  var firstNext = new Date(Date.UTC(nextY, nextM-1, 1));
+  var lastDay = new Date(firstNext.getTime() - 86400000);
+  var end = lastDay.getUTCFullYear() + '-' + pad2(lastDay.getUTCMonth()+1) + '-' + pad2(lastDay.getUTCDate());
+  return { start:start, end:end };
+}
+function pad2(n){ return n < 10 ? '0'+n : String(n); }
+
+function overlapsWindow(p, win){
+  if(!win) return true;
+  var s = pStart(p), e = pEnd(p);
+  if(e && e < win.start) return false;
+  if(s && s > win.end)   return false;
+  return true;
+}
+
+/* Quarter filter for initiatives. An initiative is kept if it has an in-quarter
+   objective (quarterInitIds), or — only when it carries explicit dates — its own
+   dates overlap the window. A dateless initiative with no in-quarter objective is
+   dropped, so the filter still bites when initiatives have no real dates (a bare
+   overlapsWindow would let every dateless initiative through). Pure. */
+function initiativeInWindow(it, win, quarterInitIds){
+  if(!win) return true;
+  if(quarterInitIds && quarterInitIds[it.id]) return true;
+  var s = pStart(it), e = pEnd(it);
+  if(!s && !e) return false;
+  return overlapsWindow(it, win);
+}
+
+/* Whole calendar days from date string a to b (b − a); 0 if either is missing. */
+function daysBetween(a, b){
+  if(!a || !b) return 0;
+  var ms = Date.parse(b) - Date.parse(a);
+  if(isNaN(ms)) return 0;
+  return Math.round(ms / 86400000);
+}
+
+/* Quarter filter for milestones. A milestone is a point at its due date, so it
+   shows if that due date falls inside the window, OR it's a still-open overdue
+   milestone whose due date is before the window — i.e. it slipped out of an
+   earlier quarter and hasn't been hit, so it carries forward (an incomplete Q1
+   milestone still shows in Q2). The due<today guard keeps a not-yet-due
+   milestone from "carrying" into a future-quarter view. Pure. */
+function milestoneInWindow(m, win, today){
+  if(!win) return true;
+  var d = pEnd(m) || pStart(m);
+  if(!d) return true;                                   /* dateless: can't place, keep it */
+  if(d >= win.start && d <= win.end) return true;       /* due within the quarter */
+  return !!(d < win.start && d < today && !milestoneDone(m));  /* carried-forward overdue */
+}
+
+/* ── KPI / KR scoring (faithful copies of the Q-Tracker scoring chain) ───── */
+function migrateKpi(k){
+  k = k || {};
+  var validTypes = { demonstration:1, statistical:1, binary:1 };
+  var validDirections = { increase:1, decrease:1 };
+  var validStats = { average:1, median:1, stddev:1, cv:1, range:1, max:1, min:1 };
+  var gid = k.gid || ('kpi-' + Date.now().toString(36) + Math.random().toString(36).slice(2,7));
+  var type = k.type;
+  if(type === 'increase')      type = 'demonstration';
+  else if(type === 'decrease') type = 'demonstration';
+  else if(type === 'control')  type = 'statistical';
+  if(!validTypes[type])        type = 'demonstration';
+  if(type === 'binary'){ return { gid:gid, type:'binary', name:k.name || '' }; }
+  var direction = validDirections[k.direction] ? k.direction
+                  : (k.type === 'decrease' ? 'decrease' : 'increase');
+  if(type === 'demonstration'){
+    return { gid:gid, type:'demonstration', name:k.name || '', direction:direction,
+             target:k.target != null ? String(k.target) : '', unit:k.unit || '' };
+  }
+  var statRaw = k.statistic;
+  if(statRaw === 'variance') statRaw = 'cv';
+  var statistic = validStats[statRaw] ? statRaw : 'average';
+  var readCount = (typeof k.readCount === 'number' && k.readCount > 0) ? k.readCount
+                  : (typeof k.readCount === 'string' && k.readCount.trim()) ? parseInt(k.readCount, 10) || ''
+                  : '';
+  var unit = (statistic === 'cv') ? '%' : (k.unit || '');
+  return { gid:gid, type:'statistical', name:k.name || '', readCount:readCount,
+           statistic:statistic, direction:direction,
+           target:k.target != null ? String(k.target) : '', unit:unit };
+}
+function migrateKrKpi(k){
+  k = k || {};
+  if(k.units && !k.unit) k.unit = k.units;
+  if(!k.type) k.type = 'demonstration';
+  var migrated = migrateKpi(k);
+  if(k.current === null || k.current === undefined){ migrated.current = null; }
+  else if(typeof k.current === 'number' && !isNaN(k.current)){ migrated.current = k.current; }
+  else { var parsed = parseFloat(k.current); migrated.current = isNaN(parsed) ? null : parsed; }
+  return migrated;
+}
+function kpiIsMeasured(k){ return k && k.current != null && !isNaN(parseFloat(k.current)); }
+
+function calculateKpiProgress(kpis){
+  if(!kpis || !kpis.length) return 0;
+  var measured = kpis.filter(function(k){ return !k.notMeasured && kpiIsMeasured(k); });
+  if(!measured.length) return 0;
+  var total = measured.reduce(function(s, raw){
+    var k = migrateKrKpi(raw);
+    var current = parseFloat(k.current);
+    if(k.type === 'binary'){ return s + (current >= 1 ? 100 : 0); }
+    var target = parseFloat(k.target)||0;
+    if(target === 0) return s + (current > 0 ? 100 : 0);
+    var pct;
+    if(k.direction === 'decrease') pct = Math.max(0, Math.min(100, (1 - (current - target) / target) * 100));
+    else                            pct = Math.max(0, Math.min(100, (current / target) * 100));
+    return s + pct;
+  }, 0);
+  return Math.round(total / measured.length);
+}
+function subKrPct(skr){
+  return skr.trackingType === 'kpi' ? calculateKpiProgress(skr.kpis||[]) : (skr.progress||0);
+}
+function calcSubKrProgress(subKrs){
+  if(!subKrs || !subKrs.length) return 0;
+  var totalW = 0, sum = 0;
+  subKrs.forEach(function(skr){
+    var w = parseFloat(skr.weight)||1;
+    totalW += w; sum += w * subKrPct(skr);
+  });
+  return totalW > 0 ? Math.round(sum / totalW) : 0;
+}
+function getKrPct(kr){
+  if(kr.trackingType === 'kpi')   return calculateKpiProgress(kr.kpis||[]);
+  if(kr.trackingType === 'subkr') return calcSubKrProgress(kr.subKrs||[]);
+  return kr.progress || 0;
+}
+
+/* Objective score = mean of its KR scores. null when the objective has no KRs
+   (so "unscored" objectives are excluded from rollups rather than counted 0). */
+function objectiveScore(obj){
+  var krs = (obj && obj.keyResults) || [];
+  if(!krs.length) return null;
+  var s = krs.reduce(function(a,kr){ return a + getKrPct(kr); }, 0);
+  return Math.round(s / krs.length);
+}
+
+/* KR-band colour/label (decision #7 — same 70/40 bands as Q-Tracker). */
+function bandColor(pct){
+  if(pct == null) return '#bbb';
+  return pct >= 70 ? '#639922' : pct >= 40 ? '#BA7517' : '#E24B4A';
+}
+function bandLabel(pct){
+  if(pct == null) return '\u2014';
+  return pct >= 70 ? 'On track' : pct >= 40 ? 'At risk' : 'Off track';
+}
+
+/* ── Milestone status ───────────────────────────────────────────────────── */
+/* A project counts as a milestone the way the Gantt's milestone report does:
+   projectType 'milestone' OR the legacy milestone:true flag. Older bins store
+   milestones with only the flag and no projectType (the Gantt back-fills it on
+   load), which is why a strict projectType check misses them. Deliveries and
+   stage-gates are excluded (the user wants milestones, not stage-gates). Pure. */
+function isMilestoneProject(p){
+  if(!p || p.isStageGate) return false;
+  if(p.projectType === 'delivery') return false;
+  return p.projectType === 'milestone' || p.milestone === true;
+}
+function milestoneDone(m){
+  return !!(m.manuallyCompleted || (typeof m.progress === 'number' && m.progress >= 100));
+}
+function milestoneStatus(m, today){
+  if(milestoneDone(m)) return 'done';
+  var e = pEnd(m);
+  if(e && e < today) return 'overdue';
+  if(m.status === 'active' || (typeof m.progress === 'number' && m.progress > 0)) return 'active';
+  return 'upcoming';
+}
+function milestoneDue(m, today){ var e = pEnd(m); return !!(e && e <= today); }
+
+/* ── Objective → initiative resolution (decision #2: parentId chain) ─────── */
+function resolveInitiativeId(obj, byId){
+  var cur = obj, hops = 0;
+  while(cur && cur.parentId != null && hops < 12){
+    var par = byId[cur.parentId];
+    if(!par) return null;
+    if(par.projectType === 'initiative') return par.id;
+    cur = par; hops++;
+  }
+  return null;
+}
+
+/* ── Division model (the one pure entry point the view + harness both use) ─ */
+/* ── Product → Generation grouping (decision: productLine / productModel) ──
+   groupTree takes a flat list of entries (each carrying the level fields it
+   will be grouped on, plus `item`) and a list of level keys, and returns a
+   sorted nested tree:
+     keys ['product','gen']            → Product → Generation
+     keys ['division','product','gen'] → Division → Product → Generation
+   Each node: { level, value, count, leaf, groups | items }. Empty values are
+   pinned last per level; item order within a leaf is preserved from input.
+   A per-level comparator may be supplied via `sorters` (used to order
+   divisions by the toggle order rather than alphabetically). */
+function cmpPinEmptyLast(a, b){
+  if(a === '' && b !== '') return 1;
+  if(b === '' && a !== '') return -1;
+  return a.toLowerCase().localeCompare(b.toLowerCase());
+}
+var DIV_ORDER = { electrolyzer:0, fuelcell:1, exploration:2 };
+function divisionCmp(a, b){
+  var ai = DIV_ORDER[a] != null ? DIV_ORDER[a] : 99;
+  var bi = DIV_ORDER[b] != null ? DIV_ORDER[b] : 99;
+  if(ai !== bi) return ai - bi;
+  return cmpPinEmptyLast(a, b);
+}
+function groupTree(entries, keys, sorters){
+  sorters = sorters || {};
+  var key = keys[0], rest = keys.slice(1);
+  var map = {}, order = [];
+  (entries||[]).forEach(function(e){
+    var v = e[key] || '';
+    if(map[v] === undefined){ map[v] = []; order.push(v); }
+    map[v].push(e);
+  });
+  var cmp = sorters[key] || cmpPinEmptyLast;
+  return order.slice().sort(cmp).map(function(v){
+    var bucket = map[v];
+    if(rest.length){
+      var groups = groupTree(bucket, rest, sorters);
+      var count = groups.reduce(function(s, g){ return s + g.count; }, 0);
+      return { level:key, value:v, count:count, leaf:false, groups:groups };
+    }
+    var items = bucket.map(function(e){ return e.item; });
+    return { level:key, value:v, count:items.length, leaf:true, items:items };
+  });
+}
+
+/* The (product, generation) buckets an initiative belongs to. Uses the
+   initiative's own fields when set; otherwise the distinct buckets of its
+   child objectives; otherwise a single unassigned bucket. */
+function initiativeGroups(initRow, objRows){
+  if(initRow.productLine){
+    return [{ product:initRow.productLine, gen:initRow.productModel || '' }];
+  }
+  var seen = {}, pairs = [];
+  (objRows||[]).forEach(function(r){
+    if(r.initiativeId !== initRow.id) return;
+    var p = r.productLine || '', g = r.productModel || '';
+    if(p === '') return;                 /* productless children don't seed a bucket */
+    var key = p + '\u0000' + g;
+    if(!seen[key]){ seen[key] = 1; pairs.push({ product:p, gen:g }); }
+  });
+  return pairs.length ? pairs : [{ product:'', gen:'' }];
+}
+
+/* Is an initiative relevant to a (productName, genName) selection? Uses the same
+   buckets as the Initiatives panel (own product, else derived from objectives).
+   Permissive on purpose: an initiative with no determinate product (general, or
+   brand-new with no objectives yet) is always shown, so you can still associate
+   the first objective with it; one with no specific generation matches any
+   generation of its product. Names, not catalog ids. Pure. */
+function initiativeMatchesProduct(it, objRows, productName, genName){
+  if(!productName) return true;
+  var buckets = initiativeGroups(it, objRows);
+  var named = buckets.filter(function(b){ return b.product; });
+  if(!named.length) return true;
+  var onProduct = named.filter(function(b){ return b.product === productName; });
+  if(!onProduct.length) return false;
+  if(!genName) return true;
+  return onProduct.some(function(b){ return b.gen === genName || !b.gen; });
+}
+function objectiveMatchesProduct(o, productName, genName){
+  if(!productName) return true;
+  if(!o.productLine) return true;                  /* unassigned objective → general */
+  if(o.productLine !== productName) return false;
+  if(!genName) return true;
+  return !o.productModel || o.productModel === genName;
+}
+function buildObjRowsForLinks(projects){
+  var byId = {}; (projects || []).forEach(function(p){ byId[p.id] = p; });
+  return (projects || []).filter(function(p){ return p.projectType === 'objective'; }).map(function(o){
+    return { id:o.id, initiativeId:(o._assocInitiativeId != null ? o._assocInitiativeId : resolveInitiativeId(o, byId)),
+             productLine:o.productLine || '', productModel:o.productModel || '' };
+  });
+}
+/* Initiatives / objectives in a division relevant to the selected product+gen,
+   for the add-modal association dropdowns. Pure. */
+function relevantInitiativesFor(projects, division, productName, genName){
+  var objRows = buildObjRowsForLinks(projects);
+  return (projects || []).filter(function(p){
+    return p.projectType === 'initiative' && p.division === division && initiativeMatchesProduct(p, objRows, productName, genName);
+  });
+}
+function relevantObjectivesFor(projects, division, productName, genName){
+  return (projects || []).filter(function(p){
+    return p.projectType === 'objective' && p.division === division && objectiveMatchesProduct(p, productName, genName);
+  });
+}
+
+function buildDivisionModel(projects, division, win, today){
+  projects = projects || [];
+  var allDivs = !division;            /* null/'' => Overall: include every division */
+  today = today || new Date().toISOString().slice(0,10);
+  var byId = {}; projects.forEach(function(p){ byId[p.id] = p; });
+
+  var objectives = projects.filter(function(p){
+    return p.projectType === 'objective' && (allDivs || p.division === division) && overlapsWindow(p, win);
+  });
+
+  var objRows = objectives.map(function(o){
+    return { id:o.id, name:o.name || 'Objective', parentId:o.parentId, division:o.division || '',
+             initiativeId:(o._assocInitiativeId != null ? o._assocInitiativeId : resolveInitiativeId(o, byId)), score:objectiveScore(o),
+             keyResults:o.keyResults || [],
+             productLine:o.productLine || '', productModel:o.productModel || '' };
+  });
+
+  /* Initiatives are quarter-filtered too — kept if they own an in-quarter
+     objective, or their own dates overlap the window (see initiativeInWindow).
+     Resolving objRows first lets the filter see which initiatives have content
+     this quarter, which also guarantees every shown objective's initiative tag
+     still resolves. */
+  var quarterInitIds = {};
+  objRows.forEach(function(r){ if(r.initiativeId != null) quarterInitIds[r.initiativeId] = true; });
+  var initiatives = projects.filter(function(p){
+    return p.projectType === 'initiative' && (allDivs || p.division === division) && initiativeInWindow(p, win, quarterInitIds);
+  });
+  var milestones = projects.filter(function(p){
+    return isMilestoneProject(p) && (allDivs || p.division === division) && milestoneInWindow(p, win, today);
+  });
+
+  var initRows = initiatives.map(function(it){
+    var kids   = objRows.filter(function(r){ return r.initiativeId === it.id; });
+    var scored = kids.filter(function(r){ return r.score != null; });
+    var health = scored.length
+      ? Math.round(scored.reduce(function(s,r){ return s + r.score; }, 0) / scored.length)
+      : null;
+    return { id:it.id, name:it.name || 'Initiative', objCount:kids.length, division:it.division || '',
+             objIds:kids.map(function(r){ return r.id; }), health:health,
+             productLine:it.productLine || '', productModel:it.productModel || '',
+             start:pStart(it), end:pEnd(it) };
+  }).sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+
+  var unassigned = objRows.filter(function(r){ return r.initiativeId == null; });
+
+  var msRows = milestones.map(function(m){
+    var owner = byId[m.parentId] || null;
+    var initId = null, objId = null, ownerName = owner ? (owner.name||'') : '';
+    if(owner){
+      if(owner.projectType === 'objective'){ objId = owner.id; initId = resolveInitiativeId(owner, byId); }
+      else if(owner.projectType === 'initiative'){ initId = owner.id; }
+    }
+    /* product / generation: own first, else inherited from the owner
+       (objective or initiative) — mirrors how initiatives derive theirs. */
+    var msProd, msGen;
+    if(m.productLine){ msProd = m.productLine; msGen = m.productModel || ''; }
+    else if(owner && owner.productLine){ msProd = owner.productLine; msGen = owner.productModel || ''; }
+    else { msProd = ''; msGen = ''; }
+    /* An overdue milestone (not done, past due) shows its delay in every view —
+       all-quarters or any quarter it appears in: original due date, days late,
+       and the effective (delayed) due date = today. This is independent of the
+       carry-forward filter, which only governs *which* milestones a quarter
+       view includes. */
+    var dueDate = pEnd(m) || pStart(m);
+    var st = milestoneStatus(m, today);
+    var overdue = (st === 'overdue');
+    return { id:m.id, name:m.name || 'Milestone', date:dueDate,
+             status:st, done:milestoneDone(m),
+             due:milestoneDue(m, today), objId:objId, initId:initId, ownerName:ownerName,
+             division:m.division || '', productLine:msProd, productModel:msGen,
+             overdue:overdue, delayedDays:(overdue ? daysBetween(dueDate, today) : 0),
+             delayedDue:(overdue ? today : '') };
+  }).sort(function(a,b){
+    if(!a.date && !b.date) return 0;
+    if(!a.date) return 1; if(!b.date) return -1;
+    return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+  });
+
+  /* Order objective cards by initiative (like FMEA groups problems by gate),
+     unassigned last, then by name. */
+  var initOrder = {}; initRows.forEach(function(r,i){ initOrder[r.id] = i; });
+  var okrRows = objRows.slice().sort(function(a,b){
+    var ai = a.initiativeId != null ? (initOrder[a.initiativeId] != null ? initOrder[a.initiativeId] : 9998) : 9999;
+    var bi = b.initiativeId != null ? (initOrder[b.initiativeId] != null ? initOrder[b.initiativeId] : 9998) : 9999;
+    if(ai !== bi) return ai - bi;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+
+  /* Groupings for the Initiatives and OKR panels. Overall view nests
+     Division → Product → Generation; a single-division view is just
+     Product → Generation. OKRs: one entry per objective. Initiatives: one
+     entry per (product,gen) bucket the initiative touches (a cross-product
+     initiative appears in each). Entries are pushed in display order so
+     within-bucket order is preserved (initiatives by name, objectives by
+     initiative). */
+  var groupKeys = allDivs ? ['division','product','gen'] : ['product','gen'];
+  var sorters = { division: divisionCmp };
+
+  var okrEntries = okrRows.map(function(o){
+    return { division:o.division || '', product:o.productLine || '', gen:o.productModel || '', item:o };
+  });
+  var okrGroups = groupTree(okrEntries, groupKeys, sorters);
+
+  var initEntries = [];
+  initRows.forEach(function(it){
+    initiativeGroups(it, objRows).forEach(function(pr){
+      initEntries.push({ division:it.division || '', product:pr.product, gen:pr.gen, item:it });
+    });
+  });
+  var initGroups = groupTree(initEntries, groupKeys, sorters);
+
+  /* Milestones grouped the same way as initiatives — Division → Product →
+     Generation (Product → Generation in a single-division view). msRows are
+     already date-sorted, and groupTree preserves input order, so milestones
+     stay date-ordered within each generation bucket. */
+  var msEntries = msRows.map(function(m){
+    return { division:m.division || '', product:m.productLine || '', gen:m.productModel || '', item:m };
+  });
+  var msGroups = groupTree(msEntries, groupKeys, sorters);
+
+  /* Division rollups */
+  var scoredObjs = objRows.filter(function(r){ return r.score != null; });
+  var divAttain  = scoredObjs.length
+    ? Math.round(scoredObjs.reduce(function(s,r){ return s + r.score; }, 0) / scoredObjs.length)
+    : null;
+  var onTrack = scoredObjs.filter(function(r){ return r.score >= 70; }).length;
+
+  var scoredInits   = initRows.filter(function(r){ return r.health != null; });
+  var initHealthMean = scoredInits.length
+    ? Math.round(scoredInits.reduce(function(s,r){ return s + r.health; }, 0) / scoredInits.length)
+    : null;
+  var healthyInits = scoredInits.filter(function(r){ return r.health >= 70; }).length;
+  var redInits     = scoredInits.filter(function(r){ return r.health < 40; }).length;
+
+  var dueMs   = msRows.filter(function(m){ return m.due; });
+  var doneMs  = dueMs.filter(function(m){ return m.done; });
+  var msHitRate = dueMs.length ? Math.round(doneMs.length / dueMs.length * 100) : null;
+  var overdueOpen = msRows.filter(function(m){ return m.status === 'overdue'; }).length;
+
+  var signal = computeSignal({
+    divAttain:divAttain, scoredObjCount:scoredObjs.length,
+    msHitRate:msHitRate, overdueOpen:overdueOpen,
+    scoredInitCount:scoredInits.length, redInits:redInits
+  });
+
+  return {
+    division:division || '__all__', objectives:objRows, okrRows:okrRows, initiatives:initRows,
+    unassigned:unassigned, milestones:msRows,
+    okrGroups:okrGroups, initGroups:initGroups, msGroups:msGroups,
+    divAttain:divAttain, onTrack:onTrack, objCount:objRows.length, scoredObjCount:scoredObjs.length,
+    initHealthMean:initHealthMean, healthyInits:healthyInits, initCount:initRows.length, scoredInitCount:scoredInits.length,
+    msHitRate:msHitRate, dueMsCount:dueMs.length, doneMsCount:doneMs.length, overdueOpen:overdueOpen,
+    signal:signal
+  };
+}
+
+function computeSignal(x){
+  if(x.divAttain == null && !x.scoredInitCount){
+    return { color:null, label:'\u2014', reason:'No OKR data in this division yet' };
+  }
+  var a = x.divAttain != null ? x.divAttain : 0;
+  if(a < 40 || x.redInits >= 2 || (x.msHitRate != null && x.msHitRate < 40 && x.overdueOpen >= 3)){
+    return { color:'#E24B4A', label:'At risk',
+      reason: a < 40 ? 'Division OKR attainment below 40%'
+            : x.redInits >= 2 ? x.redInits + ' initiatives off track'
+            : 'Milestone delivery slipping' };
+  }
+  if(a >= 70 && x.redInits === 0 && (x.msHitRate == null || x.msHitRate >= 70)){
+    return { color:'#639922', label:'On track', reason:'Attainment healthy; initiatives and milestones on pace' };
+  }
+  var rr = [];
+  if(a < 70) rr.push('attainment ' + a + '%');
+  if(x.overdueOpen > 0) rr.push(x.overdueOpen + ' milestone' + (x.overdueOpen>1?'s':'') + ' overdue');
+  if(x.redInits > 0)    rr.push(x.redInits + ' initiative' + (x.redInits>1?'s':'') + ' off track');
+  return { color:'#BA7517', label:'Watch closely', reason: rr.length ? rr.join('; ') : 'Some signals lagging' };
+}
+
+/* ── Write-payload builders (for adding from the tracker) ─────────────────
+   New projects must carry the Gantt's full default field set so they render
+   and behave correctly there (mirrors sanitizeProject). Ids mirror the Gantt's
+   nextId scheme: max numeric id in the target bin + 1 (floor 10000). All pure. */
+function nextProjectId(projects){
+  var max = 9999;
+  (projects || []).forEach(function(p){ if(typeof p.id === 'number' && p.id > max) max = p.id; });
+  return max + 1;
+}
+function newProjectBase(id, name, division){
+  return {
+    id:id, name:(name || '').trim(), division:division || 'fuelcell',
+    projectType:'task', milestone:false, parentId:null,
+    start:'', end:'',
+    effortType:'NRE', productLine:'', productModel:'',
+    resources:[], equipment:[], dependencies:[], kpis:[], milestoneKpis:[],
+    keyResults:[], stageGates:[], stageGatesLinked:true, associatedObjectives:[],
+    isStageGate:false, stageGateId:null, progress:0, progressType:'percentage',
+    datePrecision:'exact', completedDate:null, manuallyCompleted:false,
+    baselineEndDate:null, tentative:false, trl:null, mrl:null, milestoneReport:null
+  };
+}
+function buildObjective(o){
+  o = o || {};
+  var p = newProjectBase(o.id, o.name, o.division);
+  p.projectType = 'objective';
+  p.start = o.start || ''; p.end = o.end || '';
+  if(o.kr && (o.kr.name || '').trim()){
+    var pr = (typeof o.kr.progress === 'number' && isFinite(o.kr.progress)) ? o.kr.progress : 0;
+    p.keyResults = [{ id:'kr-1', name:o.kr.name.trim(), trackingType:'percentage', progress:Math.max(0, Math.min(100, pr)) }];
+  }
+  return p;
+}
+function buildInitiative(o){
+  o = o || {};
+  var p = newProjectBase(o.id, o.name, o.division);
+  p.projectType = 'initiative';
+  p.productLine = o.productLine || ''; p.productModel = o.productModel || '';
+  p.start = o.start || ''; p.end = o.end || '';
+  return p;
+}
+function buildMilestone(o){
+  o = o || {};
+  var p = newProjectBase(o.id, o.name, o.division);
+  p.projectType = 'milestone'; p.milestone = true;
+  p.start = o.dueDate || ''; p.end = o.dueDate || '';
+  p.parentId = (o.ownerId != null && o.ownerId !== '') ? o.ownerId : null;
+  p.productLine = o.productLine || ''; p.productModel = o.productModel || '';
+  return p;
+}
+/* Immutable updates to the hub's association maps (keyed by the prefixed
+   objective id, e.g. "fc_10001", exactly as the Gantt namespaces imports). */
+function withAssociation(importAssociations, initiativeId, prefixedObjId){
+  var map = {};
+  for(var k in importAssociations){ if(Object.prototype.hasOwnProperty.call(importAssociations, k)) map[k] = (importAssociations[k] || []).slice(); }
+  var key = String(initiativeId);
+  if(!Array.isArray(map[key])) map[key] = [];
+  if(map[key].indexOf(prefixedObjId) < 0) map[key].push(prefixedObjId);
+  return map;
+}
+function withProductAssoc(importProductAssoc, prefixedObjId, productLineId, productModelId){
+  var map = {};
+  for(var k in importProductAssoc){ if(Object.prototype.hasOwnProperty.call(importProductAssoc, k)) map[k] = importProductAssoc[k]; }
+  if(productLineId) map[prefixedObjId] = { productLine:productLineId, productModel:productModelId || '' };
+  return map;
+}
+
+/* ----------------------------- edits ----------------------------------- */
+/* Strip the source prefix the Gantt namespaces imported ids with ("fc_123" ->
+   123). Divisional bins store the bare numeric id; the tracker prefixes on
+   load, so to locate an objective back in its bin we reverse that. Returns a
+   number when the bare id is numeric (matches the bin), else the raw string. */
+function unprefixId(prefixedId){
+  var s = String(prefixedId);
+  var i = s.indexOf('_');
+  var raw = (i < 0) ? s : s.slice(i + 1);
+  var n = parseInt(raw, 10);
+  return (String(n) === raw) ? n : raw;
+}
+/* Locate a project by id, tolerant of number/string id mismatch. Pure. */
+function findProjectById(projects, id){
+  var t = String(id);
+  var hit = (projects || []).filter(function(p){ return p && String(p.id) === t; });
+  return hit.length ? hit[0] : null;
+}
+/* Immutable field merges. Each returns a shallow copy of the project with only
+   the supplied fields changed — division is never touched (locked on edit),
+   and objective key results are left intact (edited elsewhere). */
+function applyObjectiveEdit(project, f){
+  var p = {}; for(var k in project){ if(Object.prototype.hasOwnProperty.call(project, k)) p[k] = project[k]; }
+  if(f.name != null)  p.name  = String(f.name).trim();
+  if(f.start != null) p.start = f.start || '';
+  if(f.end != null)   p.end   = f.end || '';
+  return p;
+}
+function applyInitiativeEdit(project, f){
+  var p = {}; for(var k in project){ if(Object.prototype.hasOwnProperty.call(project, k)) p[k] = project[k]; }
+  if(f.name != null)         p.name         = String(f.name).trim();
+  if(f.productLine != null)  p.productLine  = f.productLine || '';
+  if(f.productModel != null) p.productModel = f.productModel || '';
+  if(f.start != null)        p.start        = f.start || '';
+  if(f.end != null)          p.end          = f.end || '';
+  return p;
+}
+function applyMilestoneEdit(project, f){
+  var p = {}; for(var k in project){ if(Object.prototype.hasOwnProperty.call(project, k)) p[k] = project[k]; }
+  if(f.name != null)        p.name = String(f.name).trim();
+  if(f.dueDate != null){    p.start = f.dueDate || ''; p.end = f.dueDate || ''; }
+  if(f.ownerId !== undefined) p.parentId = (f.ownerId != null && f.ownerId !== '') ? f.ownerId : null;
+  if(f.productLine != null)  p.productLine  = f.productLine || '';
+  if(f.productModel != null) p.productModel = f.productModel || '';
+  return p;
+}
+/* Move an objective's association from one initiative bucket to another in the
+   hub's importAssociations map. Defensively removes the objective from EVERY
+   other bucket first (an objective belongs to at most one initiative), then
+   adds it under the new id. newInitId '' / null clears the link entirely. Pure. */
+function moveAssociation(importAssociations, oldInitId, newInitId, prefixedObjId){
+  var map = {};
+  for(var k in importAssociations){ if(Object.prototype.hasOwnProperty.call(importAssociations, k)) map[k] = (importAssociations[k] || []).slice(); }
+  var nk = (newInitId != null && newInitId !== '') ? String(newInitId) : null;
+  for(var kk in map){ if(kk !== nk) map[kk] = map[kk].filter(function(x){ return x !== prefixedObjId; }); }
+  if(nk){
+    if(!Array.isArray(map[nk])) map[nk] = [];
+    if(map[nk].indexOf(prefixedObjId) < 0) map[nk].push(prefixedObjId);
+  }
+  return map;
+}
+/* Set OR clear an objective's product link in the hub's importProductAssoc.
+   A falsy productLineId removes the entry (product cleared). Pure. */
+function setProductAssoc(importProductAssoc, prefixedObjId, productLineId, productModelId){
+  var map = {};
+  for(var k in importProductAssoc){ if(Object.prototype.hasOwnProperty.call(importProductAssoc, k)) map[k] = importProductAssoc[k]; }
+  if(productLineId) map[prefixedObjId] = { productLine:productLineId, productModel:productModelId || '' };
+  else delete map[prefixedObjId];
+  return map;
+}
+/* Catalog name -> id, for pre-filling the product/generation dropdowns (the
+   dropdowns carry catalog ids; loaded projects carry resolved names). Pure. */
+function catalogIdByName(catalog, name){
+  if(!name) return '';
+  var p = (catalog || []).filter(function(x){ return x && (x.name || '') === name; })[0];
+  return p ? p.id : '';
+}
+function catalogModelIdByName(catalog, productId, modelName){
+  if(!productId || !modelName) return '';
+  var p = (catalog || []).filter(function(x){ return x && String(x.id) === String(productId); })[0];
+  if(!p || !Array.isArray(p.models)) return '';
+  var m = p.models.filter(function(x){ return x && (x.name || '') === modelName; })[0];
+  return m ? m.id : '';
+}
+
+/* ======================================================================== */
+/* ==CORE_END==                                                             */
+/* ======================================================================== */
+
+/* ----------------------------- state ------------------------------------ */
+var _projectsCache = null;   /* full projects array from the last successful pull */
+var _catalog = [];           /* hub product catalog [{id,name,division,models:[{id,name}]}] */
+var _model = null;
+var IS_READONLY = true;      /* always — this dashboard never writes */
+
+/* ---------------------------- settings ---------------------------------- */
+function loadSettings(){
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e){ return {}; }
+}
+function persistSettings(s){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
+}
+/* Which divisions have a bin configured (in toggle order). */
+function configuredDivisions(){
+  var bins = loadSettings().bins || {};
+  return SOURCE_BINS.filter(function(sb){ return bins[sb.division]; });
+}
+function hasAnySource(){ return configuredDivisions().length > 0; }
+/* Views available right now: Overall (if ≥1 source) + each configured division. */
+function availableViews(){
+  var divs = configuredDivisions();
+  if(!divs.length) return [];
+  return ['overall'].concat(divs.map(function(d){ return d.division; }));
+}
+function currentView(){
+  var avail = availableViews(), s = loadSettings();
+  if(avail.indexOf(s.view) >= 0) return s.view;
+  return avail.length ? avail[0] : 'overall';
+}
+/* Division passed to the model: null for Overall (all divisions). */
+function modelDivision(){ var v = currentView(); return v === 'overall' ? null : v; }
+function setView(v){
+  if(availableViews().indexOf(v) < 0) return;
+  var s = loadSettings(); s.view = v; persistSettings(s);
+  updateViewButtons(); updateHeader();
+  if(_projectsCache) rebuildAndRender();
+}
+/* Build the toggle from configured bins — Exploration appears once its bin is set. */
+function renderToggle(){
+  var el = document.getElementById('view-toggle'), avail = availableViews();
+  updateAddButton();
+  if(!avail.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = avail.map(function(v){
+    var label = v === 'overall' ? 'Overall' : (DIV_LABELS[v] || v);
+    return '<button data-view="'+v+'" onclick="setView(\''+v+'\')">'+esc(label)+'</button>';
+  }).join('');
+  updateViewButtons();
+}
+function updateViewButtons(){
+  var v = currentView();
+  var btns = document.querySelectorAll('#view-toggle button');
+  for(var i=0; i<btns.length; i++){
+    if(btns[i].getAttribute('data-view') === v) btns[i].classList.add('active');
+    else btns[i].classList.remove('active');
+  }
+}
+function currentQuarter(){ var v = document.getElementById('sel-quarter').value; return v ? parseInt(v,10) : null; }
+function currentYear(){ var v = document.getElementById('sel-year').value; return v ? parseInt(v,10) : null; }
+
+function openSettings(){
+  var s = loadSettings(), bins = s.bins || {};
+  document.getElementById('gs-apikey').value = s.apiKey || '';
+  document.getElementById('gs-hubbin').value = s.hubBinId || '';
+  document.getElementById('gs-fc').value  = bins.fuelcell || '';
+  document.getElementById('gs-el').value  = bins.electrolyzer || '';
+  document.getElementById('gs-exp').value = bins.exploration || '';
+  document.getElementById('gs-brokerurl').value = s.brokerUrl || '';
+  document.getElementById('gs-brokertoken').value = s.brokerToken || '';
+  gsStatus('', '');
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(){ document.getElementById('settings-overlay').classList.remove('open'); }
+function gsStatus(msg, kind){
+  var el = document.getElementById('gs-status');
+  el.textContent = msg || '';
+  el.className = 'gs-status' + (kind ? ' ' + kind : '');
+}
+async function saveSettings(){
+  var apiKey   = document.getElementById('gs-apikey').value.trim();
+  var hubBinId = document.getElementById('gs-hubbin').value.trim();
+  var bins = {
+    fuelcell:     document.getElementById('gs-fc').value.trim(),
+    electrolyzer: document.getElementById('gs-el').value.trim(),
+    exploration:  document.getElementById('gs-exp').value.trim()
+  };
+  if(!apiKey || !(bins.fuelcell || bins.electrolyzer || bins.exploration)){
+    gsStatus('Enter the API key and at least one divisional bin.', 'error'); return;
+  }
+  var s = loadSettings();
+  s.apiKey = apiKey; s.hubBinId = hubBinId; s.bins = bins;
+  s.brokerUrl = document.getElementById('gs-brokerurl').value.trim().replace(/\/+$/, '');
+  s.brokerToken = document.getElementById('gs-brokertoken').value.trim();
+  persistSettings(s);
+  renderToggle();
+  gsStatus('Saved \u2014 pulling\u2026', 'info');
+  var ok = await fetchAll(true);
+  if(ok){
+    if(hubBinId){ gsStatus('\u2713 Connected.', 'success'); setTimeout(closeSettings, 600); }
+    else { gsStatus('\u2713 Connected. No hub bin set \u2014 initiatives, milestones, and product grouping stay empty until you add it.', 'info'); setTimeout(closeSettings, 1900); }
+  } else { gsStatus(_lastFetchError || 'Could not read those bins. Check the IDs / key.', 'error'); }
+}
+
+/* --------------------------- add modal ---------------------------------- */
+var _addType = 'objective';
+var _addArmed = false;
+var _isSnapshot = false;
+var _editTarget = null;   /* id of the project being edited; null = add mode */
+var _pendingOverwrite = false;  /* set after a broker 409 the user chose to override */
+var _conflictRev = null;        /* the server's current rev from that 409 */
+
+function updateAddButton(){
+  var b = document.getElementById('add-btn');
+  if(!b) return;
+  b.style.display = (!_isSnapshot && hasAnySource()) ? '' : 'none';
+}
+function addStatus(msg, kind){
+  var el = document.getElementById('add-status');
+  el.textContent = msg || '';
+  el.className = 'gs-status' + (kind ? ' ' + kind : '');
+}
+function showAddGroup(cls, show){
+  var els = document.querySelectorAll('.' + cls);
+  for(var i=0; i<els.length; i++) els[i].style.display = show ? '' : 'none';
+}
+function disarmAdd(){
+  _addArmed = false;
+  var btn = document.getElementById('add-submit');
+  btn.textContent = _editTarget ? 'Save changes' : 'Add'; btn.classList.remove('arm');
+}
+function setFieldGroups(type, showKr){
+  showAddGroup('add-grp-initiative', type === 'objective');
+  showAddGroup('add-grp-kr',         !!showKr && type === 'objective');
+  showAddGroup('add-grp-dates',      type === 'objective' || type === 'initiative');
+  showAddGroup('add-grp-owner',      type === 'milestone');
+  showAddGroup('add-grp-due',        type === 'milestone');
+}
+function setAddType(type){
+  var s = loadSettings();
+  if((type === 'initiative' || type === 'milestone') && !s.hubBinId) return;  /* needs hub */
+  _addType = type;
+  var btns = document.querySelectorAll('#add-types .add-type');
+  for(var i=0; i<btns.length; i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-type') === type);
+  setFieldGroups(type, true);
+  disarmAdd(); addStatus('', '');
+}
+function fillSelect(el, opts, placeholder){
+  var html = (placeholder != null) ? '<option value="">' + esc(placeholder) + '</option>' : '';
+  html += opts.map(function(o){ return '<option value="' + esc(String(o.value)) + '">' + esc(o.label) + '</option>'; }).join('');
+  el.innerHTML = html;
+}
+function populateAddDivisions(){
+  var divs = configuredDivisions().map(function(d){ return { value:d.division, label:DIV_LABELS[d.division] || d.division }; });
+  fillSelect(document.getElementById('add-division'), divs, null);
+}
+function productsForDivision(division){
+  return (_catalog || []).filter(function(p){ return p && p.id && (!p.division || p.division === division); });
+}
+function populateAddProducts(division){
+  var opts = productsForDivision(division).map(function(p){ return { value:p.id, label:p.name || p.id }; });
+  fillSelect(document.getElementById('add-product'), opts, '\u2014 none \u2014');
+  populateAddGenerations();
+}
+function populateAddGenerations(){
+  var pid = document.getElementById('add-product').value;
+  var prod = (_catalog || []).filter(function(p){ return p && String(p.id) === String(pid); })[0];
+  var models = (prod && Array.isArray(prod.models)) ? prod.models : [];
+  var opts = models.filter(function(m){ return m && m.id; }).map(function(m){ return { value:m.id, label:m.name || m.id }; });
+  fillSelect(document.getElementById('add-generation'), opts, '\u2014 none \u2014');
+}
+function populateAddInitiatives(division, productName, genName){
+  var inits = relevantInitiativesFor(_projectsCache || [], division, productName, genName)
+    .map(function(p){ return { value:p.id, label:p.name || ('Initiative ' + p.id) }; });
+  fillSelect(document.getElementById('add-initiative'), inits, '\u2014 none \u2014');
+}
+function populateAddOwners(division, productName, genName){
+  var objs = relevantObjectivesFor(_projectsCache || [], division, productName, genName)
+    .map(function(p){ return { value:p.id, label:'Objective: ' + (p.name || p.id) }; });
+  var inits = relevantInitiativesFor(_projectsCache || [], division, productName, genName)
+    .map(function(p){ return { value:p.id, label:'Initiative: ' + (p.name || p.id) }; });
+  fillSelect(document.getElementById('add-owner'), objs.concat(inits), '\u2014 none \u2014');
+}
+function catalogProductName(pid){
+  if(!pid) return '';
+  var p = (_catalog || []).filter(function(x){ return x && String(x.id) === String(pid); })[0];
+  return p ? (p.name || '') : '';
+}
+function catalogModelName(pid, mid){
+  if(!pid || !mid) return '';
+  var p = (_catalog || []).filter(function(x){ return x && String(x.id) === String(pid); })[0];
+  if(!p || !Array.isArray(p.models)) return '';
+  var m = p.models.filter(function(x){ return x && String(x.id) === String(mid); })[0];
+  return m ? (m.name || '') : '';
+}
+/* Re-filter the initiative + owner dropdowns for the current division/product/
+   generation (product/gen dropdowns hold catalog ids; projects carry names). */
+function refreshAddLinks(){
+  var d   = document.getElementById('add-division').value;
+  var pid = document.getElementById('add-product').value;
+  var mid = document.getElementById('add-generation').value;
+  var pn  = catalogProductName(pid), gn = catalogModelName(pid, mid);
+  populateAddInitiatives(d, pn, gn);
+  populateAddOwners(d, pn, gn);
+}
+function addDivisionChanged(){
+  populateAddProducts(document.getElementById('add-division').value);  /* resets product + generation */
+  refreshAddLinks();
+  disarmAdd();
+}
+function addProductChanged(){ populateAddGenerations(); refreshAddLinks(); disarmAdd(); }
+function addGenerationChanged(){ refreshAddLinks(); disarmAdd(); }
+function openAddModal(){
+  if(!hasAnySource()) return;
+  var s = loadSettings();
+  var noHub = !s.hubBinId;
+  /* ensure add-mode chrome (a prior edit hides the type bar / locks division) */
+  _editTarget = null;
+  _pendingOverwrite = false; _conflictRev = null;
+  document.getElementById('add-modal-title').textContent = 'Add to your Gantt';
+  document.getElementById('add-warn').innerHTML = 'Adds write to your live Gantt data \u2014 the same bins your Gantt tools use.';
+  document.getElementById('add-types').style.display = '';
+  document.getElementById('add-info').style.display = 'none';
+  document.getElementById('add-division').disabled = false;
+  document.querySelector('#add-types [data-type="initiative"]').disabled = noHub;
+  document.querySelector('#add-types [data-type="milestone"]').disabled = noHub;
+  document.getElementById('add-hub-note').style.display = noHub ? '' : 'none';
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-start').value = '';
+  document.getElementById('add-end').value = '';
+  document.getElementById('add-due').value = '';
+  document.getElementById('add-kr-name').value = '';
+  document.getElementById('add-kr-pct').value = '';
+  populateAddDivisions();
+  addDivisionChanged();
+  setAddType('objective');
+  document.getElementById('add-overlay').classList.add('open');
+}
+function closeAddModal(){ document.getElementById('add-overlay').classList.remove('open'); _editTarget = null; _pendingOverwrite = false; _conflictRev = null; }
+
+/* --------------------------- edit modal --------------------------------- */
+function findCacheProject(id){ return findProjectById(_projectsCache || [], id); }
+function projType(p){
+  if(!p) return null;
+  if(p.projectType === 'objective')  return 'objective';
+  if(p.projectType === 'initiative') return 'initiative';
+  if(isMilestoneProject(p))          return 'milestone';
+  return null;
+}
+function initNameById(id){ var it = findCacheProject(id); return it ? (it.name || ('Initiative ' + id)) : ('Initiative ' + id); }
+function ownerLabelById(id){
+  var o = findCacheProject(id);
+  if(!o) return String(id);
+  var t = o.projectType === 'objective' ? 'Objective' : o.projectType === 'initiative' ? 'Initiative' : 'Item';
+  return t + ': ' + (o.name || o.id);
+}
+/* Force a value to be selectable even if the product/gen filter would exclude
+   it, so editing never silently drops the item's current initiative / owner. */
+function ensureOption(selectId, value, label){
+  if(value == null || value === '') return;
+  var sel = document.getElementById(selectId);
+  var v = String(value), opts = sel.options || [];
+  for(var i=0; i<opts.length; i++){ if(opts[i].value === v){ sel.value = v; return; } }
+  var opt = document.createElement('option');
+  opt.value = v; opt.textContent = label || v;
+  sel.appendChild(opt); sel.value = v;
+}
+/* Read-only context at the top of the edit modal: the computed score / health /
+   status the dashboard shows. Editable metadata is pre-filled into the fields. */
+function renderEditInfo(type, project){
+  var box = document.getElementById('add-info');
+  var rows = (_model && (type === 'objective' ? _model.objectives : type === 'initiative' ? _model.initiatives : _model.milestones)) || [];
+  var row = rows.filter(function(r){ return String(r.id) === String(project.id); })[0];
+  var html = '';
+  if(type === 'objective'){
+    var score = row ? row.score : objectiveScore(project);
+    html += '<div class="ai-head">' + scorePill(score, 'Attainment') + '</div>';
+    var krs = project.keyResults || [];
+    if(krs.length){
+      html += '<div class="ai-krs">';
+      krs.forEach(function(kr){
+        var tag = '<span class="kr-type-tag">' + (kr.trackingType==='kpi'?'KPI':kr.trackingType==='subkr'?'sub-KRs':'%') + '</span>';
+        html += '<div class="ai-kr"><span class="ai-kr-name">' + esc(kr.name || 'Key result') + tag + '</span>' + scorePill(getKrPct(kr)) + '</div>';
+        if(kr.trackingType === 'subkr' && (kr.subKrs||[]).length){
+          kr.subKrs.forEach(function(skr){
+            html += '<div class="ai-kr"><span class="ai-kr-name sub">' + esc(skr.name || 'Sub-KR') + '</span>' + scorePill(subKrPct(skr)) + '</div>';
+          });
+        }
+      });
+      html += '</div>';
+    } else { html += '<div class="ai-empty">No key results on this objective.</div>'; }
+    html += '<div class="ai-meta">Key results are read-only here \u2014 edit them in the Gantt / Q Tracker.</div>';
+  } else if(type === 'initiative'){
+    var health = row ? row.health : null;
+    var kids = ((_model && _model.objectives) || []).filter(function(r){ return r.initiativeId === project.id; });
+    html += '<div class="ai-head">' + scorePill(health, 'Health') + '<span class="ai-meta">' + kids.length + ' objective' + (kids.length!==1?'s':'') + ' this quarter</span></div>';
+    if(kids.length){
+      html += '<div class="ai-list">';
+      kids.forEach(function(r){ html += '<div class="ai-li"><span class="ai-li-name">' + esc(r.name) + '</span>' + scorePill(r.score, 'OKR') + '</div>'; });
+      html += '</div>';
+    }
+  } else {
+    var stLabel = { done:'Done', overdue:'Overdue', active:'In progress', upcoming:'Upcoming' };
+    var stCls   = { done:'st-done', overdue:'st-overdue', active:'st-active', upcoming:'st-upcoming' };
+    var st = row ? row.status : milestoneStatus(project, new Date().toISOString().slice(0,10));
+    html += '<div class="ai-head"><span class="ms-status ' + (stCls[st]||'st-upcoming') + '">' + (stLabel[st]||st) + '</span>';
+    if(row && row.ownerName) html += '<span class="ai-meta">Owner: ' + esc(row.ownerName) + '</span>';
+    html += '</div>';
+    if(row && row.overdue) html += '<div class="ai-meta">Originally due ' + fmtDate(row.date) + ' \u00b7 ' + row.delayedDays + ' days late.</div>';
+  }
+  box.innerHTML = html;
+}
+function openEditModal(id){
+  var p = findCacheProject(id);
+  if(!p) return;
+  var type = projType(p);
+  if(!type) return;
+  var s = loadSettings();
+  if((type === 'initiative' || type === 'milestone') && !s.hubBinId) return;   /* live on the hub */
+  _editTarget = String(p.id);
+  _pendingOverwrite = false; _conflictRev = null;
+
+  document.getElementById('add-modal-title').textContent = 'Edit ' + type;
+  document.getElementById('add-warn').innerHTML = 'Saving writes to your live Gantt data \u2014 the same bins your Gantt tools use.';
+  document.getElementById('add-types').style.display = 'none';
+  document.getElementById('add-hub-note').style.display = 'none';
+  document.getElementById('add-info').style.display = '';
+  renderEditInfo(type, p);
+
+  document.getElementById('add-name').value = p.name || '';
+  populateAddDivisions();
+  var divSel = document.getElementById('add-division');
+  divSel.value = p.division || ''; divSel.disabled = true;     /* division locked on edit */
+  populateAddProducts(p.division);
+  var pid = catalogIdByName(_catalog || [], p.productLine);
+  document.getElementById('add-product').value = pid;
+  populateAddGenerations();
+  var mid = catalogModelIdByName(_catalog || [], pid, p.productModel);
+  document.getElementById('add-generation').value = mid;
+  refreshAddLinks();                                           /* initiative + owner dropdowns */
+
+  document.getElementById('add-start').value = pStart(p) || '';
+  document.getElementById('add-end').value   = pEnd(p) || '';
+  document.getElementById('add-due').value   = (type === 'milestone') ? (pEnd(p) || pStart(p) || '') : '';
+  document.getElementById('add-kr-name').value = '';
+  document.getElementById('add-kr-pct').value  = '';
+
+  if(type === 'objective') ensureOption('add-initiative', p._assocInitiativeId, initNameById(p._assocInitiativeId));
+  else if(type === 'milestone') ensureOption('add-owner', p.parentId, ownerLabelById(p.parentId));
+
+  setFieldGroups(type, false);                                /* KRs read-only -> no KR input */
+  disarmAdd(); addStatus('', '');
+  document.getElementById('add-overlay').classList.add('open');
+}
+
+async function submitEdit(){
+  var p = findCacheProject(_editTarget);
+  if(!p){ addStatus('That item is no longer loaded \u2014 pull again.', 'error'); return; }
+  var type = projType(p);
+  var name = document.getElementById('add-name').value.trim();
+  if(!name){ addStatus('Give it a name first.', 'error'); return; }
+  var productLine  = document.getElementById('add-product').value || '';     /* catalog ids */
+  var productModel = document.getElementById('add-generation').value || '';
+  var start = document.getElementById('add-start').value || '';
+  var end   = document.getElementById('add-end').value || '';
+  if(type === 'milestone' && !document.getElementById('add-due').value){ addStatus('A milestone needs a due date.', 'error'); return; }
+  if((type === 'objective' || type === 'initiative') && start && end && end < start){ addStatus('End date is before the start date.', 'error'); return; }
+
+  if(!_addArmed){
+    _addArmed = true;
+    var b = document.getElementById('add-submit');
+    b.textContent = 'Confirm \u2014 save to live data'; b.classList.add('arm');
+    addStatus('This updates your live Gantt data. Click again to confirm.', 'info');
+    return;
+  }
+  disarmAdd();
+  addStatus('Saving\u2026', 'info');
+  document.getElementById('add-submit').disabled = true;
+  /* baseRev: normally the rev we loaded; after a 409 we chose to override, send
+     the server's current rev so the overwrite is accepted. */
+  var baseRev = _pendingOverwrite ? _conflictRev : (p._rev != null ? p._rev : null);
+  try {
+    var res;
+    if(type === 'objective'){
+      res = await editObjective(p, { name:name, start:start, end:end, baseRev:baseRev,
+        initiativeId:document.getElementById('add-initiative').value || '',
+        productLine:productLine, productModel:productModel });
+    } else if(type === 'initiative'){
+      res = await editInitiative(p, { name:name, baseRev:baseRev, productLine:productLine, productModel:productModel, start:start, end:end });
+    } else {
+      res = await editMilestone(p, { name:name, baseRev:baseRev, dueDate:document.getElementById('add-due').value,
+        ownerId:document.getElementById('add-owner').value || '', productLine:productLine, productModel:productModel });
+    }
+    _pendingOverwrite = false; _conflictRev = null;
+    if(res && res.warning === 'links_failed'){
+      addStatus('Saved \u2014 but its initiative/product links didn\u2019t update. You can set them in the Gantt.', 'info');
+      setTimeout(closeAddModal, 1700);
+    } else {
+      addStatus('\u2713 Saved.', 'success');
+      setTimeout(closeAddModal, 700);
+    }
+  } catch(e){
+    if(e && e.conflict){
+      _conflictRev = (e.conflict.rev != null) ? e.conflict.rev : null;
+      _pendingOverwrite = true;
+      _addArmed = true;   /* next click overwrites without a second confirm */
+      var bo = document.getElementById('add-submit');
+      bo.textContent = 'Overwrite their change'; bo.classList.add('arm');
+      addStatus('This changed since you opened it. Click \u201cOverwrite their change\u201d to replace it, or Cancel to keep theirs.', 'error');
+      fetchAll(true);     /* re-pull in the background so a reopen shows the latest */
+    } else {
+      addStatus(e.message || 'Could not save that.', 'error');
+    }
+  } finally {
+    document.getElementById('add-submit').disabled = false;
+  }
+}
+
+async function submitAdd(){
+  if(_editTarget) return submitEdit();
+  var name = document.getElementById('add-name').value.trim();
+  if(!name){ addStatus('Give it a name first.', 'error'); return; }
+  var division = document.getElementById('add-division').value;
+  var productLine  = document.getElementById('add-product').value || '';
+  var productModel = document.getElementById('add-generation').value || '';
+  var start = document.getElementById('add-start').value || '';
+  var end   = document.getElementById('add-end').value || '';
+  if(_addType === 'milestone' && !document.getElementById('add-due').value){ addStatus('A milestone needs a due date.', 'error'); return; }
+  if((_addType === 'objective' || _addType === 'initiative') && start && end && end < start){ addStatus('End date is before the start date.', 'error'); return; }
+
+  /* inline two-step confirm — this writes to live data */
+  if(!_addArmed){
+    _addArmed = true;
+    var btn = document.getElementById('add-submit');
+    btn.textContent = 'Confirm \u2014 write to live data'; btn.classList.add('arm');
+    addStatus('This adds to your live Gantt bins. Click again to confirm.', 'info');
+    return;
+  }
+  disarmAdd();
+  addStatus('Adding\u2026', 'info');
+  document.getElementById('add-submit').disabled = true;
+  try {
+    var res;
+    if(_addType === 'objective'){
+      var krName = document.getElementById('add-kr-name').value.trim();
+      var krPct  = parseFloat(document.getElementById('add-kr-pct').value);
+      res = await addObjective({
+        name:name, division:division, productLine:productLine, productModel:productModel,
+        initiativeId:document.getElementById('add-initiative').value || '', start:start, end:end,
+        kr: krName ? { name:krName, progress:(isFinite(krPct) ? krPct : 0) } : null
+      });
+    } else if(_addType === 'initiative'){
+      res = await addInitiative({ name:name, division:division, productLine:productLine, productModel:productModel, start:start, end:end });
+    } else {
+      res = await addMilestone({
+        name:name, division:division, dueDate:document.getElementById('add-due').value,
+        ownerId:document.getElementById('add-owner').value || '', productLine:productLine, productModel:productModel
+      });
+    }
+    if(res && res.warning === 'links_failed'){
+      addStatus('Added \u2014 but its initiative/product link didn\u2019t set. You can set it in the Gantt.', 'info');
+      setTimeout(closeAddModal, 1700);
+    } else {
+      addStatus('\u2713 Added.', 'success');
+      setTimeout(closeAddModal, 700);
+    }
+  } catch(e){
+    addStatus(e.message || 'Could not add that.', 'error');
+  } finally {
+    document.getElementById('add-submit').disabled = false;
+  }
+}
+
+/* --------------------------- selectors ---------------------------------- */
+function populateQuarterOptions(){
+  var qSel = document.getElementById('sel-quarter');
+  qSel.innerHTML = '<option value="">All quarters</option>' +
+    [1,2,3,4].map(function(q){ return '<option value="'+q+'">Q'+q+'</option>'; }).join('');
+  var ySel = document.getElementById('sel-year');
+  var now = new Date().getFullYear();
+  var years = [];
+  for(var y = now+1; y >= now-3; y--) years.push(y);
+  ySel.innerHTML = years.map(function(y){ return '<option value="'+y+'"'+(y===now?' selected':'')+'>'+y+'</option>'; }).join('');
+}
+function onSelectorChange(){
+  var s = loadSettings();
+  s.quarter = currentQuarter(); s.year = currentYear();
+  persistSettings(s);
+  updateHeader();
+  /* Re-filter the cached projects instantly; no network needed for selector changes. */
+  if(_projectsCache){ rebuildAndRender(); }
+}
+function updateHeader(){
+  var v = currentView();
+  var label = v === 'overall' ? 'All divisions' : (DIV_LABELS[v] || v);
+  var q = currentQuarter(), y = currentYear();
+  var scope = q ? ('Q' + q + ' ' + y) : (y + ' \u00b7 all quarters');
+  document.getElementById('div-display').textContent = label + ' \u2014 ' + scope;
+}
+
+/* --------------------------- data pull ---------------------------------- */
+async function jbFetchEx(binId, apiKey){
+  try {
+    var resp = await fetch('https://api.jsonbin.io/v3/b/' + binId + '/latest', {
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key':apiKey, 'X-Bin-Meta':'false' }
+    });
+    if(!resp.ok) return { ok:false, status:resp.status };
+    var wrapper = await resp.json();
+    return { ok:true, status:resp.status, data:(wrapper.record || wrapper) };
+  } catch(e){
+    return { ok:false, status:0, error:e && e.message };
+  }
+}
+async function jbFetch(binId, apiKey){
+  var r = await jbFetchEx(binId, apiKey);
+  return r.ok ? r.data : null;
+}
+function fetchHint(status){
+  if(status === 401 || status === 403) return 'The API key looks wrong or lacks access to that bin.';
+  if(status === 404) return 'A bin ID was not found \u2014 check for a stray space or wrong value.';
+  if(status === 429) return 'JSONBin is rate-limiting \u2014 wait a moment and retry.';
+  if(status === 0)   return 'The request did not reach JSONBin (network, CORS, or an extension blocking it).';
+  return 'Unexpected response \u2014 see the browser console for details.';
+}
+async function jbVersion(binId, apiKey){
+  try {
+    var resp = await fetch('https://api.jsonbin.io/v3/b/'+binId+'/latest', {
+      headers:{ 'X-Master-Key':apiKey, 'X-Bin-Meta':'true' }
+    });
+    if(!resp.ok) return null;
+    var meta = await resp.json();
+    return (meta.record && meta.record._version) || 0;
+  } catch(e){ return null; }
+}
+
+var _binVersions = {};   /* binId -> last seen _version */
+
+/* Pull every configured bin — the hub for the product catalog + associations,
+   each divisional bin for the projects — then namespace, stamp division,
+   resolve product/model names, and render. */
+var _lastFetchError = '';
+
+async function fetchAll(force){
+  var s = loadSettings(), divs = configuredDivisions();
+  if(!s.apiKey || !divs.length){ _lastFetchError = 'Enter an API key and at least one divisional bin.'; showNeedsSetup(); return false; }
+  showSyncIndicator('syncing');
+  _lastFetchError = '';
+
+  /* ---- fetch phase: failures here are genuine read errors ---- */
+  var catalogIndex = {}, assoc = {}, importAssoc = {}, hubNative = [], failures = [];
+  if(s.hubBinId){
+    var hr = await jbFetchEx(s.hubBinId, s.apiKey);
+    if(hr.ok && hr.data){
+      var hub = hr.data;
+      catalogIndex = buildProductIndex(hub);
+      _catalog = Array.isArray(hub.products) ? hub.products : [];
+      assoc = (hub.importProductAssoc && typeof hub.importProductAssoc === 'object') ? hub.importProductAssoc : {};
+      importAssoc = (hub.importAssociations && typeof hub.importAssociations === 'object') ? hub.importAssociations : {};
+      if(Array.isArray(hub.projects)){
+        hubNative = hub.projects.filter(function(p){ return p.projectType === 'initiative' || isMilestoneProject(p); });
+      }
+      _binVersions[s.hubBinId] = hub._version || _binVersions[s.hubBinId] || 0;
+    } else {
+      failures.push({ label:'hub bin', status:hr.status });
+    }
+  }
+  var results = await Promise.all(divs.map(function(d){ return jbFetchEx(s.bins[d.division], s.apiKey); }));
+  var sources = [];
+  for(var i=0; i<divs.length; i++){
+    var rr = results[i];
+    if(rr.ok && rr.data){
+      _binVersions[s.bins[divs[i].division]] = rr.data._version || _binVersions[s.bins[divs[i].division]] || 0;
+      var divProjects = (Array.isArray(rr.data.projects) ? rr.data.projects : []).filter(function(p){ return !isMilestoneProject(p); });
+      sources.push({ division:divs[i].division, prefix:divs[i].source + '_', projects:divProjects });
+    } else {
+      failures.push({ label:(DIV_LABELS[divs[i].division] || divs[i].division) + ' bin', status:rr.status });
+    }
+  }
+  if(!sources.length){
+    var which = failures.map(function(f){ return f.label + ' (' + (f.status || 'no response') + ')'; }).join(', ');
+    _lastFetchError = 'Could not read ' + (which || 'any bin') + '. ' + fetchHint(failures.length ? failures[0].status : 0);
+    showSyncIndicator('error');
+    return false;
+  }
+
+  /* ---- process + render phase: errors here are NOT read errors ---- */
+  try {
+    var merged   = mergeSourceProjects(sources).concat(hubNative);
+    var resolved = applyImportAssoc(merged, assoc, catalogIndex);
+    var withInit = applyInitiativeAssoc(resolved, importAssoc);
+    _projectsCache = withInit;
+    cacheProjects(withInit, _catalog);
+    rebuildAndRender();
+    showSyncIndicator('synced'); markSynced();
+    if(failures.length){
+      console.warn('Loaded, but some bins were unreadable: ' + failures.map(function(f){ return f.label + ' (' + (f.status || 'no response') + ')'; }).join(', '));
+    }
+    return true;
+  } catch(e){
+    console.error('Read the bins, but processing/render failed:', e);
+    _lastFetchError = 'Read the bins, but rendering failed: ' + (e && e.message ? e.message : e) + ' (see console).';
+    showSyncIndicator('error');
+    return false;
+  }
+}
+
+/* Cheap version poll across all configured bins → re-pull only if any changed. */
+async function silentPull(){
+  var s = loadSettings(), divs = configuredDivisions();
+  if(!s.apiKey || !divs.length) return;
+  try {
+    var binIds = divs.map(function(d){ return s.bins[d.division]; });
+    if(s.hubBinId) binIds.push(s.hubBinId);
+    var versions = await Promise.all(binIds.map(function(b){ return jbVersion(b, s.apiKey); }));
+    var changed = false;
+    for(var i=0; i<binIds.length; i++){
+      var v = versions[i];
+      if(v == null) continue;
+      if(_binVersions[binIds[i]] == null || v > _binVersions[binIds[i]]) changed = true;
+    }
+    if(changed){ await fetchAll(true); }
+    else { showSyncIndicator('synced'); markSynced(); }
+  } catch(e){ /* keep last good render */ }
+}
+
+/* --------------------------- writes ------------------------------------- */
+/* Read-modify-write a bin: fetch the latest full record, let mutate() change it
+   in place (append a project, replace one's fields, or update an association
+   map), bump the Gantt's own _version so its poll picks the change up, then PUT
+   the WHOLE record back. X-Bin-Private and X-Bin-Meta are omitted on PUT
+   (sending X-Bin-Private makes JSONBin create a new bin). Appends or replaces a
+   project in place; never deletes. Each write re-reads the latest record first,
+   so a rare lost-update race costs at most one un-saved change. */
+/* ------------------------- write broker (optional) ----------------------- */
+/* When a Broker URL + token are set in Settings, the six write actions route
+   through the Railway broker, which serializes writes per bin and holds the
+   JSONBin key. Unset -> writes go straight to JSONBin exactly as before (so the
+   broker is opt-in per tool and fully reversible). Reads are always direct, so
+   a broker outage only affects saving, not viewing. */
+function brokerEnabled(){ var s = loadSettings(); return !!(s.brokerUrl && s.brokerToken); }
+async function brokerWrite(method, path, body){
+  var s = loadSettings();
+  var base = (s.brokerUrl || '').replace(/\/+$/, '');
+  var resp;
+  try {
+    resp = await fetch(base + path, {
+      method: method,
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + (s.brokerToken || '') },
+      body: JSON.stringify(body)
+    });
+  } catch(netErr){
+    throw new Error('Could not reach the write broker. Check the Broker URL in Settings, or clear it to write directly.');
+  }
+  var data = null;
+  try { data = await resp.json(); } catch(e){ data = null; }
+  if(resp.status === 409){                       /* same object changed underneath us */
+    var err = new Error('conflict');
+    err.conflict = (data && data.current) || {};
+    throw err;
+  }
+  if(!resp.ok){
+    var detail = data && (typeof data.detail === 'string' ? data.detail : data.error);
+    throw new Error(detail || ('The broker rejected the write (' + resp.status + ').'));
+  }
+  return data || {};
+}
+
+async function jbWrite(binId, apiKey, mutate){
+  var rec = await jbFetch(binId, apiKey);
+  if(!rec) throw new Error('Could not read the target bin.');
+  if(!Array.isArray(rec.projects)) rec.projects = [];
+  mutate(rec);
+  rec._version = (rec._version || 0) + 1;
+  rec._savedAt = new Date().toISOString();
+  rec._savedBy = 'division-tracker';
+  var resp = await fetch('https://api.jsonbin.io/v3/b/' + binId, {
+    method:'PUT',
+    headers:{ 'Content-Type':'application/json', 'X-Master-Key':apiKey },
+    body: JSON.stringify(rec)
+  });
+  if(!resp.ok) throw new Error('Write failed (' + resp.status + ').');
+  _binVersions[binId] = rec._version;
+  return rec;
+}
+
+/* Initiatives and milestones are hub-native → one write to the hub bin. */
+async function addInitiative(form){
+  if(brokerEnabled()){
+    var res = await brokerWrite('POST', '/initiative', {
+      name:form.name, division:form.division,
+      productLine:form.productLine || '', productModel:form.productModel || '',
+      start:form.start || '', end:form.end || ''
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  if(!s.hubBinId) throw new Error('A hub bin is required to add initiatives.');
+  await jbWrite(s.hubBinId, s.apiKey, function(rec){
+    rec.projects.push(buildInitiative({
+      id:nextProjectId(rec.projects), name:form.name, division:form.division,
+      productLine:form.productLine, productModel:form.productModel, start:form.start, end:form.end
+    }));
+  });
+  await fetchAll(true);
+}
+async function addMilestone(form){
+  if(brokerEnabled()){
+    var res = await brokerWrite('POST', '/milestone', {
+      name:form.name, division:form.division, dueDate:form.dueDate,
+      ownerId:form.ownerId || '', productLine:form.productLine || '', productModel:form.productModel || ''
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  if(!s.hubBinId) throw new Error('A hub bin is required to add milestones.');
+  await jbWrite(s.hubBinId, s.apiKey, function(rec){
+    rec.projects.push(buildMilestone({
+      id:nextProjectId(rec.projects), name:form.name, division:form.division,
+      dueDate:form.dueDate, ownerId:form.ownerId, productLine:form.productLine, productModel:form.productModel
+    }));
+  });
+  await fetchAll(true);
+}
+/* Objectives live on the division bin; their initiative + product links live on
+   the hub (keyed by the prefixed id). Two writes: the objective first, then the
+   links. If the link write fails, the objective still exists (just unlinked). */
+async function addObjective(form){
+  if(brokerEnabled()){
+    var res = await brokerWrite('POST', '/objective', {
+      name:form.name, division:form.division,
+      productLine:form.productLine || '', productModel:form.productModel || '',
+      initiativeId:form.initiativeId || '', start:form.start || '', end:form.end || '',
+      kr: (form.kr && form.kr.name) ? { name:form.kr.name, progress:(isFinite(form.kr.progress) ? form.kr.progress : 0) } : null
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  var src = SOURCE_BINS.filter(function(sb){ return sb.division === form.division; })[0];
+  var divBinId = s.bins && s.bins[form.division];
+  if(!src || !divBinId) throw new Error('That division has no configured bin.');
+  var rawId = null;
+  await jbWrite(divBinId, s.apiKey, function(rec){
+    rawId = nextProjectId(rec.projects);
+    rec.projects.push(buildObjective({
+      id:rawId, name:form.name, division:form.division, start:form.start, end:form.end, kr:form.kr
+    }));
+  });
+  var prefixedId = src.source + '_' + rawId;
+  var needLinks = s.hubBinId && (form.initiativeId || form.productLine);
+  if(needLinks){
+    try {
+      await jbWrite(s.hubBinId, s.apiKey, function(rec){
+        if(form.initiativeId){
+          rec.importAssociations = withAssociation(rec.importAssociations || {}, form.initiativeId, prefixedId);
+        }
+        if(form.productLine){
+          rec.importProductAssoc = withProductAssoc(rec.importProductAssoc || {}, prefixedId, form.productLine, form.productModel);
+        }
+      });
+    } catch(e){
+      await fetchAll(true);
+      throw new Error('Objective added, but linking it failed: ' + e.message + ' You can set its initiative/product in the Gantt.');
+    }
+  }
+  await fetchAll(true);
+}
+
+/* --------------------------- edit writes -------------------------------- */
+/* Swap a project in place by id (immutable update objects produced by the CORE
+   apply*Edit builders are written back here). */
+function replaceProjectInPlace(projects, updated){
+  for(var i=0; i<projects.length; i++){ if(String(projects[i].id) === String(updated.id)){ projects[i] = updated; return true; } }
+  return false;
+}
+/* Initiatives are hub-native -> one read-modify-write to the hub bin. */
+async function editInitiative(p, fields){
+  if(brokerEnabled()){
+    var res = await brokerWrite('PATCH', '/initiative/' + encodeURIComponent(p.id), {
+      name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
+      productLine:fields.productLine || '', productModel:fields.productModel || '',
+      start:fields.start || '', end:fields.end || ''
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  if(!s.hubBinId) throw new Error('A hub bin is required to edit initiatives.');
+  await jbWrite(s.hubBinId, s.apiKey, function(rec){
+    var target = findProjectById(rec.projects, p.id);
+    if(!target) throw new Error('Could not find that initiative in the hub bin (it may have been removed).');
+    replaceProjectInPlace(rec.projects, applyInitiativeEdit(target, fields));
+  });
+  await fetchAll(true);
+}
+/* Milestones are hub-native too. */
+async function editMilestone(p, fields){
+  if(brokerEnabled()){
+    var res = await brokerWrite('PATCH', '/milestone/' + encodeURIComponent(p.id), {
+      name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
+      dueDate:fields.dueDate, ownerId:fields.ownerId || '',
+      productLine:fields.productLine || '', productModel:fields.productModel || ''
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  if(!s.hubBinId) throw new Error('A hub bin is required to edit milestones.');
+  await jbWrite(s.hubBinId, s.apiKey, function(rec){
+    var target = findProjectById(rec.projects, p.id);
+    if(!target) throw new Error('Could not find that milestone in the hub bin (it may have been removed).');
+    replaceProjectInPlace(rec.projects, applyMilestoneEdit(target, fields));
+  });
+  await fetchAll(true);
+}
+/* Objectives live on their division bin; their initiative + product links live
+   on the hub (keyed by the prefixed id). Two writes: the objective's own fields
+   first, then the link maps. If the link write fails the field edit still
+   stands (mirrors the add path). */
+async function editObjective(p, fields){
+  if(brokerEnabled()){
+    var res = await brokerWrite('PATCH', '/objective/' + encodeURIComponent(p.id), {
+      name:fields.name, start:fields.start || '', end:fields.end || '',
+      baseRev:(fields.baseRev != null ? fields.baseRev : null),
+      initiativeId:fields.initiativeId || '', productLine:fields.productLine || '', productModel:fields.productModel || ''
+    });
+    await fetchAll(true);
+    return res;
+  }
+  var s = loadSettings();
+  var src = SOURCE_BINS.filter(function(sb){ return sb.division === p.division; })[0];
+  var divBinId = s.bins && s.bins[p.division];
+  if(!src || !divBinId) throw new Error('That division has no configured bin.');
+  var rawId = unprefixId(p.id);
+  await jbWrite(divBinId, s.apiKey, function(rec){
+    var target = findProjectById(rec.projects, rawId);
+    if(!target) throw new Error('Could not find that objective in the ' + (DIV_LABELS[p.division] || p.division) + ' bin.');
+    replaceProjectInPlace(rec.projects, applyObjectiveEdit(target, { name:fields.name, start:fields.start, end:fields.end }));
+  });
+  if(s.hubBinId){
+    try {
+      await jbWrite(s.hubBinId, s.apiKey, function(rec){
+        rec.importAssociations = moveAssociation(rec.importAssociations || {}, p._assocInitiativeId, fields.initiativeId || '', p.id);
+        rec.importProductAssoc = setProductAssoc(rec.importProductAssoc || {}, p.id, fields.productLine || '', fields.productModel || '');
+      });
+    } catch(e){
+      await fetchAll(true);
+      throw new Error('Saved the objective, but updating its initiative/product links failed: ' + e.message);
+    }
+  }
+  await fetchAll(true);
+}
+
+function rebuildAndRender(){
+  var win = quarterWindow(currentYear(), currentQuarter());
+  _model = buildDivisionModel(_projectsCache || [], modelDivision(), win);
+  renderAll(_model);
+  document.getElementById('needs-setup').style.display = 'none';
+  document.getElementById('dashboard').style.display = '';
+}
+function showNeedsSetup(){
+  document.getElementById('needs-setup').style.display = '';
+  document.getElementById('dashboard').style.display = 'none';
+}
+
+/* localStorage render-cache so the dashboard paints instantly on reload. */
+function cacheProjects(projects, catalog){
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at:Date.now(), projects:projects, catalog:catalog || _catalog || [] })); } catch(e){}
+}
+function loadCachedProjects(){
+  try {
+    var c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if(c && Array.isArray(c.projects)){ if(Array.isArray(c.catalog)) _catalog = c.catalog; return c.projects; }
+  } catch(e){}
+  return null;
+}
+
+/* ----------------------------- render ----------------------------------- */
+function scorePill(pct, prefix){
+  if(pct == null) return '<span class="score-pill muted">'+(prefix?esc(prefix)+'\u00a0':'')+'\u2014</span>';
+  return '<span class="score-pill" style="background:'+bandColor(pct)+';">'+(prefix?esc(prefix)+'\u00a0':'')+pct+'%</span>';
+}
+function dateClass(d){
+  if(!d) return '';
+  var today = new Date().toISOString().slice(0,10);
+  if(d < today) return 'date-overdue';
+  var soon = new Date(Date.now()+14*86400000).toISOString().slice(0,10);
+  if(d <= soon) return 'date-soon';
+  return 'date-future';
+}
+function fmtDate(d){
+  if(!d) return '\u2014';
+  var parts = d.slice(0,10).split('-');
+  if(parts.length !== 3) return esc(d);
+  var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1],10)-1] || parts[1];
+  return mo + ' ' + parseInt(parts[2],10) + ', ' + parts[0];
+}
+
+function renderAll(m){
+  updateHeader();
+  renderMetrics(m);
+  renderBars(m);
+  renderInitiatives(m);
+  renderMilestones(m);
+  renderOkrs(m);
+}
+
+function renderMetrics(m){
+  /* Division attainment */
+  var aEl = document.getElementById('m-attain'), aSub = document.getElementById('m-attain-sub');
+  if(m.divAttain != null){
+    aEl.innerHTML = '<span style="color:'+bandColor(m.divAttain)+';">'+m.divAttain+'%</span>';
+    aSub.textContent = m.scoredObjCount + ' of ' + m.objCount + ' objective' + (m.objCount!==1?'s':'') + ' scored';
+  } else { aEl.innerHTML = '\u2014'; aSub.textContent = m.objCount ? 'Objectives have no KRs yet' : 'No objectives in scope'; }
+
+  /* Objectives on track */
+  var oEl = document.getElementById('m-ontrack'), oSub = document.getElementById('m-ontrack-sub');
+  if(m.scoredObjCount){ oEl.textContent = m.onTrack + ' / ' + m.scoredObjCount; oSub.textContent = '\u2265 70% attainment'; }
+  else { oEl.textContent = '\u2014'; oSub.textContent = '\u2265 70% attainment'; }
+
+  /* Initiative health */
+  var iEl = document.getElementById('m-init'), iSub = document.getElementById('m-init-sub');
+  if(m.initHealthMean != null){
+    iEl.innerHTML = '<span style="color:'+bandColor(m.initHealthMean)+';">'+m.initHealthMean+'%</span>';
+    iSub.textContent = m.healthyInits + ' of ' + m.scoredInitCount + ' healthy';
+  } else { iEl.innerHTML = '\u2014'; iSub.textContent = m.initCount ? 'Initiatives have no scored objectives' : 'No initiatives'; }
+
+  /* Milestone hit rate */
+  var msEl = document.getElementById('m-ms'), msSub = document.getElementById('m-ms-sub');
+  if(m.msHitRate != null){
+    msEl.innerHTML = '<span style="color:'+bandColor(m.msHitRate)+';">'+m.msHitRate+'%</span>';
+    msSub.textContent = m.doneMsCount + ' of ' + m.dueMsCount + ' due hit';
+  } else { msEl.textContent = '\u2014'; msSub.textContent = m.milestones.length ? 'None due yet' : 'No milestones'; }
+
+  /* Overall signal */
+  var sigEl = document.getElementById('m-sig'), sigSub = document.getElementById('m-sig-sub');
+  if(m.signal.color){ sigEl.innerHTML = '<span class="sdot" style="background:'+m.signal.color+';"></span>'+m.signal.label; }
+  else { sigEl.innerHTML = '\u2014'; }
+  sigSub.textContent = m.signal.reason;
+}
+
+function renderBars(m){
+  var area = document.getElementById('bar-area');
+  var withObjs = m.initiatives.filter(function(it){ return it.objCount > 0; });
+  if(!withObjs.length){ area.style.display = 'none'; return; }
+  area.style.display = '';
+  document.getElementById('bars').innerHTML = withObjs.map(function(it){
+    var h   = it.health != null ? Math.round(it.health/100*54) : 0;
+    var bg  = it.health != null ? bandColor(it.health) : '#ddd';
+    var val = it.health != null ? it.health + '%' : '\u2014';
+    var nm  = it.name.length > 16 ? it.name.slice(0,15)+'\u2026' : it.name;
+    return '<div class="bw" title="'+esc(it.name)+' \u2014 '+val+'">'+
+             '<div class="bwv">'+val+'</div>'+
+             '<div class="b" style="height:'+Math.max(h,2)+'px;background:'+bg+';"></div>'+
+             '<div class="bwk">'+esc(nm)+'</div>'+
+           '</div>';
+  }).join('');
+}
+
+/* Header for a grouping level. Division values map to friendly labels. */
+function groupHeader(level, value, count){
+  var label;
+  if(level === 'division')      label = value ? (DIV_LABELS[value] || value) : 'No division';
+  else if(level === 'product')  label = value || 'Unassigned product';
+  else                          label = value || 'No generation';
+  return '<div class="grp-'+level+'-hdr">'+esc(label)+'<span class="grp-count"> \u00b7 '+count+'</span></div>';
+}
+
+/* Recursively render a grouping tree (2 or 3 levels) with a per-item card fn. */
+function renderGroups(nodes, cardFn){
+  return nodes.map(function(node){
+    var inner = groupHeader(node.level, node.value, node.count);
+    inner += node.leaf
+      ? '<div class="grp-items">'+node.items.map(cardFn).join('')+'</div>'
+      : renderGroups(node.groups, cardFn);
+    return '<div class="grp-'+node.level+'">'+inner+'</div>';
+  }).join('');
+}
+
+function renderInitiativeCard(it){
+  var fillW = it.health != null ? it.health : 0;
+  var fillC = it.health != null ? bandColor(it.health) : '#ddd';
+  var dateBit = (it.start || it.end)
+    ? '<span class="init-sub">'+(it.start?fmtDate(it.start):'?')+' \u2013 '+(it.end?fmtDate(it.end):'?')+'</span>' : '';
+  return '<div class="init-card" onclick="openEditModal(\''+esc(String(it.id))+'\')">'+
+    '<div class="init-card-top">'+
+      '<div class="init-name">'+esc(it.name)+
+        '<div class="init-sub">'+it.objCount+' objective'+(it.objCount!==1?'s':'')+
+          (it.health==null && it.objCount ? ' \u00b7 not yet scored' : '')+'</div>'+
+        dateBit+
+      '</div>'+
+      '<div class="init-card-right">'+scorePill(it.health)+'</div>'+
+    '</div>'+
+    '<div class="init-bar-track"><div class="init-bar-fill" style="width:'+fillW+'%;background:'+fillC+';"></div></div>'+
+  '</div>';
+}
+
+function renderInitiatives(m){
+  document.getElementById('init-count').textContent = m.initiatives.length ? '('+m.initiatives.length+')' : '';
+  var el = document.getElementById('init-list');
+  if(!m.initiatives.length){ el.innerHTML = '<div class="empty-msg">No initiatives in this division.</div>'; return; }
+  el.innerHTML = renderGroups(m.initGroups, renderInitiativeCard);
+}
+
+function renderMilestoneCard(ms){
+  var statusLabel = { done:'Done', overdue:'Overdue', active:'In progress', upcoming:'Upcoming' };
+  var statusCls   = { done:'st-done', overdue:'st-overdue', active:'st-active', upcoming:'st-upcoming' };
+  var owner = ms.ownerName ? '<div class="ms-owner">'+esc(ms.ownerName)+'</div>' : '';
+  var dateCell;
+  if(ms.overdue){
+    dateCell = '<div class="ms-date ms-overdue-date">'+
+      '<span class="ms-orig" title="Original due date">'+fmtDate(ms.date)+'</span>'+
+      '<span class="ms-arrow">\u2192</span>'+
+      '<span class="ms-newdue" title="Effective (delayed) due date">'+fmtDate(ms.delayedDue)+'</span>'+
+      '<span class="ms-delay" title="Days delayed">'+ms.delayedDays+'d late</span>'+
+    '</div>';
+  } else {
+    dateCell = '<div class="ms-date '+dateClass(ms.date)+'">'+fmtDate(ms.date)+'</div>';
+  }
+  return '<div class="ms-row'+(ms.overdue ? ' ms-overdue-row' : '')+'" onclick="openEditModal(\''+esc(String(ms.id))+'\')">'+
+    '<div class="ms-name">'+esc(ms.name)+owner+'</div>'+
+    dateCell+
+    '<div class="ms-status '+(statusCls[ms.status]||'st-upcoming')+'">'+(statusLabel[ms.status]||ms.status)+'</div>'+
+  '</div>';
+}
+function renderMilestones(m){
+  document.getElementById('ms-count').textContent = m.milestones.length ? '('+m.milestones.length+')' : '';
+  var el = document.getElementById('ms-list');
+  if(!m.milestones.length){ el.innerHTML = '<div class="empty-msg">No milestones in this division.</div>'; return; }
+  el.innerHTML = renderGroups(m.msGroups, renderMilestoneCard);
+}
+
+/* KPI readout under a KR / sub-KR name — read-only, helps interpret the score */
+function kpiReadout(kpis){
+  if(!kpis || !kpis.length) return '';
+  var parts = kpis.map(function(raw){
+    var k = migrateKrKpi(raw);
+    var name = k.name ? '<span class="kpi-name">'+esc(k.name)+':</span> ' : '';
+    if(k.type === 'binary'){ return name + (k.current!=null ? (k.current>=1?'pass':'fail') : '\u2014'); }
+    var cur = k.current != null ? (Math.round(k.current*100)/100) : '\u2014';
+    var tgt = k.target !== '' && k.target != null ? (Math.round(parseFloat(k.target)*100)/100) : '\u2014';
+    var arrow = k.direction === 'decrease' ? '\u2193' : '\u2191';
+    return name + cur + ' / ' + tgt + (k.unit?(' '+esc(k.unit)):'') + ' ' + arrow;
+  });
+  return '<div class="kpi-readout">'+parts.join('<br>')+'</div>';
+}
+
+function renderOkrCard(obj, initName){
+  var krs = obj.keyResults || [];
+
+  /* Build table rows: each KR is one mode-row group; sub-KRs nest as effects. */
+  var rows = [];
+  krs.forEach(function(kr){
+    var krScore = getKrPct(kr);
+    var typeTag = '<span class="kr-type-tag">'+(kr.trackingType==='kpi'?'KPI':kr.trackingType==='subkr'?'sub-KRs':'%')+'</span>';
+    if(kr.trackingType === 'subkr' && (kr.subKrs||[]).length){
+      var subs = kr.subKrs;
+      subs.forEach(function(skr, si){
+        rows.push({
+          firstOfKr: si === 0, krRowSpan: subs.length,
+          krName: kr.name || 'Key result', krScore: krScore, typeTag: typeTag,
+          subName: skr.name || 'Sub-KR', subScore: subKrPct(skr),
+          subReadout: skr.trackingType === 'kpi' ? kpiReadout(skr.kpis) : '',
+          newKr: si === 0
+        });
+      });
+    } else {
+      rows.push({
+        firstOfKr: true, krRowSpan: 1,
+        krName: kr.name || 'Key result', krScore: krScore, typeTag: typeTag,
+        subName: null, subScore: null,
+        krReadout: kr.trackingType === 'kpi' ? kpiReadout(kr.kpis) : '',
+        newKr: true
+      });
+    }
+  });
+
+  var tbody = rows.map(function(row, idx){
+    var trCls = (row.newKr && idx > 0) ? ' class="kr-sep"' : '';
+    var tr = '<tr'+trCls+'>';
+    if(row.firstOfKr){
+      tr += '<td class="cell-kr" rowspan="'+row.krRowSpan+'">'+
+              esc(row.krName)+row.typeTag+
+              (row.krReadout || '')+
+            '</td>';
+    }
+    if(row.subName !== null){
+      tr += '<td class="cell-sub">'+esc(row.subName)+(row.subReadout||'')+'</td>';
+      tr += '<td class="cell-score">'+scorePill(row.subScore)+'</td>';
+    } else {
+      tr += '<td class="cell-empty">\u2014</td>';
+      tr += '<td class="cell-score">'+scorePill(row.krScore)+'</td>';
+    }
+    return tr + '</tr>';
+  }).join('');
+
+  var tableHtml = krs.length
+    ? '<div class="okr-table-wrap"><table class="okr-table"><colgroup>'+
+        '<col class="col-kr"><col class="col-sub"><col class="col-score">'+
+      '</colgroup>'+
+      '<thead><tr><th>Key result</th><th>Sub-KR</th><th style="text-align:center;">Score</th></tr></thead>'+
+      '<tbody>'+tbody+'</tbody></table></div>'
+    : '<div style="padding:9px 12px;font-size:11px;color:#bbb;">No key results on this objective.</div>';
+
+  var tagTxt = obj.initiativeId != null ? (initName[obj.initiativeId] || ('Initiative '+obj.initiativeId)) : 'Unassigned';
+  var tagCls = obj.initiativeId != null ? 'init-tag' : 'init-tag unassigned';
+
+  return '<div class="okr-card" onclick="openEditModal(\''+esc(String(obj.id))+'\')">'+
+    '<div class="okr-obj-row">'+
+      '<span class="'+tagCls+'" title="'+esc(tagTxt)+'">'+esc(tagTxt)+'</span>'+
+      '<div class="okr-obj-text">'+esc(obj.name)+'</div>'+
+      '<div class="okr-top-right">'+scorePill(obj.score, 'OKR')+'</div>'+
+    '</div>'+tableHtml+
+  '</div>';
+}
+
+function renderOkrs(m){
+  document.getElementById('okr-count').textContent = m.okrRows.length ? '('+m.okrRows.length+')' : '';
+  var el = document.getElementById('okr-list');
+  if(!m.okrRows.length){ el.innerHTML = '<div class="empty-msg">No objectives in this division.</div>'; return; }
+  var initName = {}; m.initiatives.forEach(function(it){ initName[it.id] = it.name; });
+  el.innerHTML = renderGroups(m.okrGroups, function(obj){ return renderOkrCard(obj, initName); });
+}
+
+/* --------------------------- sync UI ------------------------------------ */
+var _syncTimer = null;
+function showSyncIndicator(state){
+  var el = document.getElementById('sync-dot');
+  if(!el) return;
+  clearTimeout(_syncTimer);
+  var labels = { syncing:'\u21bb Syncing\u2026', synced:'\u2713 Synced', error:'\u26a0 Sync failed' };
+  el.textContent = labels[state] || '';
+  el.className = 'sync-dot show ' + state;
+  if(state !== 'syncing'){ _syncTimer = setTimeout(function(){ el.className = 'sync-dot ' + state; }, 3000); }
+}
+var _lastSyncedAt = 0, _pollIntervalSecs = 30, _syncInFlight = false;
+function markSynced(){ _lastSyncedAt = Date.now(); updateSyncTimestamp(); }
+function updateSyncTimestamp(){
+  var el = document.getElementById('sync-ts'), btn = document.getElementById('sync-btn');
+  if(!el) return;
+  if(_syncInFlight){ el.textContent = 'syncing\u2026'; el.className = 'ts syncing'; if(btn) btn.disabled = true; return; }
+  if(btn) btn.disabled = false;
+  if(!_lastSyncedAt){ el.textContent = 'never'; el.className = 'ts idle'; return; }
+  var ageSecs = Math.floor((Date.now() - _lastSyncedAt)/1000), txt;
+  if(ageSecs < 5) txt = 'just now';
+  else if(ageSecs < 60) txt = ageSecs + 's ago';
+  else if(ageSecs < 3600) txt = Math.floor(ageSecs/60) + 'm ago';
+  else txt = Math.floor(ageSecs/3600) + 'h ago';
+  el.textContent = txt;
+  el.className = 'ts ' + (ageSecs <= _pollIntervalSecs ? 'fresh' : 'stale');
+}
+async function manualSync(){
+  if(_syncInFlight) return;
+  _syncInFlight = true; updateSyncTimestamp();
+  try { await silentPull(); } finally { _syncInFlight = false; updateSyncTimestamp(); }
+}
+setInterval(updateSyncTimestamp, 1000);
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') manualSync(); });
+window.addEventListener('focus', function(){ if(Date.now() - _lastSyncedAt > 5000) manualSync(); });
+
+/* --------------------------- snapshot ----------------------------------- */
+function exportSnapshot(){
+  var snap = {
+    projects: _projectsCache || [],
+    view: currentView(), quarter: currentQuarter(), year: currentYear(),
+    at: new Date().toISOString()
+  };
+  var tag = '<scr'+'ipt id="qdiv-snapshot" type="application/json">'+
+            JSON.stringify(snap).replace(/<\//g,'<\\/')+'<'+'/script>';
+  var html = document.documentElement.outerHTML.replace(/<\/body>[\s\S]*$/, tag+'</body></html>');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html], { type:'text/html' }));
+  a.download = 'division-tracker-' + currentView() + '-snapshot.html';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ----------------------------- init ------------------------------------- */
+function applyUrlAndSettings(){
+  var params = new URLSearchParams(window.location.search);
+  var s = loadSettings();
+  /* URL params override saved view/quarter/year (but never credentials).
+     ?division= is accepted as an alias for ?view= for backward compatibility. */
+  var wantView = params.get('view') || params.get('division') || s.view || 'overall';
+  var quarter  = params.get('quarter') || (s.quarter != null ? String(s.quarter) : '');
+  var year     = params.get('year')    || (s.year != null ? String(s.year) : '');
+  if(quarter) document.getElementById('sel-quarter').value = quarter;
+  if(year && document.querySelector('#sel-year option[value="'+year+'"]')) document.getElementById('sel-year').value = year;
+  /* Only honor the requested view if its bin is configured; else currentView() falls back. */
+  s.view = (availableViews().indexOf(wantView) >= 0) ? wantView : (s.view || 'overall');
+  s.quarter = currentQuarter(); s.year = currentYear();
+  persistSettings(s);
+  renderToggle();
+}
+
+async function init(){
+  populateQuarterOptions();
+  applyUrlAndSettings();
+  updateHeader();
+
+  /* If this file is a saved snapshot, hydrate from it and skip the network. */
+  var snapEl = document.getElementById('qdiv-snapshot');
+  if(snapEl){
+    try {
+      var snap = JSON.parse(snapEl.textContent);
+      _isSnapshot = true;
+      _projectsCache = snap.projects || [];
+      var sv = snap.view || snap.division;
+      if(sv){ var s2 = loadSettings(); s2.view = sv; persistSettings(s2); }
+      if(snap.quarter) document.getElementById('sel-quarter').value = String(snap.quarter);
+      if(snap.year && document.querySelector('#sel-year option[value="'+snap.year+'"]')) document.getElementById('sel-year').value = String(snap.year);
+      renderToggle();
+      rebuildAndRender();
+      document.getElementById('sync-btn').style.display = 'none';
+      document.getElementById('sync-ts').textContent = 'snapshot';
+      return;
+    } catch(e){}
+  }
+
+  var s = loadSettings(), divs = configuredDivisions();
+  if(!s.apiKey || !divs.length){
+    /* Not configured — paint from cache if we have one, else show setup. */
+    var cached = loadCachedProjects();
+    if(cached){ _projectsCache = cached; rebuildAndRender(); }
+    else showNeedsSetup();
+    return;
+  }
+
+  /* Paint instantly from cache, then refresh from the network. */
+  var cached2 = loadCachedProjects();
+  if(cached2){ _projectsCache = cached2; rebuildAndRender(); }
+  await fetchAll(true);
+}
+
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSettings(); });
+
+init();
+var _pollInterval = setInterval(silentPull, 30000);
+</script>
+</body>
+</html>
