@@ -228,7 +228,7 @@ button:hover{background:#f0f0ee;}
 
 <div id="needs-setup" class="setup-hint" style="display:none;">
   <b>Connect to your broker to begin.</b><br>
-  Click <b>&#9881; Connection</b> and enter the broker URL and token. The broker holds the JSONBin key and bin IDs &mdash; this app reads and writes through it.<br>
+  Click <b>&#9881; Connection</b> and enter the broker token. The URL is pre-filled with the deployed broker, which holds the JSONBin key and bin IDs &mdash; this app reads and writes through it.<br>
   If the broker is unreachable, the tracker shows its last cached view but can't load fresh data.
 </div>
 
@@ -292,15 +292,17 @@ button:hover{background:#f0f0ee;}
 <div class="overlay" id="settings-overlay">
   <div class="modal">
     <div class="modal-title">Broker connection</div>
-    <div class="modal-field"><span class="lbl">Broker URL</span>
-      <input type="text" id="gs-brokerurl" placeholder="https://web-production-b17a2.up.railway.app" autocomplete="off">
+    <div class="modal-field"><span class="lbl">Broker URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; defaults to the deployed broker</span></span>
+      <input type="text" id="gs-brokerurl" placeholder="https://web-production-b17a2.up.railway.app" autocomplete="on">
     </div>
     <div class="modal-field"><span class="lbl">Broker token</span>
-      <input type="text" id="gs-brokertoken" placeholder="vpjshbfgtplybz5sfbjfcomygtcunkn1" autocomplete="off">
+      <input type="text" id="gs-brokertoken" placeholder="bearer token for the broker" autocomplete="on">
     </div>
     <div class="modal-note">
-      The tracker talks only to the broker now &mdash; it reads and writes through it, and the broker holds the JSONBin key and bin IDs server-side.
-      These two values are stored only in this browser (localStorage), never in the file. Both are required; if the broker is unreachable the tracker can show its last cached view but can't load fresh data.
+      The tracker talks only to the broker &mdash; it reads and writes through it, and the broker holds the JSONBin key and bin IDs server-side.
+      Only the <b>token</b> is required; the URL is pre-filled with the deployed broker, so change it only if the service moves. Both values are stored only in this browser (localStorage), never in the file.
+      For SSO&#8209;gated Confluence embeds, append <code>?token=&lt;token&gt;</code> to the iframe URL and viewers never enter anything (it's seeded then stripped from the URL).
+      If the broker is unreachable the tracker can show its last cached view but can't load fresh data.
     </div>
     <div class="gs-status" id="gs-status"></div>
     <div class="modal-actions">
@@ -401,6 +403,9 @@ var SOURCE_BINS = [
 ];
 var SETTINGS_KEY = 'qdivision-gantt';
 var CACHE_KEY    = 'qdivision-cache';
+/* The deployed broker. Baked in (it's the endpoint, not a credential) so a fresh
+   load needs only the token; override per-browser in Settings if it ever moves. */
+var DEFAULT_BROKER_URL = 'https://web-production-b17a2.up.railway.app';
 
 /* ======================================================================== */
 /* ==CORE_START==  (pure, DOM-free — runnable headless by the test harness) */
@@ -1239,7 +1244,7 @@ function currentYear(){ var v = document.getElementById('sel-year').value; retur
 
 function openSettings(){
   var s = loadSettings();
-  document.getElementById('gs-brokerurl').value = s.brokerUrl || '';
+  document.getElementById('gs-brokerurl').value = s.brokerUrl || DEFAULT_BROKER_URL;
   document.getElementById('gs-brokertoken').value = s.brokerToken || '';
   gsStatus('', '');
   document.getElementById('settings-overlay').classList.add('open');
@@ -1253,16 +1258,19 @@ function gsStatus(msg, kind){
 async function saveSettings(){
   var brokerUrl   = document.getElementById('gs-brokerurl').value.trim().replace(/\/+$/, '');
   var brokerToken = document.getElementById('gs-brokertoken').value.trim();
-  if(!brokerUrl || !brokerToken){
-    gsStatus('Enter the broker URL and token.', 'error'); return;
+  if(!brokerToken){
+    gsStatus('Enter the broker token.', 'error'); return;
   }
   var s = loadSettings();
-  s.brokerUrl = brokerUrl; s.brokerToken = brokerToken;
+  /* Store '' when the field holds the default so clearing it falls back to the
+     baked-in URL; store a real override otherwise. */
+  s.brokerUrl = (brokerUrl && brokerUrl !== DEFAULT_BROKER_URL) ? brokerUrl : '';
+  s.brokerToken = brokerToken;
   persistSettings(s);
   gsStatus('Saved \u2014 connecting\u2026', 'info');
   var ok = await fetchAll(true);
   if(ok){ gsStatus('\u2713 Connected.', 'success'); setTimeout(closeSettings, 600); }
-  else { gsStatus(_lastFetchError || 'Could not reach the broker. Check the URL and token.', 'error'); }
+  else { gsStatus(_lastFetchError || 'Could not reach the broker. Check the token (and the URL if you overrode it).', 'error'); }
 }
 
 /* --------------------------- add modal ---------------------------------- */
@@ -1662,9 +1670,12 @@ function updateHeader(){
 /* Reads come from the broker's GET /state (raw hub + division docs); the browser
    runs its existing CORE assembly on them. The broker holds the JSONBin key and
    the bin IDs — the browser knows neither. */
+/* Effective broker base URL: the per-browser override if set, else the baked-in
+   default. The URL is the endpoint, not a credential — only the token gates. */
+function brokerBase(){ return ((loadSettings().brokerUrl || DEFAULT_BROKER_URL) || '').replace(/\/+$/, ''); }
 async function brokerRead(path){
   var s = loadSettings();
-  var base = (s.brokerUrl || '').replace(/\/+$/, '');
+  var base = brokerBase();
   var resp;
   try {
     resp = await fetch(base + path, { headers:{ 'Authorization':'Bearer ' + (s.brokerToken || '') } });
@@ -1779,10 +1790,10 @@ async function silentPull(){
    can't conflict; edits send the loaded _rev as baseRev and may come back 409
    (handled in submitEdit). Objective writes can return warning:"links_failed"
    when the field write landed but the hub link write didn't. */
-function brokerEnabled(){ var s = loadSettings(); return !!(s.brokerUrl && s.brokerToken); }
+function brokerEnabled(){ return !!(brokerBase() && loadSettings().brokerToken); }
 async function brokerWrite(method, path, body){
   var s = loadSettings();
-  var base = (s.brokerUrl || '').replace(/\/+$/, '');
+  var base = brokerBase();
   var resp;
   try {
     resp = await fetch(base + path, {
@@ -2203,7 +2214,21 @@ function exportSnapshot(){
 function applyUrlAndSettings(){
   var params = new URLSearchParams(window.location.search);
   var s = loadSettings();
-  /* URL params override saved view/quarter/year (but never credentials).
+  /* A ?token= param (for SSO'd Confluence embeds) seeds the broker token into
+     localStorage so viewers never type it, then is stripped from the URL so it
+     doesn't linger in the address bar / history. The broker URL has a baked-in
+     default, so the token alone fully configures an embed. An explicit param
+     overrides any stored token; an empty/absent param leaves the stored one. */
+  var tokenParam = params.get('token');
+  if(tokenParam){
+    s.brokerToken = tokenParam;
+    try {
+      params.delete('token');
+      var qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+    } catch(e){ /* sandboxed iframe may block replaceState — token still took effect */ }
+  }
+  /* URL params override saved view/quarter/year (but never the persisted token).
      ?division= is accepted as an alias for ?view= for backward compatibility. */
   var wantView = params.get('view') || params.get('division') || s.view || 'overall';
   _wantView = wantView;   /* re-applied in assembleState once its division loads */
