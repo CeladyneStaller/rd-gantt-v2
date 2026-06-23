@@ -39,7 +39,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-import broker_core as core
+import broker.broker_core as core
 
 # --------------------------------------------------------------- config
 # Divisional source codes + the env var holding each division's bin id. Matches
