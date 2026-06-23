@@ -94,6 +94,24 @@ eq(r.json()['bins_configured']['exploration'], False, 'health reports exploratio
 r = client(FakeStore(seed())).post('/objective', json={'name': 'X', 'division': 'fuelcell'})
 eq(r.status_code, 401, 'create without token -> 401')
 
+# --- /state returns hub + configured divisions, requires auth ---
+s = FakeStore(seed())
+r = client(s).get('/state', headers=AUTH)
+eq(r.status_code, 200, '/state 200')
+body = r.json()
+ok(body['hub'] is not None and body['hub'].get('_version') == 1, '/state returns the hub doc')
+eq(sorted(body['divisions'].keys()), ['electrolyzer', 'fuelcell'], '/state returns configured divisions only (no exploration)')
+ok(any(p['id'] == 2 for p in body['divisions']['fuelcell']['projects']), '/state fuelcell carries its raw projects')
+
+r = client(FakeStore(seed())).get('/state')
+eq(r.status_code, 401, '/state without token -> 401')
+
+# --- /state surfaces a bin read failure as 502 ---
+s = FakeStore(seed())
+del s._bins['FC']                       # make the fuelcell read raise
+r = client(s).get('/state', headers=AUTH)
+eq(r.status_code, 502, '/state read failure -> 502')
+
 # --- objective create writes div bin + hub links ---
 s = FakeStore(seed())
 r = client(s).post('/objective', headers=AUTH, json={

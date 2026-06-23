@@ -222,14 +222,14 @@ button:hover{background:#f0f0ee;}
   <div><span class="lbl">Year</span>
     <select id="sel-year" onchange="onSelectorChange()"></select>
   </div>
-  <div><button onclick="openSettings()" title="Gantt data source">&#9881; Source</button></div>
+  <div><button onclick="openSettings()" title="Broker connection">&#9881; Connection</button></div>
   <div><button id="add-btn" class="btn-primary" onclick="openAddModal()" title="Add to your Gantt data" style="display:none;">&#43; Add</button></div>
 </div>
 
 <div id="needs-setup" class="setup-hint" style="display:none;">
-  <b>Connect your Gantt bins to begin.</b><br>
-  Click <b>&#9881; Source</b> and add your API key, the overall/hub bin, and at least one divisional bin.<br>
-  This dashboard is read-only &mdash; it pulls each division and never writes back.
+  <b>Connect to your broker to begin.</b><br>
+  Click <b>&#9881; Connection</b> and enter the broker URL and token. The broker holds the JSONBin key and bin IDs &mdash; this app reads and writes through it.<br>
+  If the broker is unreachable, the tracker shows its last cached view but can't load fresh data.
 </div>
 
 <div id="dashboard" style="display:none;">
@@ -282,7 +282,7 @@ button:hover{background:#f0f0ee;}
 <div class="toolbar">
   <span id="sync-dot" class="sync-dot"></span>
   <span class="spacer"></span>
-  <button onclick="openSettings()">&#9881; Gantt source</button>
+  <button onclick="openSettings()">&#9881; Connection</button>
   <button onclick="exportSnapshot()">Download snapshot</button>
 </div>
 </div><!-- /dashboard -->
@@ -291,24 +291,7 @@ button:hover{background:#f0f0ee;}
 <!-- Settings modal -->
 <div class="overlay" id="settings-overlay">
   <div class="modal">
-    <div class="modal-title">Gantt data sources</div>
-    <div class="modal-field"><span class="lbl">API key (X-Master-Key)</span>
-      <input type="text" id="gs-apikey" placeholder="$2a$10$..." autocomplete="off">
-    </div>
-    <div class="modal-field"><span class="lbl">Overall / hub Gantt bin <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; product names &amp; associations</span></span>
-      <input type="text" id="gs-hubbin" placeholder="overall Gantt bin ID (optional)" autocomplete="off">
-    </div>
-    <div class="modal-sep">Divisional Gantt bins <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; the projects &amp; OKRs</span></div>
-    <div class="modal-field"><span class="lbl">Fuel Cell</span>
-      <input type="text" id="gs-fc" placeholder="Fuel Cell bin ID" autocomplete="off">
-    </div>
-    <div class="modal-field"><span class="lbl">Electrolyzer</span>
-      <input type="text" id="gs-el" placeholder="Electrolyzer bin ID" autocomplete="off">
-    </div>
-    <div class="modal-field"><span class="lbl">Exploration <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; optional</span></span>
-      <input type="text" id="gs-exp" placeholder="Exploration bin ID (leave blank if none)" autocomplete="off">
-    </div>
-    <div class="modal-sep">Write broker <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">&mdash; optional, serializes saves</span></div>
+    <div class="modal-title">Broker connection</div>
     <div class="modal-field"><span class="lbl">Broker URL</span>
       <input type="text" id="gs-brokerurl" placeholder="https://web-production-b17a2.up.railway.app" autocomplete="off">
     </div>
@@ -316,10 +299,8 @@ button:hover{background:#f0f0ee;}
       <input type="text" id="gs-brokertoken" placeholder="https://web-production-b17a2.up.railway.app" autocomplete="off">
     </div>
     <div class="modal-note">
-      Credentials are stored only in this browser (localStorage), never written into the file. Reads always go straight to the bins.
-      With a Broker URL set, your saves route through it (which serializes concurrent writes and holds the JSONBin key); leave it blank to write the bins directly.
-      The hub bin supplies the initiatives, the milestones, the objective&rarr;initiative consolidation, and product/generation names;
-      each divisional bin supplies that division's objectives and KRs. A division's button only appears once its bin is set.
+      The tracker talks only to the broker now &mdash; it reads and writes through it, and the broker holds the JSONBin key and bin IDs server-side.
+      These two values are stored only in this browser (localStorage), never in the file. Both are required; if the broker is unreachable the tracker can show its last cached view but can't load fresh data.
     </div>
     <div class="gs-status" id="gs-status"></div>
     <div class="modal-actions">
@@ -1186,6 +1167,11 @@ function catalogModelIdByName(catalog, productId, modelName){
 /* ----------------------------- state ------------------------------------ */
 var _projectsCache = null;   /* full projects array from the last successful pull */
 var _catalog = [];           /* hub product catalog [{id,name,division,models:[{id,name}]}] */
+var _loadedDivisions = [];   /* divisions present in the last /state (or cache / snapshot) */
+var _hubLoaded = false;      /* whether the hub bin came back in /state */
+var _stateSig = '';          /* version signature of the last assembled /state (poll de-dup) */
+var _wantView = '';          /* view requested via URL/settings, re-applied once its data loads */
+var _wantViewApplied = false;/* so the poll's re-assemble can't override a manual view switch */
 var _model = null;
 var IS_READONLY = true;      /* always — this dashboard never writes */
 
@@ -1196,10 +1182,16 @@ function loadSettings(){
 function persistSettings(s){
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
 }
-/* Which divisions have a bin configured (in toggle order). */
+/* Which divisions are loaded (from the last /state, cache, or snapshot), in
+   toggle order. Bin config now lives on the broker, not in the browser. */
 function configuredDivisions(){
-  var bins = loadSettings().bins || {};
-  return SOURCE_BINS.filter(function(sb){ return bins[sb.division]; });
+  return SOURCE_BINS.filter(function(sb){ return _loadedDivisions.indexOf(sb.division) >= 0; });
+}
+/* Divisions actually present in a projects array (snapshot / legacy-cache fallback). */
+function divisionsInProjects(projects){
+  return SOURCE_BINS.filter(function(sb){
+    return (projects || []).some(function(p){ return p && p.division === sb.division; });
+  }).map(function(sb){ return sb.division; });
 }
 function hasAnySource(){ return configuredDivisions().length > 0; }
 /* Views available right now: Overall (if ≥1 source) + each configured division. */
@@ -1217,11 +1209,12 @@ function currentView(){
 function modelDivision(){ var v = currentView(); return v === 'overall' ? null : v; }
 function setView(v){
   if(availableViews().indexOf(v) < 0) return;
+  _wantViewApplied = true;   /* user took control; don't let a later pull override */
   var s = loadSettings(); s.view = v; persistSettings(s);
   updateViewButtons(); updateHeader();
   if(_projectsCache) rebuildAndRender();
 }
-/* Build the toggle from configured bins — Exploration appears once its bin is set. */
+/* Build the toggle from loaded divisions — a division appears once it's in /state. */
 function renderToggle(){
   var el = document.getElementById('view-toggle'), avail = availableViews();
   updateAddButton();
@@ -1245,12 +1238,7 @@ function currentQuarter(){ var v = document.getElementById('sel-quarter').value;
 function currentYear(){ var v = document.getElementById('sel-year').value; return v ? parseInt(v,10) : null; }
 
 function openSettings(){
-  var s = loadSettings(), bins = s.bins || {};
-  document.getElementById('gs-apikey').value = s.apiKey || '';
-  document.getElementById('gs-hubbin').value = s.hubBinId || '';
-  document.getElementById('gs-fc').value  = bins.fuelcell || '';
-  document.getElementById('gs-el').value  = bins.electrolyzer || '';
-  document.getElementById('gs-exp').value = bins.exploration || '';
+  var s = loadSettings();
   document.getElementById('gs-brokerurl').value = s.brokerUrl || '';
   document.getElementById('gs-brokertoken').value = s.brokerToken || '';
   gsStatus('', '');
@@ -1263,28 +1251,18 @@ function gsStatus(msg, kind){
   el.className = 'gs-status' + (kind ? ' ' + kind : '');
 }
 async function saveSettings(){
-  var apiKey   = document.getElementById('gs-apikey').value.trim();
-  var hubBinId = document.getElementById('gs-hubbin').value.trim();
-  var bins = {
-    fuelcell:     document.getElementById('gs-fc').value.trim(),
-    electrolyzer: document.getElementById('gs-el').value.trim(),
-    exploration:  document.getElementById('gs-exp').value.trim()
-  };
-  if(!apiKey || !(bins.fuelcell || bins.electrolyzer || bins.exploration)){
-    gsStatus('Enter the API key and at least one divisional bin.', 'error'); return;
+  var brokerUrl   = document.getElementById('gs-brokerurl').value.trim().replace(/\/+$/, '');
+  var brokerToken = document.getElementById('gs-brokertoken').value.trim();
+  if(!brokerUrl || !brokerToken){
+    gsStatus('Enter the broker URL and token.', 'error'); return;
   }
   var s = loadSettings();
-  s.apiKey = apiKey; s.hubBinId = hubBinId; s.bins = bins;
-  s.brokerUrl = document.getElementById('gs-brokerurl').value.trim().replace(/\/+$/, '');
-  s.brokerToken = document.getElementById('gs-brokertoken').value.trim();
+  s.brokerUrl = brokerUrl; s.brokerToken = brokerToken;
   persistSettings(s);
-  renderToggle();
-  gsStatus('Saved \u2014 pulling\u2026', 'info');
+  gsStatus('Saved \u2014 connecting\u2026', 'info');
   var ok = await fetchAll(true);
-  if(ok){
-    if(hubBinId){ gsStatus('\u2713 Connected.', 'success'); setTimeout(closeSettings, 600); }
-    else { gsStatus('\u2713 Connected. No hub bin set \u2014 initiatives, milestones, and product grouping stay empty until you add it.', 'info'); setTimeout(closeSettings, 1900); }
-  } else { gsStatus(_lastFetchError || 'Could not read those bins. Check the IDs / key.', 'error'); }
+  if(ok){ gsStatus('\u2713 Connected.', 'success'); setTimeout(closeSettings, 600); }
+  else { gsStatus(_lastFetchError || 'Could not reach the broker. Check the URL and token.', 'error'); }
 }
 
 /* --------------------------- add modal ---------------------------------- */
@@ -1322,8 +1300,7 @@ function setFieldGroups(type, showKr){
   showAddGroup('add-grp-due',        type === 'milestone');
 }
 function setAddType(type){
-  var s = loadSettings();
-  if((type === 'initiative' || type === 'milestone') && !s.hubBinId) return;  /* needs hub */
+  if((type === 'initiative' || type === 'milestone') && !_hubLoaded) return;  /* live on the hub */
   _addType = type;
   var btns = document.querySelectorAll('#add-types .add-type');
   for(var i=0; i<btns.length; i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-type') === type);
@@ -1397,8 +1374,7 @@ function addProductChanged(){ populateAddGenerations(); refreshAddLinks(); disar
 function addGenerationChanged(){ refreshAddLinks(); disarmAdd(); }
 function openAddModal(){
   if(!hasAnySource()) return;
-  var s = loadSettings();
-  var noHub = !s.hubBinId;
+  var noHub = !_hubLoaded;
   /* ensure add-mode chrome (a prior edit hides the type bar / locks division) */
   _editTarget = null;
   _pendingOverwrite = false; _conflictRev = null;
@@ -1500,8 +1476,7 @@ function openEditModal(id){
   if(!p) return;
   var type = projType(p);
   if(!type) return;
-  var s = loadSettings();
-  if((type === 'initiative' || type === 'milestone') && !s.hubBinId) return;   /* live on the hub */
+  if((type === 'initiative' || type === 'milestone') && !_hubLoaded) return;   /* live on the hub */
   _editTarget = String(p.id);
   _pendingOverwrite = false; _conflictRev = null;
 
@@ -1684,144 +1659,126 @@ function updateHeader(){
 }
 
 /* --------------------------- data pull ---------------------------------- */
-async function jbFetchEx(binId, apiKey){
+/* Reads come from the broker's GET /state (raw hub + division docs); the browser
+   runs its existing CORE assembly on them. The broker holds the JSONBin key and
+   the bin IDs — the browser knows neither. */
+async function brokerRead(path){
+  var s = loadSettings();
+  var base = (s.brokerUrl || '').replace(/\/+$/, '');
+  var resp;
   try {
-    var resp = await fetch('https://api.jsonbin.io/v3/b/' + binId + '/latest', {
-      headers:{ 'Content-Type':'application/json', 'X-Master-Key':apiKey, 'X-Bin-Meta':'false' }
-    });
-    if(!resp.ok) return { ok:false, status:resp.status };
-    var wrapper = await resp.json();
-    return { ok:true, status:resp.status, data:(wrapper.record || wrapper) };
-  } catch(e){
-    return { ok:false, status:0, error:e && e.message };
+    resp = await fetch(base + path, { headers:{ 'Authorization':'Bearer ' + (s.brokerToken || '') } });
+  } catch(netErr){
+    throw new Error('Could not reach the broker. Check the Broker URL in Settings.');
   }
-}
-async function jbFetch(binId, apiKey){
-  var r = await jbFetchEx(binId, apiKey);
-  return r.ok ? r.data : null;
-}
-function fetchHint(status){
-  if(status === 401 || status === 403) return 'The API key looks wrong or lacks access to that bin.';
-  if(status === 404) return 'A bin ID was not found \u2014 check for a stray space or wrong value.';
-  if(status === 429) return 'JSONBin is rate-limiting \u2014 wait a moment and retry.';
-  if(status === 0)   return 'The request did not reach JSONBin (network, CORS, or an extension blocking it).';
-  return 'Unexpected response \u2014 see the browser console for details.';
-}
-async function jbVersion(binId, apiKey){
-  try {
-    var resp = await fetch('https://api.jsonbin.io/v3/b/'+binId+'/latest', {
-      headers:{ 'X-Master-Key':apiKey, 'X-Bin-Meta':'true' }
-    });
-    if(!resp.ok) return null;
-    var meta = await resp.json();
-    return (meta.record && meta.record._version) || 0;
-  } catch(e){ return null; }
+  var data = null;
+  try { data = await resp.json(); } catch(e){ data = null; }
+  if(!resp.ok){
+    var detail = data && (typeof data.detail === 'string' ? data.detail : data.error);
+    throw new Error(detail || ('The broker returned ' + resp.status + '.'));
+  }
+  return data || {};
 }
 
-var _binVersions = {};   /* binId -> last seen _version */
-
-/* Pull every configured bin — the hub for the product catalog + associations,
-   each divisional bin for the projects — then namespace, stamp division,
-   resolve product/model names, and render. */
 var _lastFetchError = '';
 
+/* Version signature across the returned bins → lets the poll skip a re-render
+   when nothing has changed. */
+function stateSignature(state){
+  var parts = [];
+  if(state && state.hub) parts.push('hub:' + (state.hub._version || 0));
+  var divs = (state && state.divisions) || {};
+  SOURCE_BINS.forEach(function(sb){
+    if(divs[sb.division]) parts.push(sb.division + ':' + (divs[sb.division]._version || 0));
+  });
+  return parts.join('|');
+}
+
+/* Assemble a /state payload into the flat, resolved projects array the renderer
+   uses — the same CORE pipeline the direct-bin path used: hub for catalog +
+   associations + native initiatives/milestones, each division for its projects,
+   then prefix / resolve names / link initiatives. Updates the loaded-division
+   and hub flags, the poll signature, and the render-cache. */
+function assembleState(state){
+  state = state || {};
+  var catalogIndex = {}, assoc = {}, importAssoc = {}, hubNative = [];
+  if(state.hub){
+    var hub = state.hub;
+    catalogIndex = buildProductIndex(hub);
+    _catalog = Array.isArray(hub.products) ? hub.products : [];
+    assoc = (hub.importProductAssoc && typeof hub.importProductAssoc === 'object') ? hub.importProductAssoc : {};
+    importAssoc = (hub.importAssociations && typeof hub.importAssociations === 'object') ? hub.importAssociations : {};
+    if(Array.isArray(hub.projects)){
+      hubNative = hub.projects.filter(function(p){ return p.projectType === 'initiative' || isMilestoneProject(p); });
+    }
+  } else {
+    _catalog = [];
+  }
+  var divs = state.divisions || {};
+  var sources = [];
+  SOURCE_BINS.forEach(function(sb){
+    var doc = divs[sb.division];
+    if(!doc) return;
+    var divProjects = (Array.isArray(doc.projects) ? doc.projects : []).filter(function(p){ return !isMilestoneProject(p); });
+    sources.push({ division:sb.division, prefix:sb.source + '_', projects:divProjects });
+  });
+  var merged    = mergeSourceProjects(sources).concat(hubNative);
+  var resolved  = applyImportAssoc(merged, assoc, catalogIndex);
+  var withInit  = applyInitiativeAssoc(resolved, importAssoc);
+  _projectsCache   = withInit;
+  _hubLoaded       = !!state.hub;
+  _loadedDivisions = SOURCE_BINS.filter(function(sb){ return divs[sb.division]; }).map(function(sb){ return sb.division; });
+  _stateSig        = stateSignature(state);
+  cacheProjects(withInit, _catalog);
+  /* honor a URL/settings view once its division actually loads (embeds) */
+  if(_wantView && !_wantViewApplied && availableViews().indexOf(_wantView) >= 0){
+    var sv = loadSettings(); sv.view = _wantView; persistSettings(sv); _wantViewApplied = true;
+  }
+  renderToggle();
+  rebuildAndRender();
+}
+
 async function fetchAll(force){
-  var s = loadSettings(), divs = configuredDivisions();
-  if(!s.apiKey || !divs.length){ _lastFetchError = 'Enter an API key and at least one divisional bin.'; showNeedsSetup(); return false; }
+  if(!brokerEnabled()){ _lastFetchError = 'Set the Broker URL and token in Settings.'; showNeedsSetup(); return false; }
   showSyncIndicator('syncing');
   _lastFetchError = '';
-
-  /* ---- fetch phase: failures here are genuine read errors ---- */
-  var catalogIndex = {}, assoc = {}, importAssoc = {}, hubNative = [], failures = [];
-  if(s.hubBinId){
-    var hr = await jbFetchEx(s.hubBinId, s.apiKey);
-    if(hr.ok && hr.data){
-      var hub = hr.data;
-      catalogIndex = buildProductIndex(hub);
-      _catalog = Array.isArray(hub.products) ? hub.products : [];
-      assoc = (hub.importProductAssoc && typeof hub.importProductAssoc === 'object') ? hub.importProductAssoc : {};
-      importAssoc = (hub.importAssociations && typeof hub.importAssociations === 'object') ? hub.importAssociations : {};
-      if(Array.isArray(hub.projects)){
-        hubNative = hub.projects.filter(function(p){ return p.projectType === 'initiative' || isMilestoneProject(p); });
-      }
-      _binVersions[s.hubBinId] = hub._version || _binVersions[s.hubBinId] || 0;
-    } else {
-      failures.push({ label:'hub bin', status:hr.status });
-    }
-  }
-  var results = await Promise.all(divs.map(function(d){ return jbFetchEx(s.bins[d.division], s.apiKey); }));
-  var sources = [];
-  for(var i=0; i<divs.length; i++){
-    var rr = results[i];
-    if(rr.ok && rr.data){
-      _binVersions[s.bins[divs[i].division]] = rr.data._version || _binVersions[s.bins[divs[i].division]] || 0;
-      var divProjects = (Array.isArray(rr.data.projects) ? rr.data.projects : []).filter(function(p){ return !isMilestoneProject(p); });
-      sources.push({ division:divs[i].division, prefix:divs[i].source + '_', projects:divProjects });
-    } else {
-      failures.push({ label:(DIV_LABELS[divs[i].division] || divs[i].division) + ' bin', status:rr.status });
-    }
-  }
-  if(!sources.length){
-    var which = failures.map(function(f){ return f.label + ' (' + (f.status || 'no response') + ')'; }).join(', ');
-    _lastFetchError = 'Could not read ' + (which || 'any bin') + '. ' + fetchHint(failures.length ? failures[0].status : 0);
+  var state;
+  try {
+    state = await brokerRead('/state');
+  } catch(e){
+    _lastFetchError = e.message || 'Could not reach the broker.';
     showSyncIndicator('error');
     return false;
   }
-
-  /* ---- process + render phase: errors here are NOT read errors ---- */
   try {
-    var merged   = mergeSourceProjects(sources).concat(hubNative);
-    var resolved = applyImportAssoc(merged, assoc, catalogIndex);
-    var withInit = applyInitiativeAssoc(resolved, importAssoc);
-    _projectsCache = withInit;
-    cacheProjects(withInit, _catalog);
-    rebuildAndRender();
+    assembleState(state);
     showSyncIndicator('synced'); markSynced();
-    if(failures.length){
-      console.warn('Loaded, but some bins were unreadable: ' + failures.map(function(f){ return f.label + ' (' + (f.status || 'no response') + ')'; }).join(', '));
-    }
     return true;
   } catch(e){
-    console.error('Read the bins, but processing/render failed:', e);
-    _lastFetchError = 'Read the bins, but rendering failed: ' + (e && e.message ? e.message : e) + ' (see console).';
+    console.error('Loaded state, but processing/render failed:', e);
+    _lastFetchError = 'Loaded data, but rendering failed: ' + (e && e.message ? e.message : e) + ' (see console).';
     showSyncIndicator('error');
     return false;
   }
 }
 
-/* Cheap version poll across all configured bins → re-pull only if any changed. */
+/* Poll the broker; re-assemble only when a bin's _version moved. */
 async function silentPull(){
-  var s = loadSettings(), divs = configuredDivisions();
-  if(!s.apiKey || !divs.length) return;
+  if(!brokerEnabled()) return;
   try {
-    var binIds = divs.map(function(d){ return s.bins[d.division]; });
-    if(s.hubBinId) binIds.push(s.hubBinId);
-    var versions = await Promise.all(binIds.map(function(b){ return jbVersion(b, s.apiKey); }));
-    var changed = false;
-    for(var i=0; i<binIds.length; i++){
-      var v = versions[i];
-      if(v == null) continue;
-      if(_binVersions[binIds[i]] == null || v > _binVersions[binIds[i]]) changed = true;
-    }
-    if(changed){ await fetchAll(true); }
-    else { showSyncIndicator('synced'); markSynced(); }
+    var state = await brokerRead('/state');
+    if(stateSignature(state) === _stateSig){ showSyncIndicator('synced'); markSynced(); return; }
+    assembleState(state);
+    showSyncIndicator('synced'); markSynced();
   } catch(e){ /* keep last good render */ }
 }
 
 /* --------------------------- writes ------------------------------------- */
-/* Read-modify-write a bin: fetch the latest full record, let mutate() change it
-   in place (append a project, replace one's fields, or update an association
-   map), bump the Gantt's own _version so its poll picks the change up, then PUT
-   the WHOLE record back. X-Bin-Private and X-Bin-Meta are omitted on PUT
-   (sending X-Bin-Private makes JSONBin create a new bin). Appends or replaces a
-   project in place; never deletes. Each write re-reads the latest record first,
-   so a rare lost-update race costs at most one un-saved change. */
-/* ------------------------- write broker (optional) ----------------------- */
-/* When a Broker URL + token are set in Settings, the six write actions route
-   through the Railway broker, which serializes writes per bin and holds the
-   JSONBin key. Unset -> writes go straight to JSONBin exactly as before (so the
-   broker is opt-in per tool and fully reversible). Reads are always direct, so
-   a broker outage only affects saving, not viewing. */
+/* Every write goes through the broker, which serializes per-bin writes and
+   holds the JSONBin key (the browser holds only the broker URL + token). Creates
+   can't conflict; edits send the loaded _rev as baseRev and may come back 409
+   (handled in submitEdit). Objective writes can return warning:"links_failed"
+   when the field write landed but the hub link write didn't. */
 function brokerEnabled(){ var s = loadSettings(); return !!(s.brokerUrl && s.brokerToken); }
 async function brokerWrite(method, path, body){
   var s = loadSettings();
@@ -1834,7 +1791,7 @@ async function brokerWrite(method, path, body){
       body: JSON.stringify(body)
     });
   } catch(netErr){
-    throw new Error('Could not reach the write broker. Check the Broker URL in Settings, or clear it to write directly.');
+    throw new Error('Could not reach the broker. Check the Broker URL in Settings.');
   }
   var data = null;
   try { data = await resp.json(); } catch(e){ data = null; }
@@ -1850,192 +1807,63 @@ async function brokerWrite(method, path, body){
   return data || {};
 }
 
-async function jbWrite(binId, apiKey, mutate){
-  var rec = await jbFetch(binId, apiKey);
-  if(!rec) throw new Error('Could not read the target bin.');
-  if(!Array.isArray(rec.projects)) rec.projects = [];
-  mutate(rec);
-  rec._version = (rec._version || 0) + 1;
-  rec._savedAt = new Date().toISOString();
-  rec._savedBy = 'division-tracker';
-  var resp = await fetch('https://api.jsonbin.io/v3/b/' + binId, {
-    method:'PUT',
-    headers:{ 'Content-Type':'application/json', 'X-Master-Key':apiKey },
-    body: JSON.stringify(rec)
-  });
-  if(!resp.ok) throw new Error('Write failed (' + resp.status + ').');
-  _binVersions[binId] = rec._version;
-  return rec;
-}
-
-/* Initiatives and milestones are hub-native → one write to the hub bin. */
+/* Initiatives and milestones are hub-native; objectives carry their division +
+   links. The broker resolves bins and applies the record shape server-side. */
 async function addInitiative(form){
-  if(brokerEnabled()){
-    var res = await brokerWrite('POST', '/initiative', {
-      name:form.name, division:form.division,
-      productLine:form.productLine || '', productModel:form.productModel || '',
-      start:form.start || '', end:form.end || ''
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  if(!s.hubBinId) throw new Error('A hub bin is required to add initiatives.');
-  await jbWrite(s.hubBinId, s.apiKey, function(rec){
-    rec.projects.push(buildInitiative({
-      id:nextProjectId(rec.projects), name:form.name, division:form.division,
-      productLine:form.productLine, productModel:form.productModel, start:form.start, end:form.end
-    }));
+  var res = await brokerWrite('POST', '/initiative', {
+    name:form.name, division:form.division,
+    productLine:form.productLine || '', productModel:form.productModel || '',
+    start:form.start || '', end:form.end || ''
   });
   await fetchAll(true);
+  return res;
 }
 async function addMilestone(form){
-  if(brokerEnabled()){
-    var res = await brokerWrite('POST', '/milestone', {
-      name:form.name, division:form.division, dueDate:form.dueDate,
-      ownerId:form.ownerId || '', productLine:form.productLine || '', productModel:form.productModel || ''
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  if(!s.hubBinId) throw new Error('A hub bin is required to add milestones.');
-  await jbWrite(s.hubBinId, s.apiKey, function(rec){
-    rec.projects.push(buildMilestone({
-      id:nextProjectId(rec.projects), name:form.name, division:form.division,
-      dueDate:form.dueDate, ownerId:form.ownerId, productLine:form.productLine, productModel:form.productModel
-    }));
+  var res = await brokerWrite('POST', '/milestone', {
+    name:form.name, division:form.division, dueDate:form.dueDate,
+    ownerId:form.ownerId || '', productLine:form.productLine || '', productModel:form.productModel || ''
   });
   await fetchAll(true);
+  return res;
 }
-/* Objectives live on the division bin; their initiative + product links live on
-   the hub (keyed by the prefixed id). Two writes: the objective first, then the
-   links. If the link write fails, the objective still exists (just unlinked). */
 async function addObjective(form){
-  if(brokerEnabled()){
-    var res = await brokerWrite('POST', '/objective', {
-      name:form.name, division:form.division,
-      productLine:form.productLine || '', productModel:form.productModel || '',
-      initiativeId:form.initiativeId || '', start:form.start || '', end:form.end || '',
-      kr: (form.kr && form.kr.name) ? { name:form.kr.name, progress:(isFinite(form.kr.progress) ? form.kr.progress : 0) } : null
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  var src = SOURCE_BINS.filter(function(sb){ return sb.division === form.division; })[0];
-  var divBinId = s.bins && s.bins[form.division];
-  if(!src || !divBinId) throw new Error('That division has no configured bin.');
-  var rawId = null;
-  await jbWrite(divBinId, s.apiKey, function(rec){
-    rawId = nextProjectId(rec.projects);
-    rec.projects.push(buildObjective({
-      id:rawId, name:form.name, division:form.division, start:form.start, end:form.end, kr:form.kr
-    }));
+  var res = await brokerWrite('POST', '/objective', {
+    name:form.name, division:form.division,
+    productLine:form.productLine || '', productModel:form.productModel || '',
+    initiativeId:form.initiativeId || '', start:form.start || '', end:form.end || '',
+    kr: (form.kr && form.kr.name) ? { name:form.kr.name, progress:(isFinite(form.kr.progress) ? form.kr.progress : 0) } : null
   });
-  var prefixedId = src.source + '_' + rawId;
-  var needLinks = s.hubBinId && (form.initiativeId || form.productLine);
-  if(needLinks){
-    try {
-      await jbWrite(s.hubBinId, s.apiKey, function(rec){
-        if(form.initiativeId){
-          rec.importAssociations = withAssociation(rec.importAssociations || {}, form.initiativeId, prefixedId);
-        }
-        if(form.productLine){
-          rec.importProductAssoc = withProductAssoc(rec.importProductAssoc || {}, prefixedId, form.productLine, form.productModel);
-        }
-      });
-    } catch(e){
-      await fetchAll(true);
-      throw new Error('Objective added, but linking it failed: ' + e.message + ' You can set its initiative/product in the Gantt.');
-    }
-  }
   await fetchAll(true);
+  return res;
 }
 
 /* --------------------------- edit writes -------------------------------- */
-/* Swap a project in place by id (immutable update objects produced by the CORE
-   apply*Edit builders are written back here). */
-function replaceProjectInPlace(projects, updated){
-  for(var i=0; i<projects.length; i++){ if(String(projects[i].id) === String(updated.id)){ projects[i] = updated; return true; } }
-  return false;
-}
-/* Initiatives are hub-native -> one read-modify-write to the hub bin. */
 async function editInitiative(p, fields){
-  if(brokerEnabled()){
-    var res = await brokerWrite('PATCH', '/initiative/' + encodeURIComponent(p.id), {
-      name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
-      productLine:fields.productLine || '', productModel:fields.productModel || '',
-      start:fields.start || '', end:fields.end || ''
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  if(!s.hubBinId) throw new Error('A hub bin is required to edit initiatives.');
-  await jbWrite(s.hubBinId, s.apiKey, function(rec){
-    var target = findProjectById(rec.projects, p.id);
-    if(!target) throw new Error('Could not find that initiative in the hub bin (it may have been removed).');
-    replaceProjectInPlace(rec.projects, applyInitiativeEdit(target, fields));
+  var res = await brokerWrite('PATCH', '/initiative/' + encodeURIComponent(p.id), {
+    name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
+    productLine:fields.productLine || '', productModel:fields.productModel || '',
+    start:fields.start || '', end:fields.end || ''
   });
   await fetchAll(true);
+  return res;
 }
-/* Milestones are hub-native too. */
 async function editMilestone(p, fields){
-  if(brokerEnabled()){
-    var res = await brokerWrite('PATCH', '/milestone/' + encodeURIComponent(p.id), {
-      name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
-      dueDate:fields.dueDate, ownerId:fields.ownerId || '',
-      productLine:fields.productLine || '', productModel:fields.productModel || ''
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  if(!s.hubBinId) throw new Error('A hub bin is required to edit milestones.');
-  await jbWrite(s.hubBinId, s.apiKey, function(rec){
-    var target = findProjectById(rec.projects, p.id);
-    if(!target) throw new Error('Could not find that milestone in the hub bin (it may have been removed).');
-    replaceProjectInPlace(rec.projects, applyMilestoneEdit(target, fields));
+  var res = await brokerWrite('PATCH', '/milestone/' + encodeURIComponent(p.id), {
+    name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
+    dueDate:fields.dueDate, ownerId:fields.ownerId || '',
+    productLine:fields.productLine || '', productModel:fields.productModel || ''
   });
   await fetchAll(true);
+  return res;
 }
-/* Objectives live on their division bin; their initiative + product links live
-   on the hub (keyed by the prefixed id). Two writes: the objective's own fields
-   first, then the link maps. If the link write fails the field edit still
-   stands (mirrors the add path). */
 async function editObjective(p, fields){
-  if(brokerEnabled()){
-    var res = await brokerWrite('PATCH', '/objective/' + encodeURIComponent(p.id), {
-      name:fields.name, start:fields.start || '', end:fields.end || '',
-      baseRev:(fields.baseRev != null ? fields.baseRev : null),
-      initiativeId:fields.initiativeId || '', productLine:fields.productLine || '', productModel:fields.productModel || ''
-    });
-    await fetchAll(true);
-    return res;
-  }
-  var s = loadSettings();
-  var src = SOURCE_BINS.filter(function(sb){ return sb.division === p.division; })[0];
-  var divBinId = s.bins && s.bins[p.division];
-  if(!src || !divBinId) throw new Error('That division has no configured bin.');
-  var rawId = unprefixId(p.id);
-  await jbWrite(divBinId, s.apiKey, function(rec){
-    var target = findProjectById(rec.projects, rawId);
-    if(!target) throw new Error('Could not find that objective in the ' + (DIV_LABELS[p.division] || p.division) + ' bin.');
-    replaceProjectInPlace(rec.projects, applyObjectiveEdit(target, { name:fields.name, start:fields.start, end:fields.end }));
+  var res = await brokerWrite('PATCH', '/objective/' + encodeURIComponent(p.id), {
+    name:fields.name, start:fields.start || '', end:fields.end || '',
+    baseRev:(fields.baseRev != null ? fields.baseRev : null),
+    initiativeId:fields.initiativeId || '', productLine:fields.productLine || '', productModel:fields.productModel || ''
   });
-  if(s.hubBinId){
-    try {
-      await jbWrite(s.hubBinId, s.apiKey, function(rec){
-        rec.importAssociations = moveAssociation(rec.importAssociations || {}, p._assocInitiativeId, fields.initiativeId || '', p.id);
-        rec.importProductAssoc = setProductAssoc(rec.importProductAssoc || {}, p.id, fields.productLine || '', fields.productModel || '');
-      });
-    } catch(e){
-      await fetchAll(true);
-      throw new Error('Saved the objective, but updating its initiative/product links failed: ' + e.message);
-    }
-  }
   await fetchAll(true);
+  return res;
 }
 
 function rebuildAndRender(){
@@ -2052,12 +1880,22 @@ function showNeedsSetup(){
 
 /* localStorage render-cache so the dashboard paints instantly on reload. */
 function cacheProjects(projects, catalog){
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at:Date.now(), projects:projects, catalog:catalog || _catalog || [] })); } catch(e){}
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      at:Date.now(), projects:projects, catalog:catalog || _catalog || [],
+      divisions:_loadedDivisions, hubLoaded:_hubLoaded
+    }));
+  } catch(e){}
 }
 function loadCachedProjects(){
   try {
     var c = JSON.parse(localStorage.getItem(CACHE_KEY));
-    if(c && Array.isArray(c.projects)){ if(Array.isArray(c.catalog)) _catalog = c.catalog; return c.projects; }
+    if(c && Array.isArray(c.projects)){
+      if(Array.isArray(c.catalog)) _catalog = c.catalog;
+      _loadedDivisions = Array.isArray(c.divisions) ? c.divisions : divisionsInProjects(c.projects);
+      _hubLoaded = !!c.hubLoaded;
+      return c.projects;
+    }
   } catch(e){}
   return null;
 }
@@ -2368,11 +2206,12 @@ function applyUrlAndSettings(){
   /* URL params override saved view/quarter/year (but never credentials).
      ?division= is accepted as an alias for ?view= for backward compatibility. */
   var wantView = params.get('view') || params.get('division') || s.view || 'overall';
+  _wantView = wantView;   /* re-applied in assembleState once its division loads */
   var quarter  = params.get('quarter') || (s.quarter != null ? String(s.quarter) : '');
   var year     = params.get('year')    || (s.year != null ? String(s.year) : '');
   if(quarter) document.getElementById('sel-quarter').value = quarter;
   if(year && document.querySelector('#sel-year option[value="'+year+'"]')) document.getElementById('sel-year').value = year;
-  /* Only honor the requested view if its bin is configured; else currentView() falls back. */
+  /* Only honor the requested view if its division is loaded; else currentView() falls back. */
   s.view = (availableViews().indexOf(wantView) >= 0) ? wantView : (s.view || 'overall');
   s.quarter = currentQuarter(); s.year = currentYear();
   persistSettings(s);
@@ -2391,6 +2230,8 @@ async function init(){
       var snap = JSON.parse(snapEl.textContent);
       _isSnapshot = true;
       _projectsCache = snap.projects || [];
+      _loadedDivisions = divisionsInProjects(_projectsCache);
+      _hubLoaded = (_projectsCache).some(function(p){ return p.projectType === 'initiative' || isMilestoneProject(p); });
       var sv = snap.view || snap.division;
       if(sv){ var s2 = loadSettings(); s2.view = sv; persistSettings(s2); }
       if(snap.quarter) document.getElementById('sel-quarter').value = String(snap.quarter);
@@ -2403,18 +2244,17 @@ async function init(){
     } catch(e){}
   }
 
-  var s = loadSettings(), divs = configuredDivisions();
-  if(!s.apiKey || !divs.length){
-    /* Not configured — paint from cache if we have one, else show setup. */
+  if(!brokerEnabled()){
+    /* Not configured — paint from cache if we have one, then show setup. */
     var cached = loadCachedProjects();
-    if(cached){ _projectsCache = cached; rebuildAndRender(); }
+    if(cached){ _projectsCache = cached; applyUrlAndSettings(); rebuildAndRender(); }
     else showNeedsSetup();
     return;
   }
 
-  /* Paint instantly from cache, then refresh from the network. */
+  /* Paint instantly from cache, then refresh from the broker. */
   var cached2 = loadCachedProjects();
-  if(cached2){ _projectsCache = cached2; rebuildAndRender(); }
+  if(cached2){ _projectsCache = cached2; applyUrlAndSettings(); rebuildAndRender(); }
   await fetchAll(true);
 }
 

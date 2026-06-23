@@ -266,6 +266,33 @@ def health():
     }
 
 
+@app.get('/state')
+def get_state(store=Depends(get_store), _=Depends(require_auth)):
+    """Raw passthrough of the hub bin + every configured division bin. The
+    browser runs its existing, tested assembly (id prefixing, association and
+    product-name resolution, model build) on these docs — the broker stays a
+    thin credential boundary and write serializer, not a model builder, which
+    also keeps the Azure swap small. No lock is taken: these are reads. A bin
+    that can't be read surfaces as 502 naming which bin failed; the browser
+    keeps its render-cache painted."""
+    out = {'ok': True, 'hub': None, 'divisions': {}}
+    hub = hub_bin_id()
+    if hub:
+        try:
+            out['hub'] = store.read(hub)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f'failed to read hub bin: {e}')
+    for d in DIVISIONS:
+        b = div_bin_id(d['division'])
+        if not b:
+            continue
+        try:
+            out['divisions'][d['division']] = store.read(b)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"failed to read {d['division']} bin: {e}")
+    return out
+
+
 # ---- shared hub-link application (objective create + edit) ----
 def apply_objective_links(store, prefixed, initiative_id, product_line, product_model, is_edit):
     """Update the hub's association + product maps for an objective. Returns a
