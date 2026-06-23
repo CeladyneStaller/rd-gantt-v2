@@ -26,7 +26,11 @@ global.document = {
   querySelector(){ return makeEl('qs'); }, querySelectorAll(){ return []; },
   createElement(){ return makeEl('c'); }, addEventListener(){}, body: makeEl('body')
 };
-global.window = { location:{ search:'' }, addEventListener(){}, matchMedia(){ return { matches:false, addEventListener(){} }; } };
+global.window = {
+  location:{ search:'', pathname:'/q-tracker-division.html', hash:'' },
+  history:{ replaceState(st, t, url){ var q = String(url).split('?')[1] || ''; q = q.split('#')[0]; global.window.location.search = q ? '?' + q : ''; } },
+  addEventListener(){}, matchMedia(){ return { matches:false, addEventListener(){} }; }
+};
 global.localStorage = { _d:{}, getItem(k){ return this._d[k] || null; }, setItem(k,v){ this._d[k] = v; }, removeItem(k){ delete this._d[k]; } };
 global.navigator = { onLine:true };
 global.setInterval = () => 0;
@@ -162,6 +166,31 @@ const exercise = `
     if(!posted.length) throw new Error('brokered create did not POST /objective');
     return true;
   };
+  global.__runDefaultUrlTest = async function(){
+    /* token only, no brokerUrl -> brokerBase() must fall back to DEFAULT_BROKER_URL
+       and the tracker must connect against it */
+    localStorage.setItem('qdivision-gantt', JSON.stringify({ brokerToken:'tok' }));
+    if(!brokerEnabled()) throw new Error('brokerEnabled false with token + default URL');
+    if(brokerBase() !== DEFAULT_BROKER_URL) throw new Error('brokerBase did not fall back to DEFAULT_BROKER_URL (got ' + brokerBase() + ')');
+    global.__brokerCalls = [];
+    var ok = await fetchAll(true);
+    if(!ok) throw new Error('fetchAll failed against the default URL: ' + _lastFetchError);
+    if(!findProjectById(_projectsCache, 'fc_2')) throw new Error('default-URL fetch did not assemble fc_2');
+    return true;
+  };
+  global.__runTokenParamTest = async function(){
+    /* an embed URL carrying ?token= seeds the broker token, then strips the
+       param from the URL while keeping the other params (view) intact */
+    localStorage.setItem('qdivision-gantt', JSON.stringify({}));   /* no stored token */
+    global.window.location.search = '?token=embedtok&view=fuelcell';
+    applyUrlAndSettings();
+    if(loadSettings().brokerToken !== 'embedtok') throw new Error('?token= did not seed the broker token');
+    if(!brokerEnabled()) throw new Error('brokerEnabled false after ?token= seeded the token');
+    if(global.window.location.search.indexOf('token') !== -1) throw new Error('token param not stripped from URL (' + global.window.location.search + ')');
+    if(global.window.location.search.indexOf('view=fuelcell') === -1) throw new Error('stripping token also dropped the view param');
+    global.window.location.search = '';
+    return true;
+  };
   global.__smokeOK = true;
 })();`;
 
@@ -179,7 +208,9 @@ try {
     global.__validFetch = true;
     await global.__runFetchTest();
     await global.__runBrokerWriteTest();
-    console.log('SMOKE OK (init + render + add/edit modal + broker /state pull + broker writes + 409 overwrite)');
+    await global.__runDefaultUrlTest();
+    await global.__runTokenParamTest();
+    console.log('SMOKE OK (init + render + add/edit modal + broker /state pull + broker writes + 409 overwrite + default URL + ?token= embed)');
     process.exit(0);
   } catch(e){
     console.log('SMOKE FAIL (async):', e.message);
