@@ -312,6 +312,72 @@ button:hover{background:#f0f0ee;}
   </div>
 </div>
 
+<!-- Milestone report overlay — no backdrop-click close; Save / Cancel only -->
+<style>
+.mr-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;overflow:auto;z-index:200;padding:24px 16px;}
+.mr-overlay.open{display:block;}
+.mr-wrap{max-width:860px;margin:0 auto;}
+.mr-sheet{background:#fff;color:#1a1a1a;border-radius:12px;padding:2rem;font-size:13px;box-shadow:0 12px 40px rgba(0,0,0,.3);}
+.mr-sheet *{box-sizing:border-box;}
+.mr-bar{position:sticky;bottom:0;margin-top:14px;display:flex;align-items:center;gap:8px;background:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.28);}
+.mr-msg{font-size:12px;color:#555;}
+.mr-msg.err{color:#A32D2D;} .mr-msg.ok{color:#3B6D11;}
+.mr-btn{border:none;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:inherit;}
+.mr-btn-primary{background:#185FA5;color:#fff;} .mr-btn-primary:hover{background:#0C447C;}
+.mr-btn-ghost{background:#f0f0ee;color:#333;} .mr-btn-ghost:hover{background:#e4e4e2;}
+.mr-btn-lock{background:#FAEEDA;color:#854F0B;} .mr-btn-lock.is-locked{background:#FCEBEB;color:#A32D2D;}
+.mr-header{display:grid;grid-template-columns:1fr auto;align-items:start;border-bottom:2px solid #185FA5;padding-bottom:.75rem;margin-bottom:1rem;gap:1rem;}
+.mr-label{font-size:10px;letter-spacing:.08em;color:#666;text-transform:uppercase;margin-bottom:2px;}
+.mr-pname{font-size:18px;font-weight:500;}
+.mr-tag{background:#E6F1FB;color:#0C447C;font-size:11px;font-weight:500;padding:3px 10px;border-radius:4px;font-family:monospace;width:auto;}
+.mr-achieved{background:#EAF3DE;color:#3B6D11;font-size:11px;font-weight:500;padding:3px 10px;border-radius:4px;font-family:monospace;}
+.mr-pending{background:#FAEEDA;color:#854F0B;font-size:11px;font-weight:500;padding:3px 10px;border-radius:4px;font-family:monospace;}
+.mr-meta{display:flex;gap:1.5rem;justify-content:flex-end;}
+.mr-mval{font-size:12px;font-weight:500;font-family:monospace;}
+.mr-bound{box-shadow:inset 0 -1px 0 #cfe0f1;}
+.mr-section{border:.5px solid #ddd;border-radius:8px;padding:.75rem 1rem;height:100%;}
+.mr-stitle{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#666;font-weight:500;margin-bottom:.5rem;border-bottom:.5px solid #ddd;padding-bottom:.4rem;display:flex;justify-content:space-between;align-items:center;}
+.mr-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.mr-full{margin-bottom:1rem;}
+.mr-in{font:inherit;border:none;background:transparent;outline:none;width:100%;color:inherit;}
+.mr-in:hover,.mr-in:focus,.mr-ed:hover,.mr-ed:focus{background:#f5f5f3;border-radius:3px;}
+.mr-ed{outline:none;min-height:1.2em;line-height:1.6;color:#555;font-size:12px;}
+.mr-ed:empty:before{content:attr(data-ph);color:#bbb;}
+.mr-mono{font-family:monospace;font-size:12px;font-weight:500;}
+.mr-tcenter{text-align:center;}
+.mr-khead,.mr-krow{display:grid;grid-template-columns:1fr 40px 58px 52px 60px 54px 18px;gap:8px;align-items:center;}
+.mr-khead{margin-bottom:3px;}
+.mr-krow{padding:5px 0;border-bottom:.5px solid #eee;font-size:12px;}
+.mr-col{font-size:10px;color:#888;text-align:center;}
+.mr-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;text-align:center;font-family:monospace;display:inline-block;}
+.badge-green{background:#EAF3DE;color:#3B6D11;} .badge-red{background:#FCEBEB;color:#A32D2D;}
+.badge-amber{background:#FAEEDA;color:#854F0B;} .badge-gray{background:#f0f0ee;color:#888;}
+.mr-del{border:none;background:none;color:#b33;cursor:pointer;font-size:14px;line-height:1;padding:0;}
+.mr-addbtn{margin-top:8px;border:1px dashed #bbb;background:#fafafa;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#555;}
+.mr-stat{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:.5px solid #eee;font-size:12px;}
+.mr-stat .mr-in{text-align:right;font-family:monospace;font-size:13px;font-weight:500;}
+.mr-arow{display:grid;grid-template-columns:1fr 90px 80px;gap:8px;padding:5px 0;border-bottom:.5px solid #eee;font-size:12px;align-items:center;}
+.mr-frow{display:flex;gap:8px;padding:5px 0;border-bottom:.5px solid #eee;font-size:12px;align-items:flex-start;}
+.mr-fnum{font-family:monospace;font-size:10px;color:#888;width:18px;padding-top:3px;flex-shrink:0;}
+.mr-foot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;border-top:.5px solid #ddd;padding-top:.75rem;margin-top:.5rem;}
+.mr-sigline{border-bottom:.5px solid #aaa;height:24px;margin-bottom:4px;}
+.mr-siglabel{font-size:10px;color:#888;letter-spacing:.05em;text-transform:uppercase;}
+.mr-sheet.mr-locked .mr-in,.mr-sheet.mr-locked .mr-ed,.mr-sheet.mr-locked .mr-del,.mr-sheet.mr-locked .mr-addbtn{pointer-events:none;}
+.mr-sheet.mr-locked .mr-in:hover,.mr-sheet.mr-locked .mr-ed:hover{background:transparent;}
+</style>
+<div class="mr-overlay" id="mr-overlay">
+  <div class="mr-wrap">
+    <div class="mr-sheet" id="mr-report-root"></div>
+    <div class="mr-bar">
+      <button class="mr-btn mr-btn-lock" id="mr-lock-btn" onclick="mrToggleLock()">&#128275; Unlocked</button>
+      <span class="mr-msg" id="mr-msg"></span>
+      <span style="flex:1"></span>
+      <button class="mr-btn mr-btn-ghost" onclick="closeMilestoneReport()">Cancel</button>
+      <button class="mr-btn mr-btn-primary" id="mr-save-btn" onclick="saveMilestoneReport()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="add-overlay">
   <div class="modal">
     <div class="modal-title" id="add-modal-title">Add to your Gantt</div>
@@ -707,6 +773,17 @@ function isMilestoneProject(p){
 }
 function milestoneDone(m){
   return !!(m.manuallyCompleted || (typeof m.progress === 'number' && m.progress >= 100));
+}
+/* Pure: a target's result from its value, the measured value, and direction.
+   Mirrors the milestone report's auto-grading (increase/decrease/maintain). */
+function kpiStatus(target, current, direction){
+  var t = parseFloat(target), m = parseFloat(current);
+  if(!isFinite(t) || !isFinite(m)) return { label:'N/A', cls:'badge-gray' };
+  var dir = direction || 'increase', met, partial;
+  if(dir === 'decrease'){      met = m <= t;                              partial = !met && m <= t * 1.1; }
+  else if(dir === 'maintain'){ met = Math.abs(m - t) <= Math.abs(t) * 0.05 || (t === 0 && m === 0); partial = !met && m >= t * 0.9 && m <= t * 1.1; }
+  else {                       met = m >= t;                              partial = !met && m >= t * 0.9; }
+  return met ? { label:'Met', cls:'badge-green' } : partial ? { label:'Partial', cls:'badge-amber' } : { label:'Missed', cls:'badge-red' };
 }
 function milestoneStatus(m, today){
   if(milestoneDone(m)) return 'done';
@@ -1119,11 +1196,13 @@ function applyInitiativeEdit(project, f){
 }
 function applyMilestoneEdit(project, f){
   var p = {}; for(var k in project){ if(Object.prototype.hasOwnProperty.call(project, k)) p[k] = project[k]; }
-  if(f.name != null)        p.name = String(f.name).trim();
-  if(f.dueDate != null){    p.start = f.dueDate || ''; p.end = f.dueDate || ''; }
-  if(f.ownerId !== undefined) p.parentId = (f.ownerId != null && f.ownerId !== '') ? f.ownerId : null;
+  if(f.name != null)         p.name = String(f.name).trim();
+  if(f.dueDate != null){     p.start = f.dueDate || ''; p.end = f.dueDate || ''; }
+  if(f.ownerId != null)      p.parentId = (f.ownerId !== '') ? f.ownerId : null;   /* omit -> preserve */
   if(f.productLine != null)  p.productLine  = f.productLine || '';
   if(f.productModel != null) p.productModel = f.productModel || '';
+  if(f.milestoneKpis != null)   p.milestoneKpis   = f.milestoneKpis;     /* bound targets; full replace */
+  if(f.milestoneReport != null) p.milestoneReport = f.milestoneReport;   /* narrative/findings/actions blob */
   return p;
 }
 /* Move an objective's association from one initiative bucket to another in the
@@ -1280,6 +1359,10 @@ var _isSnapshot = false;
 var _editTarget = null;   /* id of the project being edited; null = add mode */
 var _pendingOverwrite = false;  /* set after a broker 409 the user chose to override */
 var _conflictRev = null;        /* the server's current rev from that 409 */
+var _mrTarget = null;           /* milestone id the open report is bound to */
+var _mrLocked = false;          /* report lock flag (persisted in the blob on Save) */
+var _mrOverwrite = false;       /* set after a report 409 the user chose to overwrite */
+var _mrConflictRev = null;      /* server rev from that 409 */
 
 function updateAddButton(){
   var b = document.getElementById('add-btn');
@@ -1406,6 +1489,287 @@ function openAddModal(){
   document.getElementById('add-overlay').classList.add('open');
 }
 function closeAddModal(){ document.getElementById('add-overlay').classList.remove('open'); _editTarget = null; _pendingOverwrite = false; _conflictRev = null; }
+
+/* ─────────────────────────── milestone report ───────────────────────────
+   Clicking a milestone opens this report instead of the edit modal. The
+   "Performance vs. targets" rows ARE the milestone's milestoneKpis, and the
+   report's name + target-date fields are the milestone's own — all marked
+   .mr-bound and saved straight to the milestone through the broker, so editing
+   the report edits the milestone (and re-opening reflects any milestone change
+   — the rows are rebuilt from live milestoneKpis each open). Everything else
+   (narrative, context, findings, actions, signatures, lock) is stored in the
+   milestoneReport blob. Owner/product are intentionally NOT sent on save, so a
+   report — which never shows them — cannot blank them. The overlay self-builds
+   and self-collects so the shell can later become a popup with no JS changes. */
+
+/* direction glyph for a target (≥ / ≤ / ~). Pure. */
+function mrDirGlyph(d){ return d === 'decrease' ? '\u2264' : d === 'maintain' ? '~' : '\u2265'; }
+
+/* result badge for one target from its measured value vs target. Pure.
+   increase: met cur>=tgt, partial cur>=tgt*0.9; decrease: met cur<=tgt,
+   partial cur<=tgt*1.1; maintain: met within 5% of tgt, partial within 10%. */
+function mrResult(k){
+  var tgt = parseFloat(k.target), cur = parseFloat(k.current);
+  if(isNaN(tgt) || isNaN(cur)) return { cls:'badge-gray', text:'N/A' };
+  var dir = k.direction || 'increase', met, partial;
+  if(dir === 'decrease'){       met = cur <= tgt;                                partial = cur <= tgt * 1.1; }
+  else if(dir === 'maintain'){  met = Math.abs(cur - tgt) <= Math.abs(tgt) * 0.05; partial = Math.abs(cur - tgt) <= Math.abs(tgt) * 0.1; }
+  else {                        met = cur >= tgt;                                partial = cur >= tgt * 0.9; }
+  if(met)     return { cls:'badge-green', text:'Met' };
+  if(partial) return { cls:'badge-amber', text:'Partial' };
+  return { cls:'badge-red', text:'Missed' };
+}
+
+/* planned-vs-actual variance label + colour. Pure. */
+function mrVariance(planned, actual){
+  var pp = Date.parse(planned), aa = Date.parse(actual);
+  if(isNaN(pp) || isNaN(aa)) return { text:'\u2014', color:'#666' };
+  var days = Math.round((aa - pp) / 86400000);
+  if(days > 0) return { text:'+' + days + ' days', color:'#854F0B' };
+  if(days < 0) return { text:days + ' days',       color:'#3B6D11' };
+  return { text:'On time', color:'#3B6D11' };
+}
+
+/* one bound target row (7-col grid: name · dir · target · unit · measured · result · del). */
+function mrKpiRow(k){
+  k = k || {};
+  var r = mrResult(k), dir = k.direction || 'increase';
+  function opt(v, g){ return '<option value="'+v+'"'+(dir===v?' selected':'')+'>'+g+'</option>'; }
+  return '<div class="mr-krow">'+
+    '<input class="mr-in" data-k="name" value="'+esc(k.name||'')+'" placeholder="Metric">'+
+    '<select class="mr-in mr-bound" data-k="direction" onchange="mrRecompute()">'+opt('increase','\u2265')+opt('decrease','\u2264')+opt('maintain','~')+'</select>'+
+    '<input class="mr-in mr-bound mr-tcenter" data-k="target" value="'+esc(k.target!=null?k.target:'')+'" oninput="mrRecompute()" placeholder="tgt">'+
+    '<input class="mr-in mr-bound mr-tcenter" data-k="unit" value="'+esc(k.unit||'')+'" placeholder="unit">'+
+    '<input class="mr-in mr-bound mr-tcenter" data-k="current" value="'+esc(k.current!=null?k.current:'')+'" oninput="mrRecompute()" placeholder="meas">'+
+    '<span class="mr-badge '+r.cls+'" data-k="result">'+r.text+'</span>'+
+    '<button class="mr-del" onclick="mrDelRow(this,\'.mr-krow\')" title="Remove">\u00d7</button>'+
+  '</div>';
+}
+
+/* one finding row (numbered, contenteditable). */
+function mrFindingRow(text, n){
+  return '<div class="mr-frow"><div class="mr-fnum">'+String(n).padStart(2,'0')+'</div>'+
+    '<div class="mr-ed" contenteditable="true" data-f="finding" data-ph="Finding or learning from the demonstration." style="flex:1">'+esc(text||'')+'</div>'+
+    '<button class="mr-del" onclick="mrDelRow(this,\'.mr-frow\')" title="Remove">\u00d7</button></div>';
+}
+
+/* one action row (text · owner · due · del). */
+function mrActionRow(a){
+  a = a || {};
+  return '<div class="mr-arow">'+
+    '<input class="mr-in" data-a="text" value="'+esc(a.text||'')+'" placeholder="Action item arising from the demonstration">'+
+    '<input class="mr-in mr-mono mr-tcenter" data-a="owner" value="'+esc(a.owner||'')+'" placeholder="Owner">'+
+    '<input class="mr-in mr-mono mr-tcenter" data-a="due" value="'+esc(a.due||'')+'" placeholder="Due">'+
+    '<button class="mr-del" onclick="mrDelRow(this,\'.mr-arow\')" title="Remove">\u00d7</button>'+
+  '</div>';
+}
+
+/* build the report sheet's inner HTML for a milestone p. Bound singletons carry
+   stable ids (mr-f-name, mr-f-end) and .mr-bound; blob fields carry mr-f-* ids. */
+function mrBuildReport(p){
+  var saved = p.milestoneReport || {};
+  var kpis = p.milestoneKpis || [];
+  var endVal = pEnd(p);
+  var done = milestoneDone(p);
+  var findings = (saved.findings && saved.findings.length) ? saved.findings : ['','',''];
+  var actions  = (saved.actions  && saved.actions.length)  ? saved.actions  : [{},{},{}];
+  var variance = mrVariance(endVal, saved.ctxActual || '');
+  var kpiRows  = kpis.length ? kpis.map(mrKpiRow).join('') : '';
+
+  return ''+
+  '<div class="mr-header">'+
+    '<div>'+
+      '<div class="mr-label">Milestone</div>'+
+      '<input class="mr-in mr-bound mr-pname" id="mr-f-name" value="'+esc(p.name||'')+'" placeholder="Milestone name" style="max-width:280px">'+
+      '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+        '<input class="mr-in mr-tag" id="mr-f-msTag" value="'+esc(saved.msTag||'')+'" placeholder="MS-01" style="width:90px">'+
+        (done ? '<span class="mr-achieved">ACHIEVED</span>' : '<span class="mr-pending">PENDING</span>')+
+      '</div>'+
+    '</div>'+
+    '<div class="mr-meta">'+
+      '<div><div class="mr-label">Target date</div><input class="mr-in mr-bound mr-mval" id="mr-f-end" type="date" value="'+esc(endVal)+'" style="width:140px"></div>'+
+      '<div><div class="mr-label">Author</div><input class="mr-in mr-mval" id="mr-f-author" value="'+esc(saved.author||'')+'" placeholder="Name" style="width:96px"></div>'+
+      '<div><div class="mr-label">Version</div><input class="mr-in mr-mval" id="mr-f-version" value="'+esc(saved.version||'v1.0')+'" style="width:64px"></div>'+
+    '</div>'+
+  '</div>'+
+
+  '<div class="mr-full mr-section">'+
+    '<div class="mr-stitle">What was demonstrated</div>'+
+    '<div class="mr-ed" contenteditable="true" id="mr-f-demonstrated" data-ph="Describe what was physically demonstrated, tested, or shown \u2014 setup conditions, operating envelope, duration, and any observers present.">'+esc(saved.demonstrated||'')+'</div>'+
+  '</div>'+
+
+  '<div class="mr-full mr-section">'+
+    '<div class="mr-stitle">Performance vs. targets <span style="font-size:9px;color:#8aa9c4;letter-spacing:.04em">\u25CF bound to milestone</span></div>'+
+    '<div class="mr-khead">'+
+      '<div class="mr-col" style="text-align:left">Metric</div><div class="mr-col">Dir</div><div class="mr-col">Target</div><div class="mr-col">Unit</div><div class="mr-col">Meas.</div><div class="mr-col">Result</div><div></div>'+
+    '</div>'+
+    '<div id="mr-kpis">'+kpiRows+'</div>'+
+    '<button class="mr-addbtn" onclick="mrAddKpi()">+ Add target</button>'+
+  '</div>'+
+
+  '<div class="mr-two">'+
+    '<div class="mr-section">'+
+      '<div class="mr-stitle">Milestone context</div>'+
+      '<div class="mr-stat"><span style="color:#666">Planned date</span><span class="mr-mono">'+esc(endVal||'\u2014')+'</span></div>'+
+      '<div class="mr-stat"><span style="color:#666">Actual date</span><input class="mr-in" id="mr-f-ctxActual" value="'+esc(saved.ctxActual||'')+'" placeholder="\u2014"></div>'+
+      '<div class="mr-stat"><span style="color:#666">Variance</span><span class="mr-mono" style="color:'+variance.color+'">'+esc(variance.text)+'</span></div>'+
+      '<div class="mr-stat"><span style="color:#666">Budget spent</span><input class="mr-in" id="mr-f-ctxBudget" value="'+esc(saved.ctxBudget||'')+'" placeholder="\u2014"></div>'+
+      '<div class="mr-stat"><span style="color:#666">Prototype build no.</span><input class="mr-in" id="mr-f-ctxBuild" value="'+esc(saved.ctxBuild||'')+'" placeholder="\u2014"></div>'+
+      '<div class="mr-stat"><span style="color:#666">Linked OKR</span><input class="mr-in" id="mr-f-ctxOkr" value="'+esc(saved.ctxOkr||'')+'" placeholder="\u2014"></div>'+
+    '</div>'+
+    '<div class="mr-section">'+
+      '<div class="mr-stitle">Key findings &amp; learnings</div>'+
+      '<div id="mr-findings">'+findings.map(function(f,i){ return mrFindingRow(f, i+1); }).join('')+'</div>'+
+      '<button class="mr-addbtn" onclick="mrAddFinding()">+ Add finding</button>'+
+    '</div>'+
+  '</div>'+
+
+  '<div class="mr-full mr-section">'+
+    '<div class="mr-stitle">Actions required</div>'+
+    '<div class="mr-khead" style="grid-template-columns:1fr 90px 80px 18px"><div class="mr-col" style="text-align:left">Action</div><div class="mr-col">Owner</div><div class="mr-col">Due</div><div></div></div>'+
+    '<div id="mr-actions">'+actions.map(mrActionRow).join('')+'</div>'+
+    '<button class="mr-addbtn" onclick="mrAddAction()">+ Add action</button>'+
+  '</div>'+
+
+  '<div class="mr-foot">'+
+    '<div><div class="mr-sigline"></div><input class="mr-in mr-siglabel" id="mr-f-sig1" value="'+esc(saved.sig1||'Technical lead')+'"></div>'+
+    '<div><div class="mr-sigline"></div><input class="mr-in mr-siglabel" id="mr-f-sig2" value="'+esc(saved.sig2||'CTO / R&D director')+'"></div>'+
+    '<div><div class="mr-sigline"></div><input class="mr-in mr-siglabel" id="mr-f-sig3" value="'+esc(saved.sig3||'Reviewer / sponsor')+'"></div>'+
+  '</div>';
+}
+
+/* open the report for milestone id, bound to it. Rebuilds rows from live data. */
+function openMilestoneReport(id){
+  var p = findCacheProject(id);
+  if(!p || !isMilestoneProject(p)) return;
+  _mrTarget = String(p.id);
+  _mrOverwrite = false; _mrConflictRev = null;
+  _mrLocked = !!(p.milestoneReport && p.milestoneReport.locked);
+  var root = document.getElementById('mr-report-root');
+  root.innerHTML = mrBuildReport(p);
+  root.classList.toggle('mr-locked', _mrLocked);
+  var sb = document.getElementById('mr-save-btn');
+  if(sb){ sb.disabled = false; sb.textContent = 'Save'; }
+  mrSetLockBtn();
+  mrRecompute();
+  mrMsg('', '');
+  document.getElementById('mr-overlay').classList.add('open');
+}
+
+/* close — Save / Cancel / close button only; there is no backdrop-click close. */
+function closeMilestoneReport(){
+  document.getElementById('mr-overlay').classList.remove('open');
+  _mrTarget = null; _mrOverwrite = false; _mrConflictRev = null;
+}
+
+function mrSetLockBtn(){
+  var b = document.getElementById('mr-lock-btn');
+  if(!b) return;
+  if(_mrLocked){ b.innerHTML = '\uD83D\uDD12 Locked';   b.classList.add('is-locked'); }
+  else {         b.innerHTML = '\uD83D\uDD13 Unlocked'; b.classList.remove('is-locked'); }
+}
+
+/* toggle the lock; does NOT auto-save — the new state persists on the next Save. */
+function mrToggleLock(){
+  _mrLocked = !_mrLocked;
+  var root = document.getElementById('mr-report-root');
+  if(root) root.classList.toggle('mr-locked', _mrLocked);
+  mrSetLockBtn();
+  mrMsg((_mrLocked ? 'Locked' : 'Unlocked') + ' \u2014 click Save to persist.', '');
+}
+
+function mrMsg(t, kind){
+  var m = document.getElementById('mr-msg');
+  if(!m) return;
+  m.textContent = t || '';
+  m.className = 'mr-msg' + (kind ? ' ' + kind : '');
+}
+
+function mrAddKpi(){ if(_mrLocked) return; var c = document.getElementById('mr-kpis'); if(c) c.insertAdjacentHTML('beforeend', mrKpiRow({})); }
+function mrAddFinding(){ if(_mrLocked) return; var c = document.getElementById('mr-findings'); if(!c) return; var n = c.querySelectorAll('.mr-frow').length + 1; c.insertAdjacentHTML('beforeend', mrFindingRow('', n)); }
+function mrAddAction(){ if(_mrLocked) return; var c = document.getElementById('mr-actions'); if(c) c.insertAdjacentHTML('beforeend', mrActionRow({})); }
+function mrDelRow(btn, sel){ if(_mrLocked) return; var row = btn.closest(sel); if(row && row.parentNode) row.parentNode.removeChild(row); if(sel === '.mr-krow') mrRecompute(); }
+
+/* recompute every target's result badge from its current measured/target/dir. */
+function mrRecompute(){
+  var rows = document.querySelectorAll('#mr-kpis .mr-krow');
+  for(var i=0;i<rows.length;i++){
+    var row = rows[i];
+    var get = function(k){ var el = row.querySelector('[data-k="'+k+'"]'); return el ? el.value : ''; };
+    var r = mrResult({ target:get('target'), current:get('current'), direction:get('direction') });
+    var badge = row.querySelector('[data-k="result"]');
+    if(badge){ badge.textContent = r.text; badge.className = 'mr-badge ' + r.cls; }
+  }
+}
+
+/* gather the report into { name, end, milestoneKpis, blob }. name + end + the
+   targets are the bound milestone data; blob is everything else. */
+function collectMilestoneReport(){
+  function v(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+  function t(id){ var el = document.getElementById(id); return el ? String(el.textContent || '').trim() : ''; }
+
+  var kpis = [], krows = document.querySelectorAll('#mr-kpis .mr-krow');
+  for(var i=0;i<krows.length;i++){
+    var row = krows[i];
+    var g = (function(rw){ return function(k){ var el = rw.querySelector('[data-k="'+k+'"]'); return el ? String(el.value || '').trim() : ''; }; })(row);
+    var name = g('name'), target = g('target'), unit = g('unit'), current = g('current'), direction = g('direction') || 'increase';
+    if(!name && !target && !unit && !current) continue;
+    kpis.push({ name:name, target:target, unit:unit, current:current, direction:direction });
+  }
+
+  var findings = [], feds = document.querySelectorAll('#mr-findings [data-f="finding"]');
+  for(var j=0;j<feds.length;j++){ findings.push(String(feds[j].textContent || '').trim()); }
+
+  var actions = [], arows = document.querySelectorAll('#mr-actions .mr-arow');
+  for(var a=0;a<arows.length;a++){
+    var ar = arows[a];
+    var ag = (function(rw){ return function(k){ var el = rw.querySelector('[data-a="'+k+'"]'); return el ? String(el.value || '').trim() : ''; }; })(ar);
+    var atext = ag('text'), aowner = ag('owner'), adue = ag('due');
+    if(!atext && !aowner && !adue) continue;
+    actions.push({ text:atext, owner:aowner, due:adue });
+  }
+
+  var blob = {
+    msTag: v('mr-f-msTag'), author: v('mr-f-author'), version: v('mr-f-version'),
+    demonstrated: t('mr-f-demonstrated'),
+    ctxActual: v('mr-f-ctxActual'), ctxBudget: v('mr-f-ctxBudget'), ctxBuild: v('mr-f-ctxBuild'), ctxOkr: v('mr-f-ctxOkr'),
+    sig1: v('mr-f-sig1'), sig2: v('mr-f-sig2'), sig3: v('mr-f-sig3'),
+    findings: findings, actions: actions, locked: _mrLocked
+  };
+  return { name: v('mr-f-name'), end: v('mr-f-end'), milestoneKpis: kpis, blob: blob };
+}
+
+/* persist: bound name + target-date + targets go to the milestone; the blob to
+   milestoneReport. Owner/product are omitted so they're preserved. Mirrors the
+   add-modal 409 -> overwrite flow but with the private _mr* conflict state. */
+async function saveMilestoneReport(){
+  var p = findCacheProject(_mrTarget);
+  if(!p) return;
+  var c = collectMilestoneReport();
+  if(!c.name){ mrMsg('A milestone name is required.', 'err'); return; }
+  if(!c.end){  mrMsg('A target date is required.', 'err'); return; }
+  var btn = document.getElementById('mr-save-btn');
+  if(btn) btn.disabled = true;
+  var baseRev = _mrOverwrite ? _mrConflictRev : (p._rev != null ? p._rev : null);
+  try {
+    await editMilestone(p, { name:c.name, dueDate:c.end, milestoneKpis:c.milestoneKpis, milestoneReport:c.blob, baseRev:baseRev });
+    _mrOverwrite = false; _mrConflictRev = null;
+    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
+    mrMsg('Saved \u2713', 'ok');
+    setTimeout(closeMilestoneReport, 700);
+  } catch(e){
+    if(btn) btn.disabled = false;
+    if(e && e.conflict){
+      _mrConflictRev = (e.conflict.rev != null) ? e.conflict.rev : null;
+      _mrOverwrite = true;
+      if(btn) btn.textContent = 'Overwrite their change';
+      mrMsg('This milestone changed on the server. Click Save again to overwrite.', 'err');
+      fetchAll(true);
+    } else {
+      mrMsg('Save failed: ' + (e && e.message ? e.message : 'unknown error'), 'err');
+    }
+  }
+}
 
 /* --------------------------- edit modal --------------------------------- */
 function findCacheProject(id){ return findProjectById(_projectsCache || [], id); }
@@ -1859,11 +2223,17 @@ async function editInitiative(p, fields){
   return res;
 }
 async function editMilestone(p, fields){
-  var res = await brokerWrite('PATCH', '/milestone/' + encodeURIComponent(p.id), {
-    name:fields.name, baseRev:(fields.baseRev != null ? fields.baseRev : null),
-    dueDate:fields.dueDate, ownerId:fields.ownerId || '',
-    productLine:fields.productLine || '', productModel:fields.productModel || ''
-  });
+  /* name + dueDate are always sent (the broker requires them); owner / product /
+     targets / report are sent only when present, so the report — which omits
+     owner and product — can't blank them. */
+  var body = { name:fields.name, dueDate:fields.dueDate,
+               baseRev:(fields.baseRev != null ? fields.baseRev : null) };
+  if(fields.ownerId !== undefined)         body.ownerId = fields.ownerId || '';
+  if(fields.productLine !== undefined)     body.productLine = fields.productLine || '';
+  if(fields.productModel !== undefined)    body.productModel = fields.productModel || '';
+  if(fields.milestoneKpis !== undefined)   body.milestoneKpis = fields.milestoneKpis;
+  if(fields.milestoneReport !== undefined) body.milestoneReport = fields.milestoneReport;
+  var res = await brokerWrite('PATCH', '/milestone/' + encodeURIComponent(p.id), body);
   await fetchAll(true);
   return res;
 }
@@ -2053,7 +2423,7 @@ function renderMilestoneCard(ms){
   } else {
     dateCell = '<div class="ms-date '+dateClass(ms.date)+'">'+fmtDate(ms.date)+'</div>';
   }
-  return '<div class="ms-row'+(ms.overdue ? ' ms-overdue-row' : '')+'" onclick="openEditModal(\''+esc(String(ms.id))+'\')">'+
+  return '<div class="ms-row'+(ms.overdue ? ' ms-overdue-row' : '')+'" onclick="openMilestoneReport(\''+esc(String(ms.id))+'\')">'+
     '<div class="ms-name">'+esc(ms.name)+owner+'</div>'+
     dateCell+
     '<div class="ms-status '+(statusCls[ms.status]||'st-upcoming')+'">'+(statusLabel[ms.status]||ms.status)+'</div>'+

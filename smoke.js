@@ -166,6 +166,63 @@ const exercise = `
     if(!posted.length) throw new Error('brokered create did not POST /objective');
     return true;
   };
+  global.__runMilestoneReportTest = async function(){
+    /* ---- pure result / glyph / variance maths ---- */
+    if(mrDirGlyph('increase') !== '\u2265') throw new Error('mrDirGlyph increase');
+    if(mrDirGlyph('decrease') !== '\u2264') throw new Error('mrDirGlyph decrease');
+    if(mrDirGlyph('maintain') !== '~')      throw new Error('mrDirGlyph maintain');
+    if(mrResult({ target:10, current:12,  direction:'increase' }).text !== 'Met')     throw new Error('mrResult increase Met');
+    if(mrResult({ target:10, current:9.2, direction:'increase' }).text !== 'Partial') throw new Error('mrResult increase Partial');
+    if(mrResult({ target:10, current:4,   direction:'increase' }).text !== 'Missed')  throw new Error('mrResult increase Missed');
+    if(mrResult({ target:10, current:8,   direction:'decrease' }).text !== 'Met')     throw new Error('mrResult decrease Met');
+    if(mrResult({ target:'', current:'',  direction:'increase' }).text !== 'N/A')     throw new Error('mrResult blank N/A');
+    if(mrVariance('2026-05-01','2026-05-08').text !== '+7 days') throw new Error('mrVariance late');
+    if(mrVariance('2026-05-01','2026-05-01').text !== 'On time') throw new Error('mrVariance on time');
+
+    /* ---- clicking a milestone opens the report (not the edit modal), bound to it.
+       milestone 9 came in on the /state pull. ---- */
+    openMilestoneReport('9');
+    if(_mrTarget !== '9') throw new Error('openMilestoneReport did not bind milestone 9 (got ' + _mrTarget + ')');
+
+    /* edit the two bound fields (name + target date) and Save -> PATCH /milestone/9 */
+    document.getElementById('mr-f-name').value = 'Renamed MS';
+    document.getElementById('mr-f-end').value  = '2026-07-01';
+    var putsBefore = global.__puts.length;
+    global.__brokerCalls = [];
+    global.__brokerNext409 = false;
+    await saveMilestoneReport();
+    if(global.__puts.length !== putsBefore) throw new Error('milestone save issued a direct PUT (legacy path not removed)');
+    var ms = global.__brokerCalls.filter(function(c){ return c.method === 'PATCH' && c.url.indexOf('/milestone/9') !== -1; });
+    if(!ms.length) throw new Error('milestone report save did not PATCH /milestone/9');
+    var body = ms[0].body;
+    if(body.name !== 'Renamed MS')    throw new Error('report did not bind milestone name (got ' + body.name + ')');
+    if(body.dueDate !== '2026-07-01') throw new Error('report did not bind target date (got ' + body.dueDate + ')');
+    if(!('milestoneKpis' in body))    throw new Error('report save omitted milestoneKpis (the bound targets table)');
+    if(!('milestoneReport' in body))  throw new Error('report save omitted milestoneReport (the blob)');
+    if('ownerId' in body)             throw new Error('report sent ownerId (owner must be preserved, not blanked)');
+    if('productLine' in body)         throw new Error('report sent productLine (product must be preserved, not blanked)');
+    if(body.baseRev !== null)         throw new Error('milestone with no _rev should save baseRev null (got ' + body.baseRev + ')');
+
+    /* a 409 must arm the report's PRIVATE overwrite state (separate from the add modal) */
+    openMilestoneReport('9');
+    document.getElementById('mr-f-name').value = 'Renamed MS';
+    document.getElementById('mr-f-end').value  = '2026-07-01';
+    global.__brokerCalls = [];
+    global.__brokerNext409 = true;
+    await saveMilestoneReport();                       /* -> 409 */
+    if(!_mrOverwrite) throw new Error('milestone 409 did not set _mrOverwrite');
+    if(_mrConflictRev !== 7) throw new Error('milestone 409 did not capture server rev (got ' + _mrConflictRev + ')');
+    if(_pendingOverwrite) throw new Error('milestone 409 leaked into the add modal _pendingOverwrite');
+
+    /* the retry resends baseRev = server rev, then clears the private flag */
+    global.__brokerCalls = [];
+    await saveMilestoneReport();                       /* already armed -> overwrite */
+    var ow = global.__brokerCalls.filter(function(c){ return c.method === 'PATCH' && c.url.indexOf('/milestone/9') !== -1; });
+    if(!ow.length) throw new Error('milestone overwrite did not PATCH /milestone/9');
+    if(ow[0].body.baseRev !== 7) throw new Error('milestone overwrite did not send server rev as baseRev (got ' + ow[0].body.baseRev + ')');
+    if(_mrOverwrite) throw new Error('milestone overwrite success did not clear _mrOverwrite');
+    return true;
+  };
   global.__runDefaultUrlTest = async function(){
     /* token only, no brokerUrl -> brokerBase() must fall back to DEFAULT_BROKER_URL
        and the tracker must connect against it */
@@ -208,9 +265,10 @@ try {
     global.__validFetch = true;
     await global.__runFetchTest();
     await global.__runBrokerWriteTest();
+    await global.__runMilestoneReportTest();
     await global.__runDefaultUrlTest();
     await global.__runTokenParamTest();
-    console.log('SMOKE OK (init + render + add/edit modal + broker /state pull + broker writes + 409 overwrite + default URL + ?token= embed)');
+    console.log('SMOKE OK (init + render + add/edit modal + broker /state pull + broker writes + 409 overwrite + milestone report bind/save + default URL + ?token= embed)');
     process.exit(0);
   } catch(e){
     console.log('SMOKE FAIL (async):', e.message);
