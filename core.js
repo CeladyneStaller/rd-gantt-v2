@@ -40,7 +40,7 @@
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI'
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -81,9 +81,36 @@
     return base + num;
   }
 
-  // ---- KPI values & scoring (v1.3) -----------------------------------------
-  // A KPI is the measurement atom, hosted by a Key Result or a stage-gate. A
-  // value enters ONLY via kpiUpdates (keyed by kpiId); current = latest by ts.
+  // ---- KPI link groups, level resolution & scoring (v1.3.1) ----------------
+  // A KPI is the measurement atom, hosted at a level: initiative > keyResult >
+  // stageGate > task(=execution). KPIs may share a free-standing groupId to form
+  // a LINK GROUP; exactly one member carries isDefiner and owns the IDENTITY
+  // (name/direction/unit). Resolution is asymmetric (decision v1.3.1):
+  //   - TARGET cascades DOWN: a member's effective target = its own if set, else
+  //     the nearest HIGHER level's (self overrides ancestor). Within-objective
+  //     levels resolve against the same objective; the initiative level is
+  //     objective-agnostic (one definition spanning every linked objective).
+  //   - VALUE cascades UP: a member's effective value = its own latest reading if
+  //     present, else the nearest LOWER level's. A higher-level reading never
+  //     leaks downward; a higher level's own reading overrides a lower one for
+  //     that higher level (positional override).
+  // A KPI with no groupId is a standalone singleton (its own definer) -> the
+  // resolution collapses to its own target/value, identical to v1.3.
+  var KPI_LEVEL = { initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
+
+  function progressLinear(value, target, direction) {
+    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
+    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    return 0;
+  }
+  function progressRange(value, lo, hi) {
+    if (value >= lo && value <= hi) return 100;
+    var width = (hi - lo) || 1;
+    var d = value < lo ? (lo - value) : (value - hi);
+    return 100 * Math.max(0, 1 - d / width);
+  }
+
+  // latest reading posted to a specific KPI id (the host where it was entered)
   function kpiCurrentValue(kpiId, execDocs) {
     var latest = null;
     for (var div in execDocs) {
@@ -98,19 +125,69 @@
     return latest ? latest.value : null;
   }
 
-  function progressLinear(value, target, direction) {
-    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
-    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
-    return 0;
+  function allKpis(execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ks = execDocs[div].kpis || [];
+      for (var i = 0; i < ks.length; i++) out.push(ks[i]);
+    }
+    return out;
   }
-  function progressRange(value, lo, hi) {
-    if (value >= lo && value <= hi) return 100;
-    var width = (hi - lo) || 1;
-    var d = value < lo ? (lo - value) : (value - hi);
-    return 100 * Math.max(0, 1 - d / width);
+  function effGroup(kpi) { return kpi.groupId || kpi.id; }
+  function groupMembers(kpi, kpis) {
+    var g = effGroup(kpi), out = [];
+    for (var i = 0; i < kpis.length; i++) if (effGroup(kpis[i]) === g) out.push(kpis[i]);
+    return out;
+  }
+  // the definer owns identity; a lone member is its own definer
+  function definerOf(kpi, kpis) {
+    var members = groupMembers(kpi, kpis);
+    for (var i = 0; i < members.length; i++) if (members[i].isDefiner) return members[i];
+    return members[0] || kpi;
+  }
+  function kpiDirection(kpi, kpis) { return definerOf(kpi, kpis).direction; }
+  function kpiUnit(kpi, kpis) { return definerOf(kpi, kpis).unit; }
+  function kpiName(kpi, kpis) { return definerOf(kpi, kpis).name; }
+
+  // the group member sitting at a given level (within objectiveId for the
+  // within-objective levels; objective-agnostic at the initiative level)
+  function memberAtLevel(members, level, objectiveId) {
+    for (var i = 0; i < members.length; i++) {
+      var m = members[i];
+      if (KPI_LEVEL[m.hostType] !== level) continue;
+      if (level === KPI_LEVEL.initiative) return m;
+      if (m.objectiveId === objectiveId) return m;
+    }
+    return null;
   }
 
-  // kpiScore(kpi, currentValue) -> 0..100 or null (unscored: null target / no read)
+  // effective TARGET: self, then nearest higher level (cascades down)
+  function effTarget(kpi, kpis) {
+    var members = groupMembers(kpi, kpis);
+    var lvl = KPI_LEVEL[kpi.hostType];
+    for (var L = lvl; L <= KPI_LEVEL.initiative; L++) {
+      var m = memberAtLevel(members, L, kpi.objectiveId);
+      if (m && m.target != null) return m.target;
+    }
+    return null;
+  }
+  // effective VALUE: self, then nearest lower level (cascades up)
+  function effValue(kpi, kpis, execDocs) {
+    var members = groupMembers(kpi, kpis);
+    var lvl = KPI_LEVEL[kpi.hostType];
+    for (var L = lvl; L >= 0; L--) {
+      var m = memberAtLevel(members, L, kpi.objectiveId);
+      if (m) {
+        var v = kpiCurrentValue(m.id, execDocs);
+        if (v != null) return v;
+      }
+    }
+    return null;
+  }
+
+  // kpiScore(kpi, currentValue) -> 0..100 or null. Pure formula against the
+  // kpi's own direction/target (used for standalone KPIs and unit tests).
   function kpiScore(kpi, currentValue) {
     if (kpi.target == null) return null;
     if (currentValue == null) return null;
@@ -120,6 +197,19 @@
     } else {
       raw = progressLinear(currentValue, kpi.target, kpi.direction);
     }
+    return clamp(raw, 0, 100);
+  }
+
+  // group/level-aware score: resolved target (down) vs resolved value (up),
+  // direction from the definer.
+  function kpiScoreResolved(kpi, kpis, execDocs) {
+    var target = effTarget(kpi, kpis);
+    if (target == null) return null;
+    var value = effValue(kpi, kpis, execDocs);
+    if (value == null) return null;
+    var dir = kpiDirection(kpi, kpis);
+    var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
+                                : progressLinear(value, target, dir);
     return clamp(raw, 0, 100);
   }
 
@@ -137,15 +227,16 @@
   }
 
   function meanScorable(kpis, execDocs) {
+    var all = allKpis(execDocs);
     var scores = [];
     for (var i = 0; i < kpis.length; i++) {
-      var s = kpiScore(kpis[i], kpiCurrentValue(kpis[i].id, execDocs));
+      var s = kpiScoreResolved(kpis[i], all, execDocs);
       if (s != null) scores.push(s);
     }
     return mean(scores);
   }
 
-  // keyResultScore -> mean of the KR's KPIs' scores (null if none scorable)
+  // keyResultScore -> mean of the KR's KPIs' resolved scores (null if none scorable)
   function keyResultScore(krId, execDocs) { return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs); }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
@@ -439,8 +530,16 @@
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
+    kpiScoreResolved: kpiScoreResolved,
     kpiCurrentValue: kpiCurrentValue,
     kpisFor: kpisFor,
+    groupMembers: groupMembers,
+    definerOf: definerOf,
+    kpiDirection: kpiDirection,
+    kpiUnit: kpiUnit,
+    kpiName: kpiName,
+    effTarget: effTarget,
+    effValue: effValue,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
     krsForObjective: krsForObjective,

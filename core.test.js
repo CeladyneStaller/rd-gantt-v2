@@ -108,6 +108,77 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   isNull(C.objectiveScore('O1', exec5), 'KR with only an unscored KPI -> objective null');
 })();
 
+/* ---- KPI link groups: define-down targets, status-up values ------------- */
+(function () {
+  // define on a Key Result, link a stage-gate member, measure AT the gate.
+  var exec = { 'D': {
+    keyResults: [{ id: 'KR1', objectiveId: 'O1', statement: 'kr' }],
+    stageGates: [{ id: 'SG1', objectiveId: 'O1', plannedDate: 10 }],
+    kpis: [
+      { id: 'Kkr', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR1', groupId: 'G1', isDefiner: true,
+        name: 'Limiting current', direction: 'up', unit: 'A/cm2', target: 100 },
+      { id: 'Kg', objectiveId: 'O1', hostType: 'stageGate', hostId: 'SG1', groupId: 'G1', isDefiner: false, target: null }
+    ],
+    kpiUpdates: [{ id: 'u1', kpiId: 'Kg', value: 80, timestamp: 1 }]   // reading entered at the GATE
+  } };
+  var kpis = exec['D'].kpis;
+  approx(C.effTarget(kpis[1], kpis), 100, 'target cascades DOWN to the gate member');
+  approx(C.effValue(kpis[0], kpis, exec), 80, 'value cascades UP to the KR member');
+  eq(C.kpiDirection(kpis[1], kpis), 'up', 'gate member inherits direction from definer');
+  eq(C.kpiName(kpis[1], kpis), 'Limiting current', 'gate member inherits name from definer');
+  approx(C.keyResultScore('KR1', exec), 80, 'gate reading scores the linked KR (value up)');
+  approx(C.objectiveScore('O1', exec), 80, 'objective scores from the linked gate reading');
+  approx(C.stageGateScore('SG1', exec), 80, 'gate readiness = cascaded-down target + own reading');
+})();
+
+/* ---- KPI link groups: initiative-level definition + lower override ------ */
+(function () {
+  var exec = { 'D': {
+    keyResults: [{ id: 'KR2', objectiveId: 'O1', statement: 'kr' }],
+    stageGates: [],
+    kpis: [
+      { id: 'Ki', objectiveId: null, hostType: 'initiative', hostId: 'INIT1', groupId: 'G2', isDefiner: true,
+        name: 'X', direction: 'up', unit: 'u', target: 200 },
+      { id: 'Kk', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR2', groupId: 'G2', isDefiner: false, target: null }
+    ],
+    kpiUpdates: [{ id: 'u1', kpiId: 'Kk', value: 100, timestamp: 1 }]
+  } };
+  approx(C.keyResultScore('KR2', exec), 50, 'initiative target (200) cascades down to KR -> 100/200');
+  exec['D'].kpis[1].target = 100;   // KR overrides locally
+  approx(C.keyResultScore('KR2', exec), 100, 'KR-level target override beats the initiative target');
+})();
+
+/* ---- KPI link groups: higher value overpowers, lower never reads up ----- */
+(function () {
+  var exec = { 'D': {
+    keyResults: [{ id: 'KR3', objectiveId: 'O1', statement: 'kr' }],
+    stageGates: [{ id: 'SG3', objectiveId: 'O1', plannedDate: 10 }],
+    kpis: [
+      { id: 'Kk3', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR3', groupId: 'G3', isDefiner: true,
+        name: 'X', direction: 'up', unit: 'u', target: 100 },
+      { id: 'Kg3', objectiveId: 'O1', hostType: 'stageGate', hostId: 'SG3', groupId: 'G3', isDefiner: false, target: null }
+    ],
+    kpiUpdates: [
+      { id: 'u1', kpiId: 'Kg3', value: 50, timestamp: 1 },   // gate reading
+      { id: 'u2', kpiId: 'Kk3', value: 90, timestamp: 2 }    // KR reading (higher level)
+    ]
+  } };
+  approx(C.keyResultScore('KR3', exec), 90, 'higher-level reading overpowers the lower one for the KR');
+  approx(C.stageGateScore('SG3', exec), 50, 'lower level keeps its own reading, never reads up');
+})();
+
+/* ---- KPI link groups: standalone KPI is its own definer (v1.3 parity) --- */
+(function () {
+  var exec = { 'D': {
+    keyResults: [{ id: 'KR4', objectiveId: 'O1', statement: 'kr' }],
+    kpis: [{ id: 'Ks', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR4', groupId: null, isDefiner: true,
+             name: 'S', direction: 'down', unit: 'ms', target: 10 }],
+    kpiUpdates: [{ id: 'u1', kpiId: 'Ks', value: 20, timestamp: 1 }]
+  } };
+  approx(C.keyResultScore('KR4', exec), 50, 'standalone KPI scores from its own target/value (down 10 vs 20)');
+  eq(C.kpiDirection(exec['D'].kpis[0], exec['D'].kpis), 'down', 'standalone resolves identity to itself');
+})();
+
 /* ---- tiers: quarterly vs overall, collapse, company grand-mean ----------- */
 (function () {
   // Division D with two initiatives across two quarters.
