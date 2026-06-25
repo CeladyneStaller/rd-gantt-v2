@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>R&D Execution — Division</title>
+<style>
+  :root{
+    --bg:#0f1620; --panel:#15202d; --panel2:#1b2937; --line:#26384a;
+    --ink:#e6edf3; --muted:#8aa0b4; --accent:#3fd0c9; --accent2:#7ca8ff;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --none:#5b7186;
+    --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
+  header h1 .dot{color:var(--accent)}
+  header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
+  .spacer{flex:1}
+  main{padding:18px;max-width:1080px;margin:0 auto}
+  .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
+  .msg.show{display:block}
+  .msg.info{background:#13314a;color:#add4ff;border:1px solid #1d4a6e}
+  .msg.err{background:#3a1620;color:#ffb4bd;border:1px solid #5e2230}
+  .msg.ok{background:#13311f;color:#9ff0c4;border:1px solid #1d5e3a}
+  select.obj{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:8px;font-size:14px;min-width:340px}
+  .objhead{display:flex;align-items:center;gap:16px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+  .objhead .sc{font-size:40px;font-weight:800;line-height:1}
+  .objhead .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
+  .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .band.on-track{background:#10371f;color:var(--ok)} .band.at-risk{background:#3a2f10;color:var(--warn)}
+  .band.off-track{background:#3a1414;color:var(--bad)} .band.no-band{background:#1c2733;color:var(--none)}
+  .sub{margin:18px 0}
+  .sub h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:10px}
+  .sub h3 button{margin-left:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .mono{font-family:var(--mono);font-size:12px}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:6px;font-family:var(--sans);font-size:13px}
+  input.mono{font-family:var(--mono)}
+  input.tiny{width:70px} input.sm{width:120px}
+  button.act{background:var(--accent);color:#08121a;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
+  button.ghost{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+  button.danger{color:var(--bad);border-color:#5e2230}
+  button.danger.armed{background:var(--bad);color:#1a0a0c}
+  button.mini{padding:3px 8px;font-size:12px}
+  .row-actions{display:flex;gap:6px;align-items:center}
+  .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+  .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  .hint{color:var(--muted);font-size:12px;margin:8px 0}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .kpi-now{font-family:var(--mono);font-size:12px}
+  .read-row{display:flex;gap:6px;align-items:center}
+  code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+  .settings label{display:block;margin-bottom:10px;max-width:520px}
+  .scwrap{display:flex;align-items:baseline;gap:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot">▣</span> R&amp;D Execution</h1>
+  <span class="div-pill" id="divPill">—</span>
+  <div class="spacer"></div>
+  <select class="obj" id="objSelect"><option>loading…</option></select>
+  <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
+  <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
+</header>
+<main>
+  <div class="msg" id="msg"></div>
+
+  <div id="settingsPanel" style="display:none" class="settings">
+    <h3>Broker &amp; division</h3>
+    <p class="hint">Broker is baked in; token lives in this browser only. The division is taken from
+      <code>?division=DIV-FC</code> (or pick below). An SSO embed can pass <code>?token=…</code>; it strips itself.</p>
+    <label>Broker token <input class="mono" id="tokenInput" type="password" style="width:100%" placeholder="paste token"/></label>
+    <label>Division <select id="divSelect"></select></label>
+    <button class="act" id="tokenSave">Save</button>
+  </div>
+
+  <div id="objHeadWrap"></div>
+  <div id="subKR" class="sub"></div>
+  <div id="subSG" class="sub"></div>
+  <div id="subTASK" class="sub"></div>
+</main>
+
+<script>
+/* ============================================================================
+   Unified R&D Suite — Shared Core (frozen spec v1.2)
+   Pure logic only. No DOM, no network. Runs headless in Node and injects into
+   the browser shells via build.py (between the CORE markers).
+
+   Conventions
+   -----------
+   - Dates are integer day-counts (days since an arbitrary epoch). Shells convert
+     ISO <-> day-count; the core only does max / +lag arithmetic.
+   - percentComplete is an integer 0..100.
+   - A KPI "group" is identified by groupId. A value enters ONLY via kpiUpdates
+     (in an exec doc). A group's current value = the latest update by timestamp.
+   - A Key Result is scored from its OWN target against its group's current value.
+     A KR's effective group id = kr.groupId || kr.id  (standalone KRs are their
+     own singleton group).
+   - Documented build-time defaults (flippable, flagged on delivery):
+       (g1) A KR with a target but no read yet is UNSCORED (excluded from the
+            mean), same treatment as a null-target KR. If every KR of an objective
+            is unscored, the objective has no band (not zero).
+       (g2) The keyResults row carries the KR's measurement params
+            {unit, direction, target, groupId?}; additional kpiDefs (stageGate /
+            task / milestone / initiative hosts) share the groupId for
+            trickle-down targets and trickle-up values but never feed the OKR
+            score (only KRs do, per spec §4).
+       (range falloff) For direction 'range', score is 100 inside [lo,hi] and
+            falls off linearly to 0 at one full band-width outside the band.
+   ============================================================================ */
+
+(function (root) {
+  'use strict';
+
+  // ---- small helpers --------------------------------------------------------
+  function mean(arr) {
+    if (!arr.length) return null;
+    var s = 0;
+    for (var i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+  }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+  // ---- IDs ------------------------------------------------------------------
+  // Type-prefixed, parent-scoped, monotonic counter. The counter is an
+  // ALLOCATION number, never a position: reordering existing ids never changes
+  // the next id. Display order lives in the separate `order` field.
+  var ID_PREFIX = {
+    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI'
+  };
+  // Structural levels pad to 2 digits; leaf metrics use plain integers.
+  var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
+
+  function stemFromParent(type, parentId, opts) {
+    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
+    if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
+    return parentStem;
+  }
+
+  // allocId(type, parentId, existingIds, opts?)
+  //   division:  opts.code required (parentId may be null)
+  //   objective: opts.quarter required, parentId = division id
+  //   others:    parentId = immediate logical parent (initiative / objective / host)
+  function allocId(type, parentId, existingIds, opts) {
+    opts = opts || {};
+    var prefix = ID_PREFIX[type];
+    if (!prefix) throw new Error('allocId: unknown type ' + type);
+    var stem = stemFromParent(type, parentId, opts);
+    if (type === 'division') {
+      var did = prefix + '-' + stem;
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      return did;
+    }
+    var base = prefix + '-' + stem + '-';
+    var max = 0;
+    for (var i = 0; i < existingIds.length; i++) {
+      var id = existingIds[i];
+      if (id.indexOf(base) === 0) {
+        var n = parseInt(id.slice(base.length), 10);
+        if (!isNaN(n) && n > max) max = n;
+      }
+    }
+    var next = max + 1;
+    var pad = ID_PAD[type] || 0;
+    var num = pad ? String(next).padStart(pad, '0') : String(next);
+    return base + num;
+  }
+
+  // ---- KPI values & KR scoring ---------------------------------------------
+  function groupCurrentValue(groupId, execDocs) {
+    var latest = null;
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ups = execDocs[div].kpiUpdates || [];
+      for (var i = 0; i < ups.length; i++) {
+        if (ups[i].groupId === groupId) {
+          if (!latest || ups[i].timestamp > latest.timestamp) latest = ups[i];
+        }
+      }
+    }
+    return latest ? latest.value : null;
+  }
+
+  function krGroupId(kr) { return kr.groupId || kr.id; }
+  function krCurrentValue(kr, execDocs) { return groupCurrentValue(krGroupId(kr), execDocs); }
+
+  function progressLinear(value, target, direction) {
+    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
+    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    return 0;
+  }
+  function progressRange(value, lo, hi) {
+    if (value >= lo && value <= hi) return 100;
+    var width = (hi - lo) || 1;
+    var d = value < lo ? (lo - value) : (value - hi);
+    return 100 * Math.max(0, 1 - d / width);
+  }
+
+  // krScore(kr, currentValue) -> 0..100 or null (unscored: null target or no read)
+  function krScore(kr, currentValue) {
+    if (kr.target == null) return null;          // (g1) null-target excluded
+    if (currentValue == null) return null;       // (g1) no read yet -> unscored
+    var raw;
+    if (kr.direction === 'range') {
+      raw = progressRange(currentValue, kr.target.lo, kr.target.hi);
+    } else {
+      raw = progressLinear(currentValue, kr.target, kr.direction);
+    }
+    return clamp(raw, 0, 100);
+  }
+
+  // ---- objective & tier scores ---------------------------------------------
+  function krsForObjective(objId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
+    }
+    return out;
+  }
+
+  // objectiveScore -> mean of scorable KRs, or null when none are scorable
+  function objectiveScore(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs);
+    var scores = [];
+    for (var i = 0; i < krs.length; i++) {
+      var s = krScore(krs[i], krCurrentValue(krs[i], execDocs));
+      if (s != null) scores.push(s);
+    }
+    return mean(scores); // null if empty
+  }
+
+  function objectivesInScope(entityType, entityId, portfolio) {
+    var objs = portfolio.objectives || [];
+    switch (entityType) {
+      case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
+      case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
+      case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'company':    return objs.slice();
+      default: return [];
+    }
+  }
+
+  // score(entityType, entityId, portfolio, execDocs, quarter?)
+  //   quarter omitted -> OVERALL (grand mean of the entity's objectives)
+  //   quarter given   -> QUARTERLY (objectives stamped that quarter)
+  // Returns 0..100 or null (no scorable objectives in the bound -> no band).
+  function score(entityType, entityId, portfolio, execDocs, quarter) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // boundsOf -> sorted distinct quarters in scope. length 1 => caller collapses
+  // quarterly and overall into a single number.
+  function boundsOf(entityType, entityId, portfolio) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    var seen = {}, out = [];
+    for (var i = 0; i < objs.length; i++) {
+      var q = objs[i].quarter;
+      if (q && !seen[q]) { seen[q] = 1; out.push(q); }
+    }
+    out.sort();
+    return out;
+  }
+
+  function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
+  function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
+  function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
+  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+
+  function band(s) {
+    if (s == null) return 'no-band';
+    if (s >= 90) return 'on-track';
+    if (s >= 70) return 'at-risk';
+    return 'off-track';
+  }
+
+  // ---- product / model classification (§5) ---------------------------------
+  function ownClass(node) {
+    if (node.modelId) return { kind: 'model', modelId: node.modelId };
+    if (node.productId) return { kind: 'product', productId: node.productId };
+    return { kind: 'agnostic' };
+  }
+  function parentProductOf(modelId, portfolio) {
+    var ms = portfolio.models || [];
+    for (var i = 0; i < ms.length; i++) if (ms[i].id === modelId) return ms[i].productId;
+    return null;
+  }
+  function initiativeOf(obj, portfolio) {
+    var inits = portfolio.initiatives || [];
+    for (var i = 0; i < inits.length; i++) if (inits[i].id === obj.initiativeId) return inits[i];
+    return null;
+  }
+  function effClass(obj, portfolio) {
+    var c = ownClass(obj);
+    if (c.kind === 'agnostic') {
+      var init = initiativeOf(obj, portfolio);
+      if (init) c = ownClass(init);
+    }
+    return c;
+  }
+  function effProduct(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    if (c.kind === 'model') return parentProductOf(c.modelId, portfolio);
+    if (c.kind === 'product') return c.productId;
+    return null;
+  }
+  function effModel(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    return c.kind === 'model' ? c.modelId : null;
+  }
+
+  // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
+  // Enforces the node invariant (at most one of productId/modelId) and the
+  // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
+  function validateClassification(obj, portfolio) {
+    if (obj.productId && obj.modelId) return { ok: false, reason: 'objective sets both productId and modelId' };
+    var init = initiativeOf(obj, portfolio);
+    if (!init) return { ok: false, reason: 'objective has no initiative' };
+    if (init.productId && init.modelId) return { ok: false, reason: 'initiative sets both productId and modelId' };
+
+    var io = ownClass(init);
+    var oo = ownClass(obj);
+    if (oo.kind === 'agnostic') return { ok: true };           // inherits; always valid
+    if (io.kind === 'agnostic') return { ok: true };           // anything allowed below agnostic
+
+    if (io.kind === 'product') {
+      if (oo.kind === 'product') {
+        return oo.productId === io.productId
+          ? { ok: true }
+          : { ok: false, reason: 'objective pins a different product than its initiative' };
+      }
+      // oo is model -> must be under the initiative's product
+      return parentProductOf(oo.modelId, portfolio) === io.productId
+        ? { ok: true }
+        : { ok: false, reason: 'objective model belongs to a different product than its initiative' };
+    }
+
+    if (io.kind === 'model') {
+      // initiative is at the finest grain: objective must match exactly (no broaden)
+      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+    }
+    return { ok: true };
+  }
+
+  // sliceScore(axis, id, portfolio, execDocs, quarter?) -> 0..100 or null
+  function sliceScore(axis, id, portfolio, execDocs, quarter) {
+    var objs = (portfolio.objectives || []).filter(function (o) {
+      var match = axis === 'product' ? (effProduct(o, portfolio) === id)
+                                     : (effModel(o, portfolio) === id);
+      if (!match) return false;
+      if (quarter != null && o.quarter !== quarter) return false;
+      return true;
+    });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // ---- schedule cascade (§6) -----------------------------------------------
+  // cascade(portfolio, execDocs, today) ->
+  //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
+  //     longTermSlip, cycles }
+  function cascade(portfolio, execDocs, today) {
+    var objs = portfolio.objectives || [];
+    var inits = portfolio.initiatives || [];
+    var miles = portfolio.milestones || [];
+    var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
+
+    function execFor(divId) { return execDocs[divId] || {}; }
+    function childrenOf(obj) {
+      var ex = execFor(obj.divisionId);
+      var sgs = (ex.stageGates || []).filter(function (s) { return s.objectiveId === obj.id; });
+      var tasks = (ex.tasks || []).filter(function (t) { return t.objectiveId === obj.id; });
+      return { sgs: sgs, tasks: tasks };
+    }
+
+    function pfTask(t) {
+      if (t.actualEnd != null) return t.actualEnd;
+      var started = (t.actualStart != null) || (t.percentComplete && t.percentComplete > 0);
+      if (started) {
+        var frac = clamp((t.percentComplete || 0) / 100, 0, 1);
+        return Math.max(t.plannedEnd, today + Math.ceil((1 - frac) * (t.plannedEnd - t.plannedStart)));
+      }
+      return t.plannedEnd; // not started
+    }
+    // A stage-gate is a checkpoint: done -> actualDate; otherwise it cannot have
+    // finished before now, so it projects to max(plannedDate, today).
+    function pfGate(s) {
+      if (s.actualDate != null) return s.actualDate;
+      return Math.max(s.plannedDate, today);
+    }
+
+    // Stage 1: intrinsic projected end per objective
+    var intrinsic = {};
+    objs.forEach(function (o) {
+      var c = childrenOf(o), vals = [];
+      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
+      c.sgs.forEach(function (s) { vals.push(pfGate(s)); });
+      intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+    });
+
+    // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
+    var objPreds = {}; objs.forEach(function (o) { objPreds[o.id] = []; });
+    (portfolio.objectiveEdges || []).forEach(function (e) {
+      if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
+    });
+    var projEnd = {}, objStack = {}, cycles = [];
+    function computeProjEnd(id) {
+      if (projEnd[id] != null) return projEnd[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objStack[id]) { cycles.push('OBJ:' + id); return intrinsic[id]; } // break cycle
+      objStack[id] = true;
+      var cs = o.plannedStart;
+      var preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objStack[preds[i].from]) { cycles.push('OBJ:' + preds[i].from); continue; }
+        cs = Math.max(cs, computeProjEnd(preds[i].from) + preds[i].lag);
+      }
+      var dur = o.plannedEnd - o.plannedStart;
+      var res = Math.max(intrinsic[id], cs + dur);
+      objStack[id] = false;
+      projEnd[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // Stage 3: vertical lift into milestones
+    var effective = {};
+    miles.forEach(function (m) { effective[m.id] = m.plannedDate; });
+    objs.forEach(function (o) {
+      (o.milestoneIds || []).forEach(function (mid) {
+        if (effective[mid] != null) effective[mid] = Math.max(effective[mid], projEnd[o.id]);
+      });
+    });
+
+    // Stage 4: lateral MS->MS forward pass (topological, cycle-guarded)
+    var msById = {}; miles.forEach(function (m) { msById[m.id] = m; });
+    var msPreds = {}; miles.forEach(function (m) { msPreds[m.id] = []; });
+    (portfolio.milestoneEdges || []).forEach(function (e) {
+      if (msPreds[e.toMs]) msPreds[e.toMs].push({ from: e.fromMs, lag: e.lagDays || 0 });
+    });
+    var msDone = {}, msStack = {};
+    function liftMilestone(id) {
+      if (msDone[id]) return effective[id];
+      if (!msById[id]) return effective[id] || 0;
+      if (msStack[id]) { cycles.push('MS:' + id); return effective[id]; }
+      msStack[id] = true;
+      var preds = msPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (msStack[preds[i].from]) { cycles.push('MS:' + preds[i].from); continue; }
+        effective[id] = Math.max(effective[id], liftMilestone(preds[i].from) + preds[i].lag);
+      }
+      msStack[id] = false;
+      msDone[id] = true;
+      return effective[id];
+    }
+    miles.forEach(function (m) { liftMilestone(m.id); });
+
+    // Stage 5: initiative projected end + headline slip
+    var initProjEnd = {}, slip = {};
+    inits.forEach(function (I) {
+      var vals = [I.plannedEnd];
+      miles.forEach(function (m) { if (m.initiativeId === I.id) vals.push(effective[m.id]); });
+      objs.forEach(function (o) {
+        if (o.initiativeId === I.id && (!o.milestoneIds || o.milestoneIds.length === 0)) {
+          vals.push(projEnd[o.id]);
+        }
+      });
+      var pe = Math.max.apply(null, vals);
+      initProjEnd[I.id] = pe;
+      slip[I.id] = pe - I.plannedEnd;
+    });
+
+    return {
+      objectiveProjectedEnd: projEnd,
+      milestoneEffective: effective,
+      initiativeProjectedEnd: initProjEnd,
+      longTermSlip: slip,
+      cycles: cycles
+    };
+  }
+
+  // ---- exports --------------------------------------------------------------
+  var API = {
+    allocId: allocId,
+    krScore: krScore,
+    krGroupId: krGroupId,
+    krCurrentValue: krCurrentValue,
+    groupCurrentValue: groupCurrentValue,
+    objectiveScore: objectiveScore,
+    score: score,
+    boundsOf: boundsOf,
+    band: band,
+    rollupObjective: rollupObjective,
+    rollupInitiative: rollupInitiative,
+    rollupDivision: rollupDivision,
+    rollupCompany: rollupCompany,
+    ownClass: ownClass,
+    effClass: effClass,
+    effProduct: effProduct,
+    effModel: effModel,
+    validateClassification: validateClassification,
+    sliceScore: sliceScore,
+    cascade: cascade,
+    // exposed for tests / shells
+    _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.RDCore = API;
+
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+"use strict";
+const RD = window.RDCore;
+
+/* ---------------- broker (identical contract to planning app) ---------------- */
+const BROKER = "https://web-production-b17a2.up.railway.app";
+(function seedToken(){
+  const u = new URL(location.href);
+  const t = u.searchParams.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({}, "", u.toString()); }
+})();
+const tok = () => localStorage.getItem("rd_broker_token") || "";
+const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
+async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
+async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
+async function apiPut(id,doc,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+  headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})}); if(!r.ok) throw r; return r.json(); }
+
+/* ---------------- date <-> day-count ---------------- */
+const EPOCH = Date.UTC(2020,0,1);
+const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
+const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().slice(0,10);
+const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
+
+/* ---------------- state ---------------- */
+let portfolio = null;            // read-only
+let exec = blankExec();          // this division's doc (read-write)
+let divisionId = null;
+let execEtag = "0", execVersion = 0, portfolioVersion = 0;
+let selectedObj = null;
+let pollTimer = null;
+
+function blankExec(){ return { objectiveState:[],keyResults:[],stageGates:[],tasks:[],kpiDefs:[],kpiUpdates:[] }; }
+function execId(){ return "EXEC-"+divisionId; }
+function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return m; }
+
+/* ---------------- messaging ---------------- */
+function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
+  if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
+
+/* ---------------- division resolution ---------------- */
+function resolveDivision(){
+  const u = new URL(location.href);
+  return u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+}
+
+/* ---------------- load / save ---------------- */
+async function loadAll(){
+  if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
+  try{
+    const p = await apiGet("portfolio");
+    if(!p){ setMsg("No portfolio doc on the broker yet — create it from the Planning app first.", "err"); return; }
+    portfolio = p.doc; portfolioVersion = p.version;
+    fillDivSelect();
+    if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
+    if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
+    localStorage.setItem("rd_division", divisionId);
+    document.getElementById("divPill").textContent = divName(divisionId)+" · "+divisionId;
+    const ex = await apiGet(execId());
+    exec = ex ? Object.assign(blankExec(), ex.doc) : blankExec();
+    execEtag = ex ? ex.etag : "0"; execVersion = ex ? ex.version : 0;
+    fillObjSelect();
+    setMsg("Loaded "+divName(divisionId)+".", "ok");
+    startPoll();
+  }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
+  renderAll();
+}
+async function saveExec(){
+  if(!tok()){ setMsg("Add a broker token first.", "err"); return; }
+  try{
+    const res = await apiPut(execId(), exec, execEtag);
+    execEtag = res.etag; execVersion = res.version;   // record own version -> next poll ignores echo
+    setMsg("Saved.", "ok");
+  }catch(e){
+    if(e.status===412){ setMsg("Another editor saved first — reloading, then re-apply.", "err");
+      const ex=await apiGet(execId()); if(ex){ exec=Object.assign(blankExec(),ex.doc); execEtag=ex.etag; execVersion=ex.version; renderAll(); } }
+    else setMsg("Save failed ("+(e.status||e)+").", "err");
+  }
+}
+function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
+function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+async function pollOnce(){
+  try{
+    const pv = await apiVersion("portfolio");
+    if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; fillObjSelect(); } }
+    const ev = await apiVersion(execId());
+    if(ev.version!==execVersion){ const ex=await apiGet(execId());
+      if(ex){ exec=Object.assign(blankExec(),ex.doc); execEtag=ex.etag; execVersion=ex.version; renderAll();
+        setMsg("Updated from another editor.", "info"); } }
+  }catch(e){}
+}
+
+/* ---------------- lookups ---------------- */
+function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); return d?d.name:id; }
+function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId); }
+function fillDivSelect(){ const s=document.getElementById("divSelect");
+  s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
+  if(divisionId) s.value=divisionId;
+  s.onchange=()=>{ divisionId=s.value; localStorage.setItem("rd_division",divisionId); selectedObj=null; loadAll(); }; }
+function fillObjSelect(){
+  const s=document.getElementById("objSelect"); const objs=myObjectives();
+  s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
+                            : `<option value="">no objectives for this division</option>`;
+  if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
+  s.onchange=()=>{ selectedObj=s.value; renderAll(); };
+}
+
+/* ---------------- generic sub-entity editor ---------------- */
+const SUB = {
+  keyResult: { arr:()=>exec.keyResults, label:"Key results",
+    schema:[["statement","Statement","text"],["unit","Unit","text"],["direction","Direction","dir"],
+            ["target","Target","target"],["status","Status","text"]] },
+  stageGate: { arr:()=>exec.stageGates, label:"Stage-gates",
+    schema:[["name","Name","text"],["gate_id","Gate id (optional)","text"],["plannedDate","Planned date","date"],
+            ["actualDate","Actual / passed date","date"],["status","Status","text"]] },
+  task:      { arr:()=>exec.tasks, label:"Execution tasks",
+    schema:[["name","Name","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
+            ["percentComplete","% complete","number"],["actualStart","Actual start","date"],["actualEnd","Actual end","date"]] },
+};
+let addingFor = null, editingSub = null, armedDel = null;
+
+function subOpen(type, id){ addingFor = id?null:type; editingSub = id?{type,id}:null; renderAll(); }
+
+function renderSubEditor(type){
+  const cfg = SUB[type];
+  const editing = editingSub && editingSub.type===type;
+  const rec = editing ? cfg.arr().find(x=>x.id===editingSub.id) : {};
+  let html = `<div class="ed">`;
+  for(const [k,label,t] of cfg.schema){
+    if(t==="dir"){
+      html += `<label>${label}<select data-f="direction">`+
+        ["up","down","range"].map(d=>`<option ${rec.direction===d?'selected':''}>${d}</option>`).join("")+`</select></label>`;
+    } else if(t==="target"){
+      const isRange = rec.direction==="range";
+      const tgt = rec.target;
+      html += `<label>Target (up/down)<input data-f="target" class="sm" type="number" value="${(tgt!=null&&typeof tgt!=='object')?tgt:''}"/></label>`;
+      html += `<label>Range lo<input data-f="targetLo" class="tiny" type="number" value="${(tgt&&typeof tgt==='object')?tgt.lo:''}"/></label>`;
+      html += `<label>Range hi<input data-f="targetHi" class="tiny" type="number" value="${(tgt&&typeof tgt==='object')?tgt.hi:''}"/></label>`;
+    } else {
+      const val = t==="date" ? dayToIso(rec[k]) : (rec[k]!=null?rec[k]:"");
+      html += `<label>${label}<input data-f="${k}" type="${t==='date'?'date':t==='number'?'number':'text'}" value="${esc(String(val))}"/></label>`;
+    }
+  }
+  html += `</div><div class="row-actions" style="margin-bottom:8px">
+    <button class="act mini" data-save="${type}">${editing?'Update':'Add'}</button>
+    <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return html;
+}
+function readSubEditor(scope){
+  const out={};
+  scope.querySelectorAll("[data-f]").forEach(el=>{
+    const k=el.dataset.f;
+    if(el.type==="date") out[k]=isoToDay(el.value)||null;
+    else if(el.type==="number") out[k]= el.value===""?null:Number(el.value);
+    else out[k]= el.value===""?null:el.value;
+  });
+  // assemble range target
+  if(out.direction==="range"){ out.target = (out.targetLo!=null&&out.targetHi!=null)?{lo:out.targetLo,hi:out.targetHi}:null; }
+  else if(out.target===undefined){ /* keep */ }
+  delete out.targetLo; delete out.targetHi;
+  return out;
+}
+function saveSub(type){
+  const scope = document.querySelector(`#sub${suf(type)} .ed`).parentElement;
+  const data = readSubEditor(scope);
+  const cfg = SUB[type], arr = cfg.arr();
+  if(editingSub && editingSub.type===type){
+    Object.assign(arr.find(x=>x.id===editingSub.id), data, {objectiveId:selectedObj});
+  } else {
+    const idType = type, parent = selectedObj;
+    const id = RD.allocId(idType, parent, arr.map(x=>x.id));
+    arr.push(Object.assign({id, objectiveId:selectedObj}, data));
+  }
+  addingFor=null; editingSub=null; renderAll(); setMsg(cfg.label+" updated (Save to persist).", "ok");
+}
+function suf(type){ return type==="keyResult"?"KR":type==="stageGate"?"SG":"TASK"; }
+
+/* ---------------- render: objective header + sub-tables ---------------- */
+function renderAll(){
+  if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
+  const objs = myObjectives();
+  if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; clearSubs(); return; }
+  const o = objs.find(x=>x.id===selectedObj);
+  const sc = RD.objectiveScore(selectedObj, emForCore());
+  const b = RD.band(sc);
+  document.getElementById("objHeadWrap").innerHTML = `<div class="objhead">
+    <div><div class="sc" style="color:${col(b)}">${sc==null?'—':Math.round(sc)}</div></div>
+    <div><div class="lbl">Objective score (live)</div>
+      <span class="band ${b}">${b.replace('-',' ')}</span>
+      <div class="hint" style="margin:6px 0 0">${esc(o.statement||o.id)} · <span class="mono">${o.id}</span> · ${o.quarter||'—'}</div></div></div>`;
+  renderSub("keyResult"); renderSub("stageGate"); renderSub("task");
+}
+function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); }
+function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
+
+function renderSub(type){
+  const cfg = SUB[type], host=document.getElementById("sub"+suf(type));
+  const rows = cfg.arr().filter(r=>r.objectiveId===selectedObj);
+  let html = `<h3>${cfg.label}<button class="ghost mini" data-add="${type}">+ add</button></h3>`;
+  if(addingFor===type || (editingSub&&editingSub.type===type)) html += renderSubEditor(type);
+  html += tableFor(type, rows);
+  host.innerHTML = html;
+  wireSub(type, host);
+}
+function tableFor(type, rows){
+  if(!rows.length) return `<p class="hint">none yet</p>`;
+  if(type==="keyResult"){
+    let h=`<table><thead><tr><th>id</th><th>statement</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const cv = RD.krCurrentValue(r, emForCore());
+      const s = RD.krScore(r, cv);
+      const tgt = r.target==null?'—':(typeof r.target==='object'?`${r.target.lo}–${r.target.hi}`:r.target)+(r.unit?` ${esc(r.unit)}`:'');
+      h+=`<tr><td class="mono">${r.id}</td><td>${esc(r.statement||'')}</td><td class="mono">${r.direction||''}</td>
+        <td class="mono">${tgt}</td><td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
+        <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
+        <td><div class="read-row"><input class="tiny" type="number" data-read="${r.id}" placeholder="value"/>
+          <button class="ghost mini" data-postread="${r.id}">post</button></div></td>
+        <td class="row-actions"><button class="ghost mini" data-edit="${type}:${r.id}">edit</button>
+          <button class="ghost mini danger ${armedDel===r.id?'armed':''}" data-del="${type}:${r.id}">${armedDel===r.id?'confirm':'del'}</button></td></tr>`;
+    });
+    return h+`</tbody></table><p class="hint">A reading enters the metric group <code>kr.groupId || kr.id</code> as a timestamped update; the latest read scores against this KR's target. This is the only place values originate.</p>`;
+  }
+  if(type==="stageGate"){
+    let h=`<table><thead><tr><th>id</th><th>name</th><th>gate_id</th><th>planned</th><th>passed</th><th></th></tr></thead><tbody>`;
+    rows.forEach(r=>{ h+=`<tr><td class="mono">${r.id}</td><td>${esc(r.name||'')}</td><td class="mono">${r.gate_id||'<span class=pill>—</span>'}</td>
+      <td class="mono">${dayToIso(r.plannedDate)||'—'}</td>
+      <td><input class="sm" type="date" data-pass="${r.id}" value="${dayToIso(r.actualDate)}"/></td>
+      <td class="row-actions"><button class="ghost mini" data-edit="${type}:${r.id}">edit</button>
+        <button class="ghost mini danger ${armedDel===r.id?'armed':''}" data-del="${type}:${r.id}">${armedDel===r.id?'confirm':'del'}</button></td></tr>`; });
+    return h+`</tbody></table>`;
+  }
+  // task
+  let h=`<table><thead><tr><th>id</th><th>name</th><th>planned</th><th>% complete</th><th>actual end</th><th></th></tr></thead><tbody>`;
+  rows.forEach(r=>{ h+=`<tr><td class="mono">${r.id}</td><td>${esc(r.name||'')}</td>
+    <td class="mono">${dayToIso(r.plannedStart)||'—'} → ${dayToIso(r.plannedEnd)||'—'}</td>
+    <td><input class="tiny" type="number" min="0" max="100" data-pct="${r.id}" value="${r.percentComplete!=null?r.percentComplete:0}"/></td>
+    <td><input class="sm" type="date" data-actend="${r.id}" value="${dayToIso(r.actualEnd)}"/></td>
+    <td class="row-actions"><button class="ghost mini" data-edit="${type}:${r.id}">edit</button>
+      <button class="ghost mini danger ${armedDel===r.id?'armed':''}" data-del="${type}:${r.id}">${armedDel===r.id?'confirm':'del'}</button></td></tr>`; });
+  return h+`</tbody></table>`;
+}
+function wireSub(type, host){
+  host.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>subOpen(b.dataset.add,null));
+  host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>{ addingFor=null; editingSub=null; renderAll(); });
+  host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub(b.dataset.save));
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); subOpen(t,id); });
+  host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":");
+    if(armedDel!==id){ armedDel=id; renderAll(); return; }
+    const arr=SUB[t].arr(); arr.splice(arr.findIndex(x=>x.id===id),1); armedDel=null; renderAll(); setMsg("Deleted (Save to persist).","ok"); });
+  // KR readings -> kpiUpdates (the input surface)
+  host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.postread; const inp=host.querySelector(`[data-read="${id}"]`);
+    if(inp.value===""){ setMsg("Enter a value to post.","err"); return; }
+    const kr=exec.keyResults.find(x=>x.id===id); const gid=RD.krGroupId(kr);
+    const upId=RD.allocId("kpi", selectedObj, exec.kpiUpdates.map(x=>x.id||""));
+    exec.kpiUpdates.push({id:upId, groupId:gid, value:Number(inp.value), timestamp:Date.now(), note:"", sourceKpiId:null});
+    renderAll(); setMsg("Reading posted to "+gid+" (Save to persist).","ok");
+  });
+  // inline edits
+  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; setMsg("Stage-gate updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); setMsg("Task updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; setMsg("Task updated (Save to persist).","ok"); });
+}
+
+/* ---------------- wiring ---------------- */
+document.getElementById("saveBtn").onclick = saveExec;
+document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
+document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
+window.addEventListener("beforeunload", stopPoll);
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* boot */
+divisionId = resolveDivision();
+loadAll();
+</script>
+</body>
+</html>

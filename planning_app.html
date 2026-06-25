@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>R&D Planning — Portfolio</title>
+<style>
+  :root{
+    --bg:#0f1620; --panel:#15202d; --panel2:#1b2937; --line:#26384a;
+    --ink:#e6edf3; --muted:#8aa0b4; --accent:#3fd0c9; --accent2:#7ca8ff;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --none:#5b7186;
+    --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+  header{display:flex;align-items:center;gap:16px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
+  header h1 .dot{color:var(--accent)}
+  nav{display:flex;gap:4px;margin-left:8px}
+  nav button{background:none;border:1px solid transparent;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--sans)}
+  nav button.active{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+  nav button:hover{color:var(--ink)}
+  .spacer{flex:1}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .toggle button{background:var(--panel);border:none;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:12px}
+  .toggle button.active{background:var(--accent);color:#08121a;font-weight:600}
+  main{padding:18px;max-width:1200px;margin:0 auto}
+  .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
+  .msg.show{display:block}
+  .msg.info{background:#13314a;color:#add4ff;border:1px solid #1d4a6e}
+  .msg.err{background:#3a1620;color:#ffb4bd;border:1px solid #5e2230}
+  .msg.ok{background:#13311f;color:#9ff0c4;border:1px solid #1d5e3a}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 2px;font-size:14px}
+  .card .sub{color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .score{font-size:34px;font-weight:700;line-height:1.1;margin:10px 0 2px}
+  .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .band.on-track{background:#10371f;color:var(--ok)} .band.at-risk{background:#3a2f10;color:var(--warn)}
+  .band.off-track{background:#3a1414;color:var(--bad)} .band.no-band{background:#1c2733;color:var(--none)}
+  .counts{display:flex;gap:10px;margin-top:12px;font-size:12px;font-family:var(--mono)}
+  .counts span{display:flex;align-items:center;gap:5px}
+  .pip{width:8px;height:8px;border-radius:99px;display:inline-block}
+  .slip{margin-top:10px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .slip b{color:var(--bad)} .slip b.zero{color:var(--ok)}
+  .company-hero{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;gap:28px}
+  .company-hero .big{font-size:52px;font-weight:800;line-height:1}
+  .company-hero .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  td.mono,.mono{font-family:var(--mono);font-size:12px}
+  .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:6px;font-family:var(--sans);font-size:13px}
+  input.mono{font-family:var(--mono)}
+  button.act{background:var(--accent);color:#08121a;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
+  button.ghost{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+  button.danger{color:var(--bad);border-color:#5e2230}
+  button.danger.armed{background:var(--bad);color:#1a0a0c}
+  .row-actions{display:flex;gap:6px}
+  .tabsec{display:none} .tabsec.active{display:block}
+  .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+  .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
+  .entity-tabs button.active{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
+  svg{display:block;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .legend{display:flex;gap:18px;margin:10px 2px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .swatch{width:14px;height:8px;border-radius:2px;display:inline-block}
+  .hint{color:var(--muted);font-size:12px;margin:8px 0}
+  code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+  .settings label{display:block;margin-bottom:10px;max-width:520px}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot">◆</span> R&amp;D Planning</h1>
+  <nav id="nav">
+    <button data-tab="company" class="active">Company</button>
+    <button data-tab="portfolio">Portfolio</button>
+    <button data-tab="gantt">Gantt</button>
+    <button data-tab="slices">Product / Model</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="toggle" id="modeToggle" title="Quarterly columns vs single overall score">
+    <button data-mode="overall" class="active">Overall</button>
+    <button data-mode="quarterly">Quarterly</button>
+  </div>
+  <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
+</header>
+<main>
+  <div class="msg" id="msg"></div>
+
+  <section class="tabsec active" id="tab-company"></section>
+  <section class="tabsec" id="tab-portfolio">
+    <div class="entity-tabs" id="entityTabs"></div>
+    <div id="editorPanel"></div>
+    <div id="entityTable"></div>
+  </section>
+  <section class="tabsec" id="tab-gantt">
+    <div class="legend">
+      <span><i class="swatch" style="background:#2c4a63"></i> baseline</span>
+      <span><i class="swatch" style="background:var(--accent)"></i> projected</span>
+      <span><i class="swatch" style="background:var(--bad)"></i> slip</span>
+      <span>◆ milestone (planned → effective)</span>
+    </div>
+    <div id="ganttWrap"></div>
+  </section>
+  <section class="tabsec" id="tab-slices"></section>
+  <section class="tabsec settings" id="tab-settings">
+    <h3>Broker</h3>
+    <p class="hint">Default broker is baked in. Only the token is needed; it is stored in this browser only.
+      An SSO-gated Confluence embed can pass <code>?token=…</code> once and it strips itself from the URL.</p>
+    <label>Broker token
+      <input class="mono" id="tokenInput" type="password" placeholder="paste token" style="width:100%"/></label>
+    <button class="act" id="tokenSave">Save token</button>
+    <p class="hint" id="brokerStatus"></p>
+  </section>
+</main>
+
+<script>
+/* ============================================================================
+   Unified R&D Suite — Shared Core (frozen spec v1.2)
+   Pure logic only. No DOM, no network. Runs headless in Node and injects into
+   the browser shells via build.py (between the CORE markers).
+
+   Conventions
+   -----------
+   - Dates are integer day-counts (days since an arbitrary epoch). Shells convert
+     ISO <-> day-count; the core only does max / +lag arithmetic.
+   - percentComplete is an integer 0..100.
+   - A KPI "group" is identified by groupId. A value enters ONLY via kpiUpdates
+     (in an exec doc). A group's current value = the latest update by timestamp.
+   - A Key Result is scored from its OWN target against its group's current value.
+     A KR's effective group id = kr.groupId || kr.id  (standalone KRs are their
+     own singleton group).
+   - Documented build-time defaults (flippable, flagged on delivery):
+       (g1) A KR with a target but no read yet is UNSCORED (excluded from the
+            mean), same treatment as a null-target KR. If every KR of an objective
+            is unscored, the objective has no band (not zero).
+       (g2) The keyResults row carries the KR's measurement params
+            {unit, direction, target, groupId?}; additional kpiDefs (stageGate /
+            task / milestone / initiative hosts) share the groupId for
+            trickle-down targets and trickle-up values but never feed the OKR
+            score (only KRs do, per spec §4).
+       (range falloff) For direction 'range', score is 100 inside [lo,hi] and
+            falls off linearly to 0 at one full band-width outside the band.
+   ============================================================================ */
+
+(function (root) {
+  'use strict';
+
+  // ---- small helpers --------------------------------------------------------
+  function mean(arr) {
+    if (!arr.length) return null;
+    var s = 0;
+    for (var i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+  }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+  // ---- IDs ------------------------------------------------------------------
+  // Type-prefixed, parent-scoped, monotonic counter. The counter is an
+  // ALLOCATION number, never a position: reordering existing ids never changes
+  // the next id. Display order lives in the separate `order` field.
+  var ID_PREFIX = {
+    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI'
+  };
+  // Structural levels pad to 2 digits; leaf metrics use plain integers.
+  var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
+
+  function stemFromParent(type, parentId, opts) {
+    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
+    if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
+    return parentStem;
+  }
+
+  // allocId(type, parentId, existingIds, opts?)
+  //   division:  opts.code required (parentId may be null)
+  //   objective: opts.quarter required, parentId = division id
+  //   others:    parentId = immediate logical parent (initiative / objective / host)
+  function allocId(type, parentId, existingIds, opts) {
+    opts = opts || {};
+    var prefix = ID_PREFIX[type];
+    if (!prefix) throw new Error('allocId: unknown type ' + type);
+    var stem = stemFromParent(type, parentId, opts);
+    if (type === 'division') {
+      var did = prefix + '-' + stem;
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      return did;
+    }
+    var base = prefix + '-' + stem + '-';
+    var max = 0;
+    for (var i = 0; i < existingIds.length; i++) {
+      var id = existingIds[i];
+      if (id.indexOf(base) === 0) {
+        var n = parseInt(id.slice(base.length), 10);
+        if (!isNaN(n) && n > max) max = n;
+      }
+    }
+    var next = max + 1;
+    var pad = ID_PAD[type] || 0;
+    var num = pad ? String(next).padStart(pad, '0') : String(next);
+    return base + num;
+  }
+
+  // ---- KPI values & KR scoring ---------------------------------------------
+  function groupCurrentValue(groupId, execDocs) {
+    var latest = null;
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ups = execDocs[div].kpiUpdates || [];
+      for (var i = 0; i < ups.length; i++) {
+        if (ups[i].groupId === groupId) {
+          if (!latest || ups[i].timestamp > latest.timestamp) latest = ups[i];
+        }
+      }
+    }
+    return latest ? latest.value : null;
+  }
+
+  function krGroupId(kr) { return kr.groupId || kr.id; }
+  function krCurrentValue(kr, execDocs) { return groupCurrentValue(krGroupId(kr), execDocs); }
+
+  function progressLinear(value, target, direction) {
+    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
+    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    return 0;
+  }
+  function progressRange(value, lo, hi) {
+    if (value >= lo && value <= hi) return 100;
+    var width = (hi - lo) || 1;
+    var d = value < lo ? (lo - value) : (value - hi);
+    return 100 * Math.max(0, 1 - d / width);
+  }
+
+  // krScore(kr, currentValue) -> 0..100 or null (unscored: null target or no read)
+  function krScore(kr, currentValue) {
+    if (kr.target == null) return null;          // (g1) null-target excluded
+    if (currentValue == null) return null;       // (g1) no read yet -> unscored
+    var raw;
+    if (kr.direction === 'range') {
+      raw = progressRange(currentValue, kr.target.lo, kr.target.hi);
+    } else {
+      raw = progressLinear(currentValue, kr.target, kr.direction);
+    }
+    return clamp(raw, 0, 100);
+  }
+
+  // ---- objective & tier scores ---------------------------------------------
+  function krsForObjective(objId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
+    }
+    return out;
+  }
+
+  // objectiveScore -> mean of scorable KRs, or null when none are scorable
+  function objectiveScore(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs);
+    var scores = [];
+    for (var i = 0; i < krs.length; i++) {
+      var s = krScore(krs[i], krCurrentValue(krs[i], execDocs));
+      if (s != null) scores.push(s);
+    }
+    return mean(scores); // null if empty
+  }
+
+  function objectivesInScope(entityType, entityId, portfolio) {
+    var objs = portfolio.objectives || [];
+    switch (entityType) {
+      case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
+      case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
+      case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'company':    return objs.slice();
+      default: return [];
+    }
+  }
+
+  // score(entityType, entityId, portfolio, execDocs, quarter?)
+  //   quarter omitted -> OVERALL (grand mean of the entity's objectives)
+  //   quarter given   -> QUARTERLY (objectives stamped that quarter)
+  // Returns 0..100 or null (no scorable objectives in the bound -> no band).
+  function score(entityType, entityId, portfolio, execDocs, quarter) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // boundsOf -> sorted distinct quarters in scope. length 1 => caller collapses
+  // quarterly and overall into a single number.
+  function boundsOf(entityType, entityId, portfolio) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    var seen = {}, out = [];
+    for (var i = 0; i < objs.length; i++) {
+      var q = objs[i].quarter;
+      if (q && !seen[q]) { seen[q] = 1; out.push(q); }
+    }
+    out.sort();
+    return out;
+  }
+
+  function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
+  function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
+  function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
+  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+
+  function band(s) {
+    if (s == null) return 'no-band';
+    if (s >= 90) return 'on-track';
+    if (s >= 70) return 'at-risk';
+    return 'off-track';
+  }
+
+  // ---- product / model classification (§5) ---------------------------------
+  function ownClass(node) {
+    if (node.modelId) return { kind: 'model', modelId: node.modelId };
+    if (node.productId) return { kind: 'product', productId: node.productId };
+    return { kind: 'agnostic' };
+  }
+  function parentProductOf(modelId, portfolio) {
+    var ms = portfolio.models || [];
+    for (var i = 0; i < ms.length; i++) if (ms[i].id === modelId) return ms[i].productId;
+    return null;
+  }
+  function initiativeOf(obj, portfolio) {
+    var inits = portfolio.initiatives || [];
+    for (var i = 0; i < inits.length; i++) if (inits[i].id === obj.initiativeId) return inits[i];
+    return null;
+  }
+  function effClass(obj, portfolio) {
+    var c = ownClass(obj);
+    if (c.kind === 'agnostic') {
+      var init = initiativeOf(obj, portfolio);
+      if (init) c = ownClass(init);
+    }
+    return c;
+  }
+  function effProduct(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    if (c.kind === 'model') return parentProductOf(c.modelId, portfolio);
+    if (c.kind === 'product') return c.productId;
+    return null;
+  }
+  function effModel(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    return c.kind === 'model' ? c.modelId : null;
+  }
+
+  // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
+  // Enforces the node invariant (at most one of productId/modelId) and the
+  // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
+  function validateClassification(obj, portfolio) {
+    if (obj.productId && obj.modelId) return { ok: false, reason: 'objective sets both productId and modelId' };
+    var init = initiativeOf(obj, portfolio);
+    if (!init) return { ok: false, reason: 'objective has no initiative' };
+    if (init.productId && init.modelId) return { ok: false, reason: 'initiative sets both productId and modelId' };
+
+    var io = ownClass(init);
+    var oo = ownClass(obj);
+    if (oo.kind === 'agnostic') return { ok: true };           // inherits; always valid
+    if (io.kind === 'agnostic') return { ok: true };           // anything allowed below agnostic
+
+    if (io.kind === 'product') {
+      if (oo.kind === 'product') {
+        return oo.productId === io.productId
+          ? { ok: true }
+          : { ok: false, reason: 'objective pins a different product than its initiative' };
+      }
+      // oo is model -> must be under the initiative's product
+      return parentProductOf(oo.modelId, portfolio) === io.productId
+        ? { ok: true }
+        : { ok: false, reason: 'objective model belongs to a different product than its initiative' };
+    }
+
+    if (io.kind === 'model') {
+      // initiative is at the finest grain: objective must match exactly (no broaden)
+      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+    }
+    return { ok: true };
+  }
+
+  // sliceScore(axis, id, portfolio, execDocs, quarter?) -> 0..100 or null
+  function sliceScore(axis, id, portfolio, execDocs, quarter) {
+    var objs = (portfolio.objectives || []).filter(function (o) {
+      var match = axis === 'product' ? (effProduct(o, portfolio) === id)
+                                     : (effModel(o, portfolio) === id);
+      if (!match) return false;
+      if (quarter != null && o.quarter !== quarter) return false;
+      return true;
+    });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // ---- schedule cascade (§6) -----------------------------------------------
+  // cascade(portfolio, execDocs, today) ->
+  //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
+  //     longTermSlip, cycles }
+  function cascade(portfolio, execDocs, today) {
+    var objs = portfolio.objectives || [];
+    var inits = portfolio.initiatives || [];
+    var miles = portfolio.milestones || [];
+    var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
+
+    function execFor(divId) { return execDocs[divId] || {}; }
+    function childrenOf(obj) {
+      var ex = execFor(obj.divisionId);
+      var sgs = (ex.stageGates || []).filter(function (s) { return s.objectiveId === obj.id; });
+      var tasks = (ex.tasks || []).filter(function (t) { return t.objectiveId === obj.id; });
+      return { sgs: sgs, tasks: tasks };
+    }
+
+    function pfTask(t) {
+      if (t.actualEnd != null) return t.actualEnd;
+      var started = (t.actualStart != null) || (t.percentComplete && t.percentComplete > 0);
+      if (started) {
+        var frac = clamp((t.percentComplete || 0) / 100, 0, 1);
+        return Math.max(t.plannedEnd, today + Math.ceil((1 - frac) * (t.plannedEnd - t.plannedStart)));
+      }
+      return t.plannedEnd; // not started
+    }
+    // A stage-gate is a checkpoint: done -> actualDate; otherwise it cannot have
+    // finished before now, so it projects to max(plannedDate, today).
+    function pfGate(s) {
+      if (s.actualDate != null) return s.actualDate;
+      return Math.max(s.plannedDate, today);
+    }
+
+    // Stage 1: intrinsic projected end per objective
+    var intrinsic = {};
+    objs.forEach(function (o) {
+      var c = childrenOf(o), vals = [];
+      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
+      c.sgs.forEach(function (s) { vals.push(pfGate(s)); });
+      intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+    });
+
+    // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
+    var objPreds = {}; objs.forEach(function (o) { objPreds[o.id] = []; });
+    (portfolio.objectiveEdges || []).forEach(function (e) {
+      if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
+    });
+    var projEnd = {}, objStack = {}, cycles = [];
+    function computeProjEnd(id) {
+      if (projEnd[id] != null) return projEnd[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objStack[id]) { cycles.push('OBJ:' + id); return intrinsic[id]; } // break cycle
+      objStack[id] = true;
+      var cs = o.plannedStart;
+      var preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objStack[preds[i].from]) { cycles.push('OBJ:' + preds[i].from); continue; }
+        cs = Math.max(cs, computeProjEnd(preds[i].from) + preds[i].lag);
+      }
+      var dur = o.plannedEnd - o.plannedStart;
+      var res = Math.max(intrinsic[id], cs + dur);
+      objStack[id] = false;
+      projEnd[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // Stage 3: vertical lift into milestones
+    var effective = {};
+    miles.forEach(function (m) { effective[m.id] = m.plannedDate; });
+    objs.forEach(function (o) {
+      (o.milestoneIds || []).forEach(function (mid) {
+        if (effective[mid] != null) effective[mid] = Math.max(effective[mid], projEnd[o.id]);
+      });
+    });
+
+    // Stage 4: lateral MS->MS forward pass (topological, cycle-guarded)
+    var msById = {}; miles.forEach(function (m) { msById[m.id] = m; });
+    var msPreds = {}; miles.forEach(function (m) { msPreds[m.id] = []; });
+    (portfolio.milestoneEdges || []).forEach(function (e) {
+      if (msPreds[e.toMs]) msPreds[e.toMs].push({ from: e.fromMs, lag: e.lagDays || 0 });
+    });
+    var msDone = {}, msStack = {};
+    function liftMilestone(id) {
+      if (msDone[id]) return effective[id];
+      if (!msById[id]) return effective[id] || 0;
+      if (msStack[id]) { cycles.push('MS:' + id); return effective[id]; }
+      msStack[id] = true;
+      var preds = msPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (msStack[preds[i].from]) { cycles.push('MS:' + preds[i].from); continue; }
+        effective[id] = Math.max(effective[id], liftMilestone(preds[i].from) + preds[i].lag);
+      }
+      msStack[id] = false;
+      msDone[id] = true;
+      return effective[id];
+    }
+    miles.forEach(function (m) { liftMilestone(m.id); });
+
+    // Stage 5: initiative projected end + headline slip
+    var initProjEnd = {}, slip = {};
+    inits.forEach(function (I) {
+      var vals = [I.plannedEnd];
+      miles.forEach(function (m) { if (m.initiativeId === I.id) vals.push(effective[m.id]); });
+      objs.forEach(function (o) {
+        if (o.initiativeId === I.id && (!o.milestoneIds || o.milestoneIds.length === 0)) {
+          vals.push(projEnd[o.id]);
+        }
+      });
+      var pe = Math.max.apply(null, vals);
+      initProjEnd[I.id] = pe;
+      slip[I.id] = pe - I.plannedEnd;
+    });
+
+    return {
+      objectiveProjectedEnd: projEnd,
+      milestoneEffective: effective,
+      initiativeProjectedEnd: initProjEnd,
+      longTermSlip: slip,
+      cycles: cycles
+    };
+  }
+
+  // ---- exports --------------------------------------------------------------
+  var API = {
+    allocId: allocId,
+    krScore: krScore,
+    krGroupId: krGroupId,
+    krCurrentValue: krCurrentValue,
+    groupCurrentValue: groupCurrentValue,
+    objectiveScore: objectiveScore,
+    score: score,
+    boundsOf: boundsOf,
+    band: band,
+    rollupObjective: rollupObjective,
+    rollupInitiative: rollupInitiative,
+    rollupDivision: rollupDivision,
+    rollupCompany: rollupCompany,
+    ownClass: ownClass,
+    effClass: effClass,
+    effProduct: effProduct,
+    effModel: effModel,
+    validateClassification: validateClassification,
+    sliceScore: sliceScore,
+    cascade: cascade,
+    // exposed for tests / shells
+    _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.RDCore = API;
+
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+"use strict";
+const RD = window.RDCore;
+
+/* ---------------- broker ---------------- */
+const BROKER = "https://web-production-b17a2.up.railway.app";
+(function seedToken(){
+  const u = new URL(location.href);
+  const t = u.searchParams.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token");
+    history.replaceState({}, "", u.toString()); }
+})();
+const tok = () => localStorage.getItem("rd_broker_token") || "";
+const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
+async function apiVersion(id){ const r = await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
+async function apiGet(id){ const r = await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
+async function apiPut(id,doc,etag){ const r = await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+    headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})});
+  if(!r.ok) throw r; return r.json(); }
+
+/* ---------------- date <-> day-count ---------------- */
+const EPOCH = Date.UTC(2020,0,1);
+const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
+const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().slice(0,10);
+const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
+
+/* ---------------- state ---------------- */
+let portfolio = blankPortfolio();
+let execDocs = {};               // EXEC-<div> docId -> doc
+let etags = {};                  // docId -> etag (for If-Match)
+let knownVersions = {};          // docId -> version (ignore own echo)
+let mode = "overall";            // overall | quarterly
+let pollTimer = null;
+
+function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpiDefs:[] }; }
+function execIdFor(divId){ return "EXEC-"+divId; }
+function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
+
+/* ---------------- messaging (no native modals) ---------------- */
+function setMsg(text, kind){ const el=document.getElementById("msg"); el.textContent=text;
+  el.className="msg show "+(kind||"info"); if(kind==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
+function clearMsg(){ document.getElementById("msg").classList.remove("show"); }
+
+/* ---------------- load / save ---------------- */
+function watchedDocs(){ return ["portfolio","gantt-view", ...portfolio.divisions.map(d=>execIdFor(d.id))]; }
+
+async function loadAll(){
+  if(!tok()){ setMsg("No broker token yet — add one in Settings to load live data. Showing local scratch.", "info"); return; }
+  try{
+    const p = await apiGet("portfolio");
+    if(p){ portfolio = Object.assign(blankPortfolio(), p.doc); etags["portfolio"]=p.etag; knownVersions["portfolio"]=p.version; }
+    const gv = await apiGet("gantt-view");
+    if(gv){ etags["gantt-view"]=gv.etag; knownVersions["gantt-view"]=gv.version; window._ganttView=gv.doc; }
+    execDocs = {};
+    for(const d of portfolio.divisions){
+      const id = execIdFor(d.id);
+      const ex = await apiGet(id);
+      if(ex){ execDocs[id]=ex.doc; etags[id]=ex.etag; knownVersions[id]=ex.version; }
+    }
+    setMsg("Loaded portfolio + "+Object.keys(execDocs).length+" division docs.", "ok");
+    startPoll();
+  }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check the token in Settings.", "err"); }
+  renderAll();
+}
+
+async function saveAll(){
+  if(!tok()){ setMsg("Add a broker token in Settings before saving.", "err"); return; }
+  try{
+    const res = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
+    etags["portfolio"]=res.etag; knownVersions["portfolio"]=res.version;   // ignore own echo on next poll
+    const gv = window._ganttView || { overrides:{} };
+    const gres = await apiPut("gantt-view", gv, etags["gantt-view"]||"0");
+    etags["gantt-view"]=gres.etag; knownVersions["gantt-view"]=gres.version;
+    setMsg("Saved.", "ok");
+  }catch(e){
+    if(e.status===412){ setMsg("Someone else saved first — reloading their version, then re-apply your change.", "err"); await loadAll(); }
+    else setMsg("Save failed ("+(e.status||e)+").", "err");
+  }
+}
+
+/* version-gated polling: ONE timer, version endpoint only, pull on change, own echo ignored */
+function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce, 25000); }
+function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+async function pollOnce(){
+  for(const id of watchedDocs()){
+    try{ const v = await apiVersion(id);
+      if(v.version !== knownVersions[id]){ const fresh = await apiGet(id);
+        if(fresh){ if(id==="portfolio") portfolio=Object.assign(blankPortfolio(),fresh.doc);
+          else if(id==="gantt-view") window._ganttView=fresh.doc;
+          else execDocs[id]=fresh.doc;
+          etags[id]=fresh.etag; knownVersions[id]=fresh.version; renderAll();
+          setMsg("Updated from another editor.", "info"); } }
+    }catch(e){}
+  }
+}
+
+/* ---------------- scoring helpers for views ---------------- */
+function quartersAll(){ const s={}; portfolio.objectives.forEach(o=>{ if(o.quarter) s[o.quarter]=1; });
+  return Object.keys(s).sort(); }
+function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
+function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.replace("-"," ")}</span>`; }
+
+/* ---------------- COMPANY tab ---------------- */
+function renderCompany(){
+  const root = document.getElementById("tab-company");
+  const em = execMap();
+  const comp = RD.rollupCompany(portfolio, em);
+  let hero = `<div class="company-hero">
+      <div><div class="big" style="color:${scoreColor(comp)}">${fmtScore(comp)}</div></div>
+      <div><div class="lbl">Company score · overall</div>${bandHtml(comp)}
+        <div class="slip">${portfolio.divisions.length} divisions · ${portfolio.objectives.length} objectives</div></div></div>`;
+
+  const casc = RD.cascade(portfolio, em, todayDay());
+  let cards = `<div class="cards">`;
+  for(const d of portfolio.divisions){
+    const counts = statusCounts("division", d.id, em);
+    const worst = worstSlip(d.id, casc);
+    if(mode==="overall"){
+      const sc = RD.rollupDivision(d.id, portfolio, em);
+      cards += divCard(d, [["overall", sc]], counts, worst);
+    } else {
+      const qs = RD.boundsOf("division", d.id, portfolio);
+      const cells = qs.length ? qs.map(q=>[q, RD.score("division",d.id,portfolio,em,q)])
+                              : [["—", null]];
+      cards += divCard(d, cells, counts, worst);
+    }
+  }
+  cards += `</div>`;
+  if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Portfolio tab to begin.</p>`;
+  root.innerHTML = hero + cards;
+}
+function divCard(d, cells, counts, worst){
+  const scoreBlocks = cells.map(([lbl,v])=>`
+    <div style="display:inline-block;margin-right:14px">
+      <div class="score" style="font-size:24px;color:${scoreColor(v)}">${fmtScore(v)}</div>
+      <div class="pill">${lbl}</div></div>`).join("");
+  const slipTxt = worst==null ? `<span>no schedule data</span>`
+    : `worst initiative slip <b class="${worst<=0?'zero':''}">${worst<=0?'0':'+'+worst}d</b>`;
+  return `<div class="card"><h3>${esc(d.name)}</h3><div class="sub">${d.id}</div>
+    <div style="margin-top:10px">${scoreBlocks}</div>
+    <div class="counts">
+      <span><i class="pip" style="background:var(--ok)"></i>${counts["on-track"]}</span>
+      <span><i class="pip" style="background:var(--warn)"></i>${counts["at-risk"]}</span>
+      <span><i class="pip" style="background:var(--bad)"></i>${counts["off-track"]}</span>
+      <span><i class="pip" style="background:var(--none)"></i>${counts["no-band"]}</span></div>
+    <div class="slip">${slipTxt}</div></div>`;
+}
+function statusCounts(type, id, em){
+  const c={"on-track":0,"at-risk":0,"off-track":0,"no-band":0};
+  const objs = portfolio.objectives.filter(o=>type==="division"?o.divisionId===id:true);
+  objs.forEach(o=>{ c[RD.band(RD.objectiveScore(o.id, em))]++; });
+  return c;
+}
+function worstSlip(divId, casc){
+  let w=null;
+  portfolio.initiatives.filter(i=>i.divisionId===divId).forEach(i=>{
+    const s=casc.longTermSlip[i.id]; if(s!=null){ w = (w==null)?s:Math.max(w,s); } });
+  return w;
+}
+function scoreColor(v){ const b=RD.band(v);
+  return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
+
+/* ---------------- PORTFOLIO tab (generic editor) ---------------- */
+const SEL = { division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+  initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
+const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
+const SCHEMAS = {
+  division:   [["name","Name","text"],["order","Order","number"]],
+  product:    [["name","Name","text"],["divisionId","Division","ref:division"],["order","Order","number"]],
+  model:      [["name","Name","text"],["productId","Product","ref:product"],["order","Order","number"]],
+  initiative: [["name","Name","text"],["divisionId","Division","ref:division"],["desc","Description","text"],
+               ["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
+               ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
+  milestone:  [["name","Name","text"],["initiativeId","Initiative","ref:initiative"],
+               ["plannedDate","Planned date","date"],["order","Order","number"]],
+  objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
+               ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter (e.g. 2026Q3)","text"],
+               ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
+               ["milestoneIds","Linked milestones","multiref:milestone"],
+               ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
+};
+let activeEntity = "division";
+let editingId = null;
+
+function renderPortfolio(){
+  const tabs = document.getElementById("entityTabs");
+  tabs.innerHTML = Object.keys(SCHEMAS).map(k=>
+    `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
+  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; editingId=null; renderPortfolio(); });
+  renderEditor();
+  renderTable();
+}
+function renderEditor(){
+  const panel = document.getElementById("editorPanel");
+  const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : {};
+  let html = `<div class="ed">`;
+  for(const [k,label,type] of SCHEMAS[activeEntity]){
+    html += `<label>${label}${refFieldNote(k)}`;
+    if(type.startsWith("ref:")){
+      const kind = type.slice(4).replace("?",""); const opt = type.endsWith("?");
+      html += `<select data-f="${k}">${opt?'<option value="">— none —</option>':''}`+
+        SEL[kind]().map(o=>`<option value="${o.id}" ${rec[k]===o.id?'selected':''}>${esc(o.name||o.statement||o.id)}</option>`).join("")+`</select>`;
+    } else if(type.startsWith("multiref:")){
+      const kind = type.slice(9);
+      const cur = rec[k]||[];
+      html += `<select data-f="${k}" multiple size="3">`+
+        SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
+    } else {
+      const val = type==="date" ? dayToIso(rec[k]) : (rec[k]!=null?rec[k]:"");
+      html += `<input data-f="${k}" type="${type==='date'?'date':type==='number'?'number':'text'}" value="${esc(String(val))}"/>`;
+    }
+    html += `</label>`;
+  }
+  html += `</div><div class="row-actions" style="margin-bottom:16px">
+    <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
+    ${editingId?'<button class="ghost" id="cancelEdit">Cancel</button>':''}</div>`;
+  panel.innerHTML = html;
+  document.getElementById("saveRec").onclick = saveRecord;
+  const ce = document.getElementById("cancelEdit"); if(ce) ce.onclick=()=>{ editingId=null; renderPortfolio(); };
+}
+function refFieldNote(k){ return (k==="productId"||k==="modelId") ? ' <span class="pill">classification</span>' : ''; }
+
+function readEditor(){
+  const out = {};
+  document.querySelectorAll("#editorPanel [data-f]").forEach(el=>{
+    const k = el.dataset.f;
+    if(el.multiple){ out[k]=Array.from(el.selectedOptions).map(o=>o.value); }
+    else if(el.type==="date"){ out[k]=isoToDay(el.value)||null; }
+    else if(el.type==="number"){ out[k]= el.value===""?0:Number(el.value); }
+    else out[k] = el.value==="" ? null : el.value;
+  });
+  // classification: at most one of productId/modelId — model wins, clear the other
+  if(out.modelId){ out.productId=null; }
+  return out;
+}
+function saveRecord(){
+  const data = readEditor();
+  const list = SEL[activeEntity]();
+  if(editingId){
+    const rec = list.find(x=>x.id===editingId);
+    Object.assign(rec, data);
+    if(!validateAndWarn(activeEntity, rec)) return;
+  } else {
+    const id = allocFor(activeEntity, data);
+    const rec = Object.assign({id}, data);
+    if(!validateAndWarn(activeEntity, rec)) return;
+    list.push(rec);
+  }
+  editingId=null; renderPortfolio(); renderCompany(); setMsg(cap(activeEntity)+" saved (remember to Save to the broker).", "ok");
+}
+function validateAndWarn(entity, rec){
+  if(entity==="objective" || entity==="initiative"){
+    // objective validates against its initiative; initiative validates only its own both-set invariant
+    if(rec.productId && rec.modelId){ setMsg("A node can pin a product OR a model, not both.", "err"); return false; }
+    if(entity==="objective"){
+      const v = RD.validateClassification(rec, portfolio);
+      if(!v.ok){ setMsg("Classification blocked: "+v.reason, "err"); return false; }
+    }
+  }
+  return true;
+}
+function allocFor(entity, data){
+  if(entity==="division"){
+    const code = (data.name||"DIV").replace(/[^A-Za-z0-9]/g,"").slice(0,4).toUpperCase()||"DIV";
+    return RD.allocId("division", null, portfolio.divisions.map(x=>x.id), {code});
+  }
+  if(entity==="product") return RD.allocId("product", data.divisionId, portfolio.products.map(x=>x.id));
+  if(entity==="model")   return RD.allocId("model", data.productId, portfolio.models.map(x=>x.id));
+  if(entity==="initiative") return RD.allocId("initiative", data.divisionId, portfolio.initiatives.map(x=>x.id));
+  if(entity==="milestone")  return RD.allocId("milestone", data.initiativeId, portfolio.milestones.map(x=>x.id));
+  if(entity==="objective")  return RD.allocId("objective", data.divisionId, portfolio.objectives.map(x=>x.id), {quarter:data.quarter||"UNSET"});
+}
+
+let armedDelete = null;
+function renderTable(){
+  const cols = SCHEMAS[activeEntity].map(s=>s[0]).filter(k=>k!=="desc");
+  const list = SEL[activeEntity]();
+  let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
+  for(const r of list){
+    html += `<tr><td class="mono">${r.id}</td>`+
+      cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
+      `<td class="row-actions">
+        <button class="ghost" data-edit="${r.id}">edit</button>
+        <button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
+  }
+  html += `</tbody></table>`;
+  if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
+  document.getElementById("entityTable").innerHTML = html;
+  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ editingId=b.dataset.edit; armedDelete=null; renderPortfolio(); });
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.del;
+    if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
+    SEL[activeEntity]().splice(SEL[activeEntity]().findIndex(x=>x.id===id),1);
+    armedDelete=null; renderPortfolio(); renderCompany();
+    setMsg(cap(activeEntity)+" deleted locally (Save to persist).", "ok");
+  });
+}
+function cellVal(col,v){
+  if(v==null||v==="") return '<span class="pill">—</span>';
+  if(DATE_FIELDS.has(col)) return `<span class="mono">${dayToIso(v)}</span>`;
+  if(Array.isArray(v)) return `<span class="mono">${v.join(", ")||"—"}</span>`;
+  if(col==="productId"||col==="modelId"||col.endsWith("Id")) return `<span class="mono">${esc(String(v))}</span>`;
+  return esc(String(v));
+}
+
+/* ---------------- GANTT tab ---------------- */
+function renderGantt(){
+  const em = execMap();
+  const casc = RD.cascade(portfolio, em, todayDay());
+  const inits = portfolio.initiatives;
+  if(!inits.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No initiatives to chart.</p>'; return; }
+  // domain
+  let lo=Infinity, hi=-Infinity;
+  inits.forEach(i=>{ lo=Math.min(lo,i.plannedStart??0); hi=Math.max(hi,i.plannedEnd??0, casc.initiativeProjectedEnd[i.id]??0); });
+  portfolio.milestones.forEach(m=>{ lo=Math.min(lo,m.plannedDate??lo); hi=Math.max(hi,casc.milestoneEffective[m.id]??hi); });
+  if(!isFinite(lo)){ lo=0; hi=1; } if(hi<=lo) hi=lo+1;
+  const padL=180, padR=40, W=1000, rowH=34, top=20;
+  const H = top + inits.length*rowH + 30;
+  const x = d => padL + (d-lo)/(hi-lo)*(W-padL-padR);
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet">`;
+  // today line
+  const td=todayDay(); if(td>=lo&&td<=hi){ s+=`<line x1="${x(td)}" y1="${top-6}" x2="${x(td)}" y2="${H-20}" stroke="#3a5169" stroke-dasharray="3 3"/>`+
+     `<text x="${x(td)+3}" y="${top-8}" fill="#6f8aa3" font-size="10" font-family="monospace">today</text>`; }
+  inits.forEach((i,idx)=>{
+    const y = top + idx*rowH;
+    const bs=i.plannedStart??lo, be=i.plannedEnd??lo, pe=casc.initiativeProjectedEnd[i.id]??be;
+    const slip=casc.longTermSlip[i.id]??0;
+    s += `<text x="8" y="${y+18}" fill="#cdd9e5" font-size="12">${esc((i.name||i.id).slice(0,24))}</text>`;
+    s += `<rect x="${x(bs)}" y="${y+8}" width="${Math.max(2,x(be)-x(bs))}" height="12" rx="3" fill="#2c4a63"/>`;
+    if(slip>0) s += `<rect x="${x(be)}" y="${y+8}" width="${Math.max(2,x(pe)-x(be))}" height="12" rx="3" fill="var(--bad)" opacity="0.85"/>`;
+    s += `<rect x="${x(bs)}" y="${y+8}" width="${Math.max(2,x(Math.min(pe,be))-x(bs))}" height="12" rx="3" fill="var(--accent)" opacity="0.5"/>`;
+    s += `<text x="${x(pe)+5}" y="${y+18}" fill="${slip>0?'#f87171':'#34d399'}" font-size="11" font-family="monospace">${slip>0?'+'+slip+'d':'on plan'}</text>`;
+    // milestones on this initiative
+    portfolio.milestones.filter(m=>m.initiativeId===i.id).forEach(m=>{
+      const pd=m.plannedDate, ef=casc.milestoneEffective[m.id];
+      if(pd!=null){ s+=`<path d="${diamond(x(pd),y+14,5)}" fill="#6f8aa3"/>`; }
+      if(ef!=null && ef!==pd){ s+=`<path d="${diamond(x(ef),y+14,5)}" fill="var(--warn)"/>`; }
+    });
+  });
+  s += `</svg>`;
+  document.getElementById("ganttWrap").innerHTML = s;
+}
+function diamond(cx,cy,r){ return `M ${cx} ${cy-r} L ${cx+r} ${cy} L ${cx} ${cy+r} L ${cx-r} ${cy} Z`; }
+
+/* ---------------- SLICES tab ---------------- */
+function renderSlices(){
+  const root = document.getElementById("tab-slices");
+  const em = execMap();
+  if(!portfolio.products.length){ root.innerHTML='<p class="hint">No products defined yet. Add products and models in the Portfolio tab to see sliced scores.</p>'; return; }
+  const qs = mode==="quarterly" ? quartersAll() : [null];
+  let html = `<table><thead><tr><th>Product / Model</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
+  for(const p of portfolio.products){
+    html += `<tr><td><b>${esc(p.name)}</b> <span class="pill">${p.id}</span></td>`+
+      qs.map(q=>scoreCell(RD.sliceScore("product",p.id,portfolio,em,q))).join("")+`</tr>`;
+    portfolio.models.filter(m=>m.productId===p.id).forEach(m=>{
+      html += `<tr><td style="padding-left:26px">↳ ${esc(m.name)} <span class="pill">${m.id}</span></td>`+
+        qs.map(q=>scoreCell(RD.sliceScore("model",m.id,portfolio,em,q))).join("")+`</tr>`;
+    });
+  }
+  html += `</tbody></table>
+    <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
+  root.innerHTML = html;
+}
+function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
+
+/* ---------------- render dispatch ---------------- */
+function renderAll(){ renderCompany(); renderPortfolio(); renderGantt(); renderSlices(); renderBrokerStatus(); }
+function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
+  el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
+
+/* ---------------- nav + wiring ---------------- */
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
+  document.getElementById("tab-"+b.dataset.tab).classList.add("active");
+});
+document.querySelectorAll("#modeToggle button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#modeToggle button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); mode=b.dataset.mode; renderCompany(); renderSlices();
+});
+document.getElementById("saveBtn").onclick = saveAll;
+document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
+  document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
+window.addEventListener("beforeunload", stopPoll);
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+/* boot */
+renderAll();
+loadAll();
+</script>
+</body>
+</html>
