@@ -432,31 +432,62 @@ function cellVal(col,v){
 function renderGantt(){
   const em = execMap();
   const casc = RD.cascade(portfolio, em, todayDay());
-  const inits = portfolio.initiatives;
-  if(!inits.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No initiatives to chart.</p>'; return; }
-  // domain
+  const objs = portfolio.objectives||[], miles = portfolio.milestones||[];
+  const td = todayDay();
+  // ---- build chartable rows with derived spans (null dates never anchor at epoch) ----
+  const rows = [];
+  (portfolio.initiatives||[]).forEach(I=>{
+    const childObjs = objs.filter(o=>o.initiativeId===I.id);
+    const childMiles = miles.filter(m=>m.initiativeId===I.id);
+    const hasChildren = childObjs.length>0 || childMiles.length>0;
+    if(!hasChildren && I.plannedStart==null && I.plannedEnd==null) return; // hide empty, undated (e.g. emptied umbrellas)
+    // derived start: own, else earliest child planned date
+    let ds = I.plannedStart;
+    if(ds==null){
+      const cand=[];
+      childObjs.forEach(o=>{ if(o.plannedStart!=null) cand.push(o.plannedStart); });
+      childMiles.forEach(m=>{ if(m.plannedDate!=null) cand.push(m.plannedDate); });
+      ds = cand.length ? Math.min.apply(null,cand) : null;
+    }
+    // projected end (max over plannedEnd + children); derive end from it when no own end
+    const peRaw = casc.initiativeProjectedEnd[I.id];
+    const pe = (peRaw!=null && peRaw>0) ? peRaw : null;
+    const de = (I.plannedEnd!=null) ? I.plannedEnd : pe;
+    const derived = (I.plannedStart==null || I.plannedEnd==null);
+    const slip = (I.plannedEnd!=null) ? (casc.longTermSlip[I.id]??0) : 0;
+    rows.push({ I, ds, de, pe, derived, slip, childMiles });
+  });
+  if(!rows.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No scheduled initiatives to chart.</p>'; return; }
+  // ---- domain from real/derived dates only (+ today for context) ----
   let lo=Infinity, hi=-Infinity;
-  inits.forEach(i=>{ lo=Math.min(lo,i.plannedStart??0); hi=Math.max(hi,i.plannedEnd??0, casc.initiativeProjectedEnd[i.id]??0); });
-  portfolio.milestones.forEach(m=>{ lo=Math.min(lo,m.plannedDate??lo); hi=Math.max(hi,casc.milestoneEffective[m.id]??hi); });
-  if(!isFinite(lo)){ lo=0; hi=1; } if(hi<=lo) hi=lo+1;
+  rows.forEach(r=>{ if(r.ds!=null) lo=Math.min(lo,r.ds); if(r.de!=null) hi=Math.max(hi,r.de); if(r.pe!=null) hi=Math.max(hi,r.pe); });
+  miles.forEach(m=>{ if(m.plannedDate!=null) lo=Math.min(lo,m.plannedDate); const ef=casc.milestoneEffective[m.id]; if(ef!=null) hi=Math.max(hi,ef); });
+  if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
+  if(!isFinite(lo)){ lo=td; } if(!isFinite(hi)||hi<=lo){ hi=lo+1; }
   const padL=180, padR=40, W=1000, rowH=34, top=20;
-  const H = top + inits.length*rowH + 30;
+  const H = top + rows.length*rowH + 30;
   const x = d => padL + (d-lo)/(hi-lo)*(W-padL-padR);
   let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet">`;
-  // today line
-  const td=todayDay(); if(td>=lo&&td<=hi){ s+=`<line x1="${x(td)}" y1="${top-6}" x2="${x(td)}" y2="${H-20}" stroke="#3a5169" stroke-dasharray="3 3"/>`+
+  if(td>=lo&&td<=hi){ s+=`<line x1="${x(td)}" y1="${top-6}" x2="${x(td)}" y2="${H-20}" stroke="#3a5169" stroke-dasharray="3 3"/>`+
      `<text x="${x(td)+3}" y="${top-8}" fill="#6f8aa3" font-size="10" font-family="monospace">today</text>`; }
-  inits.forEach((i,idx)=>{
-    const y = top + idx*rowH;
-    const bs=i.plannedStart??lo, be=i.plannedEnd??lo, pe=casc.initiativeProjectedEnd[i.id]??be;
-    const slip=casc.longTermSlip[i.id]??0;
-    s += `<text x="8" y="${y+18}" fill="#cdd9e5" font-size="12">${esc((i.name||i.id).slice(0,24))}</text>`;
-    s += `<rect x="${x(bs)}" y="${y+8}" width="${Math.max(2,x(be)-x(bs))}" height="12" rx="3" fill="#2c4a63"/>`;
-    if(slip>0) s += `<rect x="${x(be)}" y="${y+8}" width="${Math.max(2,x(pe)-x(be))}" height="12" rx="3" fill="var(--bad)" opacity="0.85"/>`;
-    s += `<rect x="${x(bs)}" y="${y+8}" width="${Math.max(2,x(Math.min(pe,be))-x(bs))}" height="12" rx="3" fill="var(--accent)" opacity="0.5"/>`;
-    s += `<text x="${x(pe)+5}" y="${y+18}" fill="${slip>0?'#f87171':'#34d399'}" font-size="11" font-family="monospace">${slip>0?'+'+slip+'d':'on plan'}</text>`;
-    // milestones on this initiative
-    portfolio.milestones.filter(m=>m.initiativeId===i.id).forEach(m=>{
+  rows.forEach((r,idx)=>{
+    const I=r.I, y=top+idx*rowH;
+    s += `<text x="8" y="${y+18}" fill="#cdd9e5" font-size="12">${esc((I.name||I.id).slice(0,24))}</text>`;
+    if(r.ds==null || r.de==null){
+      s += `<text x="${padL}" y="${y+18}" fill="#6f8aa3" font-size="11" font-family="monospace">unscheduled</text>`;
+    } else {
+      // base planned bar (derived spans drawn dashed + faint so they read as inferred)
+      s += `<rect x="${x(r.ds)}" y="${y+8}" width="${Math.max(2,x(r.de)-x(r.ds))}" height="12" rx="3" fill="#2c4a63"${r.derived?' opacity="0.5" stroke="#46627d" stroke-dasharray="3 2"':''}/>`;
+      // overrun overlay only when there is a real planned end to slip past
+      if(r.slip>0 && r.pe!=null){ s += `<rect x="${x(I.plannedEnd)}" y="${y+8}" width="${Math.max(2,x(r.pe)-x(I.plannedEnd))}" height="12" rx="3" fill="var(--bad)" opacity="0.85"/>`; }
+      // within-plan accent
+      const accentEnd = (r.pe!=null) ? Math.min(r.pe, r.de) : r.de;
+      s += `<rect x="${x(r.ds)}" y="${y+8}" width="${Math.max(2,x(accentEnd)-x(r.ds))}" height="12" rx="3" fill="var(--accent)" opacity="${r.derived?0.3:0.5}"/>`;
+      const endX = (r.pe!=null) ? r.pe : r.de;
+      if(r.derived) s += `<text x="${x(endX)+5}" y="${y+18}" fill="#6f8aa3" font-size="11" font-family="monospace">derived</text>`;
+      else s += `<text x="${x(endX)+5}" y="${y+18}" fill="${r.slip>0?'#f87171':'#34d399'}" font-size="11" font-family="monospace">${r.slip>0?'+'+r.slip+'d':'on plan'}</text>`;
+    }
+    r.childMiles.forEach(m=>{
       const pd=m.plannedDate, ef=casc.milestoneEffective[m.id];
       if(pd!=null){ s+=`<path d="${diamond(x(pd),y+14,5)}" fill="#6f8aa3"/>`; }
       if(ef!=null && ef!==pd){ s+=`<path d="${diamond(x(ef),y+14,5)}" fill="var(--warn)"/>`; }
