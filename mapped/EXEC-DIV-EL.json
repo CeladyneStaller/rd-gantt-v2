@@ -1,0 +1,1542 @@
+{
+  "objectiveState": [
+    {
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-03",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-06",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-07",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-02",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-03",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-04",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-05",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-08",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-09",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-10",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-06",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-07",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q3-08",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-11",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q2-12",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q1-03",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-EL-2026Q1-04",
+      "status": "not-started"
+    }
+  ],
+  "keyResults": [
+    {
+      "id": "KR-EL-2026Q2-01-1",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Inlet water install (1)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-2",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Water conductivity after flowing in the system for 24-hours (bar)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-3",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "All external ports to be connected for safe venting (3)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-4",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "System is error free (0)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-5",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Complete 100% of pre\u2011handover readiness checks and repairs (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 100,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-6",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Hardware plumbed in TERA stack (1)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-7",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "No water leaks (With pump flowing) (0)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-8",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Run production rate (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 60,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-9",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "No H2 leak (WebGUI confirmation-stack pressure) (H2 sniffer) (leaks)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-10",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "No fatal errors during and after 2 hours of operation (hours)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-11",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "System Efficiency (kWh/kgH2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-12",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "WebGUI production rate matches H2 out flow rate (Mass flow sensor) (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 60,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-13",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Purity (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 99.9,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-14",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "0 errors durning 24-hour continuous operation at 100% production rate (errors)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-15",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Confirm H2 purity after 24-hours run (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 99.9,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-16",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Power efficiency at 100% production rate (kWh/kgH2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-01-17",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "statement": "Deliver system (system)",
+      "unit": null,
+      "direction": "up",
+      "target": 1,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-1",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "%H2-in-O2 (%)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-2",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Cell Voltage (V)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-3",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Seals under differential pressure (bar DP)",
+      "unit": null,
+      "direction": "up",
+      "target": 38,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-4",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "No hardware corrosion",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-5",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Cells in a stack (cells)",
+      "unit": null,
+      "direction": "up",
+      "target": 5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-6",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Energy efficiency (kWh/kgH2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-7",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Avg Cell Voltage (@ 52A, 55C, 35barH2) (V/cell)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-8",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "FAT passed",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-9",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Cell count (cells)",
+      "unit": null,
+      "direction": "up",
+      "target": 23,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-10",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "# of stack (stack)",
+      "unit": null,
+      "direction": "up",
+      "target": 1,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-11",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "Energy consumption (kWh/kgH2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-12",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "<46 V at 52 A, 55 C, 35 barH2 (V)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-02-13",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "statement": "FAT passed (FAT)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-1",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "Plates & Meshes",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-2",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "MEAs",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-3",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "PTLs & Pt-coated C clothes",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-4",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "Gaskets (Inter-MPP & cell)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-5",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "Bolts & Nuts",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-6",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "Cell count (cells)",
+      "unit": null,
+      "direction": "up",
+      "target": 5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-7",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "FAT passed",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-8",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "# of load cycles (cycles)",
+      "unit": null,
+      "direction": "up",
+      "target": 400,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-9",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "Cell count (cells)",
+      "unit": null,
+      "direction": "up",
+      "target": 30,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-04-10",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "statement": "# of load cycles (cycles)",
+      "unit": null,
+      "direction": "up",
+      "target": 8000,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-1",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Fluctuation around setpoint (%)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-2",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Number of runs",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-3",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Low end of calibration curve (ppm)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-4",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Power Supply Voltage (V)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-5",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Power Supply Current (A)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-6",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Temperature (C)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-7",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Flowrate (mlpm)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-8",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Vessel volume (L)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-9",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "H2 pressure (barH2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-10",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Flowrate (lpm)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-11",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "BP control electrified",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-12",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "BP ramp rate (bar/s)",
+      "unit": null,
+      "direction": "up",
+      "target": 5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-13",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Current ramp rate (A/s)",
+      "unit": null,
+      "direction": "up",
+      "target": 10,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-14",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Automated",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-15",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "BP and electrical aligned",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q2-05-16",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "statement": "Demonstration Cycles (cycles)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-1",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Power Supply Voltage",
+      "unit": "V",
+      "direction": "up",
+      "target": 45,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-2",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Power Supply Current",
+      "unit": "A",
+      "direction": "up",
+      "target": 52,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-3",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Power Supply Power",
+      "unit": "kW",
+      "direction": "up",
+      "target": 2.3,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-4",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Water flow",
+      "unit": "L/min",
+      "direction": "up",
+      "target": 1.5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-5",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Pressure",
+      "unit": "bar",
+      "direction": "up",
+      "target": 35,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-6",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Conductivity",
+      "unit": "uS/cm",
+      "direction": "down",
+      "target": 1,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EL-2026Q1-02-7",
+      "objectiveId": "OBJ-EL-2026Q1-02",
+      "statement": "Errors",
+      "unit": "errors",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-EL-2026Q2-01-1",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Confirm Enapter is completely read for TERA stack",
+      "gate_id": null,
+      "plannedDate": 2298,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-2",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Prepare for SG 3-7 and derisk imaginable issues",
+      "gate_id": null,
+      "plannedDate": 2317,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-3",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Install TERA stack",
+      "gate_id": null,
+      "plannedDate": 2318,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-4",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Pilot run of Enapter with TERA stack",
+      "gate_id": null,
+      "plannedDate": 2326,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-5",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Confirm system energy efficiency",
+      "gate_id": null,
+      "plannedDate": 2330,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-6",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Confirm H2 production rate and purity",
+      "gate_id": null,
+      "plannedDate": 2332,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-7",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Continuous operation for 24-hours",
+      "gate_id": null,
+      "plannedDate": 2339,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-01-8",
+      "objectiveId": "OBJ-EL-2026Q2-01",
+      "name": "Ship TERA stack retrofitted system to SESAME SOLAR",
+      "gate_id": null,
+      "plannedDate": 2342,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q1-01-1",
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "name": "Demonstrate Electra-X with J >4.5A/cm2 at 1.8V shows no degradation during extended pol curve cycling",
+      "gate_id": null,
+      "plannedDate": 2284,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q1-01-2",
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "name": "Demonstrate Electra-X has <3V%/1000h durability at 3A/cm2, 80C",
+      "gate_id": null,
+      "plannedDate": 2291,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q1-01-3",
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "name": "Demonstrate Electra-X production can be successfully scaled up",
+      "gate_id": null,
+      "plannedDate": 2298,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q1-01-4",
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "name": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+      "gate_id": null,
+      "plannedDate": 2305,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q1-01-5",
+      "objectiveId": "OBJ-EL-2026Q1-01",
+      "name": "Produce at least 50 membranes",
+      "gate_id": null,
+      "plannedDate": 2326,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-1",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Demonstrate capability in a single cell",
+      "gate_id": null,
+      "plannedDate": 2309,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-2",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Assemble short stack and ensure testing capability for short stack",
+      "gate_id": null,
+      "plannedDate": 2310,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-3",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Demonstrate capability in a short stack",
+      "gate_id": null,
+      "plannedDate": 2312,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-4",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Assemble Sesame stack and ensure testing capability for full stack",
+      "gate_id": null,
+      "plannedDate": 2316,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-5",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Hand off stack to Sesame System Integration project",
+      "gate_id": null,
+      "plannedDate": 2318,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-02-6",
+      "objectiveId": "OBJ-EL-2026Q2-02",
+      "name": "Confirm capability of whole stack",
+      "gate_id": null,
+      "plannedDate": 2320,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-1",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Prepare materials for Fourier short stack assembly",
+      "gate_id": null,
+      "plannedDate": 2310,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-2",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Assemble short stack and ensure load cycling capability for short stack",
+      "gate_id": null,
+      "plannedDate": 2311,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-3",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Ensure short stack passes FAT (Fourier)",
+      "gate_id": null,
+      "plannedDate": 2316,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-4",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Demonstrate load cycling capability of test stand and short stack",
+      "gate_id": null,
+      "plannedDate": 2323,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-5",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Assemble Fourier stack",
+      "gate_id": null,
+      "plannedDate": 2330,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-6",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Ensure full stack passes FAT",
+      "gate_id": null,
+      "plannedDate": 2332,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-04-7",
+      "objectiveId": "OBJ-EL-2026Q2-04",
+      "name": "Demonstrate load cycling capability of full stack",
+      "gate_id": null,
+      "plannedDate": 2347,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-05-1",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "name": "Improve %H2-in-O2 measurement accuracy",
+      "gate_id": null,
+      "plannedDate": 2289,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-05-2",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "name": "Enable short stack testing",
+      "gate_id": null,
+      "plannedDate": 2298,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-05-3",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "name": "Enable Sesame full stack testing",
+      "gate_id": null,
+      "plannedDate": 2309,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q2-05-4",
+      "objectiveId": "OBJ-EL-2026Q2-05",
+      "name": "Enable load cycling",
+      "gate_id": null,
+      "plannedDate": 2319,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    }
+  ],
+  "tasks": [],
+  "kpiDefs": [],
+  "kpiUpdates": [
+    {
+      "id": "KPI-EL-2026Q2-01-1",
+      "groupId": "KR-EL-2026Q2-01-1",
+      "value": 0,
+      "timestamp": 1782412981192,
+      "note": "migrated from gate:Confirm Enapter is completely read for TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-2",
+      "groupId": "KR-EL-2026Q2-01-2",
+      "value": 0,
+      "timestamp": 1782412981193,
+      "note": "migrated from gate:Confirm Enapter is completely read for TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-3",
+      "groupId": "KR-EL-2026Q2-01-3",
+      "value": 0,
+      "timestamp": 1782412981194,
+      "note": "migrated from gate:Confirm Enapter is completely read for TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-4",
+      "groupId": "KR-EL-2026Q2-01-4",
+      "value": 0,
+      "timestamp": 1782412981195,
+      "note": "migrated from gate:Confirm Enapter is completely read for TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-5",
+      "groupId": "KR-EL-2026Q2-01-5",
+      "value": 0,
+      "timestamp": 1782412981196,
+      "note": "migrated from gate:Prepare for SG 3-7 and derisk imaginable issues",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-6",
+      "groupId": "KR-EL-2026Q2-01-6",
+      "value": 0,
+      "timestamp": 1782412981197,
+      "note": "migrated from gate:Install TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-7",
+      "groupId": "KR-EL-2026Q2-01-7",
+      "value": 0,
+      "timestamp": 1782412981198,
+      "note": "migrated from gate:Install TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-8",
+      "groupId": "KR-EL-2026Q2-01-8",
+      "value": 0,
+      "timestamp": 1782412981199,
+      "note": "migrated from gate:Pilot run of Enapter with TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-9",
+      "groupId": "KR-EL-2026Q2-01-9",
+      "value": 0,
+      "timestamp": 1782412981200,
+      "note": "migrated from gate:Pilot run of Enapter with TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-10",
+      "groupId": "KR-EL-2026Q2-01-10",
+      "value": 0,
+      "timestamp": 1782412981201,
+      "note": "migrated from gate:Pilot run of Enapter with TERA stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-11",
+      "groupId": "KR-EL-2026Q2-01-11",
+      "value": 0,
+      "timestamp": 1782412981202,
+      "note": "migrated from gate:Confirm system energy efficiency",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-12",
+      "groupId": "KR-EL-2026Q2-01-12",
+      "value": 0,
+      "timestamp": 1782412981203,
+      "note": "migrated from gate:Confirm H2 production rate and purity",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-13",
+      "groupId": "KR-EL-2026Q2-01-13",
+      "value": 0,
+      "timestamp": 1782412981204,
+      "note": "migrated from gate:Confirm H2 production rate and purity",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-14",
+      "groupId": "KR-EL-2026Q2-01-14",
+      "value": 0,
+      "timestamp": 1782412981205,
+      "note": "migrated from gate:Continuous operation for 24-hours",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-15",
+      "groupId": "KR-EL-2026Q2-01-15",
+      "value": 0,
+      "timestamp": 1782412981206,
+      "note": "migrated from gate:Continuous operation for 24-hours",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-16",
+      "groupId": "KR-EL-2026Q2-01-16",
+      "value": 0,
+      "timestamp": 1782412981207,
+      "note": "migrated from gate:Continuous operation for 24-hours",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-01-17",
+      "groupId": "KR-EL-2026Q2-01-17",
+      "value": 0,
+      "timestamp": 1782412981208,
+      "note": "migrated from gate:Ship TERA stack retrofitted system to SESAME SOLAR",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-1",
+      "groupId": "KR-EL-2026Q2-02-1",
+      "value": 0,
+      "timestamp": 1782412981209,
+      "note": "migrated from gate:Demonstrate capability in a single cell",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-2",
+      "groupId": "KR-EL-2026Q2-02-2",
+      "value": 0,
+      "timestamp": 1782412981210,
+      "note": "migrated from gate:Demonstrate capability in a single cell",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-3",
+      "groupId": "KR-EL-2026Q2-02-3",
+      "value": 0,
+      "timestamp": 1782412981211,
+      "note": "migrated from gate:Demonstrate capability in a single cell",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-4",
+      "groupId": "KR-EL-2026Q2-02-4",
+      "value": 0,
+      "timestamp": 1782412981212,
+      "note": "migrated from gate:Demonstrate capability in a single cell",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-5",
+      "groupId": "KR-EL-2026Q2-02-5",
+      "value": 0,
+      "timestamp": 1782412981213,
+      "note": "migrated from gate:Assemble short stack and ensure testing capability for short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-6",
+      "groupId": "KR-EL-2026Q2-02-6",
+      "value": 0,
+      "timestamp": 1782412981214,
+      "note": "migrated from gate:Demonstrate capability in a short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-7",
+      "groupId": "KR-EL-2026Q2-02-7",
+      "value": 0,
+      "timestamp": 1782412981215,
+      "note": "migrated from gate:Demonstrate capability in a short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-8",
+      "groupId": "KR-EL-2026Q2-02-8",
+      "value": 0,
+      "timestamp": 1782412981216,
+      "note": "migrated from gate:Demonstrate capability in a short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-9",
+      "groupId": "KR-EL-2026Q2-02-9",
+      "value": 0,
+      "timestamp": 1782412981217,
+      "note": "migrated from gate:Assemble Sesame stack and ensure testing capability for full stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-10",
+      "groupId": "KR-EL-2026Q2-02-10",
+      "value": 0,
+      "timestamp": 1782412981218,
+      "note": "migrated from gate:Hand off stack to Sesame System Integration project",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-11",
+      "groupId": "KR-EL-2026Q2-02-11",
+      "value": 0,
+      "timestamp": 1782412981219,
+      "note": "migrated from gate:Confirm capability of whole stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-12",
+      "groupId": "KR-EL-2026Q2-02-12",
+      "value": 0,
+      "timestamp": 1782412981220,
+      "note": "migrated from gate:Confirm capability of whole stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-02-13",
+      "groupId": "KR-EL-2026Q2-02-13",
+      "value": 0,
+      "timestamp": 1782412981221,
+      "note": "migrated from gate:Confirm capability of whole stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-1",
+      "groupId": "KR-EL-2026Q2-04-1",
+      "value": 0,
+      "timestamp": 1782412981222,
+      "note": "migrated from gate:Prepare materials for Fourier short stack assembly",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-2",
+      "groupId": "KR-EL-2026Q2-04-2",
+      "value": 0,
+      "timestamp": 1782412981223,
+      "note": "migrated from gate:Prepare materials for Fourier short stack assembly",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-3",
+      "groupId": "KR-EL-2026Q2-04-3",
+      "value": 0,
+      "timestamp": 1782412981224,
+      "note": "migrated from gate:Prepare materials for Fourier short stack assembly",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-4",
+      "groupId": "KR-EL-2026Q2-04-4",
+      "value": 0,
+      "timestamp": 1782412981225,
+      "note": "migrated from gate:Prepare materials for Fourier short stack assembly",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-5",
+      "groupId": "KR-EL-2026Q2-04-5",
+      "value": 0,
+      "timestamp": 1782412981226,
+      "note": "migrated from gate:Prepare materials for Fourier short stack assembly",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-6",
+      "groupId": "KR-EL-2026Q2-04-6",
+      "value": 0,
+      "timestamp": 1782412981227,
+      "note": "migrated from gate:Assemble short stack and ensure load cycling capability for short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-7",
+      "groupId": "KR-EL-2026Q2-04-7",
+      "value": 0,
+      "timestamp": 1782412981228,
+      "note": "migrated from gate:Ensure short stack passes FAT (Fourier)",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-8",
+      "groupId": "KR-EL-2026Q2-04-8",
+      "value": 0,
+      "timestamp": 1782412981229,
+      "note": "migrated from gate:Demonstrate load cycling capability of test stand and short stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-9",
+      "groupId": "KR-EL-2026Q2-04-9",
+      "value": 0,
+      "timestamp": 1782412981230,
+      "note": "migrated from gate:Assemble Fourier stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-04-10",
+      "groupId": "KR-EL-2026Q2-04-10",
+      "value": 0,
+      "timestamp": 1782412981231,
+      "note": "migrated from gate:Demonstrate load cycling capability of full stack",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-1",
+      "groupId": "KR-EL-2026Q2-05-1",
+      "value": 0,
+      "timestamp": 1782412981232,
+      "note": "migrated from gate:Improve %H2-in-O2 measurement accuracy",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-2",
+      "groupId": "KR-EL-2026Q2-05-2",
+      "value": 0,
+      "timestamp": 1782412981233,
+      "note": "migrated from gate:Improve %H2-in-O2 measurement accuracy",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-3",
+      "groupId": "KR-EL-2026Q2-05-3",
+      "value": 0,
+      "timestamp": 1782412981234,
+      "note": "migrated from gate:Improve %H2-in-O2 measurement accuracy",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-4",
+      "groupId": "KR-EL-2026Q2-05-4",
+      "value": 0,
+      "timestamp": 1782412981235,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-5",
+      "groupId": "KR-EL-2026Q2-05-5",
+      "value": 0,
+      "timestamp": 1782412981236,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-6",
+      "groupId": "KR-EL-2026Q2-05-6",
+      "value": 0,
+      "timestamp": 1782412981237,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-7",
+      "groupId": "KR-EL-2026Q2-05-7",
+      "value": 0,
+      "timestamp": 1782412981238,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-8",
+      "groupId": "KR-EL-2026Q2-05-8",
+      "value": 0,
+      "timestamp": 1782412981239,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-9",
+      "groupId": "KR-EL-2026Q2-05-9",
+      "value": 0,
+      "timestamp": 1782412981240,
+      "note": "migrated from gate:Enable short stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-10",
+      "groupId": "KR-EL-2026Q2-05-10",
+      "value": 0,
+      "timestamp": 1782412981241,
+      "note": "migrated from gate:Enable Sesame full stack testing",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-11",
+      "groupId": "KR-EL-2026Q2-05-11",
+      "value": 0,
+      "timestamp": 1782412981242,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-12",
+      "groupId": "KR-EL-2026Q2-05-12",
+      "value": 0,
+      "timestamp": 1782412981243,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-13",
+      "groupId": "KR-EL-2026Q2-05-13",
+      "value": 0,
+      "timestamp": 1782412981244,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-14",
+      "groupId": "KR-EL-2026Q2-05-14",
+      "value": 0,
+      "timestamp": 1782412981245,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-15",
+      "groupId": "KR-EL-2026Q2-05-15",
+      "value": 0,
+      "timestamp": 1782412981246,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q2-05-16",
+      "groupId": "KR-EL-2026Q2-05-16",
+      "value": 0,
+      "timestamp": 1782412981247,
+      "note": "migrated from gate:Enable load cycling",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-1",
+      "groupId": "KR-EL-2026Q1-02-1",
+      "value": 45,
+      "timestamp": 1782412981275,
+      "note": "migrated from KR:Power supply is functional for rated use",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-2",
+      "groupId": "KR-EL-2026Q1-02-2",
+      "value": 52,
+      "timestamp": 1782412981276,
+      "note": "migrated from KR:Power supply is functional for rated use",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-3",
+      "groupId": "KR-EL-2026Q1-02-3",
+      "value": 2.3,
+      "timestamp": 1782412981277,
+      "note": "migrated from KR:Power supply is functional for rated use",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-4",
+      "groupId": "KR-EL-2026Q1-02-4",
+      "value": 1.5,
+      "timestamp": 1782412981278,
+      "note": "migrated from KR:Pump can flow water at >1.5 L/min",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-5",
+      "groupId": "KR-EL-2026Q1-02-5",
+      "value": 35,
+      "timestamp": 1782412981279,
+      "note": "migrated from KR:System can pressurize up to 35 bar",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EL-2026Q1-02-6",
+      "groupId": "KR-EL-2026Q1-02-6",
+      "value": 8,
+      "timestamp": 1782412981280,
+      "note": "migrated from KR:Achieve water conductivity of <1uS/cm after 24 h of flow in the system",
+      "sourceKpiId": null
+    }
+  ]
+}

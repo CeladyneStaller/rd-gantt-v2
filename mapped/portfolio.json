@@ -1,0 +1,1425 @@
+{
+  "divisions": [
+    {
+      "id": "DIV-EL",
+      "name": "Electrolyzer",
+      "order": 0
+    },
+    {
+      "id": "DIV-EXP",
+      "name": "Exploration",
+      "order": 1
+    },
+    {
+      "id": "DIV-FC",
+      "name": "Fuel Cell",
+      "order": 2
+    }
+  ],
+  "products": [
+    {
+      "id": "product-1773938849898",
+      "divisionId": "DIV-EL",
+      "name": "Tera Stack",
+      "order": 0
+    },
+    {
+      "id": "product-1773938877055",
+      "divisionId": "DIV-EL",
+      "name": "Tera System",
+      "order": 1
+    },
+    {
+      "id": "product-1773938901523",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 Membrane",
+      "order": 2
+    },
+    {
+      "id": "product-1774028598286",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 2 Membrane",
+      "order": 3
+    },
+    {
+      "id": "product-1774041067366",
+      "divisionId": "DIV-FC",
+      "name": "SPECTRE",
+      "order": 4
+    }
+  ],
+  "models": [
+    {
+      "id": "model-1773938819748",
+      "productId": "product-1773938849898",
+      "name": "Tera 25-30-R5",
+      "order": 0
+    },
+    {
+      "id": "model-1773939474106",
+      "productId": "product-1773938849898",
+      "name": "Tera 25-30-R6",
+      "order": 1
+    },
+    {
+      "id": "model-1773939484522",
+      "productId": "product-1773938849898",
+      "name": "Tera 25-30-R7",
+      "order": 2
+    },
+    {
+      "id": "model-1773938857836",
+      "productId": "product-1773938877055",
+      "name": "Retrofit S4-25-26-R5",
+      "order": 0
+    },
+    {
+      "id": "model-1774040053752",
+      "productId": "product-1773938877055",
+      "name": "Tera S4-25-26-R5",
+      "order": 1
+    },
+    {
+      "id": "model-1773938887067",
+      "productId": "product-1773938901523",
+      "name": "Dura 1D-HP6-15",
+      "order": 0
+    },
+    {
+      "id": "model-1773938893198",
+      "productId": "product-1773938901523",
+      "name": "Dura 1D-HP6-12",
+      "order": 1
+    },
+    {
+      "id": "model-1774028722302",
+      "productId": "product-1774028598286",
+      "name": "Dura 2D-6",
+      "order": 0
+    },
+    {
+      "id": "model-1774041083919",
+      "productId": "product-1774041067366",
+      "name": "Dura Gen 1",
+      "order": 0
+    }
+  ],
+  "initiatives": [
+    {
+      "id": "INIT-EL-01",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-30-R5 Component Lock",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2250,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-02",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-30-R5 Prototype Integration",
+      "desc": "",
+      "plannedStart": 2223,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-03",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-30-R5 Stack Validation",
+      "desc": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2342,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-04",
+      "divisionId": "DIV-EL",
+      "name": "v6 Design Iteration",
+      "desc": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "INIT-EL-05",
+      "divisionId": "DIV-EL",
+      "name": "Electra Design Freeze",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2250,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-06",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-30-R6 Validation",
+      "desc": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "INIT-EL-07",
+      "divisionId": "DIV-EL",
+      "name": "Manufacturing Development",
+      "desc": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "INIT-EL-08",
+      "divisionId": "DIV-EL",
+      "name": "v7 Design Iteration",
+      "desc": "",
+      "plannedStart": 2465,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939484522"
+    },
+    {
+      "id": "INIT-EL-09",
+      "divisionId": "DIV-EL",
+      "name": "Stack Production",
+      "desc": "",
+      "plannedStart": 2465,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "INIT-EL-10",
+      "divisionId": "DIV-EL",
+      "name": "Enapter Retrofit",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2250,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "INIT-EL-11",
+      "divisionId": "DIV-EL",
+      "name": "Retrofit Alpha Prototype",
+      "desc": "",
+      "plannedStart": 2251,
+      "plannedEnd": 2311,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "INIT-EL-12",
+      "divisionId": "DIV-EL",
+      "name": "Balance of Plant Design",
+      "desc": "",
+      "plannedStart": 2251,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "INIT-EL-13",
+      "divisionId": "DIV-EL",
+      "name": "S4-25-26-R5 System Prototype",
+      "desc": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "INIT-EL-14",
+      "divisionId": "DIV-EL",
+      "name": "S4-25-26-R5 System Design Iteration",
+      "desc": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "INIT-EL-15",
+      "divisionId": "DIV-EL",
+      "name": "System Manufacturing",
+      "desc": "",
+      "plannedStart": 2465,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "INIT-EL-16",
+      "divisionId": "DIV-EL",
+      "name": "Retrofit Beta Prototype",
+      "desc": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "INIT-FC-01",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 R2R Feasibility",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938887067"
+    },
+    {
+      "id": "INIT-FC-02",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 Design Freeze",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2342,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "INIT-FC-03",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 Fuel Cell Optimization",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "INIT-FC-04",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 R2R Demonstration",
+      "desc": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2434,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "INIT-FC-05",
+      "divisionId": "DIV-FC",
+      "name": "UAV Fuel Cell Integration",
+      "desc": "",
+      "plannedStart": 2251,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "INIT-FC-06",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 1 R2R Pilot Production",
+      "desc": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "INIT-FC-07",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 2 Design Freeze",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2342,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "INIT-FC-08",
+      "divisionId": "DIV-FC",
+      "name": "Dura Gen 2 Iteration",
+      "desc": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "INIT-FC-09",
+      "divisionId": "DIV-FC",
+      "name": "Gen 2 Product Delivery",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "INIT-FC-10",
+      "divisionId": "DIV-FC",
+      "name": "SPECTRE CCM Freeze",
+      "desc": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "INIT-FC-11",
+      "divisionId": "DIV-FC",
+      "name": "SPECTRE Reports",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "INIT-FC-12",
+      "divisionId": "DIV-FC",
+      "name": "Gen 1 Product Delivery",
+      "desc": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": ""
+    },
+    {
+      "id": "INIT-EL-17",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-30-R5 Stack Durability",
+      "desc": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-18",
+      "divisionId": "DIV-EL",
+      "name": "Tera 25-10-R5 External Validation",
+      "desc": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "INIT-EL-19",
+      "divisionId": "DIV-EL",
+      "name": "Unassigned \u2014 Electrolyzer",
+      "desc": "Holds migrated objectives without a resolved initiative link; re-parent in-app.",
+      "plannedStart": null,
+      "plannedEnd": null,
+      "order": 999,
+      "productId": null,
+      "modelId": null
+    },
+    {
+      "id": "INIT-EXP-01",
+      "divisionId": "DIV-EXP",
+      "name": "Unassigned \u2014 Exploration",
+      "desc": "Holds migrated objectives without a resolved initiative link; re-parent in-app.",
+      "plannedStart": null,
+      "plannedEnd": null,
+      "order": 999,
+      "productId": null,
+      "modelId": null
+    },
+    {
+      "id": "INIT-FC-13",
+      "divisionId": "DIV-FC",
+      "name": "Unassigned \u2014 Fuel Cell",
+      "desc": "Holds migrated objectives without a resolved initiative link; re-parent in-app.",
+      "plannedStart": null,
+      "plannedEnd": null,
+      "order": 999,
+      "productId": null,
+      "modelId": null
+    }
+  ],
+  "milestones": [
+    {
+      "id": "MS-EL-01-01",
+      "initiativeId": "INIT-EL-01",
+      "name": "Address membrane-based WTP underperformance",
+      "plannedDate": 2338,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-01-02",
+      "initiativeId": "INIT-EL-01",
+      "name": "Address optimal operating parameters in WTP",
+      "plannedDate": 2354,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-01-03",
+      "initiativeId": "INIT-EL-01",
+      "name": "Evaluate optimal CCM and operation",
+      "plannedDate": 2375,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-04-01",
+      "initiativeId": "INIT-EL-04",
+      "name": "Address membrane-based WTP underperformance",
+      "plannedDate": 2338,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-04-02",
+      "initiativeId": "INIT-EL-04",
+      "name": "Address optimal operating parameters in WTP",
+      "plannedDate": 2354,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-04-03",
+      "initiativeId": "INIT-EL-04",
+      "name": "Evaluate optimal CCM and operation",
+      "plannedDate": 2375,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-01",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera 25-30-R5 Launch",
+      "plannedDate": 2342,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-02",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera 25-30-R6 Launch",
+      "plannedDate": 2403,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-03",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera 25-30-R7 Launch",
+      "plannedDate": 2556,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-04",
+      "initiativeId": "INIT-EL-19",
+      "name": "Initial Design Lock",
+      "plannedDate": 2250,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-05",
+      "initiativeId": "INIT-EL-19",
+      "name": "Operational Tera Stack",
+      "plannedDate": 2281,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-06",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera Manufacturing Ready",
+      "plannedDate": 2464,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-07",
+      "initiativeId": "INIT-EL-19",
+      "name": "Fourier Stack Shipment",
+      "plannedDate": 2311,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-08",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera v5 System Retrofit",
+      "plannedDate": 2311,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-09",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera v5 System v1 Prototype",
+      "plannedDate": 2403,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-10",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera v5 System v1 Launch",
+      "plannedDate": 2464,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-11",
+      "initiativeId": "INIT-EL-19",
+      "name": "Tera v6 System v2 Launch",
+      "plannedDate": 2525,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-12",
+      "initiativeId": "INIT-EL-19",
+      "name": "Sesame System Shipment",
+      "plannedDate": 2311,
+      "order": 0
+    },
+    {
+      "id": "MS-EL-19-13",
+      "initiativeId": "INIT-EL-19",
+      "name": "Novaspark System Shipment",
+      "plannedDate": 2372,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-01",
+      "initiativeId": "INIT-FC-13",
+      "name": "R2R Feasibility",
+      "plannedDate": 2281,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-02",
+      "initiativeId": "INIT-FC-13",
+      "name": "Dura Gen 2 Launch",
+      "plannedDate": 2312,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-03",
+      "initiativeId": "INIT-FC-13",
+      "name": "Dura Gen 1 Design Freeze",
+      "plannedDate": 2342,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-04",
+      "initiativeId": "INIT-FC-13",
+      "name": "Gen 2 External Validation",
+      "plannedDate": 2372,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-05",
+      "initiativeId": "INIT-FC-13",
+      "name": "Dura QC Protocol Established",
+      "plannedDate": 2434,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-06",
+      "initiativeId": "INIT-FC-13",
+      "name": "Pilot Production Demonstrated",
+      "plannedDate": 2495,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-07",
+      "initiativeId": "INIT-FC-13",
+      "name": "Dura Gen 1 Roll Product Launch",
+      "plannedDate": 2556,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-08",
+      "initiativeId": "INIT-FC-13",
+      "name": "Ballard",
+      "plannedDate": 2372,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-13-09",
+      "initiativeId": "INIT-FC-13",
+      "name": "?Ballard",
+      "plannedDate": 2525,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-01",
+      "initiativeId": "INIT-FC-11",
+      "name": "Demonstrate >1 A/cm2 at 0.65V with Dura CCM at 50cm2 active area",
+      "plannedDate": 2281,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-02",
+      "initiativeId": "INIT-FC-11",
+      "name": "Scale Dura CCM  production to 150 cm2",
+      "plannedDate": 2222,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-03",
+      "initiativeId": "INIT-FC-11",
+      "name": "Match simulation of 50cm2 Dura CCM with data",
+      "plannedDate": 2342,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-04",
+      "initiativeId": "INIT-FC-11",
+      "name": "Demonstrate >1 A/cm2 at 0.65V Dura CCM at 150cm2 active area",
+      "plannedDate": 2403,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-05",
+      "initiativeId": "INIT-FC-11",
+      "name": "Match simulation of 150cm2 Dura CCM with data",
+      "plannedDate": 2464,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-11-06",
+      "initiativeId": "INIT-FC-11",
+      "name": "Demonstrate 1kW stack  with Dura CCMs",
+      "plannedDate": 2525,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-09-01",
+      "initiativeId": "INIT-FC-09",
+      "name": "Cellcentric",
+      "plannedDate": 2311,
+      "order": 0
+    },
+    {
+      "id": "MS-FC-09-02",
+      "initiativeId": "INIT-FC-09",
+      "name": "Honda",
+      "plannedDate": 2403,
+      "order": 0
+    }
+  ],
+  "milestoneEdges": [
+    {
+      "id": "MSE-1",
+      "fromMs": "MS-FC-13-02",
+      "toMs": "MS-FC-13-04",
+      "lagDays": 60
+    }
+  ],
+  "objectives": [
+    {
+      "id": "OBJ-EL-2026Q2-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Deliver retrofit PO to Sesame Solar",
+      "owner": "",
+      "plannedStart": 2287,
+      "plannedEnd": 2340,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "OBJ-EL-2026Q1-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Finalize Electra-X Design Freeze",
+      "owner": "",
+      "plannedStart": 2280,
+      "plannedEnd": 2326,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-02",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Sesame Stack",
+      "owner": "toruhatsukade@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-03",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "3rd party validation stack",
+      "owner": "toruhatsukade@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-04",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "(Fourier) Demonstrate Functional Tera 25-30-R5 Stack Prototype and Validate for Fourier use",
+      "owner": "toruhatsukade@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-05",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-19",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Establish Testing Capabilities",
+      "owner": "toruhatsukade@celadynetech.com",
+      "plannedStart": 2284,
+      "plannedEnd": 2319,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-EXP-2026Q1-01",
+      "divisionId": "DIV-EXP",
+      "initiativeId": "INIT-EXP-01",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Develop the steelmaking model with integrated hydrogen usage",
+      "owner": "coreystaller@celadynetech.com",
+      "plannedStart": 2192,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": null,
+      "modelId": null
+    },
+    {
+      "id": "OBJ-EXP-2026Q1-02",
+      "divisionId": "DIV-EXP",
+      "initiativeId": "INIT-EXP-01",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Develop the electrolyzer model to predict Tera electrolyzer performance",
+      "owner": "coreystaller@celadynetech.com",
+      "plannedStart": 2192,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": null,
+      "modelId": null
+    },
+    {
+      "id": "OBJ-FC-2026Q2-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-12",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Deliver on 26Q2 Customer POs",
+      "owner": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": null
+    },
+    {
+      "id": "OBJ-FC-2026Q2-02",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-07",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Cellcentric Development to Unlock PO",
+      "owner": "erincastele@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-03",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-02",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Achieve Ballard Targets",
+      "owner": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-04",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-04",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "1D-HP6-12 R2R Demonstration",
+      "owner": "erincastele@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-05",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-07",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Show feasibility in 20RH pol curve improvement",
+      "owner": "erincastele@celadynetech.com",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-06",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-10",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Optimize sub-scale MEA with higher Pt loading for SPECTRE",
+      "owner": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-06",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-04",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Stack Design Iteration",
+      "owner": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-07",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-04",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Internal Stack Validation",
+      "owner": "",
+      "plannedStart": 2343,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-06",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Third Party Stack Validation",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-02",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-07",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Hardware Manufacturing Scaled",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2434,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-03",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-07",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Develop R2R Catalyst",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-04",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-07",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "MEA Design for Manufacturing",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-05",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-07",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Electra Design for Manufacturing",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q4-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-08",
+      "milestoneIds": [],
+      "quarter": "2026Q4",
+      "statement": "Stack Design Iteration",
+      "owner": "",
+      "plannedStart": 2465,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939484522"
+    },
+    {
+      "id": "OBJ-EL-2026Q4-02",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-08",
+      "milestoneIds": [],
+      "quarter": "2026Q4",
+      "statement": "Internal Stack Validation",
+      "owner": "",
+      "plannedStart": 2496,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939484522"
+    },
+    {
+      "id": "OBJ-EL-2026Q1-02",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-10",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Functional Enapter System",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2250,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-08",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-04",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "BoP Design Stack Validation",
+      "owner": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2342,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773939474106"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-09",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-12",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "BoP Stack Validation",
+      "owner": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2311,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-10",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-12",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "BoP Prototype Delivery",
+      "owner": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2403,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-06",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-13",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "System Prototype Stress Testing",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2434,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-07",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-13",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Determine System Prototype Operating Window",
+      "owner": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "OBJ-EL-2026Q3-08",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-14",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "v2 BoP Prototype Delivery",
+      "owner": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1774040053752"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-11",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-16",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Retrofit Stack Validation",
+      "owner": "",
+      "plannedStart": 2312,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "OBJ-EL-2026Q2-12",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-16",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Retrofit System Prototype Validation",
+      "owner": "",
+      "plannedStart": 2343,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1773938877055",
+      "modelId": "model-1773938857836"
+    },
+    {
+      "id": "OBJ-FC-2026Q1-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-01",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Full R2R Produced Membrane",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938887067"
+    },
+    {
+      "id": "OBJ-FC-2026Q1-02",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-02",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "AST Degradation Root Cause",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-07",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-04",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "R2R QC Strategy Development",
+      "owner": "",
+      "plannedStart": 2343,
+      "plannedEnd": 2434,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q3-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-06",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "R2R Pre-Pilot Demonstration",
+      "owner": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2495,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q4-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-06",
+      "milestoneIds": [],
+      "quarter": "2026Q4",
+      "statement": "R2R Pilot Production Qualification",
+      "owner": "",
+      "plannedStart": 2465,
+      "plannedEnd": 2556,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": "model-1773938893198"
+    },
+    {
+      "id": "OBJ-FC-2026Q1-03",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-03",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Determine and Resolve Performance Limits in WTP",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2311,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "OBJ-FC-2026Q3-02",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-05",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "CCM Supply",
+      "owner": "",
+      "plannedStart": 2404,
+      "plannedEnd": 2495,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    },
+    {
+      "id": "OBJ-FC-2026Q1-04",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-07",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "FC6 Performance Match",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2311,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "OBJ-FC-2026Q3-03",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-08",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Performance and Product Optimization",
+      "owner": "",
+      "plannedStart": 2373,
+      "plannedEnd": 2464,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "OBJ-FC-2026Q3-04",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-08",
+      "milestoneIds": [],
+      "quarter": "2026Q3",
+      "statement": "Durability Optimization",
+      "owner": "",
+      "plannedStart": 2435,
+      "plannedEnd": 2525,
+      "order": 0,
+      "productId": "product-1774028598286",
+      "modelId": "model-1774028722302"
+    },
+    {
+      "id": "OBJ-FC-2026Q1-05",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-12",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Deliver on 26Q1 Customer POs",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938901523",
+      "modelId": null
+    },
+    {
+      "id": "OBJ-EL-2026Q1-03",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-05",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Electra Design Freeze",
+      "owner": "",
+      "plannedStart": 2192,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-EL-2026Q1-04",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-02",
+      "milestoneIds": [],
+      "quarter": "2026Q1",
+      "statement": "Integrate 30-cell Stack",
+      "owner": "",
+      "plannedStart": 2223,
+      "plannedEnd": 2281,
+      "order": 0,
+      "productId": "product-1773938849898",
+      "modelId": "model-1773938819748"
+    },
+    {
+      "id": "OBJ-FC-2026Q2-08",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-10",
+      "milestoneIds": [],
+      "quarter": "2026Q2",
+      "statement": "Maximize Dura performance in WTP",
+      "owner": "",
+      "plannedStart": 2282,
+      "plannedEnd": 2372,
+      "order": 0,
+      "productId": "product-1774041067366",
+      "modelId": "model-1774041083919"
+    }
+  ],
+  "objectiveEdges": [
+    {
+      "id": "OBJE-2",
+      "fromObj": "OBJ-EL-2026Q2-06",
+      "toObj": "OBJ-EL-2026Q2-07",
+      "lagDays": 30
+    },
+    {
+      "id": "OBJE-3",
+      "fromObj": "OBJ-EL-2026Q2-09",
+      "toObj": "OBJ-EL-2026Q2-10",
+      "lagDays": 0
+    },
+    {
+      "id": "OBJE-4",
+      "fromObj": "OBJ-EL-2026Q2-10",
+      "toObj": "OBJ-EL-2026Q3-06",
+      "lagDays": 0
+    },
+    {
+      "id": "OBJE-5",
+      "fromObj": "OBJ-EL-2026Q3-06",
+      "toObj": "OBJ-EL-2026Q3-07",
+      "lagDays": 14
+    },
+    {
+      "id": "OBJE-6",
+      "fromObj": "OBJ-EL-2026Q3-07",
+      "toObj": "OBJ-EL-2026Q3-08",
+      "lagDays": 0
+    },
+    {
+      "id": "OBJE-7",
+      "fromObj": "OBJ-EL-2026Q2-11",
+      "toObj": "OBJ-EL-2026Q2-12",
+      "lagDays": 0
+    },
+    {
+      "id": "OBJE-8",
+      "fromObj": "OBJ-FC-2026Q2-03",
+      "toObj": "OBJ-FC-2026Q2-04",
+      "lagDays": 0
+    }
+  ],
+  "kpiDefs": []
+}

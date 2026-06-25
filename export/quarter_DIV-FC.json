@@ -1,0 +1,3157 @@
+{
+  "projects": [
+    {
+      "id": 10000,
+      "name": "Deliver on 26Q2 Customer POs",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "Product Delivery",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnqcx4e9cer",
+          "name": "Ship samples to Ballard (Batch 5)",
+          "endDate": "2026-04-10",
+          "startDate": "2026-04-01",
+          "subProjectId": 10057,
+          "baselineEndDate": "2026-04-10",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnqczs6f31i",
+          "name": "Ship samples to Toyota (Batch 3)",
+          "endDate": "2026-04-20",
+          "startDate": "2026-04-14",
+          "subProjectId": 10058,
+          "baselineEndDate": "2026-04-20",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnqd0owp30f",
+          "name": "Ship samples to AVL",
+          "endDate": "2026-05-13",
+          "startDate": "2026-04-25",
+          "subProjectId": 10060,
+          "baselineEndDate": "2026-05-11",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnqd61huo2c",
+          "name": "Ship samples to CNRC",
+          "endDate": "2026-05-13",
+          "startDate": "2026-05-13",
+          "subProjectId": 10061,
+          "baselineEndDate": "2026-05-20",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnqd084j44m",
+          "name": "Ship samples to Plug Power",
+          "endDate": "2026-05-26",
+          "startDate": "2026-05-26",
+          "subProjectId": 10059,
+          "baselineEndDate": "2026-04-30",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": []
+    },
+    {
+      "id": 10001,
+      "name": "Cellcentric Development to Unlock PO",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [
+        {
+          "id": "kr-1775598902530-1",
+          "name": "Better than GSMA performance",
+          "trackingType": "kpi",
+          "progress": 0,
+          "kpis": [
+            {
+              "name": "J at 0.65V, 80C, 95RH, 100kPag",
+              "direction": "increase",
+              "target": 1200,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            },
+            {
+              "name": "J at 0.65V, 80C, 50RH, 100kPag",
+              "direction": "increase",
+              "target": 1000,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            },
+            {
+              "name": "CoV",
+              "direction": "decrease",
+              "target": 10,
+              "current": 0,
+              "units": "%",
+              "notMeasured": true
+            },
+            {
+              "name": "H2X",
+              "direction": "decrease",
+              "target": 2,
+              "current": 1,
+              "units": "mA/cm2",
+              "notMeasured": true
+            }
+          ],
+          "subKrs": []
+        }
+      ],
+      "stageGates": [
+        {
+          "id": "qt-mnp105pme08",
+          "name": "Baseline GSMA",
+          "endDate": "2026-04-24",
+          "startDate": "2026-04-01",
+          "subProjectId": 10019,
+          "baselineEndDate": "2026-04-24",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp10m55ezc",
+          "name": "Achieve Dura > GSMA at 95RH and 50RH once (feasibility check)",
+          "endDate": "2026-05-15",
+          "startDate": "2026-05-05",
+          "subProjectId": 10020,
+          "baselineEndDate": "2026-05-15",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp11exxwk0",
+          "name": "Achieve H2X < 2mA/cm2",
+          "endDate": "2026-06-05",
+          "startDate": "2026-05-16",
+          "subProjectId": 10021,
+          "baselineEndDate": "2026-06-05",
+          "kpis": [
+            {
+              "name": "H2X 80C, 100RH, 0kPa (mA/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnp11uxdnfg",
+          "name": "Show reproducibility in achieving Cellcentric targets",
+          "endDate": "2026-06-19",
+          "startDate": "2026-06-06",
+          "subProjectId": 10022,
+          "baselineEndDate": "2026-06-19",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp12b8na78",
+          "name": "Scale up deposition to Cellcentric size",
+          "endDate": "2026-06-26",
+          "startDate": "2026-06-20",
+          "subProjectId": 10023,
+          "baselineEndDate": "2026-06-26",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp12p9a87o",
+          "name": "Ensure scaled membrane achieves Cellcentric delivery targets",
+          "endDate": "2026-07-02",
+          "startDate": "2026-06-27",
+          "subProjectId": 10024,
+          "baselineEndDate": "2026-07-02",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "erincastele@celadynetech.com"
+      ]
+    },
+    {
+      "id": 10002,
+      "name": "Achieve Ballard Targets",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnjenasictn",
+          "name": "Demonstrate similar reduction in pol curve drop at 80h",
+          "endDate": "2026-04-03",
+          "startDate": "2026-04-01",
+          "subProjectId": 10044,
+          "baselineEndDate": "2026-04-03",
+          "kpis": [
+            {
+              "name": "J @ 0.65V retention (%)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnjep256q51",
+          "name": "Determine total AST lifetime",
+          "endDate": "2026-05-01",
+          "startDate": "2026-04-04",
+          "subProjectId": 10045,
+          "baselineEndDate": "2026-05-01",
+          "kpis": [
+            {
+              "name": "AST Hours (Hours)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnjevpvs9ug",
+          "name": "Demonstrate Dura membrane still achieves Ballard performance targets",
+          "endDate": "2026-05-08",
+          "startDate": "2026-05-02",
+          "subProjectId": 10046,
+          "baselineEndDate": "2026-05-08",
+          "kpis": [
+            {
+              "name": "0.6V J @ 95RH, 80C, 100kPa (A/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "0.5V J @ 60RH, 80C, 100kPa (A/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "0.43V J @ 40RH, 80C, 100kPa (A/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "H2X @ 100RH, 80C, 0kPa (mA/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "J coV across 3 samples (%)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnjeyiqrkvb",
+          "name": "Demonstrate 2x BM1 total AST lifetime",
+          "endDate": "2026-06-26",
+          "startDate": "2026-05-09",
+          "subProjectId": 10053,
+          "baselineEndDate": "2026-06-26",
+          "kpis": [
+            {
+              "name": "2x total AST lifetime of BM1 (Hours)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnjf0biuhaw",
+          "name": "Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+          "endDate": "2026-06-27",
+          "startDate": "2026-06-27",
+          "subProjectId": 10054,
+          "baselineEndDate": "2026-06-26",
+          "kpis": [
+            {
+              "name": "Matched pol curve performance at 0.65V every 40H (A/cm2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10003,
+      "name": "1D-HP6-12 R2R Demonstration",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "Manufacturing Development",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [
+        {
+          "id": "kr-1775598520325-0",
+          "name": "Create 30m2 of wrinkle-free Dura",
+          "trackingType": "kpi",
+          "progress": 0,
+          "kpis": [
+            {
+              "name": "Membrane produced",
+              "direction": "increase",
+              "target": 30,
+              "current": 0,
+              "units": "m2",
+              "notMeasured": true
+            }
+          ],
+          "subKrs": []
+        },
+        {
+          "id": "kr-1775598555867-1",
+          "name": "Achieve uniform decal transfer across a roll of Dura",
+          "trackingType": "kpi",
+          "progress": 0,
+          "kpis": [
+            {
+              "name": ">85% decal for all samples across roll (minimum 5 samples)",
+              "direction": "increase",
+              "target": 85,
+              "current": 0,
+              "units": "%",
+              "notMeasured": true
+            },
+            {
+              "name": "CoV across roll",
+              "direction": "decrease",
+              "target": 10,
+              "current": 0,
+              "units": "%",
+              "notMeasured": true
+            }
+          ],
+          "subKrs": []
+        },
+        {
+          "id": "kr-1775598621142-2",
+          "name": "Demonstrate better than BM1 performance",
+          "trackingType": "kpi",
+          "progress": 0,
+          "kpis": [
+            {
+              "name": "H2X",
+              "direction": "decrease",
+              "target": 2.5,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            },
+            {
+              "name": "J at 0.6V 80C, 95RH, 100kPag",
+              "direction": "increase",
+              "target": 1200,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            },
+            {
+              "name": "J at 0.5V 80C, 60RH, 100kPag",
+              "direction": "increase",
+              "target": 1000,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            }
+          ],
+          "subKrs": []
+        }
+      ],
+      "stageGates": [
+        {
+          "id": "qt-mnp0mazt4ya",
+          "name": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+          "endDate": "2026-05-01",
+          "startDate": "2026-04-01",
+          "subProjectId": 10011,
+          "baselineEndDate": "2026-05-01",
+          "kpis": [
+            {
+              "name": "CoV (%)",
+              "direction": "decrease",
+              "target": 10,
+              "current": 0.84,
+              "units": "%"
+            },
+            {
+              "name": "Decal transfer % (%)",
+              "direction": "increase",
+              "target": 85,
+              "current": 98
+            }
+          ]
+        },
+        {
+          "id": "qt-mnp0mx2wsri",
+          "name": "Achieve better than BM1 performance of wrinkle-free R2R membrane",
+          "endDate": "2026-06-01",
+          "startDate": "2026-06-01",
+          "subProjectId": 10012,
+          "baselineEndDate": "2026-06-01",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp0niab3xm",
+          "name": "Produce 30m2 of Dura membrane",
+          "endDate": "2026-06-26",
+          "startDate": "2026-06-02",
+          "subProjectId": 10013,
+          "baselineEndDate": "2026-06-26",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp0nvs9xts",
+          "name": "Demonstrate a uniform 30m2 roll that achieves performance targets",
+          "endDate": "2026-07-02",
+          "startDate": "2026-06-27",
+          "subProjectId": 10014,
+          "baselineEndDate": "2026-07-02",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10002,
+          "type": "synergistic",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "erincastele@celadynetech.com"
+      ]
+    },
+    {
+      "id": 10004,
+      "name": "Show feasibility in 20RH pol curve improvement",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775244587633",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [
+        {
+          "id": "kr-1775599051288-0",
+          "name": "Better than FCS6 performance",
+          "trackingType": "kpi",
+          "progress": 0,
+          "kpis": [
+            {
+              "name": "H2X",
+              "direction": "decrease",
+              "target": 4.5,
+              "current": 0,
+              "units": "mA/c,2",
+              "notMeasured": true
+            },
+            {
+              "name": "J at 0.65V, 80C, 20RH, 150kPag",
+              "direction": "increase",
+              "target": 716.37,
+              "current": 0,
+              "units": "mA/cm2",
+              "notMeasured": true
+            }
+          ],
+          "subKrs": []
+        }
+      ],
+      "stageGates": [
+        {
+          "id": "qt-mnp0w3577pl",
+          "name": "Generate a list of prioritized approach ideas to improve 20RH performance via FMEA",
+          "endDate": "2026-04-17",
+          "startDate": "2026-04-01",
+          "subProjectId": 10015,
+          "baselineEndDate": "2026-04-17",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp0wkxe0sh",
+          "name": "Determine relevant failure modes from FMEA",
+          "endDate": "2026-05-22",
+          "startDate": "2026-04-23",
+          "subProjectId": 10016,
+          "baselineEndDate": "2026-05-08",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp0x2wux25",
+          "name": "Identify a toggle for each known failure mode",
+          "endDate": "2026-06-19",
+          "startDate": "2026-05-23",
+          "subProjectId": 10017,
+          "baselineEndDate": "2026-06-08",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnp0yqyzco7",
+          "name": "Achieve 20RH pol curve target",
+          "endDate": "2026-07-02",
+          "startDate": "2026-06-20",
+          "subProjectId": 10018,
+          "baselineEndDate": "2026-07-02",
+          "kpis": [
+            {
+              "name": "Current density at 0.65V, 80C, 20RH, 150kPag (mA/cm2)",
+              "direction": "increase",
+              "target": 716.37,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "erincastele@celadynetech.com"
+      ]
+    },
+    {
+      "id": 10005,
+      "name": "Optimize sub-scale MEA with higher Pt loading for SPECTRE",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244628353",
+      "productModel": "model-1775244622497",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnqdit7mncc",
+          "name": "Baseline Dura with 0.2|0.2 mgPt/cm²",
+          "endDate": "2026-05-21",
+          "startDate": "2026-04-01",
+          "subProjectId": 10042,
+          "baselineEndDate": "2026-05-21",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnqdjcptjp9",
+          "name": "Evaluate initial Dura with 0.2|0.4 mgPt/cm²",
+          "endDate": "2026-05-25",
+          "startDate": "2026-05-22",
+          "subProjectId": 10043,
+          "baselineEndDate": "2026-05-25",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnxrymaguue",
+          "name": "Optimize 0.4 mgPt/cm² CCF",
+          "endDate": "2026-06-19",
+          "startDate": "2026-05-26",
+          "subProjectId": 10055,
+          "baselineEndDate": "2026-06-19",
+          "kpis": [
+            {
+              "name": "ECSA (m²/gPt)",
+              "direction": "increase",
+              "target": 60,
+              "current": 0
+            },
+            {
+              "name": "Decal Transfer",
+              "direction": "increase",
+              "target": 85,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnxs285vk8m",
+          "name": "Achieve Dura CCM performance targets",
+          "endDate": "2026-07-03",
+          "startDate": "2026-06-20",
+          "subProjectId": 10056,
+          "baselineEndDate": "2026-07-03",
+          "kpis": [
+            {
+              "name": "J at 0.7V with H2/air at 80C, 0kPa(g) (mA/cm²)",
+              "direction": "increase",
+              "target": 750,
+              "current": 0
+            },
+            {
+              "name": "H2X (mA/cm²)",
+              "direction": "increase",
+              "target": 2,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10011,
+      "name": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "start": "2026-04-01",
+      "end": "2026-05-01",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "CoV (%)",
+          "direction": "decrease",
+          "target": 10,
+          "current": 0.84,
+          "units": "%"
+        },
+        {
+          "name": "Decal transfer % (%)",
+          "direction": "increase",
+          "target": 85,
+          "current": 98
+        }
+      ],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-06-04",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "Improve decal-ability of wrinkle-free R2R membrane to allow for >85% transfer on anode and cathode",
+      "parentId": 10003,
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0mazt4ya",
+      "baselineEndDate": "2026-05-01",
+      "manuallyCompleted": true
+    },
+    {
+      "name": "Achieve better than BM1 performance of wrinkle-free R2R membrane",
+      "start": "2026-06-01",
+      "end": "2026-06-01",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0mx2wsri",
+      "parentId": 10003,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-01",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Show matched to lab-scale performance for SoA Dura on the R2R to show translatability of lab-scale deposition",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10011,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10012,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Produce 30m2 of Dura membrane",
+      "start": "2026-06-02",
+      "end": "2026-06-26",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0niab3xm",
+      "parentId": 10003,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-26",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Show that Dura production can be scaled to 30m2 (1 roll of HP6)",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10012,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10013,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Demonstrate a uniform 30m2 roll that achieves performance targets",
+      "start": "2026-06-27",
+      "end": "2026-07-02",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0nvs9xts",
+      "parentId": 10003,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-07-02",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Show that scaled Dura has uniform decal transfer and achieves all performance targets",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10013,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10014,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Generate a list of prioritized approach ideas to improve 20RH performance via FMEA",
+      "start": "2026-04-01",
+      "end": "2026-04-17",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0w3577pl",
+      "parentId": 10004,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-04-22",
+      "baselineEndDate": "2026-04-17",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Develop a list of possibilities for achieving low RH performance from which to begin work this quarter",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10015,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775244587633"
+    },
+    {
+      "name": "Determine relevant failure modes from FMEA",
+      "start": "2026-04-23",
+      "end": "2026-05-22",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0wkxe0sh",
+      "parentId": 10004,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-08",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Identify which potential failure modes exist",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10015,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10016,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775244587633"
+    },
+    {
+      "name": "Identify a toggle for each known failure mode",
+      "start": "2026-05-23",
+      "end": "2026-06-19",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0x2wux25",
+      "parentId": 10004,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-08",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Identify a toggle that improves low RH pol curve performance for each known failure mode",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10016,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10017,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775244587633"
+    },
+    {
+      "id": 10018,
+      "name": "Achieve 20RH pol curve target",
+      "start": "2026-06-20",
+      "end": "2026-07-02",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775244587633",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Current density at 0.65V, 80C, 20RH, 150kPag (mA/cm2)",
+          "direction": "increase",
+          "target": 716.37,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10017,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "notes": "Improve Gen2 low RH performance up to that of FCS6",
+      "parentId": 10004,
+      "isStageGate": true,
+      "stageGateId": "qt-mnp0yqyzco7",
+      "baselineEndDate": "2026-07-02",
+      "manuallyCompleted": false
+    },
+    {
+      "name": "Baseline GSMA",
+      "start": "2026-04-01",
+      "end": "2026-04-24",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp105pme08",
+      "parentId": 10001,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-05-04",
+      "baselineEndDate": "2026-04-24",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Collect baseline data that will be the target for Dura Gen2 to achieve",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10019,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170"
+    },
+    {
+      "name": "Achieve Dura > GSMA at 95RH and 50RH once (feasibility check)",
+      "start": "2026-05-05",
+      "end": "2026-05-15",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp10m55ezc",
+      "parentId": 10001,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-05-11",
+      "baselineEndDate": "2026-05-15",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Show that it is possible for Dura to outperform GSMA at 95RH and 50RH",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10019,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10020,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170"
+    },
+    {
+      "id": 10021,
+      "name": "Achieve H2X < 2mA/cm2",
+      "start": "2026-05-16",
+      "end": "2026-06-05",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "H2X 80C, 100RH, 0kPa (mA/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10020,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "notes": "Achieve target metric for H2X as defined by Cellcentric",
+      "parentId": 10001,
+      "isStageGate": true,
+      "stageGateId": "qt-mnp11exxwk0",
+      "baselineEndDate": "2026-06-05",
+      "manuallyCompleted": false
+    },
+    {
+      "name": "Show reproducibility in achieving Cellcentric targets",
+      "start": "2026-06-06",
+      "end": "2026-06-19",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp11uxdnfg",
+      "parentId": 10001,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-19",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Show that Dura outperforms GSMA reproducibly",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10021,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10022,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170"
+    },
+    {
+      "name": "Scale up deposition to Cellcentric size",
+      "start": "2026-06-20",
+      "end": "2026-06-26",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp12b8na78",
+      "parentId": 10001,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-26",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Ensure that we can make samples in the size Cellcentric wants",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10022,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10023,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170"
+    },
+    {
+      "name": "Ensure scaled membrane achieves Cellcentric delivery targets",
+      "start": "2026-06-27",
+      "end": "2026-07-02",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnp12p9a87o",
+      "parentId": 10001,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-07-02",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Ensure scaled membrane achieves same targets as small scale samples",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10023,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10024,
+      "milestone": false,
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170"
+    },
+    {
+      "id": 10025,
+      "name": "R2R Feasibility",
+      "start": "2026-04-04",
+      "end": "2026-04-04",
+      "division": "fuelcell",
+      "effortType": "Manufacturing Development",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10003,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10026,
+      "name": "Dura Gen 1 Design Freeze",
+      "start": "2026-05-31",
+      "end": "2026-05-31",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Durability v. BM1",
+          "direction": "increase",
+          "target": 2,
+          "units": "x",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "H2X",
+          "direction": "decrease",
+          "target": 2,
+          "units": "mA/cm2",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "Pol curve deviation",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10002,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10027,
+      "name": "Dura QC Protocol Established",
+      "start": "2026-08-31",
+      "end": "2026-08-31",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Roll-ready membrane",
+          "direction": "increase",
+          "target": 20,
+          "units": "m",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "CoV across roll",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "QC Protocol written",
+          "direction": "increase",
+          "target": 1,
+          "units": "written",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10028,
+      "name": "Pilot Production Demonstrated",
+      "start": "2026-10-31",
+      "end": "2026-10-31",
+      "division": "fuelcell",
+      "effortType": "Manufacturing",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Roll-ready membrane",
+          "direction": "increase",
+          "target": 130,
+          "units": "m",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "Performance variance",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10029,
+      "name": "Dura Gen 1 Roll Product Launch",
+      "start": "2026-12-31",
+      "end": "2026-12-31",
+      "division": "fuelcell",
+      "effortType": "Manufacturing",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Durability v BM1",
+          "direction": "increase",
+          "target": 2,
+          "units": "x",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "H2X",
+          "direction": "decrease",
+          "target": 2,
+          "units": "mA/cm2",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "Pol curve v BM1",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10030,
+      "name": "Dura Gen 2 Launch",
+      "start": "2026-04-30",
+      "end": "2026-04-30",
+      "division": "fuelcell",
+      "effortType": "Prototype Development",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Performance v GSMA",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "H2X",
+          "direction": "decrease",
+          "target": 2,
+          "units": "mA/cm2",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "CoV in pol curve",
+          "direction": "decrease",
+          "target": 10,
+          "units": "%",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10001,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10031,
+      "name": "Dura Gen 2 External Validation",
+      "start": "2026-06-30",
+      "end": "2026-06-30",
+      "division": "fuelcell",
+      "effortType": "Product Delivery",
+      "productLine": "product-1775244611569",
+      "productModel": "model-1775247780170",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [
+        {
+          "name": "Shipped to customer",
+          "direction": "increase",
+          "target": 1,
+          "units": "#",
+          "current": 0,
+          "notMeasured": true
+        },
+        {
+          "name": "Customer feedback",
+          "direction": "increase",
+          "target": 1,
+          "units": "#",
+          "current": 0,
+          "notMeasured": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "milestone",
+      "milestone": true,
+      "locked": false,
+      "datePrecision": "month",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10030,
+          "type": "synergistic",
+          "leadDays": 60
+        }
+      ],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null
+    },
+    {
+      "id": 10042,
+      "name": "Baseline Dura with 0.2|0.2 mgPt/cm²",
+      "start": "2026-04-01",
+      "end": "2026-05-21",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244628353",
+      "productModel": "model-1775244622497",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-05-11",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "Collect baseline fuel cell data on Dura membrane with typical Pt loadings",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mnqdx9v24sx",
+      "baselineEndDate": "2026-05-21",
+      "manuallyCompleted": true
+    },
+    {
+      "name": "Evaluate initial Dura with 0.2|0.4 mgPt/cm²",
+      "start": "2026-05-22",
+      "end": "2026-05-25",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqdx9v2rht",
+      "parentId": 10005,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-05-19",
+      "baselineEndDate": "2026-05-25",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "Get an initial comparison of 0.2|0.4 mgPt/cm2 Dura CCM with baseline to understand areas for improvement",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10042,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10043,
+      "milestone": false,
+      "productLine": "product-1775244628353",
+      "productModel": "model-1775244622497"
+    },
+    {
+      "name": "Demonstrate similar reduction in pol curve drop at 80h",
+      "start": "2026-04-01",
+      "end": "2026-04-03",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqpgp81a12",
+      "parentId": 10002,
+      "progress": 100,
+      "progressType": "kpi",
+      "manuallyCompleted": true,
+      "completedDate": "2026-04-03",
+      "baselineEndDate": "2026-04-03",
+      "kpis": [
+        {
+          "name": "J @ 0.65V retention (%)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Integrate solution to root cause that addresses pol curve drop",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10044,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Determine total AST lifetime",
+      "start": "2026-04-04",
+      "end": "2026-05-01",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqpgp81huc",
+      "parentId": 10002,
+      "progress": 100,
+      "progressType": "kpi",
+      "manuallyCompleted": true,
+      "completedDate": "2026-04-28",
+      "baselineEndDate": "2026-05-01",
+      "kpis": [
+        {
+          "name": "AST Hours (Hours)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Determine if solution actually improves AST",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10044,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10045,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Demonstrate Dura membrane still achieves Ballard performance targets",
+      "start": "2026-05-02",
+      "end": "2026-05-08",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqpgp81wqm",
+      "parentId": 10002,
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-08",
+      "kpis": [
+        {
+          "name": "0.6V J @ 95RH, 80C, 100kPa (A/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "0.5V J @ 60RH, 80C, 100kPa (A/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "0.43V J @ 40RH, 80C, 100kPa (A/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "H2X @ 100RH, 80C, 0kPa (mA/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "J coV across 3 samples (%)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Rehit the performance targets to ensure pol curve solution doesn’t decrease performance",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10045,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10046,
+      "milestone": false,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637"
+    },
+    {
+      "name": "Demonstrate 2x BM1 total AST lifetime",
+      "start": "2026-05-09",
+      "end": "2026-06-26",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mns1ao956d5",
+      "parentId": 10002,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-26",
+      "kpis": [
+        {
+          "name": "2x total AST lifetime of BM1 (Hours)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Demonstrate failure mode is resolved, and our membrane provides enhanced durability",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10046,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10053,
+      "milestone": false
+    },
+    {
+      "name": "Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+      "start": "2026-06-27",
+      "end": "2026-06-27",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mns1ao95zxa",
+      "parentId": 10002,
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-26",
+      "kpis": [
+        {
+          "name": "Matched pol curve performance at 0.65V every 40H (A/cm2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Demonstrate Dura provides enhanced durability and pol curve retention",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10053,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10054,
+      "milestone": false
+    },
+    {
+      "name": "Optimize 0.4 mgPt/cm² CCF",
+      "start": "2026-05-26",
+      "end": "2026-06-19",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnxrymaguue",
+      "parentId": 10005,
+      "productLine": "product-1775244628353",
+      "productModel": "model-1775244622497",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-19",
+      "kpis": [
+        {
+          "name": "ECSA (m²/gPt)",
+          "direction": "increase",
+          "target": 60,
+          "current": 0
+        },
+        {
+          "name": "Decal Transfer",
+          "direction": "increase",
+          "target": 85,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Optimize the 0.4 mgPt/cm² CCF & decal transfer to maximize catalyst performance",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10043,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10055,
+      "milestone": false
+    },
+    {
+      "name": "Achieve Dura CCM performance targets",
+      "start": "2026-06-20",
+      "end": "2026-07-03",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnxs285vk8m",
+      "parentId": 10005,
+      "productLine": "product-1775244628353",
+      "productModel": "model-1775244622497",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-07-03",
+      "kpis": [
+        {
+          "name": "J at 0.7V with H2/air at 80C, 0kPa(g) (mA/cm²)",
+          "direction": "increase",
+          "target": 750,
+          "current": 0
+        },
+        {
+          "name": "H2X (mA/cm²)",
+          "direction": "increase",
+          "target": 2,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Optimize Dura Gen1 membrane to internally hit desired CCM performance targets with 0.2|0.4 mgPt/cm²",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10055,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10056,
+      "milestone": false
+    },
+    {
+      "id": 10057,
+      "name": "Ship samples to Ballard (Batch 5)",
+      "start": "2026-04-01",
+      "end": "2026-04-10",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-04-13",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moa8mc11we2",
+      "baselineEndDate": "2026-04-10",
+      "manuallyCompleted": true
+    },
+    {
+      "id": 10058,
+      "name": "Ship samples to Toyota (Batch 3)",
+      "start": "2026-04-14",
+      "end": "2026-04-20",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-04-24",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10057,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10037,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moa8mc11ch2",
+      "baselineEndDate": "2026-04-20",
+      "manuallyCompleted": true
+    },
+    {
+      "id": 10059,
+      "name": "Ship samples to Plug Power",
+      "start": "2026-05-26",
+      "end": "2026-05-26",
+      "baselineEndDate": "2026-04-30",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10061,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10038,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moa8mc11wjl",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": "2026-05-29",
+      "manuallyCompleted": true
+    },
+    {
+      "id": 10060,
+      "name": "Ship samples to AVL",
+      "start": "2026-04-25",
+      "end": "2026-05-13",
+      "baselineEndDate": "2026-05-11",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10058,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10039,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moa8mc11bmc",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": "2026-05-28",
+      "manuallyCompleted": true
+    },
+    {
+      "id": 10061,
+      "name": "Ship samples to CNRC",
+      "start": "2026-05-13",
+      "end": "2026-05-13",
+      "baselineEndDate": "2026-05-20",
+      "division": "fuelcell",
+      "effortType": "NRE",
+      "productLine": "product-1775244574165",
+      "productModel": "model-1775244566637",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10060,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10040,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moa8mc11tu2",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": "2026-05-28",
+      "manuallyCompleted": true
+    }
+  ],
+  "resources": [],
+  "equipment": [],
+  "products": [
+    {
+      "id": "product-1775244574165",
+      "name": "Dura Gen 1 Membrane",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244563645",
+          "name": "Dura 1D-HP6-15",
+          "status": "active"
+        },
+        {
+          "id": "model-1775244566637",
+          "name": "Dura 1D-HP6-12",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244611569",
+      "name": "Dura Gen 2 Membrane",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244587633",
+          "name": "Dura 2D-6",
+          "status": "development"
+        },
+        {
+          "id": "model-1775247780170",
+          "name": "Dura 2D-8",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244628353",
+      "name": "SPECTRE",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244622497",
+          "name": "Dura Gen 1",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244734357",
+      "name": "Tera Stack",
+      "description": "",
+      "division": "electrolyzer",
+      "models": [
+        {
+          "id": "model-1775244702837",
+          "name": "Tera 25-30-R5",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244727748",
+          "name": "Tera 25-30-R6",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244731761",
+          "name": "Tera 25-30-R7",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244789449",
+      "name": "Tera System",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244773277",
+          "name": "Retrofit S4-25-26-R5",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244798225",
+          "name": "Tera S4-25-26-R5",
+          "status": "development"
+        }
+      ]
+    }
+  ],
+  "divisionColors": {
+    "fuelcell": {
+      "bg": "#EEEDFE",
+      "bar": "#534AB7",
+      "text": "#3C3489"
+    },
+    "electrolyzer": {
+      "bg": "#E1F5EE",
+      "bar": "#1D9E75",
+      "text": "#085041"
+    },
+    "exploration": {
+      "bg": "#E6F1FB",
+      "bar": "#378ADD",
+      "text": "#0C447C"
+    }
+  },
+  "productColors": {},
+  "resourceMeta": {},
+  "equipmentMeta": {},
+  "changelog": [
+    {
+      "id": "cl-1776106303817",
+      "ts": 1776106303817,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776106284921",
+      "ts": 1776106284921,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776103050392",
+      "ts": 1776103050392,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776103002728",
+      "ts": 1776103002728,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776102988918",
+      "ts": 1776102988918,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776099954112",
+      "ts": 1776099954112,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776099942925",
+      "ts": 1776099942925,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1776094914235",
+      "ts": 1776094914235,
+      "type": "delete",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775769769358",
+      "ts": 1775769769358,
+      "type": "date",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "dates",
+      "oldVal": "2026-05-08 → 2026-05-08",
+      "newVal": "2026-05-01 → 2026-05-01",
+      "note": ""
+    },
+    {
+      "id": "cl-1775767791538",
+      "ts": 1775767791538,
+      "type": "date",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "dates",
+      "oldVal": "2026-05-15 → 2026-05-15",
+      "newVal": "2026-05-08 → 2026-05-08",
+      "note": ""
+    },
+    {
+      "id": "cl-1775767778566",
+      "ts": 1775767778566,
+      "type": "create",
+      "projectId": 10049,
+      "projectName": "AVL Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775767737256",
+      "ts": 1775767737256,
+      "type": "delay",
+      "projectId": 10048,
+      "projectName": "Toyota Visit",
+      "field": "dates",
+      "oldVal": "2026-06-26 → 2026-05-09",
+      "newVal": "2026-06-26 → 2026-06-26",
+      "note": ""
+    },
+    {
+      "id": "cl-1775767728652",
+      "ts": 1775767728652,
+      "type": "create",
+      "projectId": 10048,
+      "projectName": "Toyota Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775767667411",
+      "ts": 1775767667411,
+      "type": "create",
+      "projectId": 10047,
+      "projectName": "Ballard Visit",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775688733614",
+      "ts": 1775688733614,
+      "type": "date",
+      "projectId": 10042,
+      "projectName": "Baseline Dura with 0.2|0.2 mgPt/cm²",
+      "field": "dates",
+      "oldVal": "2026-04-01 → 2026-05-21",
+      "newVal": "2026-05-20 → 2026-05-21",
+      "note": ""
+    },
+    {
+      "id": "cl-1775667118097",
+      "ts": 1775667118097,
+      "type": "progress",
+      "projectId": 10032,
+      "projectName": "Demonstrate similar reduction in pol curve drop at 80h",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "91%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664927686",
+      "ts": 1775664927686,
+      "type": "progress",
+      "projectId": 10036,
+      "projectName": "Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664924313",
+      "ts": 1775664924313,
+      "type": "progress",
+      "projectId": 10035,
+      "projectName": "Demonstrate 2x BM1 total AST lifetime",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664920127",
+      "ts": 1775664920127,
+      "type": "progress",
+      "projectId": 10034,
+      "projectName": "Demonstrate Dura membrane still achieves Ballard performance targets",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664909757",
+      "ts": 1775664909757,
+      "type": "progress",
+      "projectId": 10033,
+      "projectName": "Determine total AST lifetime",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664302849",
+      "ts": 1775664302849,
+      "type": "progress",
+      "projectId": 10018,
+      "projectName": "Achieve 20RH pol curve target",
+      "field": "progress",
+      "oldVal": "19%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664282624",
+      "ts": 1775664282624,
+      "type": "progress",
+      "projectId": 10018,
+      "projectName": "Achieve 20RH pol curve target",
+      "field": "progress",
+      "oldVal": "0%",
+      "newVal": "19%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775664249164",
+      "ts": 1775664249164,
+      "type": "progress",
+      "projectId": 10018,
+      "projectName": "Achieve 20RH pol curve target",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775660282989",
+      "ts": 1775660282989,
+      "type": "progress",
+      "projectId": 10021,
+      "projectName": "Achieve H2X < 2mA/cm2",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775660234424",
+      "ts": 1775660234424,
+      "type": "progress",
+      "projectId": 10011,
+      "projectName": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775659018896",
+      "ts": 1775659018897,
+      "type": "date",
+      "projectId": 10030,
+      "projectName": "Dura Gen 2 Launch",
+      "field": "dates",
+      "oldVal": "2026-05-31 → 2026-05-31",
+      "newVal": "2026-04-30 → 2026-04-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775599039170",
+      "ts": 1775599039170,
+      "type": "progress",
+      "projectId": 10001,
+      "projectName": "Cellcentric Development to Unlock PO",
+      "field": "progress",
+      "oldVal": "25%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775599033963",
+      "ts": 1775599033963,
+      "type": "progress",
+      "projectId": 10001,
+      "projectName": "Cellcentric Development to Unlock PO",
+      "field": "progress",
+      "oldVal": "0%",
+      "newVal": "25%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775592288410",
+      "ts": 1775592288410,
+      "type": "create",
+      "projectId": 10031,
+      "projectName": "Dura Gen 2 External Validation",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775592199756",
+      "ts": 1775592199756,
+      "type": "create",
+      "projectId": 10030,
+      "projectName": "Dura Gen 2 Launch",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775592104313",
+      "ts": 1775592104313,
+      "type": "create",
+      "projectId": 10029,
+      "projectName": "Dura Gen 1 Roll Product Launch",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775592025256",
+      "ts": 1775592025256,
+      "type": "create",
+      "projectId": 10028,
+      "projectName": "Pilot Production Demonstrated",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775591925611",
+      "ts": 1775591925611,
+      "type": "create",
+      "projectId": 10027,
+      "projectName": "Dura QC Protocol Established",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775591732325",
+      "ts": 1775591732325,
+      "type": "create",
+      "projectId": 10026,
+      "projectName": "Dura Gen 1 Design Freeze",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775591550158",
+      "ts": 1775591550158,
+      "type": "create",
+      "projectId": 10025,
+      "projectName": "R2R Feasibility",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248179875",
+      "ts": 1775248179875,
+      "type": "create",
+      "projectId": 10005,
+      "projectName": "Optimize sub-scale MEA with higher Pt loading for SPECTRE",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248132482",
+      "ts": 1775248132482,
+      "type": "create",
+      "projectId": 10004,
+      "projectName": "Show feasibility in 20RH pol curve improvement",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248080209",
+      "ts": 1775248080209,
+      "type": "create",
+      "projectId": 10003,
+      "projectName": "1D-HP6-12 R2R Demonstration",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248013917",
+      "ts": 1775248013917,
+      "type": "create",
+      "projectId": 10002,
+      "projectName": "Achieve Ballard Targets",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775247818643",
+      "ts": 1775247818643,
+      "type": "delay",
+      "projectId": 10001,
+      "projectName": "Cellcentric Development to Unlock PO",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-01 → 2026-06-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775247769044",
+      "ts": 1775247769044,
+      "type": "create",
+      "projectId": 10001,
+      "projectName": "Cellcentric Development to Unlock PO",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775247682344",
+      "ts": 1775247682344,
+      "type": "create",
+      "projectId": 10000,
+      "projectName": "Deliver on 26Q2 Customer POs",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246860741",
+      "ts": 1775246860741,
+      "type": "delete",
+      "projectId": 10100,
+      "projectName": "Performance and Product Optimization",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246744328",
+      "ts": 1775246744328,
+      "type": "date",
+      "projectId": 10067,
+      "projectName": "Dura Gen 2 Launch",
+      "field": "dates",
+      "oldVal": "2026-05-31 → 2026-05-31",
+      "newVal": "2026-04-30 → 2026-04-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246587900",
+      "ts": 1775246587900,
+      "type": "delete",
+      "projectId": 10103,
+      "projectName": "?Toyota",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246499311",
+      "ts": 1775246499311,
+      "type": "delete",
+      "projectId": 10080,
+      "projectName": "Ballard",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246331928",
+      "ts": 1775246331928,
+      "type": "delete",
+      "projectId": 10099,
+      "projectName": "Dura 2D-6 AST Baseline",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246219198",
+      "ts": 1775246219198,
+      "type": "delay",
+      "projectId": 10077,
+      "projectName": "R2R QC Strategy Development",
+      "field": "dates",
+      "oldVal": "2026-06-01 → 2026-08-31",
+      "newVal": "2026-07-01 → 2026-09-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775244634444",
+      "ts": 1775244634444,
+      "type": "create",
+      "projectId": 10111,
+      "projectName": "Deliver on 26Q2 Customer POs",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775224945069",
+      "ts": 1775224945069,
+      "type": "date",
+      "projectId": 10107,
+      "projectName": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "field": "dates",
+      "oldVal": "2026-05-01 → 2026-05-01",
+      "newVal": "2026-04-01 → 2026-05-01",
+      "note": ""
+    }
+  ],
+  "collapsed": [],
+  "computedStatus": {
+    "computedAt": "2026-06-04T21:47:58.253Z",
+    "objectives": {
+      "10000": {
+        "name": "Deliver on 26Q2 Customer POs",
+        "slug": "fc-dura-gen-1-m-deliver-on-26q2-cu-10000",
+        "score": 57,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": -5,
+        "delayDays": 0,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Ship samples to Ballard (Batch 5)",
+            "state": "passed-late"
+          },
+          {
+            "name": "Ship samples to Toyota (Batch 3)",
+            "state": "passed-late"
+          },
+          {
+            "name": "Ship samples to AVL",
+            "state": "passed-late"
+          },
+          {
+            "name": "Ship samples to CNRC",
+            "state": "passed-late"
+          },
+          {
+            "name": "Ship samples to Plug Power",
+            "state": "passed-late"
+          }
+        ]
+      },
+      "10001": {
+        "name": "Cellcentric Development to Unlock PO",
+        "slug": "fc-dura-gen-2-m-cellcentric-develo-10001",
+        "score": 54,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": 28,
+        "delayDays": 2,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Baseline GSMA",
+            "state": "passed-late"
+          },
+          {
+            "name": "Achieve Dura > GSMA at 95RH and 50RH once (feasibility check)",
+            "state": "passed"
+          },
+          {
+            "name": "Achieve H2X < 2mA/cm2",
+            "state": "pending"
+          },
+          {
+            "name": "Show reproducibility in achieving Cellcentric targets",
+            "state": "pending"
+          },
+          {
+            "name": "Scale up deposition to Cellcentric size",
+            "state": "pending"
+          },
+          {
+            "name": "Ensure scaled membrane achieves Cellcentric delivery targets",
+            "state": "pending"
+          }
+        ]
+      },
+      "10002": {
+        "name": "Achieve Ballard Targets",
+        "slug": "fc-dura-gen-1-m-achieve-ballard-ta-10002",
+        "score": 27,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 50,
+        "delayDays": 24,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Demonstrate similar reduction in pol curve drop at 80h",
+            "state": "passed"
+          },
+          {
+            "name": "Determine total AST lifetime",
+            "state": "passed"
+          },
+          {
+            "name": "Demonstrate Dura membrane still achieves Ballard performance targets",
+            "state": "overdue"
+          },
+          {
+            "name": "Demonstrate 2x BM1 total AST lifetime",
+            "state": "pending"
+          },
+          {
+            "name": "Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+            "state": "pending"
+          }
+        ]
+      },
+      "10003": {
+        "name": "1D-HP6-12 R2R Demonstration",
+        "slug": "fc-dura-gen-1-m-1d-hp6-12-r2r-demo-10003",
+        "score": 48,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": 32,
+        "delayDays": 6,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+            "state": "passed-late"
+          },
+          {
+            "name": "Achieve better than BM1 performance of wrinkle-free R2R membrane",
+            "state": "overdue"
+          },
+          {
+            "name": "Produce 30m2 of Dura membrane",
+            "state": "pending"
+          },
+          {
+            "name": "Demonstrate a uniform 30m2 roll that achieves performance targets",
+            "state": "pending"
+          }
+        ]
+      },
+      "10004": {
+        "name": "Show feasibility in 20RH pol curve improvement",
+        "slug": "fc-dura-gen-2-m-show-feasibility-i-10004",
+        "score": 34,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 41,
+        "delayDays": 15,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Generate a list of prioritized approach ideas to improve 20RH performance via FMEA",
+            "state": "passed-late"
+          },
+          {
+            "name": "Determine relevant failure modes from FMEA",
+            "state": "overdue"
+          },
+          {
+            "name": "Identify a toggle for each known failure mode",
+            "state": "pending"
+          },
+          {
+            "name": "Achieve 20RH pol curve target",
+            "state": "pending"
+          }
+        ]
+      },
+      "10005": {
+        "name": "Optimize sub-scale MEA with higher Pt loading for SPECTRE",
+        "slug": "fc-spectre-optimize-sub-scale-10005",
+        "score": 52,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": 29,
+        "delayDays": 3,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Baseline Dura with 0.2|0.2 mgPt/cm²",
+            "state": "passed"
+          },
+          {
+            "name": "Evaluate initial Dura with 0.2|0.4 mgPt/cm²",
+            "state": "passed"
+          },
+          {
+            "name": "Optimize 0.4 mgPt/cm² CCF",
+            "state": "pending"
+          },
+          {
+            "name": "Achieve Dura CCM performance targets",
+            "state": "pending"
+          }
+        ]
+      }
+    }
+  },
+  "_version": 249,
+  "_savedBy": "Team member",
+  "_savedAt": "2026-06-04T21:47:58.267Z"
+}

@@ -1,0 +1,1242 @@
+{
+  "objectiveState": [
+    {
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q1-02",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-07",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q3-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q1-03",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q3-02",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q3-03",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q3-04",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q1-05",
+      "status": "in-progress"
+    },
+    {
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "status": "in-progress"
+    }
+  ],
+  "keyResults": [
+    {
+      "id": "KR-FC-2026Q2-02-1",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "statement": "J at 0.65V, 80C, 95RH, 100kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-02-2",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "statement": "J at 0.65V, 80C, 50RH, 100kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-02-3",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "statement": "CoV",
+      "unit": "%",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-02-4",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "statement": "H2X",
+      "unit": "mA/cm2",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-02-5",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "statement": "H2X 80C, 100RH, 0kPa (mA/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-1",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "J @ 0.65V retention (%)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-2",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "AST Hours (Hours)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-3",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "0.6V J @ 95RH, 80C, 100kPa (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-4",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "0.5V J @ 60RH, 80C, 100kPa (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-5",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "0.43V J @ 40RH, 80C, 100kPa (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-6",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "H2X @ 100RH, 80C, 0kPa (mA/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-7",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "J coV across 3 samples (%)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-8",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "2x total AST lifetime of BM1 (Hours)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-03-9",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "statement": "Matched pol curve performance at 0.65V every 40H (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-1",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "Membrane produced",
+      "unit": "m2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-2",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": ">85% decal for all samples across roll (minimum 5 samples)",
+      "unit": "%",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-3",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "CoV across roll",
+      "unit": "%",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-4",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "H2X",
+      "unit": "mA/cm2",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-5",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "J at 0.6V 80C, 95RH, 100kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-6",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "J at 0.5V 80C, 60RH, 100kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-7",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "CoV (%)",
+      "unit": "%",
+      "direction": "down",
+      "target": 10,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-04-8",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "statement": "Decal transfer % (%)",
+      "unit": null,
+      "direction": "up",
+      "target": 85,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-05-1",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "statement": "H2X",
+      "unit": "mA/c,2",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-05-2",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "statement": "J at 0.65V, 80C, 20RH, 150kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-05-3",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "statement": "Current density at 0.65V, 80C, 20RH, 150kPag (mA/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": 716.37,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-06-1",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "statement": "ECSA (m\u00b2/gPt)",
+      "unit": null,
+      "direction": "up",
+      "target": 60,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-06-2",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "statement": "Decal Transfer",
+      "unit": null,
+      "direction": "up",
+      "target": 85,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-06-3",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "statement": "J at 0.7V with H2/air at 80C, 0kPa(g) (mA/cm\u00b2)",
+      "unit": null,
+      "direction": "up",
+      "target": 750,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-06-4",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "statement": "H2X (mA/cm\u00b2)",
+      "unit": null,
+      "direction": "up",
+      "target": 2,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-1",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "crosslinked Dura membrane",
+      "unit": "m2",
+      "direction": "up",
+      "target": 5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-2",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "(decal-enabled) Dura membrane",
+      "unit": "m2",
+      "direction": "up",
+      "target": 5,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-3",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "Average decal transfer",
+      "unit": "%",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-4",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "Decal transfer CoV across the roll (5 samples)",
+      "unit": "%",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-5",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "Pol curve at 0.6V at 80C, 100RH, 0kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-6",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "H2X at 80C, 100RH, 0kPag",
+      "unit": "mA/cm2",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-01-7",
+      "objectiveId": "OBJ-FC-2026Q1-01",
+      "statement": "GEIS at 80C, 100RH, 0kPag",
+      "unit": "mOhm",
+      "direction": "down",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-02-1",
+      "objectiveId": "OBJ-FC-2026Q1-02",
+      "statement": "AST Lifetime",
+      "unit": "hours",
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-04-1",
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "statement": "H2X at 80C, 100RH, 0kPa",
+      "unit": "mA/cm2",
+      "direction": "down",
+      "target": 2,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-04-2",
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "statement": "Pol curve 100RH >/= FCS6 at 0.65V, 150kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": 1200,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-04-3",
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "statement": "Pol curve 50RH >/= FCS6 at 0.65V, 150kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": 1040,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-04-4",
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "statement": "Pol curve 20RH >/= FCS6 at 0.65V, 150kPag",
+      "unit": "mA/cm2",
+      "direction": "up",
+      "target": 716.37,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-04-5",
+      "objectiveId": "OBJ-FC-2026Q1-04",
+      "statement": "CoV in current density at 0.65V across all 3 RH measurements at 150kPag for 3 samples",
+      "unit": "%",
+      "direction": "down",
+      "target": 10,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-05-1",
+      "objectiveId": "OBJ-FC-2026Q1-05",
+      "statement": "Ship catalyst coated membrane to customers (sum of only catalyst coated membrane)",
+      "unit": "cm2",
+      "direction": "up",
+      "target": 1060,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q1-05-2",
+      "objectiveId": "OBJ-FC-2026Q1-05",
+      "statement": "Ship total area of membrane to customers (sum of overall sample dimensions)",
+      "unit": "cm2",
+      "direction": "up",
+      "target": 1440,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-1",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "H2X",
+      "unit": null,
+      "direction": "down",
+      "target": "2.0",
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-2",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Current density at 0.7V in H2/air at 80C, 0kPa(g)",
+      "unit": null,
+      "direction": "up",
+      "target": "0.75",
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-3",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Current density at 0.6V in H2/air at 80C, 0kPa(g)",
+      "unit": null,
+      "direction": "up",
+      "target": "1.4",
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-4",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Catalyst loading on CCM cathode",
+      "unit": null,
+      "direction": "up",
+      "target": "0.4",
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-5",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Limiting current (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": 1.4,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-6",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "100RH -> 0RH gain at 1A/cm2 (mV)",
+      "unit": null,
+      "direction": "up",
+      "target": 50,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-7",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Current density at 0.6V in H2/air at 80C, 0kPa(g) (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": 1.2,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-8",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "0.2/0.4 mgPt/cm2 CCM tested at RTX",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-9",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Catalyst loading on CCM cathode (mgPt/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": 0.4,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-10",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "Current density at 0.6V in H2/air at 80C, 0kPa(g) (A/cm2)",
+      "unit": null,
+      "direction": "up",
+      "target": 1.4,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-11",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "100RH -> 0RH gain at 1A/cm2 (mV)",
+      "unit": null,
+      "direction": "down",
+      "target": 50,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-FC-2026Q2-08-12",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "statement": "0.2/0.4 mgPt/cm2 CCM tested at RTX",
+      "unit": null,
+      "direction": "up",
+      "target": 1,
+      "groupId": null,
+      "status": null
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-FC-2026Q2-01-1",
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "name": "Ship samples to Ballard (Batch 5)",
+      "gate_id": null,
+      "plannedDate": 2291,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-01-2",
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "name": "Ship samples to Toyota (Batch 3)",
+      "gate_id": null,
+      "plannedDate": 2301,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-01-3",
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "name": "Ship samples to AVL",
+      "gate_id": null,
+      "plannedDate": 2324,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-01-4",
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "name": "Ship samples to CNRC",
+      "gate_id": null,
+      "plannedDate": 2324,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-01-5",
+      "objectiveId": "OBJ-FC-2026Q2-01",
+      "name": "Ship samples to Plug Power",
+      "gate_id": null,
+      "plannedDate": 2337,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-1",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Baseline GSMA",
+      "gate_id": null,
+      "plannedDate": 2305,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-2",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Achieve Dura > GSMA at 95RH and 50RH once (feasibility check)",
+      "gate_id": null,
+      "plannedDate": 2326,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-3",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Achieve H2X < 2mA/cm2",
+      "gate_id": null,
+      "plannedDate": 2347,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-4",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Show reproducibility in achieving Cellcentric targets",
+      "gate_id": null,
+      "plannedDate": 2361,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-5",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Scale up deposition to Cellcentric size",
+      "gate_id": null,
+      "plannedDate": 2368,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-02-6",
+      "objectiveId": "OBJ-FC-2026Q2-02",
+      "name": "Ensure scaled membrane achieves Cellcentric delivery targets",
+      "gate_id": null,
+      "plannedDate": 2374,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-03-1",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "name": "Demonstrate similar reduction in pol curve drop at 80h",
+      "gate_id": null,
+      "plannedDate": 2284,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-03-2",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "name": "Determine total AST lifetime",
+      "gate_id": null,
+      "plannedDate": 2312,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-03-3",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "name": "Demonstrate Dura membrane still achieves Ballard performance targets",
+      "gate_id": null,
+      "plannedDate": 2319,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-03-4",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "name": "Demonstrate 2x BM1 total AST lifetime",
+      "gate_id": null,
+      "plannedDate": 2368,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-03-5",
+      "objectiveId": "OBJ-FC-2026Q2-03",
+      "name": "Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+      "gate_id": null,
+      "plannedDate": 2369,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-04-1",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "name": "Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "gate_id": null,
+      "plannedDate": 2312,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-04-2",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "name": "Achieve better than BM1 performance of wrinkle-free R2R membrane",
+      "gate_id": null,
+      "plannedDate": 2343,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-04-3",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "name": "Produce 30m2 of Dura membrane",
+      "gate_id": null,
+      "plannedDate": 2368,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-04-4",
+      "objectiveId": "OBJ-FC-2026Q2-04",
+      "name": "Demonstrate a uniform 30m2 roll that achieves performance targets",
+      "gate_id": null,
+      "plannedDate": 2374,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-05-1",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "name": "Generate a list of prioritized approach ideas to improve 20RH performance via FMEA",
+      "gate_id": null,
+      "plannedDate": 2298,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-05-2",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "name": "Determine relevant failure modes from FMEA",
+      "gate_id": null,
+      "plannedDate": 2333,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-05-3",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "name": "Identify a toggle for each known failure mode",
+      "gate_id": null,
+      "plannedDate": 2361,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-05-4",
+      "objectiveId": "OBJ-FC-2026Q2-05",
+      "name": "Achieve 20RH pol curve target",
+      "gate_id": null,
+      "plannedDate": 2374,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-06-1",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "name": "Baseline Dura with 0.2|0.2 mgPt/cm\u00b2",
+      "gate_id": null,
+      "plannedDate": 2332,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-06-2",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "name": "Evaluate initial Dura with 0.2|0.4 mgPt/cm\u00b2",
+      "gate_id": null,
+      "plannedDate": 2336,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-06-3",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "name": "Optimize 0.4 mgPt/cm\u00b2 CCF",
+      "gate_id": null,
+      "plannedDate": 2361,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-06-4",
+      "objectiveId": "OBJ-FC-2026Q2-06",
+      "name": "Achieve Dura CCM performance targets",
+      "gate_id": null,
+      "plannedDate": 2375,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-08-1",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "name": "Address membrane-based WTP underperformance",
+      "gate_id": null,
+      "plannedDate": 2338,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-08-2",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "name": "Address optimal operating parameters in WTP",
+      "gate_id": null,
+      "plannedDate": 2354,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q2-08-3",
+      "objectiveId": "OBJ-FC-2026Q2-08",
+      "name": "Evaluate optimal CCM and operation",
+      "gate_id": null,
+      "plannedDate": 2375,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    }
+  ],
+  "tasks": [],
+  "kpiDefs": [],
+  "kpiUpdates": [
+    {
+      "id": "KPI-FC-2026Q2-02-1",
+      "groupId": "KR-FC-2026Q2-02-5",
+      "value": 0,
+      "timestamp": 1782412981258,
+      "note": "migrated from gate:Achieve H2X < 2mA/cm2",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-1",
+      "groupId": "KR-FC-2026Q2-03-1",
+      "value": 0,
+      "timestamp": 1782412981259,
+      "note": "migrated from gate:Demonstrate similar reduction in pol curve drop at 80h",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-2",
+      "groupId": "KR-FC-2026Q2-03-2",
+      "value": 0,
+      "timestamp": 1782412981260,
+      "note": "migrated from gate:Determine total AST lifetime",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-3",
+      "groupId": "KR-FC-2026Q2-03-3",
+      "value": 0,
+      "timestamp": 1782412981261,
+      "note": "migrated from gate:Demonstrate Dura membrane still achieves Ballard performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-4",
+      "groupId": "KR-FC-2026Q2-03-4",
+      "value": 0,
+      "timestamp": 1782412981262,
+      "note": "migrated from gate:Demonstrate Dura membrane still achieves Ballard performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-5",
+      "groupId": "KR-FC-2026Q2-03-5",
+      "value": 0,
+      "timestamp": 1782412981263,
+      "note": "migrated from gate:Demonstrate Dura membrane still achieves Ballard performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-6",
+      "groupId": "KR-FC-2026Q2-03-6",
+      "value": 0,
+      "timestamp": 1782412981264,
+      "note": "migrated from gate:Demonstrate Dura membrane still achieves Ballard performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-7",
+      "groupId": "KR-FC-2026Q2-03-7",
+      "value": 0,
+      "timestamp": 1782412981265,
+      "note": "migrated from gate:Demonstrate Dura membrane still achieves Ballard performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-8",
+      "groupId": "KR-FC-2026Q2-03-8",
+      "value": 0,
+      "timestamp": 1782412981266,
+      "note": "migrated from gate:Demonstrate 2x BM1 total AST lifetime",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-03-9",
+      "groupId": "KR-FC-2026Q2-03-9",
+      "value": 0,
+      "timestamp": 1782412981267,
+      "note": "migrated from gate:Demonstrate matched or better Dura performance retention than BM1 over AST lifetime",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-04-1",
+      "groupId": "KR-FC-2026Q2-04-7",
+      "value": 0.84,
+      "timestamp": 1782412981268,
+      "note": "migrated from gate:Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-04-2",
+      "groupId": "KR-FC-2026Q2-04-8",
+      "value": 98,
+      "timestamp": 1782412981269,
+      "note": "migrated from gate:Achieve >85% decal transfer on R2R wrinkle-free membrane",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-05-1",
+      "groupId": "KR-FC-2026Q2-05-3",
+      "value": 0,
+      "timestamp": 1782412981270,
+      "note": "migrated from gate:Achieve 20RH pol curve target",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-06-1",
+      "groupId": "KR-FC-2026Q2-06-1",
+      "value": 0,
+      "timestamp": 1782412981271,
+      "note": "migrated from gate:Optimize 0.4 mgPt/cm\u00b2 CCF",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-06-2",
+      "groupId": "KR-FC-2026Q2-06-2",
+      "value": 0,
+      "timestamp": 1782412981272,
+      "note": "migrated from gate:Optimize 0.4 mgPt/cm\u00b2 CCF",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-06-3",
+      "groupId": "KR-FC-2026Q2-06-3",
+      "value": 0,
+      "timestamp": 1782412981273,
+      "note": "migrated from gate:Achieve Dura CCM performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-06-4",
+      "groupId": "KR-FC-2026Q2-06-4",
+      "value": 0,
+      "timestamp": 1782412981274,
+      "note": "migrated from gate:Achieve Dura CCM performance targets",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-01-1",
+      "groupId": "KR-FC-2026Q1-01-1",
+      "value": 5,
+      "timestamp": 1782412981281,
+      "note": "migrated from KR:Produce 5m2 of crosslinked Dura membrane",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-01-2",
+      "groupId": "KR-FC-2026Q1-01-2",
+      "value": 5,
+      "timestamp": 1782412981282,
+      "note": "migrated from KR:Produce 5m2 of fully processed (decal-enabled) Dura membrane",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-04-1",
+      "groupId": "KR-FC-2026Q1-04-1",
+      "value": 1.407,
+      "timestamp": 1782412981283,
+      "note": "migrated from KR:H2X < 2.0 mA/cm2 at 80C, 100RH, 0kPa",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-04-2",
+      "groupId": "KR-FC-2026Q1-04-2",
+      "value": 1160,
+      "timestamp": 1782412981284,
+      "note": "migrated from KR:Achieve matched to or better than FCS6 pol curve at 0.65V across a range of RH",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-04-3",
+      "groupId": "KR-FC-2026Q1-04-3",
+      "value": 912,
+      "timestamp": 1782412981285,
+      "note": "migrated from KR:Achieve matched to or better than FCS6 pol curve at 0.65V across a range of RH",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-04-4",
+      "groupId": "KR-FC-2026Q1-04-4",
+      "value": 209.75,
+      "timestamp": 1782412981286,
+      "note": "migrated from KR:Achieve matched to or better than FCS6 pol curve at 0.65V across a range of RH",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-04-5",
+      "groupId": "KR-FC-2026Q1-04-5",
+      "value": 25,
+      "timestamp": 1782412981287,
+      "note": "migrated from KR:Achieve matched to or better than FCS6 pol curve at 0.65V across a range of RH",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-05-1",
+      "groupId": "KR-FC-2026Q1-05-1",
+      "value": 407,
+      "timestamp": 1782412981288,
+      "note": "migrated from KR:Deliver on 100% of POs received (tracked by area)",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q1-05-2",
+      "groupId": "KR-FC-2026Q1-05-2",
+      "value": 516,
+      "timestamp": 1782412981289,
+      "note": "migrated from KR:Deliver on 100% of POs received (tracked by area)",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-1",
+      "groupId": "KR-FC-2026Q2-08-3",
+      "value": 1.2,
+      "timestamp": 1782412981290,
+      "note": "migrated from KR:Current density at 0.6V in H2/air at 80C, 0kPa(g)",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-2",
+      "groupId": "KR-FC-2026Q2-08-4",
+      "value": 0.17,
+      "timestamp": 1782412981291,
+      "note": "migrated from KR:Catalyst loading on CCM cathode",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-3",
+      "groupId": "KR-FC-2026Q2-08-5",
+      "value": 0,
+      "timestamp": 1782412981292,
+      "note": "migrated from gate:Address membrane-based WTP underperformance",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-4",
+      "groupId": "KR-FC-2026Q2-08-6",
+      "value": 0,
+      "timestamp": 1782412981293,
+      "note": "migrated from gate:Address membrane-based WTP underperformance",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-5",
+      "groupId": "KR-FC-2026Q2-08-7",
+      "value": 0,
+      "timestamp": 1782412981294,
+      "note": "migrated from gate:Address optimal operating parameters in WTP",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-6",
+      "groupId": "KR-FC-2026Q2-08-8",
+      "value": 0,
+      "timestamp": 1782412981295,
+      "note": "migrated from gate:Evaluate optimal CCM and operation",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-7",
+      "groupId": "KR-FC-2026Q2-08-9",
+      "value": 0,
+      "timestamp": 1782412981296,
+      "note": "migrated from gate:Evaluate optimal CCM and operation",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-8",
+      "groupId": "KR-FC-2026Q2-08-10",
+      "value": 0,
+      "timestamp": 1782412981297,
+      "note": "migrated from gate:Evaluate optimal CCM and operation",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-9",
+      "groupId": "KR-FC-2026Q2-08-11",
+      "value": 0,
+      "timestamp": 1782412981298,
+      "note": "migrated from task:Address membrane-based WTP underperformance",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-FC-2026Q2-08-10",
+      "groupId": "KR-FC-2026Q2-08-12",
+      "value": 0,
+      "timestamp": 1782412981299,
+      "note": "migrated from task:Evaluate optimal CCM and operation",
+      "sourceKpiId": null
+    }
+  ]
+}

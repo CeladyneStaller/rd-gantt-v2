@@ -1,0 +1,4254 @@
+{
+  "projects": [
+    {
+      "id": 10000,
+      "name": "Deliver retrofit PO to Sesame Solar",
+      "start": "2026-04-06",
+      "end": "2026-05-29",
+      "division": "electrolyzer",
+      "effortType": "Prototype Development",
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-moir14v1mvv",
+          "name": "Confirm Enapter is completely read for TERA stack",
+          "endDate": "2026-04-17",
+          "startDate": "2026-04-06",
+          "subProjectId": 10089,
+          "baselineEndDate": "2026-04-17",
+          "kpis": [
+            {
+              "name": "Inlet water install (1)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Water conductivity after flowing in the system for 24-hours (bar)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "All external ports to be connected for safe venting (3)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "System is error free (0)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xa1ve",
+          "name": "Prepare for SG 3-7 and derisk imaginable issues",
+          "endDate": "2026-05-06",
+          "startDate": "2026-04-18",
+          "subProjectId": 10075,
+          "baselineEndDate": "2026-05-06",
+          "kpis": [
+            {
+              "name": "Complete 100% of pre‑handover readiness checks and repairs (%)",
+              "direction": "increase",
+              "target": 100,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xar6g",
+          "name": "Install TERA stack",
+          "endDate": "2026-05-07",
+          "startDate": "2026-05-07",
+          "subProjectId": 10091,
+          "baselineEndDate": "2026-05-07",
+          "kpis": [
+            {
+              "name": "Hardware plumbed in TERA stack (1)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "No water leaks (With pump flowing) (0)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xa8hp",
+          "name": "Pilot run of Enapter with TERA stack",
+          "endDate": "2026-05-15",
+          "startDate": "2026-05-08",
+          "subProjectId": 10092,
+          "baselineEndDate": "2026-05-15",
+          "kpis": [
+            {
+              "name": "Run production rate (%)",
+              "direction": "increase",
+              "target": 60,
+              "current": 0
+            },
+            {
+              "name": "No H2 leak (WebGUI confirmation-stack pressure) (H2 sniffer) (leaks)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "No fatal errors during and after 2 hours of operation (hours)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xaxoc",
+          "name": "Confirm system energy efficiency",
+          "endDate": "2026-05-19",
+          "startDate": "2026-05-16",
+          "subProjectId": 10093,
+          "baselineEndDate": "2026-05-19",
+          "kpis": [
+            {
+              "name": "System Efficiency (kWh/kgH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xa0h3",
+          "name": "Confirm H2 production rate and purity",
+          "endDate": "2026-05-21",
+          "startDate": "2026-05-20",
+          "subProjectId": 10094,
+          "baselineEndDate": "2026-05-21",
+          "kpis": [
+            {
+              "name": "WebGUI production rate matches H2 out flow rate (Mass flow sensor) (%)",
+              "direction": "increase",
+              "target": 60,
+              "current": 0
+            },
+            {
+              "name": "Purity (%)",
+              "direction": "increase",
+              "target": 99.9,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xbzga",
+          "name": "Continuous operation for 24-hours",
+          "endDate": "2026-05-28",
+          "startDate": "2026-05-22",
+          "subProjectId": 10095,
+          "baselineEndDate": "2026-05-28",
+          "kpis": [
+            {
+              "name": "0 errors durning 24-hour continuous operation at 100% production rate (errors)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Confirm H2 purity after 24-hours run (%)",
+              "direction": "increase",
+              "target": 99.9,
+              "current": 0
+            },
+            {
+              "name": "Power efficiency at 100% production rate (kWh/kgH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnrvh0xbsi3",
+          "name": "Ship TERA stack retrofitted system to SESAME SOLAR",
+          "endDate": "2026-05-31",
+          "startDate": "2026-05-29",
+          "subProjectId": 10081,
+          "baselineEndDate": "2026-05-29",
+          "kpis": [
+            {
+              "name": "Deliver system (system)",
+              "direction": "increase",
+              "target": 1,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10001,
+      "name": "Finalize Electra-X Design Freeze",
+      "start": "2026-03-30",
+      "end": "2026-05-15",
+      "division": "electrolyzer",
+      "effortType": "Prototype Development",
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnjv2l9stec",
+          "name": "Demonstrate Electra-X with J >4.5A/cm2 at 1.8V shows no degradation during extended pol curve cycling",
+          "endDate": "2026-04-03",
+          "startDate": "2026-03-30",
+          "subProjectId": 10020,
+          "baselineEndDate": "2026-04-03",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnjv2l9si83",
+          "name": "Demonstrate Electra-X has <3V%/1000h durability at 3A/cm2, 80C",
+          "endDate": "2026-04-10",
+          "startDate": "2026-04-04",
+          "subProjectId": 10021,
+          "baselineEndDate": "2026-04-10",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnjv2l9slz0",
+          "name": "Demonstrate Electra-X production can be successfully scaled up",
+          "endDate": "2026-04-17",
+          "startDate": "2026-04-11",
+          "subProjectId": 10025,
+          "baselineEndDate": "2026-04-17",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnjv2l9s00l",
+          "name": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+          "endDate": "2026-04-24",
+          "startDate": "2026-04-18",
+          "subProjectId": 10026,
+          "baselineEndDate": "2026-04-24",
+          "kpis": []
+        },
+        {
+          "id": "qt-mnjv2l9ss4z",
+          "name": "Produce at least 50 membranes",
+          "endDate": "2026-05-15",
+          "startDate": "2026-04-25",
+          "subProjectId": 10024,
+          "baselineEndDate": "2026-05-15",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [],
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10002,
+      "name": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+      "start": "2026-04-01",
+      "end": "2026-09-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "progress": 0,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "initiative",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10003,
+      "name": "Sesame Stack",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnqiglpd57i",
+          "name": "Demonstrate capability in a single cell",
+          "endDate": "2026-04-28",
+          "startDate": "2026-04-01",
+          "subProjectId": 10061,
+          "baselineEndDate": "2026-04-16",
+          "kpis": [
+            {
+              "name": "%H2-in-O2 (%)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Cell Voltage (V)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Seals under differential pressure (bar DP)",
+              "direction": "increase",
+              "target": 38,
+              "current": 0
+            },
+            {
+              "name": "No hardware corrosion",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqijhs5tz8",
+          "name": "Assemble short stack and ensure testing capability for short stack",
+          "endDate": "2026-04-29",
+          "startDate": "2026-04-29",
+          "subProjectId": 10062,
+          "baselineEndDate": "2026-04-17",
+          "kpis": [
+            {
+              "name": "Cells in a stack (cells)",
+              "direction": "increase",
+              "target": 5,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqimqqhhoi",
+          "name": "Demonstrate capability in a short stack",
+          "endDate": "2026-05-01",
+          "startDate": "2026-04-30",
+          "subProjectId": 10063,
+          "baselineEndDate": "2026-04-24",
+          "kpis": [
+            {
+              "name": "Energy efficiency (kWh/kgH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Avg Cell Voltage (@ 52A, 55C, 35barH2) (V/cell)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "FAT passed",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqjjzp1fiz",
+          "name": "Assemble Sesame stack and ensure testing capability for full stack",
+          "endDate": "2026-05-05",
+          "startDate": "2026-05-02",
+          "subProjectId": 10064,
+          "baselineEndDate": "2026-04-30",
+          "kpis": [
+            {
+              "name": "Cell count (cells)",
+              "direction": "increase",
+              "target": 23,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqjmyq9876",
+          "name": "Hand off stack to Sesame System Integration project",
+          "endDate": "2026-05-07",
+          "startDate": "2026-05-06",
+          "subProjectId": 10066,
+          "baselineEndDate": "2026-05-05",
+          "kpis": [
+            {
+              "name": "# of stack (stack)",
+              "direction": "increase",
+              "target": 1,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqjm9b1w3y",
+          "name": "Confirm capability of whole stack",
+          "endDate": "2026-05-09",
+          "startDate": "2026-05-08",
+          "subProjectId": 10073,
+          "baselineEndDate": "2026-05-06",
+          "kpis": [
+            {
+              "name": "Energy consumption (kWh/kgH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "<46 V at 52 A, 55 C, 35 barH2 (V)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "FAT passed (FAT)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10002,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "toruhatsukade@celadynetech.com"
+      ],
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10004,
+      "name": "3rd party validation stack",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10002,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "toruhatsukade@celadynetech.com"
+      ],
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10005,
+      "name": "(Fourier) Demonstrate Functional Tera 25-30-R5 Stack Prototype and Validate for Fourier use",
+      "start": "2026-04-01",
+      "end": "2026-06-30",
+      "division": "electrolyzer",
+      "effortType": "Prototype Development",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnqxxfadlor",
+          "name": "Prepare materials for Fourier short stack assembly",
+          "endDate": "2026-04-29",
+          "startDate": "2026-04-01",
+          "subProjectId": 10082,
+          "baselineEndDate": "2026-04-29",
+          "kpis": [
+            {
+              "name": "Plates & Meshes",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "MEAs",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "PTLs & Pt-coated C clothes",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Gaskets (Inter-MPP & cell)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Bolts & Nuts",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqxzn9u7ky",
+          "name": "Assemble short stack and ensure load cycling capability for short stack",
+          "endDate": "2026-04-30",
+          "startDate": "2026-04-30",
+          "subProjectId": 10083,
+          "baselineEndDate": "2026-04-30",
+          "kpis": [
+            {
+              "name": "Cell count (cells)",
+              "direction": "increase",
+              "target": 5,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqy0rhgy2s",
+          "name": "Ensure short stack passes FAT (Fourier)",
+          "endDate": "2026-05-05",
+          "startDate": "2026-05-01",
+          "subProjectId": 10084,
+          "baselineEndDate": "2026-05-05",
+          "kpis": [
+            {
+              "name": "FAT passed",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqy28v321m",
+          "name": "Demonstrate load cycling capability of test stand and short stack",
+          "endDate": "2026-05-12",
+          "startDate": "2026-05-06",
+          "subProjectId": 10085,
+          "baselineEndDate": "2026-05-12",
+          "kpis": [
+            {
+              "name": "# of load cycles (cycles)",
+              "direction": "increase",
+              "target": 400,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqy448ylad",
+          "name": "Assemble Fourier stack",
+          "endDate": "2026-05-19",
+          "startDate": "2026-05-13",
+          "subProjectId": 10086,
+          "baselineEndDate": "2026-05-19",
+          "kpis": [
+            {
+              "name": "Cell count (cells)",
+              "direction": "increase",
+              "target": 30,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqy53eoarm",
+          "name": "Ensure full stack passes FAT",
+          "endDate": "2026-05-21",
+          "startDate": "2026-05-20",
+          "subProjectId": 10087,
+          "baselineEndDate": "2026-05-21",
+          "kpis": [
+            {
+              "name": "FAT passed",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqy6vk47qc",
+          "name": "Demonstrate load cycling capability of full stack",
+          "endDate": "2026-06-05",
+          "startDate": "2026-05-22",
+          "subProjectId": 10088,
+          "baselineEndDate": "2026-06-05",
+          "kpis": [
+            {
+              "name": "# of load cycles (cycles)",
+              "direction": "increase",
+              "target": 8000,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "toruhatsukade@celadynetech.com"
+      ],
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10006,
+      "name": "Establish Testing Capabilities",
+      "start": "2026-04-03",
+      "end": "2026-05-08",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mnjeogrgrhk",
+          "name": "Improve %H2-in-O2 measurement accuracy",
+          "endDate": "2026-04-08",
+          "startDate": "2026-04-03",
+          "subProjectId": 10031,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Fluctuation around setpoint (%)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Number of runs",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Low end of calibration curve (ppm)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnjeoz16s44",
+          "name": "Enable short stack testing",
+          "endDate": "2026-04-17",
+          "startDate": "2026-04-10",
+          "subProjectId": 10032,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Power Supply Voltage (V)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Power Supply Current (A)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Temperature (C)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Flowrate (mlpm)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Vessel volume (L)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "H2 pressure (barH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqhe0ubstn",
+          "name": "Enable Sesame full stack testing",
+          "endDate": "2026-04-28",
+          "startDate": "2026-04-25",
+          "subProjectId": 10033,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Power Supply Voltage (V)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Power Supply Current (A)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "H2 pressure (barH2)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Temperature (C)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Flowrate (lpm)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Vessel volume (L)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "qt-mnqhy9oawqd",
+          "name": "Enable load cycling",
+          "endDate": "2026-05-08",
+          "startDate": "2026-04-29",
+          "subProjectId": 10030,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "BP control electrified",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "BP ramp rate (bar/s)",
+              "direction": "increase",
+              "target": 5,
+              "current": 0
+            },
+            {
+              "name": "Current ramp rate (A/s)",
+              "direction": "increase",
+              "target": 10,
+              "current": 0
+            },
+            {
+              "name": "Automated",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "BP and electrical aligned",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Demonstration Cycles (cycles)",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "assignedTo": [
+        "toruhatsukade@celadynetech.com"
+      ],
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10020,
+      "name": "Demonstrate Electra-X with J >4.5A/cm2 at 1.8V shows no degradation during extended pol curve cycling",
+      "start": "2026-03-30",
+      "end": "2026-04-03",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "progress": 100,
+      "progressType": "percentage",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-04-03",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "Demonstrate membrane is stable and reproducible",
+      "parentId": 10001,
+      "isStageGate": true,
+      "stageGateId": "qt-mnjv2l9stec",
+      "baselineEndDate": "2026-04-03",
+      "manuallyCompleted": true,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate Electra-X has <3V%/1000h durability at 3A/cm2, 80C",
+      "start": "2026-04-04",
+      "end": "2026-04-10",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnjv2l9si83",
+      "parentId": 10001,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-04-09",
+      "baselineEndDate": "2026-04-10",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10020,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10021,
+      "milestone": false,
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Produce at least 50 membranes",
+      "start": "2026-04-25",
+      "end": "2026-05-15",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnjv2l9ss4z",
+      "parentId": 10001,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-15",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10026,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10024,
+      "milestone": false,
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate Electra-X production can be successfully scaled up",
+      "start": "2026-04-11",
+      "end": "2026-04-17",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnjv2l9slz0",
+      "parentId": 10001,
+      "progress": 100,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-04-10",
+      "baselineEndDate": "2026-04-17",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10021,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10025,
+      "milestone": false,
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+      "start": "2026-04-18",
+      "end": "2026-04-24",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnjv2l9s00l",
+      "parentId": 10001,
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-24",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10025,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10026,
+      "milestone": false,
+      "productLine": "product-1775244734357",
+      "productModel": "model-1775244702837",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Enable load cycling",
+      "start": "2026-04-29",
+      "end": "2026-05-08",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqi5keh0b8",
+      "parentId": 10006,
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [
+        {
+          "name": "BP control electrified",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "BP ramp rate (bar/s)",
+          "direction": "increase",
+          "target": 5,
+          "current": 0
+        },
+        {
+          "name": "Current ramp rate (A/s)",
+          "direction": "increase",
+          "target": 10,
+          "current": 0
+        },
+        {
+          "name": "Automated",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "BP and electrical aligned",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Demonstration Cycles (cycles)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Make necessary upgrades to enable current and pressure load cycling to evaluate Fourier stack",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10033,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10030,
+      "milestone": false,
+      "productLine": "",
+      "productModel": "",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10031,
+      "name": "Improve %H2-in-O2 measurement accuracy",
+      "start": "2026-04-03",
+      "end": "2026-04-08",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "",
+      "productModel": "",
+      "progress": 100,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Fluctuation around setpoint (%)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Number of runs",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Low end of calibration curve (ppm)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-04-09",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "Build confidence in our %H2-in-O2 measurements by improving calibration methodology with low flow MFC",
+      "parentId": 10006,
+      "isStageGate": true,
+      "stageGateId": "qt-mnqi5kehqen",
+      "manuallyCompleted": true,
+      "baselineEndDate": null,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10032,
+      "name": "Enable short stack testing",
+      "start": "2026-04-10",
+      "end": "2026-04-17",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "",
+      "productModel": "",
+      "progress": 100,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Power Supply Voltage (V)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Power Supply Current (A)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Temperature (C)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Flowrate (mlpm)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Vessel volume (L)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "H2 pressure (barH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "datePrecision": "exact",
+      "completedDate": "2026-04-24",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10031,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "notes": "Make necessary upgrades to enable short stack evaluation",
+      "parentId": 10006,
+      "isStageGate": true,
+      "stageGateId": "qt-mnqi5kehfn6",
+      "manuallyCompleted": true,
+      "baselineEndDate": null,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Enable Sesame full stack testing",
+      "start": "2026-04-25",
+      "end": "2026-04-28",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mnqi5kehawe",
+      "parentId": 10006,
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [
+        {
+          "name": "Power Supply Voltage (V)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Power Supply Current (A)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "H2 pressure (barH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Temperature (C)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Flowrate (lpm)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Vessel volume (L)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Make necessary upgrades to enable Sesame full stack evaluation",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10032,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10033,
+      "milestone": false,
+      "productLine": "",
+      "productModel": "",
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate capability in a single cell",
+      "start": "2026-04-01",
+      "end": "2026-04-28",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg677dh4",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-16",
+      "kpis": [
+        {
+          "name": "%H2-in-O2 (%)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Cell Voltage (V)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Seals under differential pressure (bar DP)",
+          "direction": "increase",
+          "target": 38,
+          "current": 0
+        },
+        {
+          "name": "No hardware corrosion",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Check quality of new hardware and its interplay with Electra-2X by replicating Scribner cell metrics",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10061,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Assemble short stack and ensure testing capability for short stack",
+      "start": "2026-04-29",
+      "end": "2026-04-29",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg677zdz",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-17",
+      "kpis": [
+        {
+          "name": "Cells in a stack (cells)",
+          "direction": "increase",
+          "target": 5,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Assemble a short stack to confirm capability translation, and learn/practice assembly in the process",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10061,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10062,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate capability in a short stack",
+      "start": "2026-04-30",
+      "end": "2026-05-01",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg6780mk",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-24",
+      "kpis": [
+        {
+          "name": "Energy efficiency (kWh/kgH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Avg Cell Voltage (@ 52A, 55C, 35barH2) (V/cell)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "FAT passed",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Early proof-of-concept to confirm translation of capabilities in a stack environment",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10062,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10032,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10063,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Assemble Sesame stack and ensure testing capability for full stack",
+      "start": "2026-05-02",
+      "end": "2026-05-05",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg678zcs",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-30",
+      "kpis": [
+        {
+          "name": "Cell count (cells)",
+          "direction": "increase",
+          "target": 23,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Assemble full Sesame stack",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10063,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10064,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Hand off stack to Sesame System Integration project",
+      "start": "2026-05-06",
+      "end": "2026-05-07",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg678g7f",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-05",
+      "kpis": [
+        {
+          "name": "# of stack (stack)",
+          "direction": "increase",
+          "target": 1,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10064,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10066,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Confirm capability of whole stack",
+      "start": "2026-05-08",
+      "end": "2026-05-09",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mo3cg67858d",
+      "parentId": 10003,
+      "productLine": "",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-06",
+      "kpis": [
+        {
+          "name": "Energy consumption (kWh/kgH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "<46 V at 52 A, 55 C, 35 barH2 (V)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "FAT passed (FAT)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Qualify Sesame stack",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10066,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10073,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10075,
+      "name": "Prepare for SG 3-7 and derisk imaginable issues",
+      "start": "2026-04-18",
+      "end": "2026-05-06",
+      "baselineEndDate": "2026-05-06",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Complete 100% of pre‑handover readiness checks and repairs (%)",
+          "direction": "increase",
+          "target": 100,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10089,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10047,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkifp",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10081,
+      "name": "Ship TERA stack retrofitted system to SESAME SOLAR",
+      "start": "2026-05-29",
+      "end": "2026-05-31",
+      "baselineEndDate": "2026-05-29",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Deliver system (system)",
+          "direction": "increase",
+          "target": 1,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10095,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10053,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkgws",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10082,
+      "name": "Prepare materials for Fourier short stack assembly",
+      "start": "2026-04-01",
+      "end": "2026-04-29",
+      "baselineEndDate": "2026-04-29",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 100,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Plates & Meshes",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "MEAs",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "PTLs & Pt-coated C clothes",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Gaskets (Inter-MPP & cell)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Bolts & Nuts",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2xw82",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": "2026-04-29",
+      "manuallyCompleted": true,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10083,
+      "name": "Assemble short stack and ensure load cycling capability for short stack",
+      "start": "2026-04-30",
+      "end": "2026-04-30",
+      "baselineEndDate": "2026-04-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Cell count (cells)",
+          "direction": "increase",
+          "target": 5,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10082,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10040,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2xmde",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10084,
+      "name": "Ensure short stack passes FAT (Fourier)",
+      "start": "2026-05-01",
+      "end": "2026-05-05",
+      "baselineEndDate": "2026-05-05",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "FAT passed",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10083,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10041,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2x7x8",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10085,
+      "name": "Demonstrate load cycling capability of test stand and short stack",
+      "start": "2026-05-06",
+      "end": "2026-05-12",
+      "baselineEndDate": "2026-05-12",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "# of load cycles (cycles)",
+          "direction": "increase",
+          "target": 400,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10084,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10042,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2xhlv",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10086,
+      "name": "Assemble Fourier stack",
+      "start": "2026-05-13",
+      "end": "2026-05-19",
+      "baselineEndDate": "2026-05-19",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "Cell count (cells)",
+          "direction": "increase",
+          "target": 30,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10085,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10043,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2xk3g",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10087,
+      "name": "Ensure full stack passes FAT",
+      "start": "2026-05-20",
+      "end": "2026-05-21",
+      "baselineEndDate": "2026-05-21",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "FAT passed",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10086,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10044,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2x647",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10088,
+      "name": "Demonstrate load cycling capability of full stack",
+      "start": "2026-05-22",
+      "end": "2026-06-05",
+      "baselineEndDate": "2026-06-05",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1775244734357",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [
+        {
+          "name": "# of load cycles (cycles)",
+          "direction": "increase",
+          "target": 8000,
+          "current": 0
+        }
+      ],
+      "milestone": false,
+      "projectType": "task",
+      "locked": false,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10087,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10045,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "notes": "",
+      "parentId": 10005,
+      "isStageGate": true,
+      "stageGateId": "qt-mox6je2xhjq",
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "completedDate": null,
+      "manuallyCompleted": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Confirm Enapter is completely read for TERA stack",
+      "start": "2026-04-06",
+      "end": "2026-04-17",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qk2a4",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-04-17",
+      "kpis": [
+        {
+          "name": "Inlet water install (1)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Water conductivity after flowing in the system for 24-hours (bar)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "All external ports to be connected for safe venting (3)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "System is error free (0)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Be sure that Enapter BoP is ready for TERA stack integration",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10089,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Install TERA stack",
+      "start": "2026-05-07",
+      "end": "2026-05-07",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkglp",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-07",
+      "kpis": [
+        {
+          "name": "Hardware plumbed in TERA stack (1)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "No water leaks (With pump flowing) (0)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Secure TERA stack in system",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10075,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        },
+        {
+          "id": 10003,
+          "type": "blocking",
+          "leadDays": 0
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10091,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Pilot run of Enapter with TERA stack",
+      "start": "2026-05-08",
+      "end": "2026-05-15",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkx5a",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-15",
+      "kpis": [
+        {
+          "name": "Run production rate (%)",
+          "direction": "increase",
+          "target": 60,
+          "current": 0
+        },
+        {
+          "name": "No H2 leak (WebGUI confirmation-stack pressure) (H2 sniffer) (leaks)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "No fatal errors during and after 2 hours of operation (hours)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Identify flaws and ensure integrity of integration",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10091,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10092,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Confirm system energy efficiency",
+      "start": "2026-05-16",
+      "end": "2026-05-19",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qki5n",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-19",
+      "kpis": [
+        {
+          "name": "System Efficiency (kWh/kgH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Make sure system with TERA stack is working efficiently",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10092,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10093,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Confirm H2 production rate and purity",
+      "start": "2026-05-20",
+      "end": "2026-05-21",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkyx0",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-21",
+      "kpis": [
+        {
+          "name": "WebGUI production rate matches H2 out flow rate (Mass flow sensor) (%)",
+          "direction": "increase",
+          "target": 60,
+          "current": 0
+        },
+        {
+          "name": "Purity (%)",
+          "direction": "increase",
+          "target": 99.9,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Confirm 99.9% H2 purity and H2 production",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10093,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10094,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Continuous operation for 24-hours",
+      "start": "2026-05-22",
+      "end": "2026-05-28",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-moj4p1qkqwz",
+      "parentId": 10000,
+      "productLine": "product-1775244789449",
+      "productModel": "model-1775244773277",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-05-28",
+      "kpis": [
+        {
+          "name": "0 errors durning 24-hour continuous operation at 100% production rate (errors)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Confirm H2 purity after 24-hours run (%)",
+          "direction": "increase",
+          "target": 99.9,
+          "current": 0
+        },
+        {
+          "name": "Power efficiency at 100% production rate (kWh/kgH2)",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "Operate at full production rate for 24-hours. Monitoring for transient behaviors and errors",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10094,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10095,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    }
+  ],
+  "resources": [],
+  "equipment": [],
+  "products": [
+    {
+      "id": "product-1775244574165",
+      "name": "Dura Gen 1 Membrane",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244563645",
+          "name": "Dura 1D-HP6-15",
+          "status": "active"
+        },
+        {
+          "id": "model-1775244566637",
+          "name": "Dura 1D-HP6-12",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244611569",
+      "name": "Dura Gen 2 Membrane",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244587633",
+          "name": "Dura 2D-6",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244628353",
+      "name": "SPECTRE",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244622497",
+          "name": "Dura Gen 1",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244734357",
+      "name": "Tera Stack",
+      "description": "",
+      "division": "electrolyzer",
+      "models": [
+        {
+          "id": "model-1775244702837",
+          "name": "Tera 25-30-R5",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244727748",
+          "name": "Tera 25-30-R6",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244731761",
+          "name": "Tera 25-30-R7",
+          "status": "development"
+        }
+      ]
+    },
+    {
+      "id": "product-1775244789449",
+      "name": "Tera System",
+      "description": "",
+      "division": "fuelcell",
+      "models": [
+        {
+          "id": "model-1775244773277",
+          "name": "Retrofit S4-25-26-R5",
+          "status": "development"
+        },
+        {
+          "id": "model-1775244798225",
+          "name": "Tera S4-25-26-R5",
+          "status": "development"
+        }
+      ]
+    }
+  ],
+  "divisionColors": {
+    "fuelcell": {
+      "bg": "#EEEDFE",
+      "bar": "#534AB7",
+      "text": "#3C3489"
+    },
+    "electrolyzer": {
+      "bg": "#E1F5EE",
+      "bar": "#1D9E75",
+      "text": "#085041"
+    },
+    "exploration": {
+      "bg": "#E6F1FB",
+      "bar": "#378ADD",
+      "text": "#0C447C"
+    }
+  },
+  "productColors": {},
+  "resourceMeta": {},
+  "equipmentMeta": {},
+  "changelog": [
+    {
+      "id": "cl-1776454294134",
+      "ts": 1776454294134,
+      "type": "date",
+      "projectId": 10055,
+      "projectName": "Prepare materials for short stack assembly",
+      "field": "dates",
+      "oldVal": "2026-05-06 → 2026-05-16",
+      "newVal": "2026-04-01 → 2026-04-16",
+      "note": ""
+    },
+    {
+      "id": "cl-1776114058878",
+      "ts": 1776114058878,
+      "type": "progress",
+      "projectId": 10031,
+      "projectName": "Improve %H2-in-O2 measurement accuracy",
+      "field": "progress",
+      "oldVal": "0%",
+      "newVal": "100%",
+      "note": ""
+    },
+    {
+      "id": "cl-1776114013770",
+      "ts": 1776114013770,
+      "type": "progress",
+      "projectId": 10031,
+      "projectName": "Improve %H2-in-O2 measurement accuracy",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1776098170120",
+      "ts": 1776098170120,
+      "type": "progress",
+      "projectId": 10057,
+      "projectName": "Demonstrate capability in a short stack",
+      "field": "progress",
+      "oldVal": "67%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775847509570",
+      "ts": 1775847509570,
+      "type": "progress",
+      "projectId": 10055,
+      "projectName": "Prepare materials for short stack assembly",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "0%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775847500027",
+      "ts": 1775847500027,
+      "type": "progress",
+      "projectId": 10057,
+      "projectName": "Demonstrate capability in a short stack",
+      "field": "progress",
+      "oldVal": "100%",
+      "newVal": "67%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775803016313",
+      "ts": 1775803016313,
+      "type": "progress",
+      "projectId": 10031,
+      "projectName": "Improve %H2-in-O2 measurement accuracy",
+      "field": "progress",
+      "oldVal": "0%",
+      "newVal": "100%",
+      "note": ""
+    },
+    {
+      "id": "cl-1775708903534",
+      "ts": 1775708903534,
+      "type": "delay",
+      "projectId": 10004,
+      "projectName": "3rd party validation stack",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-01 → 2026-06-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775706505890",
+      "ts": 1775706505890,
+      "type": "delay",
+      "projectId": 10005,
+      "projectName": "(Fourier) Demonstrate Functional Tera 25-30-R5 Stack Prototype and Validate for Fourier use",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-01 → 2026-06-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775705634097",
+      "ts": 1775705634097,
+      "type": "delay",
+      "projectId": 10002,
+      "projectName": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+      "field": "dates",
+      "oldVal": "2026-04-06 → 2026-07-03",
+      "newVal": "2026-04-01 → 2026-09-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775705596842",
+      "ts": 1775705596842,
+      "type": "delay",
+      "projectId": 10003,
+      "projectName": "Sesame Stack",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-05",
+      "newVal": "2026-04-01 → 2026-06-30",
+      "note": ""
+    },
+    {
+      "id": "cl-1775705330532",
+      "ts": 1775705330532,
+      "type": "delay",
+      "projectId": 10006,
+      "projectName": "Establish Testing Capabilities",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-03 → 2026-05-08",
+      "note": ""
+    },
+    {
+      "id": "cl-1775682785094",
+      "ts": 1775682785094,
+      "type": "delay",
+      "projectId": 10003,
+      "projectName": "Sesame Stack",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-03 → 2026-05-05",
+      "note": ""
+    },
+    {
+      "id": "cl-1775278588706",
+      "ts": 1775278588706,
+      "type": "delete",
+      "projectId": 10025,
+      "projectName": "Demonstrate Electra-X production can be successfully scaled up",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775278531254",
+      "ts": 1775278531254,
+      "type": "delete",
+      "projectId": 10017,
+      "projectName": "Demonstrate Electra-X production can be successfully scaled up",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775278527430",
+      "ts": 1775278527430,
+      "type": "delete",
+      "projectId": 10018,
+      "projectName": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775278523403",
+      "ts": 1775278523403,
+      "type": "delete",
+      "projectId": 10019,
+      "projectName": "Produce at least 50 membranes",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775273639189",
+      "ts": 1775273639189,
+      "type": "date",
+      "projectId": 10011,
+      "projectName": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+      "field": "dates",
+      "oldVal": "2026-04-17 → 2026-04-24",
+      "newVal": "2026-04-18 → 2026-04-24",
+      "note": ""
+    },
+    {
+      "id": "cl-1775273633382",
+      "ts": 1775273633382,
+      "type": "date",
+      "projectId": 10010,
+      "projectName": "Demonstrate Electra-X production can be successfully scaled up",
+      "field": "dates",
+      "oldVal": "2026-04-10 → 2026-04-17",
+      "newVal": "2026-04-11 → 2026-04-17",
+      "note": ""
+    },
+    {
+      "id": "cl-1775273627516",
+      "ts": 1775273627516,
+      "type": "date",
+      "projectId": 10009,
+      "projectName": "Demonstrate Electra-X has <3V%/1000h durability at 3A/cm2, 80C",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-04-10",
+      "newVal": "2026-04-04 → 2026-04-10",
+      "note": ""
+    },
+    {
+      "id": "cl-1775269565233",
+      "ts": 1775269565233,
+      "type": "delete",
+      "projectId": 10016,
+      "projectName": "Test_gantt_delete",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775260356334",
+      "ts": 1775260356334,
+      "type": "delete",
+      "projectId": 10015,
+      "projectName": "BLAH",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775260235273",
+      "ts": 1775260235273,
+      "type": "delete",
+      "projectId": 10015,
+      "projectName": "BLAH",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775260214237",
+      "ts": 1775260214237,
+      "type": "delete",
+      "projectId": 10015,
+      "projectName": "BLAH",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775253338561",
+      "ts": 1775253338561,
+      "type": "delete",
+      "projectId": 10017,
+      "projectName": "Test2",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775253335124",
+      "ts": 1775253335124,
+      "type": "delete",
+      "projectId": 10016,
+      "projectName": "Test",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775253275498",
+      "ts": 1775253275498,
+      "type": "delete",
+      "projectId": 10016,
+      "projectName": "Test",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248775751",
+      "ts": 1775248775751,
+      "type": "delete",
+      "projectId": 10007,
+      "projectName": "a",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248582567",
+      "ts": 1775248582567,
+      "type": "date",
+      "projectId": 10001,
+      "projectName": "Finalize Electra-X Design Freeze",
+      "field": "dates",
+      "oldVal": "2026-04-06 → 2026-05-15",
+      "newVal": "2026-03-30 → 2026-05-15",
+      "note": ""
+    },
+    {
+      "id": "cl-1775248560170",
+      "ts": 1775248560170,
+      "type": "date",
+      "projectId": 10008,
+      "projectName": "Demonstrate Electra-X with J >4.5A/cm2 at 1.8V shows no degradation during extended pol curve cycling",
+      "field": "dates",
+      "oldVal": "2026-04-06 → 2026-04-03",
+      "newVal": "2026-04-03 → 2026-04-03",
+      "note": ""
+    },
+    {
+      "id": "cl-1775247867243",
+      "ts": 1775247867243,
+      "type": "create",
+      "projectId": 10006,
+      "projectName": "Establish Testing Capabilities",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246413924",
+      "ts": 1775246413924,
+      "type": "create",
+      "projectId": 10005,
+      "projectName": "Demonstrate Functional Tera 25-30-R5 Stack Prototype and Validate for Fourier use",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246323798",
+      "ts": 1775246323798,
+      "type": "create",
+      "projectId": 10004,
+      "projectName": "3rd party validation stack",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246287921",
+      "ts": 1775246287921,
+      "type": "create",
+      "projectId": 10003,
+      "projectName": "Sesame Stack",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246256523",
+      "ts": 1775246256523,
+      "type": "delay",
+      "projectId": 10002,
+      "projectName": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+      "field": "dates",
+      "oldVal": "2026-04-03 → 2026-05-03",
+      "newVal": "2026-04-06 → 2026-07-03",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246233011",
+      "ts": 1775246233011,
+      "type": "create",
+      "projectId": 10002,
+      "projectName": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775246109128",
+      "ts": 1775246109128,
+      "type": "create",
+      "projectId": 10001,
+      "projectName": "Finalize Electra-X Design Freeze",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775245917962",
+      "ts": 1775245917962,
+      "type": "create",
+      "projectId": 10000,
+      "projectName": "Deliver retrofit PO to Sesame Solar",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162393360",
+      "ts": 1775162393360,
+      "type": "delete",
+      "projectId": 10063,
+      "projectName": "Dura Gen 2 Iteration",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162391416",
+      "ts": 1775162391416,
+      "type": "delete",
+      "projectId": 10069,
+      "projectName": "Gen 2 External Validation",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162389487",
+      "ts": 1775162389487,
+      "type": "delete",
+      "projectId": 10067,
+      "projectName": "Dura Gen 2 Launch",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162387287",
+      "ts": 1775162387287,
+      "type": "delete",
+      "projectId": 10106,
+      "projectName": "Cellcentric",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162385196",
+      "ts": 1775162385196,
+      "type": "delete",
+      "projectId": 10060,
+      "projectName": "UAV Fuel Cell Integration",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162383071",
+      "ts": 1775162383071,
+      "type": "delete",
+      "projectId": 10097,
+      "projectName": "SPECTRE Reports",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162380907",
+      "ts": 1775162380907,
+      "type": "delete",
+      "projectId": 10065,
+      "projectName": "Gen 2 Product Delivery",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162378189",
+      "ts": 1775162378189,
+      "type": "delete",
+      "projectId": 10058,
+      "projectName": "Dura Gen 1 Fuel Cell Optimization",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162349526",
+      "ts": 1775162349526,
+      "type": "delete",
+      "projectId": 10062,
+      "projectName": "Dura Gen 2 Design Freeze",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162347561",
+      "ts": 1775162347561,
+      "type": "delete",
+      "projectId": 10072,
+      "projectName": "Dura Gen 1 Roll Product Launch",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162345636",
+      "ts": 1775162345636,
+      "type": "delete",
+      "projectId": 10084,
+      "projectName": "?Ballard",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162343543",
+      "ts": 1775162343543,
+      "type": "delete",
+      "projectId": 10071,
+      "projectName": "Pilot Production Demonstrated",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162341494",
+      "ts": 1775162341494,
+      "type": "delete",
+      "projectId": 10061,
+      "projectName": "Dura Gen 1 R2R Pilot Production",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162339276",
+      "ts": 1775162339276,
+      "type": "delete",
+      "projectId": 10070,
+      "projectName": "Dura QC Protocol Established",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162337061",
+      "ts": 1775162337061,
+      "type": "delete",
+      "projectId": 10083,
+      "projectName": "?Ballard",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162335115",
+      "ts": 1775162335115,
+      "type": "delete",
+      "projectId": 10068,
+      "projectName": "Dura Gen 1 Design Freeze",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162333001",
+      "ts": 1775162333001,
+      "type": "delete",
+      "projectId": 10059,
+      "projectName": "Dura Gen 1 R2R Demonstration",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162330936",
+      "ts": 1775162330936,
+      "type": "delete",
+      "projectId": 10080,
+      "projectName": "Ballard",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162328844",
+      "ts": 1775162328844,
+      "type": "delete",
+      "projectId": 10066,
+      "projectName": "R2R Feasibility",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162326642",
+      "ts": 1775162326642,
+      "type": "delete",
+      "projectId": 10104,
+      "projectName": "Gen 1 Product Delivery",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162324451",
+      "ts": 1775162324451,
+      "type": "delete",
+      "projectId": 10064,
+      "projectName": "Gen 1 Development for Product Delivery",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162322372",
+      "ts": 1775162322372,
+      "type": "delete",
+      "projectId": 10057,
+      "projectName": "Dura Gen 1 Design Freeze",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1775162319673",
+      "ts": 1775162319673,
+      "type": "delete",
+      "projectId": 10056,
+      "projectName": "Dura Gen 1 R2R Feasibility",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    }
+  ],
+  "collapsed": [
+    10001
+  ],
+  "importAssociations": {},
+  "importProductAssoc": {},
+  "importDelayExclusions": [],
+  "importTypeFilter": [
+    "objective",
+    "stagegate"
+  ],
+  "computedStatus": {
+    "computedAt": "2026-06-24T22:07:31.041Z",
+    "objectives": {
+      "10000": {
+        "name": "Deliver retrofit PO to Sesame Solar",
+        "parentName": "",
+        "slug": "ez-tera-system-deliver-retrofit-p-10000",
+        "score": 0,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 44,
+        "delayDays": 70,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Confirm Enapter is completely read for TERA stack",
+            "state": "overdue",
+            "endDate": "2026-04-17",
+            "completedDate": null
+          },
+          {
+            "name": "Prepare for SG 3-7 and derisk imaginable issues",
+            "state": "overdue",
+            "endDate": "2026-05-06",
+            "completedDate": null
+          },
+          {
+            "name": "Install TERA stack",
+            "state": "overdue",
+            "endDate": "2026-05-07",
+            "completedDate": null
+          },
+          {
+            "name": "Pilot run of Enapter with TERA stack",
+            "state": "overdue",
+            "endDate": "2026-05-15",
+            "completedDate": null
+          },
+          {
+            "name": "Confirm system energy efficiency",
+            "state": "overdue",
+            "endDate": "2026-05-19",
+            "completedDate": null
+          },
+          {
+            "name": "Confirm H2 production rate and purity",
+            "state": "overdue",
+            "endDate": "2026-05-21",
+            "completedDate": null
+          },
+          {
+            "name": "Continuous operation for 24-hours",
+            "state": "overdue",
+            "endDate": "2026-05-28",
+            "completedDate": null
+          },
+          {
+            "name": "Ship TERA stack retrofitted system to SESAME SOLAR",
+            "state": "overdue",
+            "endDate": "2026-05-31",
+            "completedDate": null
+          }
+        ],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "product-1775244789449",
+        "productLineLabel": "Tera System",
+        "productModel": "model-1775244773277",
+        "productModelLabel": "Retrofit S4-25-26-R5",
+        "keyResults": [],
+        "kpis": [
+          {
+            "name": "Inlet water install (1)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm Enapter is completely read for TERA stack"
+          },
+          {
+            "name": "Water conductivity after flowing in the system for 24-hours (bar)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm Enapter is completely read for TERA stack"
+          },
+          {
+            "name": "All external ports to be connected for safe venting (3)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm Enapter is completely read for TERA stack"
+          },
+          {
+            "name": "System is error free (0)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm Enapter is completely read for TERA stack"
+          },
+          {
+            "name": "Complete 100% of pre‑handover readiness checks and repairs (%)",
+            "target": 100,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare for SG 3-7 and derisk imaginable issues"
+          },
+          {
+            "name": "Hardware plumbed in TERA stack (1)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Install TERA stack"
+          },
+          {
+            "name": "No water leaks (With pump flowing) (0)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Install TERA stack"
+          },
+          {
+            "name": "Run production rate (%)",
+            "target": 60,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Pilot run of Enapter with TERA stack"
+          },
+          {
+            "name": "No H2 leak (WebGUI confirmation-stack pressure) (H2 sniffer) (leaks)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Pilot run of Enapter with TERA stack"
+          },
+          {
+            "name": "No fatal errors during and after 2 hours of operation (hours)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Pilot run of Enapter with TERA stack"
+          },
+          {
+            "name": "System Efficiency (kWh/kgH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm system energy efficiency"
+          },
+          {
+            "name": "WebGUI production rate matches H2 out flow rate (Mass flow sensor) (%)",
+            "target": 60,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm H2 production rate and purity"
+          },
+          {
+            "name": "Purity (%)",
+            "target": 99.9,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm H2 production rate and purity"
+          },
+          {
+            "name": "0 errors durning 24-hour continuous operation at 100% production rate (errors)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Continuous operation for 24-hours"
+          },
+          {
+            "name": "Confirm H2 purity after 24-hours run (%)",
+            "target": 99.9,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Continuous operation for 24-hours"
+          },
+          {
+            "name": "Power efficiency at 100% production rate (kWh/kgH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Continuous operation for 24-hours"
+          },
+          {
+            "name": "Deliver system (system)",
+            "target": 1,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Ship TERA stack retrofitted system to SESAME SOLAR"
+          }
+        ]
+      },
+      "10001": {
+        "name": "Finalize Electra-X Design Freeze",
+        "parentName": "",
+        "slug": "ez-tera-stack-finalize-electra-x-10001",
+        "score": 0,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 21,
+        "delayDays": 61,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Demonstrate Electra-X with J >4.5A/cm2 at 1.8V shows no degradation during extended pol curve cycling",
+            "state": "passed",
+            "endDate": "2026-04-03",
+            "completedDate": "2026-04-03"
+          },
+          {
+            "name": "Demonstrate Electra-X has <3V%/1000h durability at 3A/cm2, 80C",
+            "state": "passed",
+            "endDate": "2026-04-10",
+            "completedDate": "2026-04-09"
+          },
+          {
+            "name": "Demonstrate Electra-X production can be successfully scaled up",
+            "state": "passed",
+            "endDate": "2026-04-17",
+            "completedDate": "2026-04-10"
+          },
+          {
+            "name": "Demonstrate Electra-X has <1.1% H2-in-O2 across three cells",
+            "state": "overdue",
+            "endDate": "2026-04-24",
+            "completedDate": null
+          },
+          {
+            "name": "Produce at least 50 membranes",
+            "state": "overdue",
+            "endDate": "2026-05-15",
+            "completedDate": null
+          }
+        ],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "product-1775244734357",
+        "productLineLabel": "Tera Stack",
+        "productModel": "model-1775244702837",
+        "productModelLabel": "Tera 25-30-R5",
+        "keyResults": [],
+        "kpis": []
+      },
+      "10003": {
+        "name": "Sesame Stack",
+        "parentName": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+        "slug": "ez-sesame-stack-10003",
+        "score": 0,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 11,
+        "delayDays": 5,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Demonstrate capability in a single cell",
+            "state": "overdue",
+            "endDate": "2026-04-28",
+            "completedDate": null
+          },
+          {
+            "name": "Assemble short stack and ensure testing capability for short stack",
+            "state": "overdue",
+            "endDate": "2026-04-29",
+            "completedDate": null
+          },
+          {
+            "name": "Demonstrate capability in a short stack",
+            "state": "overdue",
+            "endDate": "2026-05-01",
+            "completedDate": null
+          },
+          {
+            "name": "Assemble Sesame stack and ensure testing capability for full stack",
+            "state": "overdue",
+            "endDate": "2026-05-05",
+            "completedDate": null
+          },
+          {
+            "name": "Hand off stack to Sesame System Integration project",
+            "state": "overdue",
+            "endDate": "2026-05-07",
+            "completedDate": null
+          },
+          {
+            "name": "Confirm capability of whole stack",
+            "state": "overdue",
+            "endDate": "2026-05-09",
+            "completedDate": null
+          }
+        ],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "",
+        "productLineLabel": "",
+        "productModel": "",
+        "productModelLabel": "",
+        "keyResults": [],
+        "kpis": [
+          {
+            "name": "%H2-in-O2 (%)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a single cell"
+          },
+          {
+            "name": "Cell Voltage (V)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a single cell"
+          },
+          {
+            "name": "Seals under differential pressure (bar DP)",
+            "target": 38,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a single cell"
+          },
+          {
+            "name": "No hardware corrosion",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a single cell"
+          },
+          {
+            "name": "Cells in a stack (cells)",
+            "target": 5,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Assemble short stack and ensure testing capability for short stack"
+          },
+          {
+            "name": "Energy efficiency (kWh/kgH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a short stack"
+          },
+          {
+            "name": "Avg Cell Voltage (@ 52A, 55C, 35barH2) (V/cell)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a short stack"
+          },
+          {
+            "name": "FAT passed",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate capability in a short stack"
+          },
+          {
+            "name": "Cell count (cells)",
+            "target": 23,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Assemble Sesame stack and ensure testing capability for full stack"
+          },
+          {
+            "name": "# of stack (stack)",
+            "target": 1,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Hand off stack to Sesame System Integration project"
+          },
+          {
+            "name": "Energy consumption (kWh/kgH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm capability of whole stack"
+          },
+          {
+            "name": "<46 V at 52 A, 55 C, 35 barH2 (V)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm capability of whole stack"
+          },
+          {
+            "name": "FAT passed (FAT)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Confirm capability of whole stack"
+          }
+        ]
+      },
+      "10004": {
+        "name": "3rd party validation stack",
+        "parentName": "Assemble and Qualify Tera Stacks for Internal & External Customers",
+        "slug": "ez-3rd-party-validati-10004",
+        "score": 44,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": 6,
+        "delayDays": 0,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "",
+        "productLineLabel": "",
+        "productModel": "",
+        "productModelLabel": "",
+        "keyResults": [],
+        "kpis": []
+      },
+      "10005": {
+        "name": "(Fourier) Demonstrate Functional Tera 25-30-R5 Stack Prototype and Validate for Fourier use",
+        "parentName": "",
+        "slug": "ez-tera-stack-fourier-demonstrat-10005",
+        "score": 0,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 36,
+        "delayDays": 30,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Prepare materials for Fourier short stack assembly",
+            "state": "passed",
+            "endDate": "2026-04-29",
+            "completedDate": "2026-04-29"
+          },
+          {
+            "name": "Assemble short stack and ensure load cycling capability for short stack",
+            "state": "overdue",
+            "endDate": "2026-04-30",
+            "completedDate": null
+          },
+          {
+            "name": "Ensure short stack passes FAT (Fourier)",
+            "state": "overdue",
+            "endDate": "2026-05-05",
+            "completedDate": null
+          },
+          {
+            "name": "Demonstrate load cycling capability of test stand and short stack",
+            "state": "overdue",
+            "endDate": "2026-05-12",
+            "completedDate": null
+          },
+          {
+            "name": "Assemble Fourier stack",
+            "state": "overdue",
+            "endDate": "2026-05-19",
+            "completedDate": null
+          },
+          {
+            "name": "Ensure full stack passes FAT",
+            "state": "overdue",
+            "endDate": "2026-05-21",
+            "completedDate": null
+          },
+          {
+            "name": "Demonstrate load cycling capability of full stack",
+            "state": "overdue",
+            "endDate": "2026-06-05",
+            "completedDate": null
+          }
+        ],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "product-1775244734357",
+        "productLineLabel": "Tera Stack",
+        "productModel": "",
+        "productModelLabel": "",
+        "keyResults": [],
+        "kpis": [
+          {
+            "name": "Plates & Meshes",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare materials for Fourier short stack assembly"
+          },
+          {
+            "name": "MEAs",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare materials for Fourier short stack assembly"
+          },
+          {
+            "name": "PTLs & Pt-coated C clothes",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare materials for Fourier short stack assembly"
+          },
+          {
+            "name": "Gaskets (Inter-MPP & cell)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare materials for Fourier short stack assembly"
+          },
+          {
+            "name": "Bolts & Nuts",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Prepare materials for Fourier short stack assembly"
+          },
+          {
+            "name": "Cell count (cells)",
+            "target": 5,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Assemble short stack and ensure load cycling capability for short stack"
+          },
+          {
+            "name": "FAT passed",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Ensure short stack passes FAT (Fourier)"
+          },
+          {
+            "name": "# of load cycles (cycles)",
+            "target": 400,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate load cycling capability of test stand and short stack"
+          },
+          {
+            "name": "Cell count (cells)",
+            "target": 30,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Assemble Fourier stack"
+          },
+          {
+            "name": "FAT passed",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Ensure full stack passes FAT"
+          },
+          {
+            "name": "# of load cycles (cycles)",
+            "target": 8000,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Demonstrate load cycling capability of full stack"
+          }
+        ]
+      },
+      "10006": {
+        "name": "Establish Testing Capabilities",
+        "parentName": "",
+        "slug": "ez-establish-testing--10006",
+        "score": 0,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 10,
+        "delayDays": 57,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Improve %H2-in-O2 measurement accuracy",
+            "state": "passed-late",
+            "endDate": "2026-04-08",
+            "completedDate": "2026-04-09"
+          },
+          {
+            "name": "Enable short stack testing",
+            "state": "passed-late",
+            "endDate": "2026-04-17",
+            "completedDate": "2026-04-24"
+          },
+          {
+            "name": "Enable Sesame full stack testing",
+            "state": "overdue",
+            "endDate": "2026-04-28",
+            "completedDate": null
+          },
+          {
+            "name": "Enable load cycling",
+            "state": "overdue",
+            "endDate": "2026-05-08",
+            "completedDate": null
+          }
+        ],
+        "division": "electrolyzer",
+        "divisionLabel": "Electrolyzer",
+        "productLine": "",
+        "productLineLabel": "",
+        "productModel": "",
+        "productModelLabel": "",
+        "keyResults": [],
+        "kpis": [
+          {
+            "name": "Fluctuation around setpoint (%)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Improve %H2-in-O2 measurement accuracy"
+          },
+          {
+            "name": "Number of runs",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Improve %H2-in-O2 measurement accuracy"
+          },
+          {
+            "name": "Low end of calibration curve (ppm)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Improve %H2-in-O2 measurement accuracy"
+          },
+          {
+            "name": "Power Supply Voltage (V)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "Power Supply Current (A)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "Temperature (C)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "Flowrate (mlpm)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "Vessel volume (L)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "H2 pressure (barH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable short stack testing"
+          },
+          {
+            "name": "Power Supply Voltage (V)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "Power Supply Current (A)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "H2 pressure (barH2)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "Temperature (C)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "Flowrate (lpm)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "Vessel volume (L)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable Sesame full stack testing"
+          },
+          {
+            "name": "BP control electrified",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          },
+          {
+            "name": "BP ramp rate (bar/s)",
+            "target": 5,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          },
+          {
+            "name": "Current ramp rate (A/s)",
+            "target": 10,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          },
+          {
+            "name": "Automated",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          },
+          {
+            "name": "BP and electrical aligned",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          },
+          {
+            "name": "Demonstration Cycles (cycles)",
+            "target": 0,
+            "current": 0,
+            "direction": "increase",
+            "source": "gate",
+            "gateName": "Enable load cycling"
+          }
+        ]
+      }
+    }
+  },
+  "_version": 307,
+  "_savedBy": "Team member",
+  "_savedAt": "2026-06-24T22:07:31.075Z"
+}

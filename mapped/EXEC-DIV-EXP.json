@@ -1,0 +1,350 @@
+{
+  "objectiveState": [
+    {
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "status": "not-started"
+    },
+    {
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "status": "not-started"
+    }
+  ],
+  "keyResults": [
+    {
+      "id": "KR-EXP-2026Q1-01-1",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Flow",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-2",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Raw Materials",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-3",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Electricity",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-4",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Gas",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-5",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Product",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-6",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Input agreement",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-7",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "Ton/day production rate",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-8",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "$/ton COGS",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-9",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "kWh/ton electricity usage",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    },
+    {
+      "id": "KR-EXP-2026Q1-01-10",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "statement": "BTU/ton gas usage",
+      "unit": null,
+      "direction": "up",
+      "target": null,
+      "groupId": null,
+      "status": null
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-EXP-2026Q1-01-1",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Definition of steelmaking process flow",
+      "gate_id": null,
+      "plannedDate": 2343,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-01-2",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Demonstrate initial steelmaking model",
+      "gate_id": null,
+      "plannedDate": 2372,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-01-3",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Demonstrate steelmaking model achieves baseline KPIs",
+      "gate_id": null,
+      "plannedDate": 2403,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-01-4",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Incorporate hydrogen into steelmaking model",
+      "gate_id": null,
+      "plannedDate": 2434,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-01-5",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Determine baseline hydrogen rate and price targets in steelmaking model",
+      "gate_id": null,
+      "plannedDate": 2464,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-01-6",
+      "objectiveId": "OBJ-EXP-2026Q1-01",
+      "name": "Determine levelized hydrogen production rate and price with storage",
+      "gate_id": null,
+      "plannedDate": 2464,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-1",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Calibrate electrolyzer performance at 80C",
+      "gate_id": null,
+      "plannedDate": 2339,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-2",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Calibrate electrolyzer durability at 80C, 3A/cm2",
+      "gate_id": null,
+      "plannedDate": 2353,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-3",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Calibrate electrolyzer model to 60C",
+      "gate_id": null,
+      "plannedDate": 2367,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-4",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Define electrolyzer operating conditions and reference data",
+      "gate_id": null,
+      "plannedDate": 2372,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-5",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Calibrate electrolyzer durability at 60C",
+      "gate_id": null,
+      "plannedDate": 2381,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-6",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Determine LCOH with validated electrolyzer performance model and provided cost",
+      "gate_id": null,
+      "plannedDate": 2403,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-7",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Determine optimal stand-alone electrolyzer sizing and control without storage",
+      "gate_id": null,
+      "plannedDate": 2437,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-8",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Determine optimal stand-alone  electrolyzer sizing and control with storage",
+      "gate_id": null,
+      "plannedDate": 2451,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    },
+    {
+      "id": "SG-EXP-2026Q1-02-9",
+      "objectiveId": "OBJ-EXP-2026Q1-02",
+      "name": "Determine optimal electrolyzer sizing and control when integrated with the steelmaking process",
+      "gate_id": null,
+      "plannedDate": 2465,
+      "actualDate": null,
+      "status": null,
+      "order": 0
+    }
+  ],
+  "tasks": [],
+  "kpiDefs": [],
+  "kpiUpdates": [
+    {
+      "id": "KPI-EXP-2026Q1-01-1",
+      "groupId": "KR-EXP-2026Q1-01-1",
+      "value": 0,
+      "timestamp": 1782412981248,
+      "note": "migrated from gate:Definition of steelmaking process flow",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-2",
+      "groupId": "KR-EXP-2026Q1-01-2",
+      "value": 0,
+      "timestamp": 1782412981249,
+      "note": "migrated from gate:Definition of steelmaking process flow",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-3",
+      "groupId": "KR-EXP-2026Q1-01-3",
+      "value": 0,
+      "timestamp": 1782412981250,
+      "note": "migrated from gate:Definition of steelmaking process flow",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-4",
+      "groupId": "KR-EXP-2026Q1-01-4",
+      "value": 0,
+      "timestamp": 1782412981251,
+      "note": "migrated from gate:Definition of steelmaking process flow",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-5",
+      "groupId": "KR-EXP-2026Q1-01-5",
+      "value": 0,
+      "timestamp": 1782412981252,
+      "note": "migrated from gate:Definition of steelmaking process flow",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-6",
+      "groupId": "KR-EXP-2026Q1-01-6",
+      "value": 0,
+      "timestamp": 1782412981253,
+      "note": "migrated from gate:Demonstrate initial steelmaking model",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-7",
+      "groupId": "KR-EXP-2026Q1-01-7",
+      "value": 0,
+      "timestamp": 1782412981254,
+      "note": "migrated from gate:Demonstrate initial steelmaking model",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-8",
+      "groupId": "KR-EXP-2026Q1-01-8",
+      "value": 0,
+      "timestamp": 1782412981255,
+      "note": "migrated from gate:Demonstrate initial steelmaking model",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-9",
+      "groupId": "KR-EXP-2026Q1-01-9",
+      "value": 0,
+      "timestamp": 1782412981256,
+      "note": "migrated from gate:Demonstrate initial steelmaking model",
+      "sourceKpiId": null
+    },
+    {
+      "id": "KPI-EXP-2026Q1-01-10",
+      "groupId": "KR-EXP-2026Q1-01-10",
+      "value": 0,
+      "timestamp": 1782412981257,
+      "note": "migrated from gate:Demonstrate initial steelmaking model",
+      "sourceKpiId": null
+    }
+  ]
+}

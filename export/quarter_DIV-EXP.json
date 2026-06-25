@@ -1,0 +1,1265 @@
+{
+  "projects": [
+    {
+      "id": 10000,
+      "name": "Determine the value proposition of on-site hydrogen production at a steelmaker near Mobile, AL",
+      "start": "2026-01-01",
+      "end": "2026-12-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "task",
+      "milestone": false,
+      "locked": false,
+      "tentative": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": null,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "milestoneReport": null
+    },
+    {
+      "id": 10001,
+      "name": "Develop the steelmaking model with integrated hydrogen usage",
+      "start": "2026-01-01",
+      "end": "2026-12-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "sg-1777566863959-0",
+          "name": "Definition of steelmaking process flow",
+          "endDate": "2026-06-01",
+          "startDate": "2026-01-01",
+          "subProjectId": 10035,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Flow",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Raw Materials",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Electricity",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Gas",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Product",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "sg-1777566874243-1",
+          "name": "Demonstrate initial steelmaking model",
+          "endDate": "2026-06-30",
+          "startDate": "2026-06-02",
+          "subProjectId": 10036,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Input agreement",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "Ton/day production rate",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "$/ton COGS",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "kWh/ton electricity usage",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "BTU/ton gas usage",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "sg-1777566880911-2",
+          "name": "Demonstrate steelmaking model achieves baseline KPIs",
+          "endDate": "2026-07-31",
+          "startDate": "2026-07-01",
+          "subProjectId": 10037,
+          "baselineEndDate": null,
+          "kpis": [
+            {
+              "name": "Ton/day production rate",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "$/ton COGS",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "kWh/ton electricity usage",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            },
+            {
+              "name": "BTU/ton gas usage",
+              "direction": "increase",
+              "target": 0,
+              "current": 0
+            }
+          ]
+        },
+        {
+          "id": "sg-1777566885875-3",
+          "name": "Incorporate hydrogen into steelmaking model",
+          "endDate": "2026-08-31",
+          "startDate": "2026-08-01",
+          "subProjectId": 10038,
+          "baselineEndDate": null,
+          "kpis": []
+        },
+        {
+          "id": "sg-1777566892207-4",
+          "name": "Determine baseline hydrogen rate and price targets in steelmaking model",
+          "endDate": "2026-09-30",
+          "startDate": "2026-09-01",
+          "subProjectId": 10039,
+          "baselineEndDate": null,
+          "kpis": []
+        },
+        {
+          "id": "qt-morjol2ypf5",
+          "name": "Determine levelized hydrogen production rate and price with storage",
+          "endDate": "2026-09-30",
+          "startDate": "2026-09-30",
+          "subProjectId": 10040,
+          "baselineEndDate": "2026-09-30",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "tentative": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "milestoneReport": null,
+      "assignedTo": [
+        "coreystaller@celadynetech.com"
+      ]
+    },
+    {
+      "id": 10002,
+      "name": "Develop the electrolyzer model to predict Tera electrolyzer performance",
+      "start": "2026-01-01",
+      "end": "2026-12-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "kpis": [],
+      "milestoneKpis": [],
+      "keyResults": [],
+      "stageGates": [
+        {
+          "id": "qt-mori8acaadn",
+          "name": "Calibrate electrolyzer performance at 80C",
+          "endDate": "2026-05-28",
+          "startDate": "2026-01-01",
+          "subProjectId": 10041,
+          "baselineEndDate": "2026-05-28",
+          "kpis": []
+        },
+        {
+          "id": "qt-mori8uk3p52",
+          "name": "Calibrate electrolyzer durability at 80C, 3A/cm2",
+          "endDate": "2026-06-11",
+          "startDate": "2026-05-29",
+          "subProjectId": 10042,
+          "baselineEndDate": "2026-06-11",
+          "kpis": []
+        },
+        {
+          "id": "qt-moriadtavzg",
+          "name": "Calibrate electrolyzer model to 60C",
+          "endDate": "2026-06-25",
+          "startDate": "2026-06-12",
+          "subProjectId": 10043,
+          "baselineEndDate": "2026-06-25",
+          "kpis": []
+        },
+        {
+          "id": "qt-mori7yeu2ba",
+          "name": "Define electrolyzer operating conditions and reference data",
+          "endDate": "2026-06-30",
+          "startDate": "2026-06-26",
+          "subProjectId": 10045,
+          "baselineEndDate": "2026-06-30",
+          "kpis": []
+        },
+        {
+          "id": "qt-moriatcul6r",
+          "name": "Calibrate electrolyzer durability at 60C",
+          "endDate": "2026-07-09",
+          "startDate": "2026-07-01",
+          "subProjectId": 10046,
+          "baselineEndDate": "2026-07-09",
+          "kpis": []
+        },
+        {
+          "id": "qt-morie9vgedb",
+          "name": "Determine LCOH with validated electrolyzer performance model and provided cost",
+          "endDate": "2026-07-31",
+          "startDate": "2026-07-10",
+          "subProjectId": 10048,
+          "baselineEndDate": "2026-07-31",
+          "kpis": []
+        },
+        {
+          "id": "qt-morif4g7smp",
+          "name": "Determine optimal stand-alone electrolyzer sizing and control without storage",
+          "endDate": "2026-09-03",
+          "startDate": "2026-08-01",
+          "subProjectId": 10050,
+          "baselineEndDate": "2026-09-03",
+          "kpis": []
+        },
+        {
+          "id": "qt-morkewf0t1x",
+          "name": "Determine optimal stand-alone  electrolyzer sizing and control with storage",
+          "endDate": "2026-09-17",
+          "startDate": "2026-09-04",
+          "subProjectId": 10051,
+          "baselineEndDate": "2026-09-17",
+          "kpis": []
+        },
+        {
+          "id": "qt-moriatcul6r",
+          "name": "Determine optimal electrolyzer sizing and control when integrated with the steelmaking process",
+          "endDate": "2026-10-01",
+          "startDate": "2026-09-18",
+          "subProjectId": 10054,
+          "baselineEndDate": "2026-10-01",
+          "kpis": []
+        }
+      ],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "projectType": "objective",
+      "milestone": false,
+      "locked": false,
+      "tentative": false,
+      "datePrecision": "quarter",
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "notes": "",
+      "parentId": 10000,
+      "isStageGate": false,
+      "stageGateId": null,
+      "manuallyCompleted": false,
+      "baselineEndDate": null,
+      "milestoneReport": null,
+      "assignedTo": [
+        "coreystaller@celadynetech.com"
+      ]
+    },
+    {
+      "name": "Definition of steelmaking process flow",
+      "start": "2026-01-01",
+      "end": "2026-06-01",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7djwu",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": true,
+      "completedDate": "2026-06-15",
+      "baselineEndDate": null,
+      "kpis": [
+        {
+          "name": "Flow",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Raw Materials",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Electricity",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Gas",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Product",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10035,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate initial steelmaking model",
+      "start": "2026-06-02",
+      "end": "2026-06-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7diqq",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [
+        {
+          "name": "Input agreement",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "Ton/day production rate",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "$/ton COGS",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "kWh/ton electricity usage",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "BTU/ton gas usage",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10035,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10036,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Demonstrate steelmaking model achieves baseline KPIs",
+      "start": "2026-07-01",
+      "end": "2026-07-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7dnoy",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "kpi",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [
+        {
+          "name": "Ton/day production rate",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "$/ton COGS",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "kWh/ton electricity usage",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        },
+        {
+          "name": "BTU/ton gas usage",
+          "direction": "increase",
+          "target": 0,
+          "current": 0
+        }
+      ],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10036,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10037,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Incorporate hydrogen into steelmaking model",
+      "start": "2026-08-01",
+      "end": "2026-08-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7d3fj",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10037,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10038,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine baseline hydrogen rate and price targets in steelmaking model",
+      "start": "2026-09-01",
+      "end": "2026-09-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7del7",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": null,
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10038,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10039,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine levelized hydrogen production rate and price with storage",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72sc7drk6",
+      "parentId": 10001,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-09-30",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10039,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10040,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Calibrate electrolyzer performance at 80C",
+      "start": "2026-01-01",
+      "end": "2026-05-28",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1r2x1",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": true,
+      "completedDate": "2026-06-15",
+      "baselineEndDate": "2026-05-28",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10041,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Calibrate electrolyzer durability at 80C, 3A/cm2",
+      "start": "2026-05-29",
+      "end": "2026-06-11",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1rxe7",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-11",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10041,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10042,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Calibrate electrolyzer model to 60C",
+      "start": "2026-06-12",
+      "end": "2026-06-25",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1rylg",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-25",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10042,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10043,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Define electrolyzer operating conditions and reference data",
+      "start": "2026-06-26",
+      "end": "2026-06-30",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1r5s4",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-06-30",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10043,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10045,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Calibrate electrolyzer durability at 60C",
+      "start": "2026-07-01",
+      "end": "2026-07-09",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1ruvz",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-07-09",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10045,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10046,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine LCOH with validated electrolyzer performance model and provided cost",
+      "start": "2026-07-10",
+      "end": "2026-07-31",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1rc28",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-07-31",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10046,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10048,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine optimal stand-alone electrolyzer sizing and control without storage",
+      "start": "2026-08-01",
+      "end": "2026-09-03",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1rs0q",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-09-03",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10048,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10050,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine optimal stand-alone  electrolyzer sizing and control with storage",
+      "start": "2026-09-04",
+      "end": "2026-09-17",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1r82y",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-09-17",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10050,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10051,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    },
+    {
+      "name": "Determine optimal electrolyzer sizing and control when integrated with the steelmaking process",
+      "start": "2026-09-18",
+      "end": "2026-10-01",
+      "division": "electrolyzer",
+      "effortType": "NRE",
+      "projectType": "task",
+      "isStageGate": true,
+      "stageGateId": "qt-mp72xw1rmcm",
+      "parentId": 10002,
+      "productLine": "product-1777565741600",
+      "productModel": "",
+      "progress": 0,
+      "progressType": "percentage",
+      "manuallyCompleted": false,
+      "completedDate": null,
+      "baselineEndDate": "2026-10-01",
+      "kpis": [],
+      "milestoneKpis": [],
+      "notes": "",
+      "resources": [],
+      "equipment": [],
+      "dependencies": [
+        {
+          "id": 10051,
+          "type": "blocking",
+          "leadDays": 0,
+          "hidden": true
+        }
+      ],
+      "keyResults": [],
+      "stageGates": [],
+      "stageGatesLinked": true,
+      "associatedObjectives": [],
+      "datePrecision": "exact",
+      "locked": false,
+      "id": 10054,
+      "milestone": false,
+      "tentative": false,
+      "trl": null,
+      "mrl": null,
+      "milestoneReport": null
+    }
+  ],
+  "resources": [],
+  "equipment": [],
+  "products": [
+    {
+      "id": "product-1777565741600",
+      "name": "Tera System",
+      "code": "Tera",
+      "description": "",
+      "division": "electrolyzer",
+      "models": []
+    }
+  ],
+  "divisionColors": {
+    "fuelcell": {
+      "bg": "#EEEDFE",
+      "bar": "#534AB7",
+      "text": "#3C3489"
+    },
+    "electrolyzer": {
+      "bg": "#E1F5EE",
+      "bar": "#1D9E75",
+      "text": "#085041"
+    },
+    "exploration": {
+      "bg": "#E6F1FB",
+      "bar": "#378ADD",
+      "text": "#0C447C"
+    }
+  },
+  "productColors": {
+    "product-1777565741600": "#0e7127"
+  },
+  "resourceMeta": {},
+  "equipmentMeta": {},
+  "changelog": [
+    {
+      "id": "cl-1777566841926",
+      "ts": 1777566841926,
+      "type": "create",
+      "projectId": 10002,
+      "projectName": "Develop the electrolyzer model to predict Tera electrolyzer performance",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1777566804414",
+      "ts": 1777566804414,
+      "type": "create",
+      "projectId": 10001,
+      "projectName": "Develop the steelmaking model with integrated hydrogen usage",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    },
+    {
+      "id": "cl-1777565709400",
+      "ts": 1777565709400,
+      "type": "create",
+      "projectId": 10000,
+      "projectName": "Determine the value proposition of on-site hydrogen production at a steelmaker near Mobile, AL",
+      "field": "",
+      "oldVal": "",
+      "newVal": "",
+      "note": ""
+    }
+  ],
+  "collapsed": [
+    10001
+  ],
+  "importAssociations": {},
+  "importProductAssoc": {},
+  "importDelayExclusions": [],
+  "importTypeFilter": [
+    "objective",
+    "stagegate"
+  ],
+  "computedStatus": {
+    "computedAt": "2026-06-24T22:06:22.814Z",
+    "objectives": {
+      "10001": {
+        "name": "Develop the steelmaking model with integrated hydrogen usage",
+        "parentName": "Determine the value proposition of on-site hydrogen production at a steelmaker near Mobile, AL",
+        "slug": "ez-tera-system-develop-the-steelm-10001",
+        "score": 61,
+        "status": "watch",
+        "progress": 0,
+        "daysLeft": 99,
+        "delayDays": 0,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Definition of steelmaking process flow",
+            "state": "passed-late",
+            "endDate": "2026-06-01",
+            "completedDate": "2026-06-15"
+          },
+          {
+            "name": "Demonstrate initial steelmaking model",
+            "state": "pending",
+            "endDate": "2026-06-30",
+            "completedDate": null
+          },
+          {
+            "name": "Demonstrate steelmaking model achieves baseline KPIs",
+            "state": "pending",
+            "endDate": "2026-07-31",
+            "completedDate": null
+          },
+          {
+            "name": "Incorporate hydrogen into steelmaking model",
+            "state": "pending",
+            "endDate": "2026-08-31",
+            "completedDate": null
+          },
+          {
+            "name": "Determine baseline hydrogen rate and price targets in steelmaking model",
+            "state": "pending",
+            "endDate": "2026-09-30",
+            "completedDate": null
+          },
+          {
+            "name": "Determine levelized hydrogen production rate and price with storage",
+            "state": "pending",
+            "endDate": "2026-09-30",
+            "completedDate": null
+          }
+        ]
+      },
+      "10002": {
+        "name": "Develop the electrolyzer model to predict Tera electrolyzer performance",
+        "parentName": "Determine the value proposition of on-site hydrogen production at a steelmaker near Mobile, AL",
+        "slug": "ez-tera-system-develop-the-electr-10002",
+        "score": 16,
+        "status": "atrisk",
+        "progress": 0,
+        "daysLeft": 112,
+        "delayDays": 0,
+        "isComplete": false,
+        "isActive": true,
+        "gates": [
+          {
+            "name": "Calibrate electrolyzer performance at 80C",
+            "state": "passed-late",
+            "endDate": "2026-05-28",
+            "completedDate": "2026-06-15"
+          },
+          {
+            "name": "Calibrate electrolyzer durability at 80C, 3A/cm2",
+            "state": "overdue",
+            "endDate": "2026-06-11",
+            "completedDate": null
+          },
+          {
+            "name": "Calibrate electrolyzer model to 60C",
+            "state": "pending",
+            "endDate": "2026-06-25",
+            "completedDate": null
+          },
+          {
+            "name": "Define electrolyzer operating conditions and reference data",
+            "state": "pending",
+            "endDate": "2026-06-30",
+            "completedDate": null
+          },
+          {
+            "name": "Calibrate electrolyzer durability at 60C",
+            "state": "pending",
+            "endDate": "2026-07-09",
+            "completedDate": null
+          },
+          {
+            "name": "Determine LCOH with validated electrolyzer performance model and provided cost",
+            "state": "pending",
+            "endDate": "2026-07-31",
+            "completedDate": null
+          },
+          {
+            "name": "Determine optimal stand-alone electrolyzer sizing and control without storage",
+            "state": "pending",
+            "endDate": "2026-09-03",
+            "completedDate": null
+          },
+          {
+            "name": "Determine optimal stand-alone  electrolyzer sizing and control with storage",
+            "state": "pending",
+            "endDate": "2026-09-17",
+            "completedDate": null
+          },
+          {
+            "name": "Determine optimal electrolyzer sizing and control when integrated with the steelmaking process",
+            "state": "pending",
+            "endDate": "2026-10-01",
+            "completedDate": null
+          }
+        ]
+      }
+    }
+  },
+  "_version": 277,
+  "_savedBy": "Team member",
+  "_savedAt": "2026-06-24T22:06:22.824Z"
+}
