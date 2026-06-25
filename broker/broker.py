@@ -248,9 +248,11 @@ app.include_router(state_router)
 _origins = [o.strip() for o in _env('ALLOWED_ORIGINS').split(',') if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins or ['*'],
-    allow_methods=['GET', 'POST', 'PATCH', 'OPTIONS'],
-    allow_headers=['Authorization', 'Content-Type'],
+    allow_origins=_origins or ['*'] or ["https://celadynestaller.github.io"],
+    allow_methods=['GET', 'PUT', 'POST', 'PATCH', 'OPTIONS'],
+    allow_headers=['Authorization', 'Content-Type', 'If-Match'],
+    expose_headers=['ETag'],
+    max_age=600,
 )
 
 
