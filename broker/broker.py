@@ -242,6 +242,8 @@ def conflict_response(current):
 
 # --------------------------------------------------------------- app
 app = FastAPI(title='Division Tracker Broker')
+from broker_patch import state_router
+app.include_router(state_router)
 
 _origins = [o.strip() for o in _env('ALLOWED_ORIGINS').split(',') if o.strip()]
 app.add_middleware(
