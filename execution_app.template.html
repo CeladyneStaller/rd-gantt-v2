@@ -66,6 +66,8 @@
   table.kpitable{margin:0}
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
+  .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
+  .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -93,6 +95,7 @@
   <div id="subKR" class="sub"></div>
   <div id="subSG" class="sub"></div>
   <div id="subTASK" class="sub"></div>
+  <div id="initPanel" class="sub"></div>
 </main>
 
 <script>/*__CORE__*/</script>
@@ -269,16 +272,23 @@ function saveSub(){
   const data = readSubEditor(scope);
   const arr = SUB[type].arr();
   if(e){
-    Object.assign(arr.find(x=>x.id===e.id), data);
+    const rec = arr.find(x=>x.id===e.id);
+    if(type==="kpi" && isMemberKpi(rec)){ rec.target = (data.target===undefined ? null : data.target); } // override only
+    else Object.assign(rec, data);
   } else {
-    const id = RD.allocId(SUB[type].idType, selectedObj, arr.map(x=>x.id));
-    const base = { id, objectiveId:selectedObj };
-    if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; }
+    const initHost = (type==="kpi" && a.hostType==="initiative");
+    const objScope = initHost ? null : selectedObj;
+    const parent = initHost ? a.hostId : selectedObj;
+    const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
+    const base = { id, objectiveId:objScope };
+    if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     arr.push(Object.assign(base, data));
   }
   addingFor=null; editingSub=null; renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
 }
 function delSub(type, id){
+  if(type==="kpi"){ const k=exec.kpis.find(x=>x.id===id);
+    if(k && isDefinerWithLinks(k)){ setMsg("This KPI defines a linked metric — unlink its members first.","err"); return; } }
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
   armedDel=null;
   if(type==="keyResult" || type==="stageGate"){
@@ -304,8 +314,9 @@ function postRead(host, kpiId){
 /* ---------------- render: objective header + sub-tables ---------------- */
 function renderAll(){
   if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
+  if(divisionId) renderInitPanel(); else document.getElementById("initPanel").innerHTML="";
   const objs = myObjectives();
-  if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; clearSubs(); return; }
+  if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   const sc = RD.objectiveScore(selectedObj, emForCore());
   const b = RD.band(sc);
@@ -316,28 +327,137 @@ function renderAll(){
       <div class="hint" style="margin:6px 0 0">${esc(o.statement||o.id)} · <span class="mono">${o.id}</span> · ${o.quarter||'—'}</div></div></div>`;
   renderKRs(); renderGates(); renderTasks();
 }
-function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); }
+function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
 
-function kpiTable(hostType, hostId){
-  const rows = exec.kpis.filter(k=>k.objectiveId===selectedObj && k.hostType===hostType && k.hostId===hostId);
+/* ---------------- KPI link groups (v1.3.1) ---------------- */
+const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
+function objById(id){ return (portfolio.objectives||[]).find(o=>o.id===id); }
+function initiativeIdOf(objId){ const o=objById(objId); return o?o.initiativeId:null; }
+function divInitiatives(){ return (portfolio.initiatives||[]).filter(i=>i.divisionId===divisionId); }
+function initName(id){ const i=(portfolio.initiatives||[]).find(x=>x.id===id); return i?(i.name||i.id):id; }
+function krName(id){ const r=exec.keyResults.find(x=>x.id===id); return r?(r.statement||r.id):id; }
+function gateName(id){ const g=exec.stageGates.find(x=>x.id===id); return g?(g.name||g.id):id; }
+function taskName(id){ const t=exec.tasks.find(x=>x.id===id); return t?(t.name||t.id):id; }
+function hostLabel(k){
+  if(k.hostType==="initiative") return "init: "+esc(initName(k.hostId));
+  if(k.hostType==="keyResult")  return "KR: "+esc(krName(k.hostId));
+  if(k.hostType==="stageGate")  return "gate: "+esc(gateName(k.hostId));
+  return "task: "+esc(taskName(k.hostId));
+}
+function groupOf(k){ return k.groupId||k.id; }
+function groupMemberCount(g){ return exec.kpis.filter(k=>groupOf(k)===g).length; }
+function isMemberKpi(k){ return !!k.groupId && !k.isDefiner; }
+function isDefinerWithLinks(k){ return !!k.groupId && k.isDefiner && groupMemberCount(k.groupId)>1; }
+function groupIdsInUse(){ return exec.kpis.map(k=>k.groupId).filter(Boolean); }
+function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
+
+function linkCandidates(hostType, hostId){
+  const O = hostType==="initiative" ? null : selectedObj;
+  const initId = O ? initiativeIdOf(O) : null;
+  const here = LEVEL[hostType];
+  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
+  const seen=new Set(), out=[];
+  exec.kpis.forEach(k=>{
+    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId);
+    if(!inScope) return;
+    const g=groupOf(k);
+    if(seen.has(g) || occupied.has(g)) return;
+    seen.add(g); out.push(RD.definerOf(k, exec.kpis));
+  });
+  return out;
+}
+function makeLinkMember(hostType, hostId, definerId){
+  const def = exec.kpis.find(k=>k.id===definerId); if(!def) return;
+  let g = def.groupId;
+  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  const objScope = hostType==="initiative" ? null : selectedObj;
+  const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
+  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
+                   name:null, direction:null, unit:null, target:null, order:0 });
+  addingFor=null; renderAll(); setMsg("Linked (Save to persist).","ok");
+}
+function unlinkKpi(id){
+  const m = exec.kpis.find(k=>k.id===id); if(!m) return;
+  m.name = RD.kpiName(m, exec.kpis); m.direction = RD.kpiDirection(m, exec.kpis); m.unit = RD.kpiUnit(m, exec.kpis);
+  if(m.target==null) m.target = RD.effTarget(m, exec.kpis);
+  m.groupId = null; m.isDefiner = true;
+  renderAll(); setMsg("Unlinked (Save to persist).","ok");
+}
+function renderLinkEditor(hostType, hostId){
+  const cands = linkCandidates(hostType, hostId);
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, or one at the initiative level, first.</p></div>
+    <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return `<div class="ed"><label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
+    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, exec.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+
+    `</select></label></div><div class="row-actions" style="margin:0 0 8px">
+    <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
+    <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+}
+function renderKpiOverrideEditor(rec){
+  const dir = RD.kpiDirection(rec, exec.kpis), unit = RD.kpiUnit(rec, exec.kpis);
+  const inhT = RD.effTarget(rec, exec.kpis), own = rec.target;
+  let tEd;
+  if(dir==="range"){
+    tEd = `<label>Override lo<input data-f="targetLo" class="tiny" type="number" value="${(own&&typeof own==='object')?own.lo:''}"/></label>
+           <label>Override hi<input data-f="targetHi" class="tiny" type="number" value="${(own&&typeof own==='object')?own.hi:''}"/></label>
+           <input type="hidden" data-f="direction" value="range"/>`;
+  } else {
+    tEd = `<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
+  }
+  return `<div class="ed">
+    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,exec.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,exec.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
+    ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
+    <button class="act mini" data-save="1">Save override</button>
+    <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+}
+function renderInitPanel(){
+  const host=document.getElementById("initPanel");
+  const inits=divInitiatives();
+  let html=`<h3>Initiative-level metrics · ${esc(divName(divisionId))} <span class="pill">shared across objectives · define here, link from a Key Result</span></h3>`;
+  if(!inits.length){ host.innerHTML=html+`<p class="hint">no initiatives in this division</p>`; return; }
+  inits.forEach(I=>{
+    const n = exec.kpis.filter(k=>k.hostType==="initiative" && k.hostId===I.id).length;
+    html+=`<div class="hostcard"><div class="hosthead">
+      <span class="hn">${esc(I.name||I.id)}</span>
+      <span class="gate-meta">${n} metric${n===1?'':'s'}</span>
+      <span class="ha"><button class="ghost mini" data-addkpi="initiative:${I.id}">+ KPI</button></span>
+      </div>${kpiTable("initiative", I.id, null)}</div>`;
+  });
+  host.innerHTML=html; wireExec(host);
+}
+
+function kpiTable(hostType, hostId, objScope){
+  const AK = exec.kpis, EM = emForCore();
+  const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   let h = `<table class="kpitable"><thead><tr><th>KPI</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
-  if(!rows.length) h += `<tr><td colspan="7" class="hint">no KPIs yet — add a measurement</td></tr>`;
+  if(!rows.length) h += `<tr><td colspan="7" class="hint">no KPIs yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
-    const cv = RD.kpiCurrentValue(k.id, emForCore());
-    const s = RD.kpiScore(k, cv);
-    const tgt = k.target==null?'—':((typeof k.target==='object')?`${k.target.lo}–${k.target.hi}`:k.target)+(k.unit?` ${esc(k.unit)}`:'');
-    h += `<tr><td>${esc(k.name||'')}</td><td class="mono">${k.direction||''}</td><td class="mono">${tgt}</td>
+    const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
+    const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = RD.kpiScoreResolved(k, AK, EM);
+    const member = isMemberKpi(k), defLinks = isDefinerWithLinks(k);
+    const tgtCell = fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
+    let badge = '';
+    if(member) badge = `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
+    else if(defLinks) badge = `<span class="linkbadge" title="defines a linked metric">🔗 defines ${groupMemberCount(k.groupId)-1}</span>`;
+    const acts = member
+      ? `<button class="ghost mini" data-edit="kpi:${k.id}">override</button><button class="ghost mini" data-unlink="${k.id}">unlink</button>`
+      : `<button class="ghost mini" data-edit="kpi:${k.id}">edit</button>`;
+    h += `<tr><td>${esc(name||'')} ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
       <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
       <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
         <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
-      <td class="row-actions"><button class="ghost mini" data-edit="kpi:${k.id}">edit</button>
+      <td class="row-actions">${acts}
         <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
-  if(addingFor && addingFor.type==="kpi" && addingFor.hostType===hostType && addingFor.hostId===hostId) h += renderSubEditor("kpi", {});
-  if(editingSub && editingSub.type==="kpi"){ const k=exec.kpis.find(x=>x.id===editingSub.id); if(k && k.hostType===hostType && k.hostId===hostId) h += renderSubEditor("kpi", k); }
+  if(addingFor && addingFor.hostType===hostType && addingFor.hostId===hostId){
+    if(addingFor.type==="kpi") h += renderSubEditor("kpi", {});
+    else if(addingFor.type==="link") h += renderLinkEditor(hostType, hostId);
+  }
+  if(editingSub && editingSub.type==="kpi"){ const k=AK.find(x=>x.id===editingSub.id);
+    if(k && k.hostType===hostType && k.hostId===hostId && k.objectiveId===objScope) h += (isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k)); }
   return h;
 }
 function renderKRs(){
@@ -353,9 +473,10 @@ function renderKRs(){
       <span class="hn">${esc(kr.statement||kr.id)}</span>
       <span class="hs" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
       <span class="ha"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
+        <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini" data-edit="keyResult:${kr.id}">edit</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div>${kpiTable("keyResult", kr.id)}</div>`;
+      </div>${kpiTable("keyResult", kr.id, selectedObj)}</div>`;
   });
   host.innerHTML=html; wireExec(host);
 }
@@ -373,30 +494,32 @@ function renderGates(){
       <span class="hs" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
       <span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
       <span class="ha"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
+        <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
         <button class="ghost mini" data-edit="stageGate:${g.id}">edit</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div>${kpiTable("stageGate", g.id)}</div>`;
+      </div>${kpiTable("stageGate", g.id, selectedObj)}</div>`;
   });
   host.innerHTML=html; wireExec(host);
-}
-function taskTable(rows){
-  if(!rows.length) return `<p class="hint">none yet</p>`;
-  let h=`<table><thead><tr><th>id</th><th>name</th><th>planned</th><th>% complete</th><th>actual end</th><th></th></tr></thead><tbody>`;
-  rows.forEach(r=>{ h+=`<tr><td class="mono">${r.id}</td><td>${esc(r.name||'')}</td>
-    <td class="mono">${dayToIso(r.plannedStart)||'—'} → ${dayToIso(r.plannedEnd)||'—'}</td>
-    <td><input class="tiny" type="number" min="0" max="100" data-pct="${r.id}" value="${r.percentComplete!=null?r.percentComplete:0}"/></td>
-    <td><input class="sm" type="date" data-actend="${r.id}" value="${dayToIso(r.actualEnd)}"/></td>
-    <td class="row-actions"><button class="ghost mini" data-edit="task:${r.id}">edit</button>
-      <button class="ghost mini danger ${armedDel===r.id?'armed':''}" data-del="task:${r.id}">${armedDel===r.id?'confirm':'del'}</button></td></tr>`; });
-  return h+`</tbody></table>`;
 }
 function renderTasks(){
   const host=document.getElementById("subTASK");
   const rows=exec.tasks.filter(r=>r.objectiveId===selectedObj);
-  let html=`<h3>Execution tasks<button class="ghost mini" data-addtask="1">+ add</button></h3>`;
+  let html=`<h3>Execution tasks <span class="pill">execution level · gating, not in objective score</span><button class="ghost mini" data-addtask="1">+ add task</button></h3>`;
   if(addingFor && addingFor.type==="task") html+=renderSubEditor("task", {});
   if(editingSub && editingSub.type==="task"){ const r=rows.find(x=>x.id===editingSub.id); if(r) html+=renderSubEditor("task", r); }
-  html+=taskTable(rows);
+  if(!rows.length) html+=`<p class="hint">none yet</p>`;
+  rows.forEach(t=>{
+    html+=`<div class="hostcard"><div class="hosthead">
+      <span class="hn">${esc(t.name||t.id)}</span>
+      <span class="gate-meta">${dayToIso(t.plannedStart)||'—'} → ${dayToIso(t.plannedEnd)||'—'} ·
+        <input class="tiny" type="number" min="0" max="100" data-pct="${t.id}" value="${t.percentComplete!=null?t.percentComplete:0}"/>% ·
+        end <input class="sm" type="date" data-actend="${t.id}" value="${dayToIso(t.actualEnd)}"/></span>
+      <span class="ha"><button class="ghost mini" data-addkpi="task:${t.id}">+ KPI</button>
+        <button class="ghost mini" data-addlink="task:${t.id}">+ link</button>
+        <button class="ghost mini" data-edit="task:${t.id}">edit</button>
+        <button class="ghost mini danger ${armedDel===t.id?'armed':''}" data-del="task:${t.id}">${armedDel===t.id?'confirm':'del'}</button></span>
+      </div>${kpiTable("task", t.id, selectedObj)}</div>`;
+  });
   host.innerHTML=html; wireExec(host);
 }
 function wireExec(host){
@@ -404,6 +527,9 @@ function wireExec(host){
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
+  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
+  host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
