@@ -13,37 +13,109 @@ Concurrency is optimistic (If-Match). Clients poll the version endpoint only and
 pull the full doc on change; after a PUT they record the returned version and
 ignore that echo so autosave cannot self-trigger.
 
-This file is additive: paste the router into the existing app, or include it with
-`app.include_router(state_router)`. Storage here is shown against the existing
-JSONBin/broker token model; the version is a monotonically increasing integer and
-the etag is its hash. Replace `_load_raw` / `_save_raw` with the broker's existing
-bin read/write (kept behind the same threading lock + backoff already in place).
+This file is additive and self-contained. To deploy:
+  1. include the router:  app.include_router(state_router)
+  2. set env vars: JSONBIN_MASTER_KEY, UNIFIED_DIVISIONS, and one <DOC>_BIN per doc
+     (PORTFOLIO_BIN, GANTT_VIEW_BIN, EXEC_DIV_FC_BIN, ... — create_bins.py prints them).
+
+The JSONBin read/write is implemented below (urllib, no extra dependency). The
+version is a monotonically increasing integer kept inside each bin; the etag is its
+hash. Optimistic concurrency is enforced here under a process-local _LOCK, so run
+the broker as a single worker / replica — JSONBin has no compare-and-swap, and two
+workers could otherwise both pass the If-Match check on the same doc (a lost
+update). A small team on one worker is safe; true multi-worker safety needs an
+external lock.
 """
 
 import hashlib
 import json
+import os
 import threading
 import time
+import urllib.error
+import urllib.request
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel
 
 state_router = APIRouter()
-
-# ---- storage shim ----------------------------------------------------------
-# Replace these two with the broker's existing JSONBin/bin accessors. Each stored
-# document is wrapped as: { "version": int, "updatedAt": float, "doc": <payload> }.
 _LOCK = threading.RLock()
-_STORE: Dict[str, Dict[str, Any]] = {}  # in-memory stand-in for the bin layer
+
+# ---- JSONBin storage -------------------------------------------------------
+# The unified app's documents live in NEW, isolated JSONBin bins, one per doc:
+# portfolio, gantt-view, and EXEC-<divisionId> per division. Each bin stores the
+# wrapper { "version": int, "updatedAt": float, "doc": <payload> }; the version
+# counter rides inside the bin, so there is no separate version store.
+#
+# Configured entirely via env (no ids/keys in code):
+#   JSONBIN_MASTER_KEY   your X-Master-Key
+#   UNIFIED_DIVISIONS    comma-separated division ids, e.g. "DIV-FC,DIV-EL"
+#   <DOC>_BIN            one bin id per doc: PORTFOLIO_BIN, GANTT_VIEW_BIN,
+#                        EXEC_DIV_FC_BIN, ...  (create_bins.py prints these)
+#
+# Import never fails on missing env; a missing bin id surfaces as a clear error
+# only if that specific doc is actually written.
+_JSONBIN = "https://api.jsonbin.io/v3/b"
+# JSONBin is fronted by Cloudflare, which 403s the urllib default "Python-urllib/x"
+# User-Agent with "error code: 1010". Send a non-default UA on every JSONBin call.
+_UA = "Mozilla/5.0 (compatible; CeladyneRD/1.0)"
+_KEY = os.environ.get("JSONBIN_MASTER_KEY")
+_DIVISIONS = [d.strip() for d in os.environ.get("UNIFIED_DIVISIONS", "DIV-FC").split(",") if d.strip()]
+_DOC_IDS = ["portfolio", "gantt-view"] + [f"EXEC-{d}" for d in _DIVISIONS]
+
+
+def _env_name(doc_id: str) -> str:
+    return doc_id.upper().replace("-", "_") + "_BIN"
+
+
+# doc id -> bin id (None until its env var is set)
+BIN_FOR: Dict[str, Optional[str]] = {d: os.environ.get(_env_name(d)) for d in _DOC_IDS}
+
+
+def _jsonbin_get(bin_id: str) -> Optional[Dict[str, Any]]:
+    req = urllib.request.Request(f"{_JSONBIN}/{bin_id}/latest",
+                                 headers={"X-Master-Key": _KEY or "", "User-Agent": _UA})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError:
+        return None
+
+
+def _jsonbin_put(bin_id: str, payload: Dict[str, Any]) -> None:
+    # The update PUT carries ONLY content-type + key — never X-Bin-Private (that
+    # would spawn a new bin). JSONBin update versioning is off by default, so this
+    # overwrites the bin in place.
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        f"{_JSONBIN}/{bin_id}", data=data, method="PUT",
+        headers={"Content-Type": "application/json", "X-Master-Key": _KEY or "", "User-Agent": _UA},
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        resp.read()
 
 
 def _load_raw(doc_id: str) -> Optional[Dict[str, Any]]:
-    return _STORE.get(doc_id)
+    """Return the stored wrapper for a doc, or None if the bin is unset/empty/new."""
+    bin_id = BIN_FOR.get(doc_id)
+    if not bin_id:
+        return None
+    resp = _jsonbin_get(bin_id)
+    if not resp:
+        return None
+    record = resp.get("record")  # JSONBin returns the stored payload under "record"
+    return record if isinstance(record, dict) and "version" in record else None
 
 
 def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
-    _STORE[doc_id] = wrapped
+    bin_id = BIN_FOR.get(doc_id)
+    if not bin_id:
+        raise RuntimeError(
+            f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)} "
+            f"(and add the division to UNIFIED_DIVISIONS if it is an EXEC doc)"
+        )
+    _jsonbin_put(bin_id, wrapped)
 
 
 # ---- helpers ---------------------------------------------------------------
@@ -125,11 +197,17 @@ def put_state(
 
 # ---- self-check (run: python broker_patch.py) ------------------------------
 if __name__ == "__main__":
-    # Minimal in-process exercise of the concurrency contract, no server needed.
+    # Exercise the route + concurrency logic against an in-memory backend so this
+    # runs offline (no JSONBin, no env). The routes resolve _load_raw / _save_raw
+    # from module globals at call time, so overriding them here is sufficient.
+    _mem: Dict[str, Dict[str, Any]] = {}
+    globals()["_load_raw"] = lambda doc_id: _mem.get(doc_id)
+    globals()["_save_raw"] = lambda doc_id, wrapped: _mem.__setitem__(doc_id, wrapped)
+
     class _Resp:
         def __init__(self): self.headers = {}
 
-    # seed
+    # seed (first write of a new doc uses If-Match "0")
     r = put_state("portfolio", StatePut(doc={"divisions": []}), _Resp(), if_match="0")
     assert r["version"] == 1, r
     v = get_version("portfolio")
@@ -144,4 +222,6 @@ if __name__ == "__main__":
     # correct write accepted
     r2 = put_state("portfolio", StatePut(doc={"divisions": [1]}), _Resp(), if_match=v["etag"])
     assert r2["version"] == 2, r2
-    print("broker_patch self-check OK")
+    # an unknown / unconfigured doc reads as version 0 (load returns None)
+    assert get_version("EXEC-DIV-XX")["version"] == 0
+    print("broker_patch self-check OK (route + concurrency logic; storage mocked)")
