@@ -111,6 +111,51 @@
   .statepill.passed-late{background:#3a2f10;color:var(--warn)}
   .statepill.overdue{background:#3a1414;color:var(--bad)}
   .statepill.pending{background:#1c2733;color:var(--none)}
+  /* modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
+  .overlay.open{display:flex}
+  .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
+  .modal-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .modal-title{font-size:14px;font-weight:600;color:var(--ink);flex:1}
+  .modal-x{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0 4px}
+  .modal-x:hover{color:var(--ink)}
+  #modalBody{padding:16px 18px}
+  #modalBody .ed{margin:0 0 14px}
+  #modalBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0 !important}
+  .modal-section-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:var(--mono);margin:14px 0 8px;display:block}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg-btn{background:var(--panel2);border:none;border-right:1px solid var(--line);color:var(--muted);padding:6px 13px;font-size:12px;cursor:pointer}
+  .seg-btn:last-child{border-right:none}
+  .seg-btn:hover{color:var(--ink)}
+  .seg-btn.seg-pending{background:#1c2733;color:var(--ink)}
+  .seg-btn.seg-active{background:#16233e;color:var(--accent2)}
+  .seg-btn.seg-hit{background:#10371f;color:var(--ok)}
+  .seg-btn.seg-missed{background:#3a1414;color:var(--bad)}
+  /* quarter/week header */
+  .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+  .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .qw-now{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-left:auto}
+  .qw-weeks{display:flex;gap:3px}
+  .qw-cell{width:18px;height:7px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
+  .qw-cell.done{background:#24405e;border-color:#2a3a5a}
+  .qw-cell.now{background:var(--accent);border-color:var(--accent)}
+  .qw-track{flex:1;min-width:120px;height:7px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .qw-fill{height:100%;background:var(--accent)}
+  /* metric mini-bar */
+  .mc-bar{height:4px;background:var(--panel2);border-radius:3px;overflow:hidden;margin:9px 0 0}
+  .mc-bar-fill{height:100%}
+  /* signal bars */
+  .bar-area{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:0 0 18px}
+  .bar-area-head{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+  .bar-area-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  .sig-legend{display:flex;gap:12px;margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .sig-legend span{display:inline-flex;align-items:center;gap:4px}
+  .sig-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .sig-row{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .sig-lbl{font-size:12px;color:var(--ink);width:230px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sig-track{flex:1;height:9px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  .sig-fill{height:100%;border-radius:4px 0 0 4px}
+  .sig-val{font-family:var(--mono);font-weight:700;font-size:13px;width:32px;text-align:right;flex:none}
 </style>
 </head>
 <body>
@@ -140,6 +185,7 @@
   <div id="subTASK" class="sub"></div>
   <div id="initPanel" class="sub"></div>
 </main>
+<div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
 
 <script>/*__CORE__*/</script>
 <script>
@@ -361,8 +407,8 @@ function renderAll(){
   const objs = myObjectives();
   if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
-  document.getElementById("objHeadWrap").innerHTML = objMetricStrip(o);
-  renderKRs(); renderGates(); renderTasks();
+  document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
+  renderKRs(); renderGates(); renderTasks(); renderModal();
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
@@ -390,14 +436,120 @@ function objMetricStrip(o){
   const schedVal=projEnd!=null?dayToIso(projEnd):"—";
   const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d slip`:"on plan");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
-  return `<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span> · ${o.quarter||"—"}</div>
-  <div class="metrics">
-    <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div><div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
+  const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
+  return `<div class="metrics">
+    <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
     <div class="mc"><div class="mc-label">Tasks</div><div class="mc-val">${tAvg==null?"—":tAvg+"%"}</div><div class="mc-sub">${tasks.length} task${tasks.length===1?"":"s"}</div></div>
   </div>`;
+}
+
+function parseQuarter(q){
+  if(!q) return null;
+  const m=String(q).match(/Q([1-4])\D*(\d{2,4})/i);
+  if(!m) return null;
+  let yr=+m[2]; if(yr<100) yr+=2000;
+  const qn=+m[1];
+  const start=Math.round((Date.UTC(yr,(qn-1)*3,1)-EPOCH)/86400000);
+  return { qn, yr, start, label:"Q"+qn+" "+yr };
+}
+function quarterHeader(o){
+  const title=`<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span></div>`;
+  const td=todayDay();
+  const q=parseQuarter(o.quarter);
+  if(q){
+    const wk=Math.max(1,Math.min(13,Math.floor((td-q.start)/7)+1));
+    const inQ = td>=q.start && td<q.start+91;
+    let cells="";
+    for(let i=1;i<=13;i++) cells+=`<span class="qw-cell${i<wk?' done':''}${(i===wk&&inQ)?' now':''}"></span>`;
+    const status = inQ?("Week "+wk+" of 13"):(td<q.start?"upcoming":"complete");
+    return title+`<div class="qweek"><span class="qw-label">${q.label} · ${dayToIso(q.start)}–${dayToIso(q.start+90)}</span><div class="qw-weeks">${cells}</div><span class="qw-now">${status}</span></div>`;
+  }
+  if(o.plannedStart!=null && o.plannedEnd!=null){
+    const span=Math.max(1,o.plannedEnd-o.plannedStart), elapsed=Math.max(0,Math.min(span,td-o.plannedStart));
+    const pct=Math.round(elapsed/span*100);
+    return title+`<div class="qweek"><span class="qw-label">${esc(o.quarter||"window")} · ${dayToIso(o.plannedStart)} → ${dayToIso(o.plannedEnd)}</span><div class="qw-track"><div class="qw-fill" style="width:${pct}%"></div></div><span class="qw-now">${pct}% elapsed</span></div>`;
+  }
+  return title + (o.quarter?`<div class="qweek"><span class="qw-label">${esc(o.quarter)}</span></div>`:"");
+}
+function signalBars(){
+  const em=emForCore();
+  const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
+  if(!krs.length) return "";
+  let rows="";
+  krs.forEach((kr,idx)=>{
+    const s=RD.keyResultScore(kr.id, em), b=RD.band(s), w=s==null?0:Math.round(s);
+    rows+=`<div class="sig-row"><span class="sig-lbl" title="${esc(kr.statement||kr.id)}">KR${idx+1} · ${esc(kr.statement||kr.id)}</span><div class="sig-track"><div class="sig-fill" style="width:${w}%;background:${col(b)}"></div></div><span class="sig-val" style="color:${col(b)}">${s==null?"—":Math.round(s)}</span></div>`;
+  });
+  const legend=`<div class="sig-legend"><span><i style="background:var(--ok)"></i>on track</span><span><i style="background:var(--warn)"></i>at risk</span><span><i style="background:var(--bad)"></i>off track</span><span><i style="background:var(--none)"></i>no data</span></div>`;
+  return `<div class="bar-area"><div class="bar-area-head"><span class="bar-area-title">Key-result signal</span>${legend}</div>${rows}</div>`;
+}
+
+/* ---------------- modal editing ---------------- */
+function openModal(title, body){
+  document.getElementById("modalTitle").textContent = title||"";
+  const mb = document.getElementById("modalBody"); mb.innerHTML = body;
+  document.getElementById("modalOverlay").classList.add("open");
+  wireModalBody(mb);
+}
+function closeModal(){
+  document.getElementById("modalOverlay").classList.remove("open");
+  document.getElementById("modalBody").innerHTML = "";
+}
+function wireModalBody(body){
+  wireExec(body);
+  const seg = body.querySelector("[data-seg]");
+  if(seg){
+    const statusInp = body.querySelector('[data-f="status"]');
+    const dateInp = body.querySelector('[data-f="actualDate"]');
+    seg.querySelectorAll("[data-gstatus]").forEach(btn=>btn.onclick=()=>{
+      const k = btn.dataset.gstatus;
+      if(statusInp) statusInp.value = k;
+      seg.querySelectorAll("[data-gstatus]").forEach(b=>b.className="seg-btn");
+      btn.className = "seg-btn seg-"+k;
+      if(k==="hit" && dateInp && !dateInp.value) dateInp.value = dayToIso(todayDay());
+    });
+  }
+}
+// the modal is a pure view of addingFor / editingSub — rendered at the end of renderAll
+function renderModal(){
+  let title=null, body=null;
+  if(editingSub){
+    const id = editingSub.id;
+    if(editingSub.type==="stageGate"){ const g=exec.stageGates.find(x=>x.id===id); if(g){ title="Edit stage-gate"; body=gateModalBody(g); } }
+    else if(editingSub.type==="keyResult"){ const r=exec.keyResults.find(x=>x.id===id); if(r){ title="Edit key result"; body=renderSubEditor("keyResult", r); } }
+    else if(editingSub.type==="task"){ const r=exec.tasks.find(x=>x.id===id); if(r){ title="Edit task"; body=renderSubEditor("task", r); } }
+    else if(editingSub.type==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k){ title=isMemberKpi(k)?"Override KPI target":"Edit KPI"; body=isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k); } }
+  } else if(addingFor){
+    if(addingFor.type==="keyResult"){ title="Add key result"; body=renderSubEditor("keyResult", {}); }
+    else if(addingFor.type==="stageGate"){ title="Add stage-gate"; body=gateModalBody(null); }
+    else if(addingFor.type==="task"){ title="Add execution task"; body=renderSubEditor("task", {}); }
+    else if(addingFor.type==="kpi"){ title="Add KPI"; body=renderSubEditor("kpi", {}); }
+    else if(addingFor.type==="link"){ title="Link a metric"; body=renderLinkEditor(addingFor.hostType, addingFor.hostId); }
+  }
+  if(body==null){ closeModal(); return; }
+  openModal(title, body);
+}
+function gateModalBody(g){
+  g = g || {};
+  const isEdit = !!g.id;
+  const statuses=[["pending","Pending"],["active","In progress"],["hit","Passed"],["missed","Failed"]];
+  const cur = g.status || (g.actualDate!=null?"hit":"pending");
+  const segBtns = statuses.map(function(p){ return `<button type="button" class="seg-btn${cur===p[0]?' seg-'+p[0]:''}" data-gstatus="${p[0]}">${p[1]}</button>`; }).join("");
+  let h=`<div class="ed">
+    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}"/></label>
+    <label>Gate id (optional)<input data-f="gate_id" type="text" value="${esc(g.gate_id||'')}"/></label>
+    <label>Planned date<input data-f="plannedDate" type="date" value="${dayToIso(g.plannedDate)}"/></label>
+    <label>Passed / actual date<input data-f="actualDate" type="date" value="${dayToIso(g.actualDate)}"/></label>
+    <input type="hidden" data-f="status" value="${cur}"/>
+  </div>
+  <span class="modal-section-lbl">Status</span>
+  <div class="seg" data-seg>${segBtns}</div>`;
+  if(isEdit) h+=`<span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
+  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return h;
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -524,20 +676,12 @@ function kpiTable(hostType, hostId, objScope){
         <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
-  if(addingFor && addingFor.hostType===hostType && addingFor.hostId===hostId){
-    if(addingFor.type==="kpi") h += renderSubEditor("kpi", {});
-    else if(addingFor.type==="link") h += renderLinkEditor(hostType, hostId);
-  }
-  if(editingSub && editingSub.type==="kpi"){ const k=AK.find(x=>x.id===editingSub.id);
-    if(k && k.hostType===hostType && k.hostId===hostId && k.objectiveId===objScope) h += (isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k)); }
   return h;
 }
 function renderKRs(){
   const host=document.getElementById("subKR");
   const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
   let inner="";
-  if(addingFor && addingFor.type==="keyResult") inner+=renderSubEditor("keyResult", {});
-  if(editingSub && editingSub.type==="keyResult"){ const r=krs.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("keyResult", r); }
   if(!krs.length) inner+=`<p class="hint">none yet — a Key Result groups the KPIs that score this objective (no Key Result ⇒ no objective score)</p>`;
   krs.forEach((kr,idx)=>{
     const s=RD.keyResultScore(kr.id, emForCore());
@@ -581,21 +725,20 @@ function renderGates(){
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const td=todayDay();
   let inner="";
-  if(addingFor && addingFor.type==="stageGate") inner+=renderSubEditor("stageGate", {});
-  if(editingSub && editingSub.type==="stageGate"){ const r=gates.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("stageGate", r); }
   if(!gates.length) inner+=`<p class="hint">none yet</p>`;
   gates.forEach((g,idx)=>{
     const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
+    const cmt = g.baselineDate!=null?`<span class="committed-badge" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
     inner+=`<div class="icard"><div class="icard-top">
       <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">G${idx+1}</span>
       <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
-      <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>
+      <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
       <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
         <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${gateSchedRow(g)}${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
   });
   const chainOn=(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':'';
   const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${chainOn}/> chain by date</label>`;
@@ -606,8 +749,6 @@ function renderTasks(){
   const host=document.getElementById("subTASK");
   const rows=exec.tasks.filter(r=>r.objectiveId===selectedObj);
   let inner="";
-  if(addingFor && addingFor.type==="task") inner+=renderSubEditor("task", {});
-  if(editingSub && editingSub.type==="task"){ const r=rows.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("task", r); }
   if(!rows.length) inner+=`<p class="hint">none yet</p>`;
   rows.forEach((t,idx)=>{
     inner+=`<div class="icard"><div class="icard-top">
@@ -652,6 +793,8 @@ function wireExec(host){
 /* ---------------- wiring ---------------- */
 document.getElementById("saveBtn").onclick = saveExec;
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
+document.getElementById("modalX").onclick = subCancel;
+document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
 window.addEventListener("beforeunload", stopPoll);
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
