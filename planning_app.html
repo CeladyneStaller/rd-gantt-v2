@@ -95,42 +95,52 @@
   .pf-viewtoggle button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px}
   .pf-viewtoggle button.active{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
   .tree{font-size:13px}
-  details.tnode > summary{list-style:none;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;user-select:none}
+  details.tnode > summary{list-style:none;display:flex;align-items:center;padding:5px 8px;border-radius:7px;cursor:pointer;user-select:none}
   details.tnode > summary::-webkit-details-marker{display:none}
-  details.tnode > summary::before{content:'▸';color:var(--muted);font-size:10px;display:inline-block;width:10px;flex:none;transition:transform .12s}
+  details.tnode > summary::before{content:'▸';color:var(--muted);font-size:10px;display:inline-block;width:14px;flex:none;transition:transform .12s;opacity:.7}
   details.tnode[open] > summary::before{transform:rotate(90deg)}
   details.tnode > summary:hover{background:var(--panel2)}
-  .tchildren{margin-left:13px;padding-left:11px;border-left:1px solid var(--line)}
-  .tleaf{display:flex;align-items:center;gap:8px;padding:5px 8px 5px 26px}
+  .tchildren{margin-left:14px;padding-left:13px;border-left:1px solid var(--line)}
+  .tleaf{display:flex;align-items:center;padding:5px 8px 5px 22px}
+  .tdot{width:7px;height:7px;border-radius:50%;flex:none;margin-right:9px}
   .ttag{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px;flex:none}
   .ttag.exec{color:var(--accent2);border-color:#2a3a5a;background:#16233e}
-  .tname{color:var(--accent2);cursor:pointer;text-decoration:none;flex:1}
-  .tname:hover{text-decoration:underline}
-  .tstatic{color:var(--ink);flex:1}
-  .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none}
+  .texlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex:none;margin-right:9px;opacity:.75}
+  .tname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tname:hover{color:var(--accent);text-decoration:underline}
+  .tname.muted{color:var(--muted)}
+  .tname.muted:hover{color:var(--accent)}
+  .tstatic{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none;margin-left:auto;padding-left:12px;opacity:.8}
   #ganttWrap{overflow-x:auto}
   .gchart{position:relative;font-size:12px}
   .grow{display:flex;align-items:center;height:30px}
   .grow:hover{background:rgba(255,255,255,0.02)}
-  .glabel{width:240px;flex:none;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;padding-right:8px}
-  .gtri{cursor:pointer;color:var(--muted);font-size:10px;width:12px;flex:none;user-select:none;text-align:center}
-  .gtri:hover{color:var(--ink)}
-  .gspacer{width:12px;flex:none}
-  .gtag{font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 4px;flex:none}
-  .gname{color:var(--accent2);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .gname:hover{text-decoration:underline}
-  .gname.static{color:var(--ink);cursor:default}
-  .gname.static:hover{text-decoration:none}
+  .glabel{width:240px;flex:none;display:flex;align-items:center;overflow:hidden;white-space:nowrap;padding-right:8px}
+  .gtri{cursor:pointer;color:var(--muted);font-size:10px;width:14px;flex:none;user-select:none;text-align:center;opacity:.7}
+  .gtri:hover{color:var(--ink);opacity:1}
+  .gspacer{width:14px;flex:none}
+  .gdot{width:7px;height:7px;border-radius:50%;flex:none;margin-right:8px}
+  .gname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gname:hover{color:var(--accent);text-decoration:underline}
+  .gname.dim{color:var(--muted)}
+  .gname.dim:hover{color:var(--accent)}
+  .gname.static{color:var(--muted);cursor:default}
+  .gname.static:hover{color:var(--muted);text-decoration:none}
   .gtrack{position:relative;width:720px;flex:none;height:100%}
-  .gbar{position:absolute;top:9px;height:12px;border-radius:3px;background:#2c4a63}
-  .gbar.derived{opacity:.5;border:1px dashed #46627d}
+  .gaxis{display:flex;align-items:flex-end;height:22px}
+  .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
+  .ggrid{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);opacity:.5;pointer-events:none}
+  .gbar{position:absolute;top:9px;height:12px;border-radius:3px;border:1px solid var(--none);box-sizing:border-box;overflow:hidden}
+  .gbarfill{position:absolute;inset:0;opacity:.28}
+  .gbar.derived{border-style:dashed}
+  .gbar.derived .gbarfill{opacity:.16}
   .gslip{position:absolute;top:9px;height:12px;border-radius:3px;background:var(--bad);opacity:.85}
-  .gblab{position:absolute;top:8px;font-size:10px;font-family:var(--mono);white-space:nowrap}
   .gdia{position:absolute;top:10px;width:10px;height:10px;transform:translateX(-50%) rotate(45deg);border-radius:2px}
-  .gdia.planned{background:#6f8aa3}
+  .gdia.planned{background:transparent;border:1.5px solid #6f8aa3}
   .gdia.eff{background:var(--warn)}
-  .gtoday{position:absolute;top:0;bottom:0;border-left:1px dashed #3a5169;pointer-events:none}
-  .gtodaylbl{position:absolute;top:-1px;font-size:9px;color:#6f8aa3;font-family:var(--mono);pointer-events:none}
+  .gtoday{position:absolute;top:0;bottom:0;border-left:1px solid var(--accent);opacity:.65;pointer-events:none}
+  .gtodaylbl{position:absolute;top:0;font-size:9px;color:var(--accent);font-family:var(--mono);pointer-events:none;opacity:.9}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
   .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
@@ -1083,12 +1093,24 @@ function hasArchChildren(entity,id){
   if(entity==="initiative") return P.milestones.some(m=>m.initiativeId===id)||P.objectives.some(o=>o.initiativeId===id);
   if(entity==="product") return P.models.some(m=>m.productId===id);
   if(entity==="objective"){ const o=byId("objective",id); const d=o&&execDocs["EXEC-"+o.divisionId]; if(!d) return false;
-    return (d.keyResults||[]).some(k=>k.objectiveId===id)||(d.stageGates||[]).some(g=>g.objectiveId===id)||(d.kpis||[]).some(k=>k.objectiveId===id); }
+    return (d.keyResults||[]).some(k=>k.objectiveId===id)||(d.stageGates||[]).some(g=>g.objectiveId===id); }
   return false;
 }
-function treeRow(entity,r){ const sub=subCount(entity,r); return `<span class="ttag">${TAG[entity]}</span><a class="tname" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
-function leafRow(entity,r){ const sub=subCount(entity,r); return `<div class="tleaf"><span class="ttag">${TAG[entity]}</span><a class="tname" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${sub?`<span class="tsub">${esc(sub)}</span>`:''}</div>`; }
-function execLeaf(tag,label){ return `<div class="tleaf"><span class="ttag exec">${tag}</span><span class="tstatic">${esc(label)}</span></div>`; }
+/* ---- health band → colour (shared by tree + gantt) ---- */
+function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
+function nodeBand(entity,id){ const em=execMap(); let s=null;
+  if(entity==="division") s=RD.rollupDivision(id,portfolio,em);
+  else if(entity==="initiative") s=RD.rollupInitiative(id,portfolio,em);
+  else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
+  return RD.band(s); }
+const STATUS_ENTITIES={division:1,initiative:1,objective:1};
+const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
+const TREE_MUTED={model:1,milestone:1};
+function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
+function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
+function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
+function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}</div>`; }
+function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${esc(tag)}</span><span class="tstatic">${esc(label)}</span></div>`; }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
   return `<details open class="tnode"><summary>${treeRow(entity,r)}</summary><div class="tchildren">${treeChildrenHtml(entity,r.id)}</div></details>`;
@@ -1098,9 +1120,8 @@ function objectiveExecHtml(objId){
   if(!doc) return `<div class="tleaf"><span class="tstatic">no exec doc loaded for this division</span></div>`;
   let h="";
   (doc.keyResults||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KR", k.statement||k.id));
-  (doc.stageGates||[]).filter(g=>g.objectiveId===objId).forEach(g=> h+=execLeaf("gate", g.name||g.id));
-  (doc.kpis||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KPI", (RD.kpiName?RD.kpiName(k, doc.kpis||[]):0)||k.name||k.id));
-  return h || `<div class="tleaf"><span class="tstatic">no key results, stage-gates, or KPIs yet</span></div>`;
+  (doc.stageGates||[]).filter(g=>g.objectiveId===objId).forEach(g=> h+=execLeaf("Gate", g.name||g.id));
+  return h || `<div class="tleaf"><span class="tstatic">no key results or stage-gates yet</span></div>`;
 }
 function treeChildrenHtml(entity,id){
   const P=portfolio; let h="";
@@ -1343,24 +1364,34 @@ function renderGantt(){
   if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
   if(!isFinite(lo)){ lo=td; } if(!isFinite(hi)||hi<=lo){ hi=lo+1; }
   const LABELW=240, TRACKW=720, x=d=>(d-lo)/(hi-lo)*TRACKW;
+  function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
+  const ticks=quarterTicks(lo,hi);
   // ---- flatten respecting collapse ----
   const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
-  const TAG={division:"div",initiative:"init",objective:"obj",milestone:"ms",stagegate:"gate"};
   const NAV={division:1,initiative:1,objective:1,milestone:1};
+  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegate:"font-size:12.5px;font-weight:400"};
   let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
+  // quarter gridlines + today, spanning the full chart height behind the rows
+  ticks.forEach(t=>{ if(t.day>=lo&&t.day<=hi){ html+=`<div class="ggrid" style="left:${LABELW+x(t.day)}px"></div>`; } });
   if(td>=lo&&td<=hi){ const tx=LABELW+x(td); html+=`<div class="gtoday" style="left:${tx}px"></div><div class="gtodaylbl" style="left:${tx+3}px">today</div>`; }
+  // time axis header
+  html+=`<div class="gaxis"><div style="width:${LABELW}px;flex:none"></div><div class="gtrack" style="height:22px">`;
+  ticks.forEach(t=>{ html+=`<span class="gaxislab" style="left:${Math.max(0,x(t.day))+3}px;bottom:3px">${t.label}</span>`; });
+  html+=`</div></div>`;
   rows.forEach(n=>{
     const g=n.g, name=esc(nameOf(n.entity,n.rec)), hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
     const tri = hasKids ? `<span class="gtri" data-gtoggle="${n.key}">${collapsed?'▸':'▾'}</span>` : `<span class="gspacer"></span>`;
-    const nm = NAV[n.entity] ? `<a class="gname" data-lineage="${n.entity}:${n.rec.id}">${name}</a>` : `<span class="gname static">${name}</span>`;
-    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}<span class="gtag">${TAG[n.entity]}</span>${nm}</div><div class="gtrack">`;
+    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
+    const fs=NS[n.entity]||"";
+    let nm;
+    if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}">${name}</span>`;
+    else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
+    else nm=`<span class="gname static" style="${fs}">${name}</span>`;
+    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}</div><div class="gtrack">`;
     if(g.kind==="bar"){
-      const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx);
-      html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px"></div>`;
+      const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id));
+      html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
-      const endX=(g.pe!=null)?g.pe:g.de;
-      if(g.slip>0) html+=`<span class="gblab" style="left:${x(endX)+5}px;color:#f87171">+${g.slip}d</span>`;
-      else if(!g.derived) html+=`<span class="gblab" style="left:${x(endX)+5}px;color:#34d399">on plan</span>`;
     } else {
       html+=`<div class="gdia planned" style="left:${x(g.planned)}px" title="planned"></div>`;
       if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
