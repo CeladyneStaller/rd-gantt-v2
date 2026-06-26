@@ -108,6 +108,29 @@
   .tname:hover{text-decoration:underline}
   .tstatic{color:var(--ink);flex:1}
   .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none}
+  #ganttWrap{overflow-x:auto}
+  .gchart{position:relative;font-size:12px}
+  .grow{display:flex;align-items:center;height:30px}
+  .grow:hover{background:rgba(255,255,255,0.02)}
+  .glabel{width:240px;flex:none;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;padding-right:8px}
+  .gtri{cursor:pointer;color:var(--muted);font-size:10px;width:12px;flex:none;user-select:none;text-align:center}
+  .gtri:hover{color:var(--ink)}
+  .gspacer{width:12px;flex:none}
+  .gtag{font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 4px;flex:none}
+  .gname{color:var(--accent2);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gname:hover{text-decoration:underline}
+  .gname.static{color:var(--ink);cursor:default}
+  .gname.static:hover{text-decoration:none}
+  .gtrack{position:relative;width:720px;flex:none;height:100%}
+  .gbar{position:absolute;top:9px;height:12px;border-radius:3px;background:#2c4a63}
+  .gbar.derived{opacity:.5;border:1px dashed #46627d}
+  .gslip{position:absolute;top:9px;height:12px;border-radius:3px;background:var(--bad);opacity:.85}
+  .gblab{position:absolute;top:8px;font-size:10px;font-family:var(--mono);white-space:nowrap}
+  .gdia{position:absolute;top:10px;width:10px;height:10px;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+  .gdia.planned{background:#6f8aa3}
+  .gdia.eff{background:var(--warn)}
+  .gtoday{position:absolute;top:0;bottom:0;border-left:1px dashed #3a5169;pointer-events:none}
+  .gtodaylbl{position:absolute;top:-1px;font-size:9px;color:#6f8aa3;font-family:var(--mono);pointer-events:none}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
   .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
@@ -1257,74 +1280,98 @@ function cellVal(col,v){
 }
 
 /* ---------------- GANTT tab ---------------- */
+let ganttCollapsed = new Set();
 function renderGantt(){
-  const em = execMap();
-  const casc = RD.cascade(portfolio, em, todayDay());
-  const objs = portfolio.objectives||[], miles = portfolio.milestones||[];
-  const td = todayDay();
-  // ---- build chartable rows with derived spans (null dates never anchor at epoch) ----
-  const rows = [];
-  (portfolio.initiatives||[]).forEach(I=>{
-    const childObjs = objs.filter(o=>o.initiativeId===I.id);
-    const childMiles = miles.filter(m=>m.initiativeId===I.id);
-    const hasChildren = childObjs.length>0 || childMiles.length>0;
-    if(!hasChildren && I.plannedStart==null && I.plannedEnd==null) return; // hide empty, undated (e.g. emptied umbrellas)
-    // derived start: own, else earliest child planned date
-    let ds = I.plannedStart;
-    if(ds==null){
-      const cand=[];
-      childObjs.forEach(o=>{ if(o.plannedStart!=null) cand.push(o.plannedStart); });
-      childMiles.forEach(m=>{ if(m.plannedDate!=null) cand.push(m.plannedDate); });
-      ds = cand.length ? Math.min.apply(null,cand) : null;
+  const em = execMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
+  const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
+  const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
+  // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
+  function geom(entity, r){
+    if(entity==="stagegate") return {kind:"diamond", planned:r.plannedDate, eff:(r.plannedDate==null?null:pfGate(r))};
+    if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
+    if(entity==="objective"){
+      const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
+      const peRaw=casc.objectiveProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
+      const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
+      const de=r.plannedEnd!=null?r.plannedEnd:pe;
+      const slip=r.plannedEnd!=null?Math.max(0,(pe!=null?pe:r.plannedEnd)-r.plannedEnd):0;
+      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
-    // projected end (max over plannedEnd + children); derive end from it when no own end
-    const peRaw = casc.initiativeProjectedEnd[I.id];
-    const pe = (peRaw!=null && peRaw>0) ? peRaw : null;
-    const de = (I.plannedEnd!=null) ? I.plannedEnd : pe;
-    const derived = (I.plannedStart==null || I.plannedEnd==null);
-    const slip = (I.plannedEnd!=null) ? (casc.longTermSlip[I.id]??0) : 0;
-    rows.push({ I, ds, de, pe, derived, slip, childMiles });
-  });
-  if(!rows.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No scheduled initiatives to chart.</p>'; return; }
-  // ---- domain from real/derived dates only (+ today for context) ----
+    if(entity==="initiative"){
+      const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=P.milestones.filter(m=>m.initiativeId===r.id);
+      const starts=[]; objs.forEach(o=>{ const g=geom("objective",o); if(g.ds!=null) starts.push(g.ds); }); mils.forEach(m=>{ if(m.plannedDate!=null) starts.push(m.plannedDate); });
+      const peRaw=casc.initiativeProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
+      const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
+      const de=r.plannedEnd!=null?r.plannedEnd:pe;
+      const slip=r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0;
+      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
+    }
+    // division: pure rollup over its initiatives (no own dates)
+    const gs=P.initiatives.filter(i=>i.divisionId===r.id).map(i=>geom("initiative",i));
+    const starts=gs.map(g=>g.ds).filter(v=>v!=null), ends=gs.map(g=>g.pe!=null?g.pe:g.de).filter(v=>v!=null);
+    const ds=starts.length?Math.min.apply(null,starts):null, de=ends.length?Math.max.apply(null,ends):null;
+    return {kind:"bar", ds, de, pe:de, slip:0, derived:true};
+  }
+  const childRefs=(entity,r)=>{
+    if(entity==="division") return P.initiatives.filter(i=>i.divisionId===r.id).map(i=>({entity:"initiative",rec:i}));
+    if(entity==="initiative") return P.milestones.filter(m=>m.initiativeId===r.id).map(m=>({entity:"milestone",rec:m}))
+      .concat(P.objectives.filter(o=>o.initiativeId===r.id).map(o=>({entity:"objective",rec:o})));
+    if(entity==="objective") return gatesOf(r).map(g=>({entity:"stagegate",rec:g}));
+    return [];
+  };
+  const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
+  // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
+  function build(entity, r, depth){
+    const g=geom(entity,r); if(!visible(g)) return null;
+    const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
+    return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
+  }
+  const roots=[]; P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
+  if(!roots.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No scheduled, dated items to chart.</p>'; return; }
+  // ---- domain over the full tree (+ today) ----
   let lo=Infinity, hi=-Infinity;
-  rows.forEach(r=>{ if(r.ds!=null) lo=Math.min(lo,r.ds); if(r.de!=null) hi=Math.max(hi,r.de); if(r.pe!=null) hi=Math.max(hi,r.pe); });
-  miles.forEach(m=>{ if(m.plannedDate!=null) lo=Math.min(lo,m.plannedDate); const ef=casc.milestoneEffective[m.id]; if(ef!=null) hi=Math.max(hi,ef); });
+  (function scan(n){ const g=n.g;
+    if(g.kind==="bar"){ if(g.ds!=null)lo=Math.min(lo,g.ds); if(g.de!=null)hi=Math.max(hi,g.de); if(g.pe!=null)hi=Math.max(hi,g.pe); }
+    else { if(g.planned!=null){lo=Math.min(lo,g.planned);hi=Math.max(hi,g.planned);} if(g.eff!=null)hi=Math.max(hi,g.eff); }
+    n.kids.forEach(scan);
+  });
+  roots.forEach(function s(n){ const g=n.g;
+    if(g.kind==="bar"){ if(g.ds!=null)lo=Math.min(lo,g.ds); if(g.de!=null)hi=Math.max(hi,g.de); if(g.pe!=null)hi=Math.max(hi,g.pe); }
+    else { if(g.planned!=null){lo=Math.min(lo,g.planned);hi=Math.max(hi,g.planned);} if(g.eff!=null)hi=Math.max(hi,g.eff); }
+    n.kids.forEach(s);
+  });
   if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
   if(!isFinite(lo)){ lo=td; } if(!isFinite(hi)||hi<=lo){ hi=lo+1; }
-  const padL=180, padR=40, W=1000, rowH=34, top=20;
-  const H = top + rows.length*rowH + 30;
-  const x = d => padL + (d-lo)/(hi-lo)*(W-padL-padR);
-  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet">`;
-  if(td>=lo&&td<=hi){ s+=`<line x1="${x(td)}" y1="${top-6}" x2="${x(td)}" y2="${H-20}" stroke="#3a5169" stroke-dasharray="3 3"/>`+
-     `<text x="${x(td)+3}" y="${top-8}" fill="#6f8aa3" font-size="10" font-family="monospace">today</text>`; }
-  rows.forEach((r,idx)=>{
-    const I=r.I, y=top+idx*rowH;
-    s += `<text x="8" y="${y+18}" fill="#cdd9e5" font-size="12">${esc((I.name||I.id).slice(0,24))}</text>`;
-    if(r.ds==null || r.de==null){
-      s += `<text x="${padL}" y="${y+18}" fill="#6f8aa3" font-size="11" font-family="monospace">unscheduled</text>`;
+  const LABELW=240, TRACKW=720, x=d=>(d-lo)/(hi-lo)*TRACKW;
+  // ---- flatten respecting collapse ----
+  const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
+  const TAG={division:"div",initiative:"init",objective:"obj",milestone:"ms",stagegate:"gate"};
+  const NAV={division:1,initiative:1,objective:1,milestone:1};
+  let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
+  if(td>=lo&&td<=hi){ const tx=LABELW+x(td); html+=`<div class="gtoday" style="left:${tx}px"></div><div class="gtodaylbl" style="left:${tx+3}px">today</div>`; }
+  rows.forEach(n=>{
+    const g=n.g, name=esc(nameOf(n.entity,n.rec)), hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
+    const tri = hasKids ? `<span class="gtri" data-gtoggle="${n.key}">${collapsed?'▸':'▾'}</span>` : `<span class="gspacer"></span>`;
+    const nm = NAV[n.entity] ? `<a class="gname" data-lineage="${n.entity}:${n.rec.id}">${name}</a>` : `<span class="gname static">${name}</span>`;
+    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}<span class="gtag">${TAG[n.entity]}</span>${nm}</div><div class="gtrack">`;
+    if(g.kind==="bar"){
+      const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx);
+      html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px"></div>`;
+      if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      const endX=(g.pe!=null)?g.pe:g.de;
+      if(g.slip>0) html+=`<span class="gblab" style="left:${x(endX)+5}px;color:#f87171">+${g.slip}d</span>`;
+      else if(!g.derived) html+=`<span class="gblab" style="left:${x(endX)+5}px;color:#34d399">on plan</span>`;
     } else {
-      // base planned bar (derived spans drawn dashed + faint so they read as inferred)
-      s += `<rect x="${x(r.ds)}" y="${y+8}" width="${Math.max(2,x(r.de)-x(r.ds))}" height="12" rx="3" fill="#2c4a63"${r.derived?' opacity="0.5" stroke="#46627d" stroke-dasharray="3 2"':''}/>`;
-      // overrun overlay only when there is a real planned end to slip past
-      if(r.slip>0 && r.pe!=null){ s += `<rect x="${x(I.plannedEnd)}" y="${y+8}" width="${Math.max(2,x(r.pe)-x(I.plannedEnd))}" height="12" rx="3" fill="var(--bad)" opacity="0.85"/>`; }
-      // within-plan accent
-      const accentEnd = (r.pe!=null) ? Math.min(r.pe, r.de) : r.de;
-      s += `<rect x="${x(r.ds)}" y="${y+8}" width="${Math.max(2,x(accentEnd)-x(r.ds))}" height="12" rx="3" fill="var(--accent)" opacity="${r.derived?0.3:0.5}"/>`;
-      const endX = (r.pe!=null) ? r.pe : r.de;
-      if(r.derived) s += `<text x="${x(endX)+5}" y="${y+18}" fill="#6f8aa3" font-size="11" font-family="monospace">derived</text>`;
-      else s += `<text x="${x(endX)+5}" y="${y+18}" fill="${r.slip>0?'#f87171':'#34d399'}" font-size="11" font-family="monospace">${r.slip>0?'+'+r.slip+'d':'on plan'}</text>`;
+      html+=`<div class="gdia planned" style="left:${x(g.planned)}px" title="planned"></div>`;
+      if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
     }
-    r.childMiles.forEach(m=>{
-      const pd=m.plannedDate, ef=casc.milestoneEffective[m.id];
-      if(pd!=null){ s+=`<path d="${diamond(x(pd),y+14,5)}" fill="#6f8aa3"/>`; }
-      if(ef!=null && ef!==pd){ s+=`<path d="${diamond(x(ef),y+14,5)}" fill="var(--warn)"/>`; }
-    });
+    html+=`</div></div>`;
   });
-  s += `</svg>`;
-  document.getElementById("ganttWrap").innerHTML = s;
+  html+=`</div>`;
+  const host=document.getElementById("ganttWrap"); host.innerHTML=html;
+  host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
+  host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
 }
-function diamond(cx,cy,r){ return `M ${cx} ${cy-r} L ${cx+r} ${cy} L ${cx} ${cy+r} L ${cx-r} ${cy} Z`; }
 
 /* ---------------- SLICES tab ---------------- */
 function renderSlices(){
