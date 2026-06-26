@@ -74,6 +74,23 @@
   #pfModalBody{padding:16px 18px 18px}
   #pfModalBody .ed{background:transparent;border:none;padding:0;margin:0}
   #pfModalBody .row-actions{margin-top:18px}
+  a.idlink{color:var(--accent2);cursor:pointer;text-decoration:none;border-bottom:1px dotted transparent}
+  a.idlink:hover{border-bottom-color:var(--accent2)}
+  #lnBody{padding:16px 18px 18px}
+  .lncrumb{font-size:12px;color:var(--muted);margin:0 0 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .lncrumb a{color:var(--accent2);cursor:pointer;text-decoration:none}
+  .lncrumb a:hover{text-decoration:underline}
+  .lncrumb .sep{color:var(--none)}
+  .lngroup{margin:0 0 15px}
+  .lngroup h4{margin:0 0 7px;font-size:12px;color:var(--ink);font-weight:600}
+  .lnrow{display:flex;align-items:center;gap:9px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:5px;background:var(--panel2)}
+  .lnrow .tag{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px;flex:none}
+  .lnnode{color:var(--accent2);cursor:pointer;text-decoration:none;font-size:13px;flex:1}
+  .lnnode:hover{text-decoration:underline}
+  .lnsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none}
+  .lnempty{font-size:12px;color:var(--muted);padding:3px 0}
+  .lnback{background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px;padding:4px 10px}
+  .lnback:hover{color:var(--ink);background:var(--panel2)}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
   .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
@@ -119,6 +136,18 @@
           <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
         <div id="pfModalErr" class="modal-err" hidden></div>
         <div id="pfModalBody"></div>
+      </div>
+    </div>
+    <div id="lnModal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
+        <div class="modal-head">
+          <span id="lnTitle">Lineage</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="lnback" id="lnEdit">Edit this</button>
+            <button class="modal-x" id="lnClose" aria-label="Close">&#10005;</button>
+          </span>
+        </div>
+        <div id="lnBody"></div>
       </div>
     </div>
   </section>
@@ -978,6 +1007,99 @@ function closeEditor(){
 }
 function showEditorErr(t){ const e=document.getElementById("pfModalErr"); if(e){ e.textContent=t; e.hidden=false; } }
 function hideEditorErr(){ const e=document.getElementById("pfModalErr"); if(e){ e.hidden=true; e.textContent=""; } }
+
+/* ---------------- lineage navigator (read-only) ---------------- */
+const TAG={division:"div",product:"prod",model:"model",initiative:"init",milestone:"ms",objective:"obj"};
+let lnFocus=null, lnStack=[];
+function byId(entity,id){ const a=SEL[entity]&&SEL[entity](); return a?a.find(x=>x.id===id):null; }
+function nameOf(entity,r){ return r ? (r.name||r.statement||r.id) : "(missing)"; }
+function execRollup(o){
+  const doc=execDocs["EXEC-"+o.divisionId];
+  if(!doc) return "No exec doc loaded for this division.";
+  const k=(doc.keyResults||[]).filter(x=>x.objectiveId===o.id).length;
+  const g=(doc.stageGates||[]).filter(x=>x.objectiveId===o.id).length;
+  return `${k} key result${k===1?'':'s'} · ${g} stage-gate${g===1?'':'s'}`;
+}
+function subCount(entity,r){
+  const P=portfolio;
+  if(entity==="division") return `${P.products.filter(p=>p.divisionId===r.id).length} prod · ${P.initiatives.filter(i=>i.divisionId===r.id).length} init · ${P.objectives.filter(o=>o.divisionId===r.id).length} obj`;
+  if(entity==="product")  return `${P.models.filter(m=>m.productId===r.id).length} models · ${P.objectives.filter(o=>o.productId===r.id).length} obj`;
+  if(entity==="model")    return `${P.objectives.filter(o=>o.modelId===r.id).length} obj`;
+  if(entity==="initiative") return `${P.milestones.filter(m=>m.initiativeId===r.id).length} ms · ${P.objectives.filter(o=>o.initiativeId===r.id).length} obj`;
+  if(entity==="milestone")  return `${P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(r.id)>=0).length} obj`;
+  if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; if(doc){ const k=(doc.keyResults||[]).filter(x=>x.objectiveId===r.id).length; const g=(doc.stageGates||[]).filter(x=>x.objectiveId===r.id).length; return `${k} KR · ${g} gates`; } return r.quarter||""; }
+  return "";
+}
+function lineageData(entity,id){
+  const P=portfolio, up=[], groups=[];
+  const crumb=(e,fid)=>{ const r=byId(e,fid); if(r) up.push({entity:e,id:fid,label:nameOf(e,r)}); };
+  const item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)});
+  if(entity==="division"){
+    const prods=P.products.filter(p=>p.divisionId===id), pid=new Set(prods.map(p=>p.id));
+    const mods=P.models.filter(m=>pid.has(m.productId));
+    const inits=P.initiatives.filter(i=>i.divisionId===id), iid=new Set(inits.map(i=>i.id));
+    const mils=P.milestones.filter(ms=>iid.has(ms.initiativeId));
+    const objs=P.objectives.filter(o=>o.divisionId===id);
+    groups.push({title:`Products (${prods.length})`, items:prods.map(p=>item("product",p))});
+    groups.push({title:`Models (${mods.length})`, items:mods.map(m=>item("model",m))});
+    groups.push({title:`Initiatives (${inits.length})`, items:inits.map(i=>item("initiative",i))});
+    groups.push({title:`Milestones (${mils.length})`, items:mils.map(m=>item("milestone",m))});
+    groups.push({title:`Objectives (${objs.length})`, items:objs.map(o=>item("objective",o))});
+  } else if(entity==="product"){
+    const p=byId("product",id); if(p) crumb("division",p.divisionId);
+    groups.push({title:`Models (${P.models.filter(m=>m.productId===id).length})`, items:P.models.filter(m=>m.productId===id).map(m=>item("model",m))});
+    groups.push({title:`Objectives classified here (${P.objectives.filter(o=>o.productId===id).length})`, items:P.objectives.filter(o=>o.productId===id).map(o=>item("objective",o))});
+  } else if(entity==="model"){
+    const m=byId("model",id); if(m){ const p=byId("product",m.productId); if(p){ crumb("division",p.divisionId); crumb("product",p.id); } }
+    groups.push({title:`Objectives classified here (${P.objectives.filter(o=>o.modelId===id).length})`, items:P.objectives.filter(o=>o.modelId===id).map(o=>item("objective",o))});
+  } else if(entity==="initiative"){
+    const i=byId("initiative",id); if(i) crumb("division",i.divisionId);
+    groups.push({title:`Milestones (${P.milestones.filter(ms=>ms.initiativeId===id).length})`, items:P.milestones.filter(ms=>ms.initiativeId===id).map(m=>item("milestone",m))});
+    groups.push({title:`Objectives (${P.objectives.filter(o=>o.initiativeId===id).length})`, items:P.objectives.filter(o=>o.initiativeId===id).map(o=>item("objective",o))});
+  } else if(entity==="milestone"){
+    const ms=byId("milestone",id); if(ms){ const i=byId("initiative",ms.initiativeId); if(i){ crumb("division",i.divisionId); crumb("initiative",i.id); } }
+    const objs=P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(id)>=0);
+    groups.push({title:`Objectives linking this (${objs.length})`, items:objs.map(o=>item("objective",o))});
+  } else if(entity==="objective"){
+    const o=byId("objective",id);
+    if(o){ if(o.divisionId) crumb("division",o.divisionId); if(o.initiativeId) crumb("initiative",o.initiativeId); }
+    const rel=[];
+    if(o&&o.productId){ const p=byId("product",o.productId); if(p) rel.push(item("product",p)); }
+    if(o&&o.modelId){ const m=byId("model",o.modelId); if(m) rel.push(item("model",m)); }
+    groups.push({title:`Classification`, items:rel});
+    const mils=((o&&o.milestoneIds)||[]).map(mid=>byId("milestone",mid)).filter(Boolean);
+    groups.push({title:`Linked milestones (${mils.length})`, items:mils.map(m=>item("milestone",m))});
+    groups.push({title:`Execution`, text:o?execRollup(o):""});
+  }
+  return {up, groups};
+}
+function renderLineageModal(){
+  if(!lnFocus) return;
+  const {entity,id}=lnFocus;
+  const rec=byId(entity,id);
+  if(!rec){ closeLineage(); return; }
+  document.getElementById("lnTitle").textContent=cap(entity)+" · "+nameOf(entity,rec);
+  const L=lineageData(entity,id);
+  let h=`<div class="lncrumb">`;
+  if(lnStack.length) h+=`<button class="lnback" data-lnback="1">← back</button>`;
+  L.up.forEach(a=>{ h+=`<a data-lineage="${a.entity}:${a.id}">${esc(a.label)}</a><span class="sep">›</span>`; });
+  h+=`<span style="color:var(--ink)">${esc(nameOf(entity,rec))}</span></div>`;
+  L.groups.forEach(g=>{
+    h+=`<div class="lngroup"><h4>${esc(g.title)}</h4>`;
+    if(g.text!=null){ h+=`<div class="lnempty">${esc(g.text)}</div>`; }
+    else if(!g.items.length){ h+=`<div class="lnempty">none</div>`; }
+    else g.items.forEach(it=>{ h+=`<div class="lnrow"><span class="tag">${it.tag}</span><a class="lnnode" data-lineage="${it.entity}:${it.id}">${esc(it.name)}</a>${it.sub?`<span class="lnsub">${esc(it.sub)}</span>`:''}</div>`; });
+    h+=`</div>`;
+  });
+  const body=document.getElementById("lnBody"); body.innerHTML=h;
+  body.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  const bk=body.querySelector("[data-lnback]"); if(bk) bk.onclick=lnBack;
+  document.getElementById("lnModal").hidden=false;
+}
+function openLineage(entity,id){ if(lnFocus) lnStack.push(lnFocus); lnFocus={entity,id}; renderLineageModal(); }
+function lnBack(){ if(lnStack.length){ lnFocus=lnStack.pop(); renderLineageModal(); } }
+function closeLineage(){ lnFocus=null; lnStack=[]; const m=document.getElementById("lnModal"); if(m) m.hidden=true; const b=document.getElementById("lnBody"); if(b) b.innerHTML=""; }
+function editFocused(){ if(!lnFocus) return; const {entity,id}=lnFocus; closeLineage(); activeEntity=entity; renderPortfolio(); openEditor(id); }
 function refFieldNote(k){ return (k==="productId"||k==="modelId") ? ' <span class="pill">classification</span>' : ''; }
 
 function readEditor(){
@@ -1045,7 +1167,7 @@ function renderTable(){
   const list = SEL[activeEntity]();
   let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
   for(const r of list){
-    html += `<tr><td class="mono">${r.id}</td>`+
+    html += `<tr><td class="mono"><a class="idlink" data-lineage="${activeEntity}:${r.id}">${r.id}</a></td>`+
       cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
       `<td class="row-actions">
         <button class="ghost" data-edit="${r.id}">edit</button>
@@ -1054,6 +1176,7 @@ function renderTable(){
   html += `</tbody></table>`;
   if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
   document.getElementById("entityTable").innerHTML = html;
+  document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ armedDelete=null; renderTable(); openEditor(b.dataset.edit); });
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.del;
@@ -1170,7 +1293,7 @@ function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
 
 /* ---------------- nav + wiring ---------------- */
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
-  closeEditor();
+  closeEditor(); closeLineage();
   document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
   document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
@@ -1184,7 +1307,11 @@ document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
 document.getElementById("pfModalClose").onclick = closeEditor;
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ const m=document.getElementById("pfModal"); if(m && !m.hidden) closeEditor(); } });
+document.getElementById("lnClose").onclick = closeLineage;
+document.getElementById("lnEdit").onclick = editFocused;
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){
+  const ln=document.getElementById("lnModal"); if(ln && !ln.hidden){ closeLineage(); return; }
+  const m=document.getElementById("pfModal"); if(m && !m.hidden) closeEditor(); } });
 window.addEventListener("beforeunload", stopPoll);
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
