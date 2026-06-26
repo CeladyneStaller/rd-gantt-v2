@@ -135,6 +135,21 @@
   .seg-btn.seg-active{background:#16233e;color:var(--accent2)}
   .seg-btn.seg-hit{background:#10371f;color:var(--ok)}
   .seg-btn.seg-missed{background:#3a1414;color:var(--bad)}
+  .seg-btn.on{background:#16233e;color:var(--accent2)}
+  .modal-field{margin:0 0 12px}
+  .modal-field>.lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+  #modalBody .modal-field input[type=text],#modalBody .modal-field input[type=number],#modalBody .modal-field select,#subkrBody .modal-field input[type=text],#subkrBody .modal-field input[type=number],#subkrBody .modal-field select{width:100%}
+  #subkrBody{padding:16px 18px}
+  #subkrBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
+  input[type=range]{accent-color:var(--accent);height:4px}
+  .pct-row{display:flex;align-items:center;gap:10px}
+  .pct-val{font-family:var(--mono);font-size:12px;font-weight:600;min-width:34px;text-align:right;color:var(--ink)}
+  .skr-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .skr-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--panel2)}
+  .skr-row .skr-name{flex:1;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+  .skr-row .skr-name:hover{color:var(--accent)}
+  .skr-row .skr-meta{font-family:var(--mono);font-size:10px;color:var(--muted);flex:none}
+  .skr-empty{font-size:12px;color:var(--muted)}
   /* quarter/week header */
   .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
   .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -190,6 +205,7 @@
   <div id="initPanel" class="sub"></div>
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
+<div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
 
 <script>
 /* ============================================================================
@@ -1078,7 +1094,7 @@ function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = nul
 
 function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
 function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; restoreReturn(); renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; closeSubKrModal(); restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -1280,16 +1296,29 @@ function wireModalBody(body){
 }
 // the modal is a pure view of addingFor / editingSub — rendered at the end of renderAll
 function renderModal(){
+  // KR modal (custom, draft-backed) takes priority and self-manages its DOM
+  const krTarget = (editingSub && editingSub.type==="keyResult") ? editingSub.id
+                 : (addingFor && addingFor.type==="keyResult") ? "__NEW__" : null;
+  if(krTarget!==null){
+    if(draftKrFor!==krTarget){
+      const kr = krTarget==="__NEW__" ? null : exec.keyResults.find(x=>x.id===krTarget);
+      draftKr=initDraftKr(kr); draftKrFor=krTarget;
+      document.getElementById("modalTitle").textContent = kr?"Edit key result":"Add key result";
+      document.getElementById("modalBody").innerHTML = krModalBody();
+      document.getElementById("modalOverlay").classList.add("open");
+      wireKrModal();
+    }
+    return;
+  }
+  draftKr=null; draftKrFor=null;
   let title=null, body=null;
   if(editingSub){
     const id = editingSub.id;
     if(editingSub.type==="stageGate"){ const g=exec.stageGates.find(x=>x.id===id); if(g){ title="Edit stage-gate"; body=gateModalBody(g); } }
-    else if(editingSub.type==="keyResult"){ const r=exec.keyResults.find(x=>x.id===id); if(r){ title="Edit key result"; body=renderSubEditor("keyResult", r); } }
     else if(editingSub.type==="task"){ const r=exec.tasks.find(x=>x.id===id); if(r){ title="Edit task"; body=renderSubEditor("task", r); } }
     else if(editingSub.type==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k){ title=isMemberKpi(k)?"Override KPI target":"Edit KPI"; body=isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k); } }
   } else if(addingFor){
-    if(addingFor.type==="keyResult"){ title="Add key result"; body=renderSubEditor("keyResult", {}); }
-    else if(addingFor.type==="stageGate"){ title="Add stage-gate"; body=gateModalBody(null); }
+    if(addingFor.type==="stageGate"){ title="Add stage-gate"; body=gateModalBody(null); }
     else if(addingFor.type==="task"){ title="Add execution task"; body=renderSubEditor("task", {}); }
     else if(addingFor.type==="kpi"){ title="Add KPI"; body=renderSubEditor("kpi", {}); }
     else if(addingFor.type==="link"){ title="Link a metric"; body=renderLinkEditor(addingFor.hostType, addingFor.hostId); }
@@ -1323,6 +1352,181 @@ function gateModalBody(g){
   }
   h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return h;
+}
+
+/* ---------------- KR modal (tracker-cloned tracking modes) ---------------- */
+let draftKr=null, draftKrFor=null;          // KR modal draft + which KR it's for
+let draftSubKr=null, draftSubKrIdx=null;    // sub-KR sub-modal draft
+const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
+function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
+function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
+function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
+function krPrimaryKpi(krId){ return exec.kpis.find(k=>k.hostType==="keyResult" && k.hostId===krId) || null; }
+function initDraftKr(kr){
+  const isNew=!kr, pk=isNew?null:krPrimaryKpi(kr.id);
+  return {
+    id:isNew?null:kr.id,
+    statement:isNew?"":(kr.statement||""),
+    trackingType:(kr&&kr.trackingType)||(isNew?"percentage":"kpi"),
+    progress:(kr&&kr.progress!=null)?kr.progress:0,
+    kpiType:pk?(pk.targetType||"demonstration"):"demonstration",
+    kpiDir:(pk&&pk.direction==="down")?"decrease":"increase",
+    kpiTarget:(pk&&pk.target!=null)?pk.target:"",
+    kpiUnit:(pk&&pk.unit)?pk.unit:"",
+    kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
+    kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
+  };
+}
+function draftSubKrListHtml(){
+  const subs=draftKr.subKrs;
+  if(!subs.length) return `<div class="skr-empty">none yet — add a weighted sub-result</div>`;
+  return subs.map((s,i)=>{
+    let meta;
+    if((s.trackingType||"percentage")==="percentage") meta=(Number(s.progress)||0)+"%";
+    else { const k=(s.kpis&&s.kpis[0])||{}; const tp=k.targetType||k.type||"demo";
+      meta = (tp==="binary") ? "binary" : tp+((k.target!=null&&k.target!=="")?(" "+(k.direction==="down"?"≤":"≥")+" "+esc(String(k.target))+(k.unit?" "+esc(k.unit):"")):""); }
+    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
+  }).join("");
+}
+function krModalBody(){
+  const d=draftKr, tt=d.trackingType;
+  const isStat=d.kpiType==="statistical", isBin=d.kpiType==="binary";
+  const kpiSection=
+    `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.kpiType,"krktype")}</div>`+
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-f="kpiReadCount" value="${esc(d.kpiReadCount)}" placeholder="e.g. 10"></div>`+
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
+  return `
+    <div class="modal-field"><span class="lbl">Key result</span><input type="text" data-f="statement" value="${esc(d.statement)}" placeholder="e.g. Achieve mass activity ≥ 50 A/g at 1.5V"></div>
+    <div class="modal-field"><span class="lbl">Tracking type</span>
+      <select data-krtype>
+        <option value="percentage"${tt==="percentage"?" selected":""}>% completion</option>
+        <option value="kpi"${tt==="kpi"?" selected":""}>KPI-based</option>
+        <option value="subkr"${tt==="subkr"?" selected":""}>Sub-key results</option>
+      </select></div>
+    <div style="display:${tt==="percentage"?"block":"none"}">
+      <div class="modal-field"><span class="lbl">Progress</span><div class="pct-row"><input type="range" min="0" max="100" data-f="progress" value="${esc(d.progress)}" style="flex:1" data-pctslider><span class="pct-val" data-pctval>${Number(d.progress)||0}%</span></div></div>
+    </div>
+    <div style="display:${tt==="kpi"?"block":"none"}">${kpiSection}</div>
+    <div style="display:${tt==="subkr"?"block":"none"}">
+      <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
+        <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
+    </div>
+    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+}
+function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
+function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
+function wireKrModal(){
+  const body=document.getElementById("modalBody");
+  body.querySelectorAll("[data-f]").forEach(el=>el.oninput=()=>{ draftKr[el.dataset.f]=el.value; });
+  const sl=body.querySelector("[data-pctslider]"), pv=body.querySelector("[data-pctval]");
+  if(sl&&pv) sl.oninput=()=>{ draftKr.progress=sl.value; pv.textContent=sl.value+"%"; };
+  const tsel=body.querySelector("[data-krtype]");
+  if(tsel) tsel.onchange=()=>{ draftKr.trackingType=tsel.value; krRerenderBody(); };
+  body.querySelectorAll("[data-krktype]").forEach(b=>b.onclick=()=>{ draftKr.kpiType=b.dataset.krktype; krRerenderBody(); });
+  body.querySelectorAll("[data-krkdir]").forEach(b=>b.onclick=()=>{ draftKr.kpiDir=b.dataset.krkdir; body.querySelectorAll("[data-krkdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
+  body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
+  body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
+  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=saveKrModal;
+  const cx=body.querySelector("[data-krcancel]"); if(cx) cx.onclick=subCancel;
+}
+function saveKrModal(){
+  const body=document.getElementById("modalBody");
+  body.querySelectorAll("[data-f]").forEach(el=>{ draftKr[el.dataset.f]=el.value; });
+  const d=draftKr;
+  if(!String(d.statement||"").trim()){ setMsg("Key result needs a statement.","err"); const s=body.querySelector('[data-f="statement"]'); if(s) s.focus(); return; }
+  let kr = d.id ? exec.keyResults.find(x=>x.id===d.id) : null;
+  if(!kr){ const id=RD.allocId("keyResult", selectedObj, exec.keyResults.map(x=>x.id)); kr={ id, objectiveId:selectedObj }; exec.keyResults.push(kr); }
+  kr.statement=String(d.statement).trim();
+  kr.trackingType=d.trackingType;
+  if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; }
+  else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
+  else { delete kr.progress; delete kr.subKrs; }
+  if(d.trackingType==="kpi"){
+    let pk=krPrimaryKpi(kr.id);
+    if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
+    pk.name=kr.statement;
+    pk.targetType=d.kpiType;
+    if(d.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
+    else {
+      pk.direction=(d.kpiDir==="decrease")?"down":"up";
+      pk.target=parseTargetNum(d.kpiTarget);
+      pk.unit=d.kpiUnit||null;
+      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount); }
+      else { delete pk.statistic; delete pk.readCount; }
+    }
+  }
+  draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
+  renderAll(); setMsg("Key result saved (Save to persist).","ok");
+}
+/* sub-KR sub-modal */
+function openSubKrModal(idx){
+  draftSubKrIdx=idx;
+  const ex=(idx!=null)?draftKr.subKrs[idx]:null;
+  const k=(ex&&ex.kpis&&ex.kpis[0])||null;
+  draftSubKr={
+    name:ex?ex.name:"",
+    weight:(ex&&ex.weight!=null)?ex.weight:1,
+    trackingType:ex ? ((ex.trackingType==="kpi") ? (k?(k.targetType||k.type||"demonstration"):"demonstration") : "percentage") : "percentage",
+    progress:(ex&&ex.progress!=null)?ex.progress:0,
+    dir:(k&&k.direction==="down")?"decrease":"increase",
+    target:(k&&k.target!=null)?k.target:"",
+    unit:(k&&k.unit)?k.unit:"",
+    statistic:(k&&k.statistic)?k.statistic:"average",
+    readCount:(k&&k.readCount!=null)?k.readCount:""
+  };
+  document.getElementById("subkrTitle").textContent=(idx!=null)?"Edit sub-KR":"Add sub-KR";
+  document.getElementById("subkrBody").innerHTML=subKrModalBody();
+  document.getElementById("subkrOverlay").classList.add("open");
+  wireSubKrModal();
+}
+function closeSubKrModal(){ document.getElementById("subkrOverlay").classList.remove("open"); document.getElementById("subkrBody").innerHTML=""; draftSubKr=null; draftSubKrIdx=null; }
+function subKrModalBody(){
+  const d=draftSubKr, t=d.trackingType;
+  const isPct=t==="percentage", isStat=t==="statistical", isBin=t==="binary", hideKpi=(isPct||isBin);
+  return `
+    <div class="modal-field"><span class="lbl">Tracking type</span>${segHtml([["percentage","% completion"],["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],t,"skrtype")}</div>
+    <div class="modal-field"><span class="lbl">Sub-KR name</span><input type="text" data-sf="name" value="${esc(d.name)}" placeholder="e.g. Achieve power density"></div>
+    <div class="modal-field"><span class="lbl">Weight</span><input type="number" min="0.1" step="0.1" data-sf="weight" value="${esc(d.weight)}"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-sf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-sf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"skrdir")}</div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Target</span><input type="text" data-sf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-sf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
+    <div class="modal-field" style="display:${isPct?"block":"none"}"><span class="lbl">Initial progress</span><div class="pct-row"><input type="range" min="0" max="100" data-sf="progress" value="${esc(d.progress)}" style="flex:1" data-spctslider><span class="pct-val" data-spctval>${Number(d.progress)||0}%</span></div></div>
+    <div class="row-actions"><button class="act mini" type="button" data-subkrsave>Save sub-KR</button><button class="ghost mini" type="button" data-subkrcancel>Cancel</button></div>`;
+}
+function wireSubKrModal(){
+  const body=document.getElementById("subkrBody");
+  body.querySelectorAll("[data-sf]").forEach(el=>el.oninput=()=>{ draftSubKr[el.dataset.sf]=el.value; });
+  const sl=body.querySelector("[data-spctslider]"), pv=body.querySelector("[data-spctval]");
+  if(sl&&pv) sl.oninput=()=>{ draftSubKr.progress=sl.value; pv.textContent=sl.value+"%"; };
+  body.querySelectorAll("[data-skrtype]").forEach(b=>b.onclick=()=>{ draftSubKr.trackingType=b.dataset.skrtype; document.getElementById("subkrBody").innerHTML=subKrModalBody(); wireSubKrModal(); });
+  body.querySelectorAll("[data-skrdir]").forEach(b=>b.onclick=()=>{ draftSubKr.dir=b.dataset.skrdir; body.querySelectorAll("[data-skrdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const sv=body.querySelector("[data-subkrsave]"); if(sv) sv.onclick=saveSubKrModal;
+  const cx=body.querySelector("[data-subkrcancel]"); if(cx) cx.onclick=closeSubKrModal;
+}
+function saveSubKrModal(){
+  const body=document.getElementById("subkrBody");
+  body.querySelectorAll("[data-sf]").forEach(el=>{ draftSubKr[el.dataset.sf]=el.value; });
+  const d=draftSubKr;
+  if(!String(d.name||"").trim()){ const n=body.querySelector('[data-sf="name"]'); if(n) n.focus(); return; }
+  const w=parseFloat(d.weight)||1, nm=String(d.name).trim();
+  let skr;
+  if(d.trackingType==="percentage"){ skr={ name:nm, weight:w, trackingType:"percentage", progress:clampPct(d.progress), kpis:[] }; }
+  else {
+    const k={ type:d.trackingType, targetType:d.trackingType, name:nm, current:null };
+    if(d.trackingType!=="binary"){ k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
+      if(d.trackingType==="statistical"){ k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
+    if(draftSubKrIdx!=null){ const ex=draftKr.subKrs[draftSubKrIdx], ek=(ex&&ex.kpis&&ex.kpis[0])||null; if(ek&&ek.current!=null) k.current=ek.current; }
+    skr={ name:nm, weight:w, trackingType:"kpi", progress:0, kpis:[k] };
+  }
+  if(draftSubKrIdx!=null) draftKr.subKrs[draftSubKrIdx]=skr; else draftKr.subKrs.push(skr);
+  closeSubKrModal(); refreshKrSubList();
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -1568,6 +1772,8 @@ document.getElementById("saveBtn").onclick = saveExec;
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
 document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
+document.getElementById("subkrX").onclick = closeSubKrModal;
+document.getElementById("subkrOverlay").onclick = (e)=>{ if(e.target.id==="subkrOverlay") closeSubKrModal(); };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
 window.addEventListener("beforeunload", stopPoll);
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
