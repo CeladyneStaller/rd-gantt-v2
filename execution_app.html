@@ -123,6 +123,8 @@
   #modalBody .ed{margin:0 0 14px}
   #modalBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0 !important}
   .modal-section-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:var(--mono);margin:14px 0 8px;display:block}
+  .gt-head{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+  .gt-acts{margin-left:auto;display:flex;gap:6px;flex:none}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg-btn{background:var(--panel2);border:none;border-right:1px solid var(--line);color:var(--muted);padding:6px 13px;font-size:12px;cursor:pointer}
   .seg-btn:last-child{border-right:none}
@@ -958,10 +960,13 @@ const SUB = {
 };
 // addingFor: null | {type, hostType?, hostId?}   editingSub: null | {type, id}
 let addingFor = null, editingSub = null, armedDel = null;
+let subReturn = null;  // when a KPI/link editor is launched from inside the gate modal, return here on close
+function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
+function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
 
-function subOpenAdd(type, hostType, hostId){ addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
-function subOpenEdit(type, id){ editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; renderAll(); }
+function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
+function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -1021,7 +1026,7 @@ function saveSub(){
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     arr.push(Object.assign(base, data));
   }
-  addingFor=null; editingSub=null; renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
+  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
 }
 function delSub(type, id){
   if(type==="kpi"){ const k=exec.kpis.find(x=>x.id===id);
@@ -1195,7 +1200,15 @@ function gateModalBody(g){
   </div>
   <span class="modal-section-lbl">Status</span>
   <div class="seg" data-seg>${segBtns}</div>`;
-  if(isEdit) h+=`<span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
+  if(isEdit){
+    h+=`<span class="modal-section-lbl">Targets / pass criteria</span>
+      <div class="gt-head"><span class="hint" style="margin:0">measurable criteria — gate readiness scores current readings against these</span>
+        <span class="gt-acts"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></span></div>
+      ${kpiTable("stageGate", g.id, selectedObj)}
+      <span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
+  } else {
+    h+=`<p class="hint" style="margin:14px 0 0">Add the gate first, then reopen it to set its targets and predecessors.</p>`;
+  }
   h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return h;
 }
@@ -1245,7 +1258,7 @@ function makeLinkMember(hostType, hostId, definerId){
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
   exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
                    name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; renderAll(); setMsg("Linked (Save to persist).","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked (Save to persist).","ok");
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
@@ -1419,7 +1432,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); subOpenAdd("kpi",ht,hid); });
-  host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
+  host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); subOpenEdit(t,id); });
