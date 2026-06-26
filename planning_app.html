@@ -795,6 +795,35 @@ async function saveAll(){
   }
 }
 
+// Auto-save a single portfolio mutation. `reapply` re-applies that one change
+// onto a freshly reloaded portfolio if a concurrent save bumped the etag (412),
+// so an auto-saved add/edit/delete is never silently lost to a race.
+async function persistPortfolio(reapply, okMsg){
+  if(!tok()){ setMsg("Saved locally — add a broker token in Settings to sync.", "info"); return; }
+  try{
+    const res = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
+    etags["portfolio"]=res.etag; knownVersions["portfolio"]=res.version;
+    setMsg(okMsg||"Saved.", "ok");
+  }catch(e){
+    if(e.status===412){
+      try{
+        const p = await apiGet("portfolio");
+        if(p){ portfolio = Object.assign(blankPortfolio(), p.doc); etags["portfolio"]=p.etag; knownVersions["portfolio"]=p.version; }
+        if(reapply) reapply();                          // re-apply this change onto their version
+        const res2 = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
+        etags["portfolio"]=res2.etag; knownVersions["portfolio"]=res2.version;
+        renderPortfolio(); renderCompany();
+        setMsg((okMsg||"Saved.")+" (merged with a concurrent change)", "ok");
+      }catch(e2){
+        renderPortfolio(); renderCompany();
+        setMsg("Auto-save hit a conflict and couldn't merge ("+(e2.status||e2)+") — reloaded; re-apply and use Save.", "err");
+      }
+    } else {
+      setMsg("Auto-save failed ("+(e.status||e)+"). Your change is local — use Save to retry.", "err");
+    }
+  }
+}
+
 /* version-gated polling: ONE timer, version endpoint only, pull on change, own echo ignored */
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce, 25000); }
 function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
@@ -966,20 +995,26 @@ function readEditor(){
 }
 function saveRecord(){
   const data = readEditor();
-  const list = SEL[activeEntity]();
+  const ent = activeEntity;
+  const list = SEL[ent]();
   hideEditorErr();
+  let reapply;
   if(editingId){
-    const rec = list.find(x=>x.id===editingId);
+    const id = editingId;
+    const rec = list.find(x=>x.id===id);
     const merged = Object.assign({}, rec, data);
-    if(!validateAndWarn(activeEntity, merged)) return;   // validate before mutating
+    if(!validateAndWarn(ent, merged)) return;   // validate before mutating
     Object.assign(rec, data);
+    reapply = ()=>{ const r=SEL[ent]().find(x=>x.id===id); if(r) Object.assign(r, data); else SEL[ent]().push(Object.assign({id}, data)); };
   } else {
-    const id = allocFor(activeEntity, data);
+    const id = allocFor(ent, data);
     const rec = Object.assign({id}, data);
-    if(!validateAndWarn(activeEntity, rec)) return;
+    if(!validateAndWarn(ent, rec)) return;
     list.push(rec);
+    reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
-  closeEditor(); renderPortfolio(); renderCompany(); setMsg(cap(activeEntity)+" saved (remember to Save to the broker).", "ok");
+  closeEditor(); renderPortfolio(); renderCompany();
+  persistPortfolio(reapply, cap(ent)+" saved.");
 }
 function validateAndWarn(entity, rec){
   if(entity==="objective" || entity==="initiative"){
@@ -1023,9 +1058,10 @@ function renderTable(){
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.del;
     if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
-    SEL[activeEntity]().splice(SEL[activeEntity]().findIndex(x=>x.id===id),1);
+    const ent = activeEntity;
+    SEL[ent]().splice(SEL[ent]().findIndex(x=>x.id===id),1);
     armedDelete=null; renderPortfolio(); renderCompany();
-    setMsg(cap(activeEntity)+" deleted locally (Save to persist).", "ok");
+    persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
   });
 }
 function cellVal(col,v){
