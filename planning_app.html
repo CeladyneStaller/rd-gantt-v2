@@ -91,6 +91,23 @@
   .lnempty{font-size:12px;color:var(--muted);padding:3px 0}
   .lnback{background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px;padding:4px 10px}
   .lnback:hover{color:var(--ink);background:var(--panel2)}
+  .pf-viewtoggle{display:flex;gap:4px;margin-bottom:14px}
+  .pf-viewtoggle button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+  .pf-viewtoggle button.active{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
+  .tree{font-size:13px}
+  details.tnode > summary{list-style:none;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;user-select:none}
+  details.tnode > summary::-webkit-details-marker{display:none}
+  details.tnode > summary::before{content:'▸';color:var(--muted);font-size:10px;display:inline-block;width:10px;flex:none;transition:transform .12s}
+  details.tnode[open] > summary::before{transform:rotate(90deg)}
+  details.tnode > summary:hover{background:var(--panel2)}
+  .tchildren{margin-left:13px;padding-left:11px;border-left:1px solid var(--line)}
+  .tleaf{display:flex;align-items:center;gap:8px;padding:5px 8px 5px 26px}
+  .ttag{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px;flex:none}
+  .ttag.exec{color:var(--accent2);border-color:#2a3a5a;background:#16233e}
+  .tname{color:var(--accent2);cursor:pointer;text-decoration:none;flex:1}
+  .tname:hover{text-decoration:underline}
+  .tstatic{color:var(--ink);flex:1}
+  .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
   .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
@@ -127,6 +144,8 @@
 
   <section class="tabsec active" id="tab-company"></section>
   <section class="tabsec" id="tab-portfolio">
+    <div id="pfViewToggle" class="pf-viewtoggle"></div>
+    <div id="pfTree"></div>
     <div class="entity-tabs" id="entityTabs"></div>
     <div id="pfToolbar"></div>
     <div id="entityTable"></div>
@@ -956,8 +975,18 @@ const SCHEMAS = {
 };
 let activeEntity = "division";
 let editingId = null;
+let pfView = "tree";
 
 function renderPortfolio(){
+  const tg = document.getElementById("pfViewToggle");
+  tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Architecture</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
+  tg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(pfView!==b.dataset.pfview){ pfView=b.dataset.pfview; closeEditor(); renderPortfolio(); } });
+  const tree = pfView==="tree";
+  document.getElementById("pfTree").style.display = tree?"":"none";
+  document.getElementById("entityTabs").style.display = tree?"none":"";
+  document.getElementById("pfToolbar").style.display = tree?"none":"";
+  document.getElementById("entityTable").style.display = tree?"none":"";
+  if(tree){ renderPortfolioTree(); return; }
   const tabs = document.getElementById("entityTabs");
   tabs.innerHTML = Object.keys(SCHEMAS).map(k=>
     `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
@@ -1013,13 +1042,6 @@ const TAG={division:"div",product:"prod",model:"model",initiative:"init",milesto
 let lnFocus=null, lnStack=[];
 function byId(entity,id){ const a=SEL[entity]&&SEL[entity](); return a?a.find(x=>x.id===id):null; }
 function nameOf(entity,r){ return r ? (r.name||r.statement||r.id) : "(missing)"; }
-function execRollup(o){
-  const doc=execDocs["EXEC-"+o.divisionId];
-  if(!doc) return "No exec doc loaded for this division.";
-  const k=(doc.keyResults||[]).filter(x=>x.objectiveId===o.id).length;
-  const g=(doc.stageGates||[]).filter(x=>x.objectiveId===o.id).length;
-  return `${k} key result${k===1?'':'s'} · ${g} stage-gate${g===1?'':'s'}`;
-}
 function subCount(entity,r){
   const P=portfolio;
   if(entity==="division") return `${P.products.filter(p=>p.divisionId===r.id).length} prod · ${P.initiatives.filter(i=>i.divisionId===r.id).length} init · ${P.objectives.filter(o=>o.divisionId===r.id).length} obj`;
@@ -1030,69 +1052,108 @@ function subCount(entity,r){
   if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; if(doc){ const k=(doc.keyResults||[]).filter(x=>x.objectiveId===r.id).length; const g=(doc.stageGates||[]).filter(x=>x.objectiveId===r.id).length; return `${k} KR · ${g} gates`; } return r.quarter||""; }
   return "";
 }
-function lineageData(entity,id){
-  const P=portfolio, up=[], groups=[];
-  const crumb=(e,fid)=>{ const r=byId(e,fid); if(r) up.push({entity:e,id:fid,label:nameOf(e,r)}); };
-  const item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)});
+
+/* ---- recursive architecture tree (shared by Portfolio tab + modal) ---- */
+function hasArchChildren(entity,id){
+  const P=portfolio;
+  if(entity==="division") return P.initiatives.some(i=>i.divisionId===id)||P.products.some(p=>p.divisionId===id);
+  if(entity==="initiative") return P.milestones.some(m=>m.initiativeId===id)||P.objectives.some(o=>o.initiativeId===id);
+  if(entity==="product") return P.models.some(m=>m.productId===id);
+  if(entity==="objective"){ const o=byId("objective",id); const d=o&&execDocs["EXEC-"+o.divisionId]; if(!d) return false;
+    return (d.keyResults||[]).some(k=>k.objectiveId===id)||(d.stageGates||[]).some(g=>g.objectiveId===id)||(d.kpis||[]).some(k=>k.objectiveId===id); }
+  return false;
+}
+function treeRow(entity,r){ const sub=subCount(entity,r); return `<span class="ttag">${TAG[entity]}</span><a class="tname" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
+function leafRow(entity,r){ const sub=subCount(entity,r); return `<div class="tleaf"><span class="ttag">${TAG[entity]}</span><a class="tname" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${sub?`<span class="tsub">${esc(sub)}</span>`:''}</div>`; }
+function execLeaf(tag,label){ return `<div class="tleaf"><span class="ttag exec">${tag}</span><span class="tstatic">${esc(label)}</span></div>`; }
+function nodeHtml(entity,r){
+  if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
+  return `<details open class="tnode"><summary>${treeRow(entity,r)}</summary><div class="tchildren">${treeChildrenHtml(entity,r.id)}</div></details>`;
+}
+function objectiveExecHtml(objId){
+  const o=byId("objective",objId), doc=o&&execDocs["EXEC-"+o.divisionId];
+  if(!doc) return `<div class="tleaf"><span class="tstatic">no exec doc loaded for this division</span></div>`;
+  let h="";
+  (doc.keyResults||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KR", k.statement||k.id));
+  (doc.stageGates||[]).filter(g=>g.objectiveId===objId).forEach(g=> h+=execLeaf("gate", g.name||g.id));
+  (doc.kpis||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KPI", (RD.kpiName?RD.kpiName(k, doc.kpis||[]):0)||k.name||k.id));
+  return h || `<div class="tleaf"><span class="tstatic">no key results, stage-gates, or KPIs yet</span></div>`;
+}
+function treeChildrenHtml(entity,id){
+  const P=portfolio; let h="";
   if(entity==="division"){
-    const prods=P.products.filter(p=>p.divisionId===id), pid=new Set(prods.map(p=>p.id));
-    const mods=P.models.filter(m=>pid.has(m.productId));
-    const inits=P.initiatives.filter(i=>i.divisionId===id), iid=new Set(inits.map(i=>i.id));
-    const mils=P.milestones.filter(ms=>iid.has(ms.initiativeId));
-    const objs=P.objectives.filter(o=>o.divisionId===id);
-    groups.push({title:`Products (${prods.length})`, items:prods.map(p=>item("product",p))});
-    groups.push({title:`Models (${mods.length})`, items:mods.map(m=>item("model",m))});
-    groups.push({title:`Initiatives (${inits.length})`, items:inits.map(i=>item("initiative",i))});
-    groups.push({title:`Milestones (${mils.length})`, items:mils.map(m=>item("milestone",m))});
-    groups.push({title:`Objectives (${objs.length})`, items:objs.map(o=>item("objective",o))});
-  } else if(entity==="product"){
-    const p=byId("product",id); if(p) crumb("division",p.divisionId);
-    groups.push({title:`Models (${P.models.filter(m=>m.productId===id).length})`, items:P.models.filter(m=>m.productId===id).map(m=>item("model",m))});
-    groups.push({title:`Objectives classified here (${P.objectives.filter(o=>o.productId===id).length})`, items:P.objectives.filter(o=>o.productId===id).map(o=>item("objective",o))});
-  } else if(entity==="model"){
-    const m=byId("model",id); if(m){ const p=byId("product",m.productId); if(p){ crumb("division",p.divisionId); crumb("product",p.id); } }
-    groups.push({title:`Objectives classified here (${P.objectives.filter(o=>o.modelId===id).length})`, items:P.objectives.filter(o=>o.modelId===id).map(o=>item("objective",o))});
+    P.initiatives.filter(i=>i.divisionId===id).forEach(i=> h+=nodeHtml("initiative",i));
+    P.products.filter(p=>p.divisionId===id).forEach(p=> h+=nodeHtml("product",p));
   } else if(entity==="initiative"){
-    const i=byId("initiative",id); if(i) crumb("division",i.divisionId);
-    groups.push({title:`Milestones (${P.milestones.filter(ms=>ms.initiativeId===id).length})`, items:P.milestones.filter(ms=>ms.initiativeId===id).map(m=>item("milestone",m))});
-    groups.push({title:`Objectives (${P.objectives.filter(o=>o.initiativeId===id).length})`, items:P.objectives.filter(o=>o.initiativeId===id).map(o=>item("objective",o))});
-  } else if(entity==="milestone"){
-    const ms=byId("milestone",id); if(ms){ const i=byId("initiative",ms.initiativeId); if(i){ crumb("division",i.divisionId); crumb("initiative",i.id); } }
-    const objs=P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(id)>=0);
-    groups.push({title:`Objectives linking this (${objs.length})`, items:objs.map(o=>item("objective",o))});
+    P.milestones.filter(m=>m.initiativeId===id).forEach(m=> h+=leafRow("milestone",m));
+    P.objectives.filter(o=>o.initiativeId===id).forEach(o=> h+=nodeHtml("objective",o));
+  } else if(entity==="product"){
+    P.models.filter(m=>m.productId===id).forEach(m=> h+=leafRow("model",m));
   } else if(entity==="objective"){
-    const o=byId("objective",id);
-    if(o){ if(o.divisionId) crumb("division",o.divisionId); if(o.initiativeId) crumb("initiative",o.initiativeId); }
-    const rel=[];
-    if(o&&o.productId){ const p=byId("product",o.productId); if(p) rel.push(item("product",p)); }
-    if(o&&o.modelId){ const m=byId("model",o.modelId); if(m) rel.push(item("model",m)); }
-    groups.push({title:`Classification`, items:rel});
-    const mils=((o&&o.milestoneIds)||[]).map(mid=>byId("milestone",mid)).filter(Boolean);
-    groups.push({title:`Linked milestones (${mils.length})`, items:mils.map(m=>item("milestone",m))});
-    groups.push({title:`Execution`, text:o?execRollup(o):""});
+    h+=objectiveExecHtml(id);
   }
-  return {up, groups};
+  return h;
+}
+function wireTreeLinks(root){
+  root.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+}
+function renderPortfolioTree(){
+  const host=document.getElementById("pfTree");
+  const divs=portfolio.divisions;
+  if(!divs.length){ host.innerHTML='<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
+  let h=`<div class="tree">`;
+  divs.forEach(d=> h+=nodeHtml("division",d));
+  h+=`</div>`;
+  host.innerHTML=h;
+  wireTreeLinks(host);
+}
+
+/* ---- lineage modal: up-chain breadcrumb + subtree + cross-links ---- */
+function upChain(entity,id){
+  const up=[], crumb=(e,fid)=>{ const r=byId(e,fid); if(r) up.push({entity:e,id:fid,label:nameOf(e,r)}); };
+  if(entity==="product"){ const p=byId("product",id); if(p) crumb("division",p.divisionId); }
+  else if(entity==="model"){ const m=byId("model",id); if(m){ const p=byId("product",m.productId); if(p){ crumb("division",p.divisionId); crumb("product",p.id); } } }
+  else if(entity==="initiative"){ const i=byId("initiative",id); if(i) crumb("division",i.divisionId); }
+  else if(entity==="milestone"){ const ms=byId("milestone",id); if(ms){ const i=byId("initiative",ms.initiativeId); if(i){ crumb("division",i.divisionId); crumb("initiative",i.id); } } }
+  else if(entity==="objective"){ const o=byId("objective",id); if(o){ if(o.divisionId) crumb("division",o.divisionId); if(o.initiativeId) crumb("initiative",o.initiativeId); } }
+  return up;
+}
+function relatedGroups(entity,id){
+  const P=portfolio, item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)}), out=[];
+  if(entity==="objective"){
+    const o=byId("objective",id), cls=[];
+    if(o&&o.productId){ const p=byId("product",o.productId); if(p) cls.push(item("product",p)); }
+    if(o&&o.modelId){ const m=byId("model",o.modelId); if(m) cls.push(item("model",m)); }
+    if(cls.length) out.push({title:"Classification", items:cls});
+    const mils=((o&&o.milestoneIds)||[]).map(mid=>byId("milestone",mid)).filter(Boolean);
+    if(mils.length) out.push({title:"Linked milestones", items:mils.map(m=>item("milestone",m))});
+  } else if(entity==="milestone"){
+    const objs=P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(id)>=0);
+    if(objs.length) out.push({title:"Objectives linking this", items:objs.map(o=>item("objective",o))});
+  } else if(entity==="product"||entity==="model"){
+    const objs=P.objectives.filter(o=>(entity==="product"?o.productId:o.modelId)===id);
+    if(objs.length) out.push({title:"Objectives classified here", items:objs.map(o=>item("objective",o))});
+  }
+  return out;
 }
 function renderLineageModal(){
   if(!lnFocus) return;
-  const {entity,id}=lnFocus;
-  const rec=byId(entity,id);
+  const {entity,id}=lnFocus, rec=byId(entity,id);
   if(!rec){ closeLineage(); return; }
   document.getElementById("lnTitle").textContent=cap(entity)+" · "+nameOf(entity,rec);
-  const L=lineageData(entity,id);
   let h=`<div class="lncrumb">`;
   if(lnStack.length) h+=`<button class="lnback" data-lnback="1">← back</button>`;
-  L.up.forEach(a=>{ h+=`<a data-lineage="${a.entity}:${a.id}">${esc(a.label)}</a><span class="sep">›</span>`; });
+  upChain(entity,id).forEach(a=>{ h+=`<a data-lineage="${a.entity}:${a.id}">${esc(a.label)}</a><span class="sep">›</span>`; });
   h+=`<span style="color:var(--ink)">${esc(nameOf(entity,rec))}</span></div>`;
-  L.groups.forEach(g=>{
+  const sub=treeChildrenHtml(entity,id);
+  h+= sub ? `<div class="tree">${sub}</div>` : `<p class="lnempty">No architecture beneath this node.</p>`;
+  relatedGroups(entity,id).forEach(g=>{
     h+=`<div class="lngroup"><h4>${esc(g.title)}</h4>`;
-    if(g.text!=null){ h+=`<div class="lnempty">${esc(g.text)}</div>`; }
-    else if(!g.items.length){ h+=`<div class="lnempty">none</div>`; }
-    else g.items.forEach(it=>{ h+=`<div class="lnrow"><span class="tag">${it.tag}</span><a class="lnnode" data-lineage="${it.entity}:${it.id}">${esc(it.name)}</a>${it.sub?`<span class="lnsub">${esc(it.sub)}</span>`:''}</div>`; });
+    g.items.forEach(it=>{ h+=`<div class="lnrow"><span class="tag">${it.tag}</span><a class="lnnode" data-lineage="${it.entity}:${it.id}">${esc(it.name)}</a>${it.sub?`<span class="lnsub">${esc(it.sub)}</span>`:''}</div>`; });
     h+=`</div>`;
   });
   const body=document.getElementById("lnBody"); body.innerHTML=h;
-  body.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  wireTreeLinks(body);
   const bk=body.querySelector("[data-lnback]"); if(bk) bk.onclick=lnBack;
   document.getElementById("lnModal").hidden=false;
 }
