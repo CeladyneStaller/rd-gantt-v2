@@ -79,6 +79,38 @@
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
   .chain-toggle input{width:auto;padding:0;margin:0}
+  /* dashboard layout (tracker QT pattern, dark theme) */
+  .obj-title{font-size:14px;color:var(--ink);margin:14px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 18px}
+  .mc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+  .mc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:8px}
+  .mc-val{font-size:23px;font-weight:600;line-height:1;color:var(--ink)}
+  .mc-val.small{font-size:14px;font-family:var(--mono)}
+  .mc-sub{font-size:11px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:14px 0}
+  .panel-header{display:flex;align-items:center;gap:10px;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .panel-title .chev{font-size:9px;transition:transform .15s;display:inline-block;color:var(--none)}
+  .panel-title.collapsed .chev{transform:rotate(-90deg)}
+  .panel-title .cnt{font-family:var(--mono);font-size:10px;color:var(--none);font-weight:400}
+  .panel-header .ha{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .item-list{display:flex;flex-direction:column;gap:8px}
+  .item-list.collapsed{display:none}
+  .icard{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .icard-top{display:flex;align-items:center;gap:10px;padding:8px 12px}
+  .icard-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
+  .icard-title{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .icard-title.click{cursor:pointer}
+  .icard-title.click:hover{color:var(--accent)}
+  .icard-score{font-family:var(--mono);font-weight:700;font-size:15px;flex:none}
+  .icard-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+  .icard-actions .gate-meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .icard-meta{border-top:1px solid var(--line);background:var(--panel)}
+  .statepill{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:2px 7px;flex:none}
+  .statepill.passed{background:#10371f;color:var(--ok)}
+  .statepill.passed-late{background:#3a2f10;color:var(--warn)}
+  .statepill.overdue{background:#3a1414;color:var(--bad)}
+  .statepill.pending{background:#1c2733;color:var(--none)}
 </style>
 </head>
 <body>
@@ -329,17 +361,44 @@ function renderAll(){
   const objs = myObjectives();
   if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
-  const sc = RD.objectiveScore(selectedObj, emForCore());
-  const b = RD.band(sc);
-  document.getElementById("objHeadWrap").innerHTML = `<div class="objhead">
-    <div><div class="sc" style="color:${col(b)}">${sc==null?'—':Math.round(sc)}</div></div>
-    <div><div class="lbl">Objective score (live)</div>
-      <span class="band ${b}">${b.replace('-',' ')}</span>
-      <div class="hint" style="margin:6px 0 0">${esc(o.statement||o.id)} · <span class="mono">${o.id}</span> · ${o.quarter||'—'}</div></div></div>`;
+  document.getElementById("objHeadWrap").innerHTML = objMetricStrip(o);
   renderKRs(); renderGates(); renderTasks();
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
+
+/* ---------------- dashboard shell (panels + metric strip) ---------------- */
+const panelCollapsed = new Set(["INIT"]);  // initiative metrics start collapsed
+function panelHead(key, title, cnt, actionsHtml){
+  const open = !panelCollapsed.has(key);
+  return `<div class="panel-header"><span class="panel-title${open?'':' collapsed'}" data-panel="${key}"><span class="chev">▼</span>${esc(title)}${cnt!=null?` <span class="cnt">${cnt}</span>`:''}</span><span class="ha">${actionsHtml||''}</span></div>`;
+}
+function listOpen(key){ return panelCollapsed.has(key)?" collapsed":""; }
+function objMetricStrip(o){
+  const em=emForCore(), td=todayDay();
+  const sc=RD.objectiveScore(selectedObj, em), b=RD.band(sc);
+  const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
+  const krOn=krs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
+  const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
+  const gSt=gates.map(g=>RD.classifyGate(g, td));
+  const gPass=gSt.filter(s=>s==="passed"||s==="passed-late").length, gOver=gSt.filter(s=>s==="overdue").length;
+  let projEnd=null, slip=null;
+  try{ const casc=RD.cascade(portfolio, em, td); projEnd=casc.objectiveProjectedEnd[selectedObj];
+    if(o.plannedEnd!=null && projEnd!=null) slip=projEnd-o.plannedEnd; }catch(e){}
+  const tasks=exec.tasks.filter(r=>r.objectiveId===selectedObj);
+  const tAvg=tasks.length?Math.round(tasks.reduce((a,t)=>a+(t.percentComplete||0),0)/tasks.length):null;
+  const schedVal=projEnd!=null?dayToIso(projEnd):"—";
+  const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d slip`:"on plan");
+  const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
+  return `<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span> · ${o.quarter||"—"}</div>
+  <div class="metrics">
+    <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div><div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
+    <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
+    <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
+    <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
+    <div class="mc"><div class="mc-label">Tasks</div><div class="mc-val">${tAvg==null?"—":tAvg+"%"}</div><div class="mc-sub">${tasks.length} task${tasks.length===1?"":"s"}</div></div>
+  </div>`;
+}
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
 const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
@@ -425,17 +484,19 @@ function renderKpiOverrideEditor(rec){
 function renderInitPanel(){
   const host=document.getElementById("initPanel");
   const inits=divInitiatives();
-  let html=`<h3>Initiative-level metrics · ${esc(divName(divisionId))} <span class="pill">shared across objectives · define here, link from a Key Result</span></h3>`;
-  if(!inits.length){ host.innerHTML=html+`<p class="hint">no initiatives in this division</p>`; return; }
-  inits.forEach(I=>{
+  let inner="";
+  if(!inits.length) inner=`<p class="hint">no initiatives in this division</p>`;
+  else inits.forEach(I=>{
     const n = exec.kpis.filter(k=>k.hostType==="initiative" && k.hostId===I.id).length;
-    html+=`<div class="hostcard"><div class="hosthead">
-      <span class="hn">${esc(I.name||I.id)}</span>
-      <span class="gate-meta">${n} metric${n===1?'':'s'}</span>
-      <span class="ha"><button class="ghost mini" data-addkpi="initiative:${I.id}">+ KPI</button></span>
-      </div>${kpiTable("initiative", I.id, null)}</div>`;
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-title">${esc(I.name||I.id)}</span>
+      <span class="pill">${n} metric${n===1?'':'s'}</span>
+      <span class="icard-actions"><button class="ghost mini" data-addkpi="initiative:${I.id}">+ KPI</button></span>
+      </div><div class="icard-meta">${kpiTable("initiative", I.id, null)}</div></div>`;
   });
-  host.innerHTML=html; wireExec(host);
+  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared · link from a Key Result</span>`;
+  host.innerHTML=`<div class="panel">${panelHead("INIT","Initiative-level metrics · "+divName(divisionId),inits.length||null,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`;
+  wireExec(host);
 }
 
 function kpiTable(hostType, hostId, objScope){
@@ -474,22 +535,24 @@ function kpiTable(hostType, hostId, objScope){
 function renderKRs(){
   const host=document.getElementById("subKR");
   const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
-  let html=`<h3>Key results<button class="ghost mini" data-addkr="1">+ add key result</button></h3>`;
-  if(addingFor && addingFor.type==="keyResult") html+=renderSubEditor("keyResult", {});
-  if(editingSub && editingSub.type==="keyResult"){ const r=krs.find(x=>x.id===editingSub.id); if(r) html+=renderSubEditor("keyResult", r); }
-  if(!krs.length) html+=`<p class="hint">none yet — a Key Result groups the KPIs that score this objective (no Key Result ⇒ no objective score)</p>`;
-  krs.forEach(kr=>{
+  let inner="";
+  if(addingFor && addingFor.type==="keyResult") inner+=renderSubEditor("keyResult", {});
+  if(editingSub && editingSub.type==="keyResult"){ const r=krs.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("keyResult", r); }
+  if(!krs.length) inner+=`<p class="hint">none yet — a Key Result groups the KPIs that score this objective (no Key Result ⇒ no objective score)</p>`;
+  krs.forEach((kr,idx)=>{
     const s=RD.keyResultScore(kr.id, emForCore());
-    html+=`<div class="hostcard"><div class="hosthead">
-      <span class="hn">${esc(kr.statement||kr.id)}</span>
-      <span class="hs" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
-      <span class="ha"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span>
+      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
+      <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
+      <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
-        <button class="ghost mini" data-edit="keyResult:${kr.id}">edit</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div>${kpiTable("keyResult", kr.id, selectedObj)}</div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedObj)}</div></div>`;
   });
-  host.innerHTML=html; wireExec(host);
+  const acts=`<button class="ghost mini" data-addkr="1">+ add key result</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("KR","Key Results",krs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
+  wireExec(host);
 }
 function gateSchedRow(g){
   const committed = g.baselineDate!=null;
@@ -516,44 +579,51 @@ function gateSchedRow(g){
 function renderGates(){
   const host=document.getElementById("subSG");
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
-  let html=`<h3>Stage-gates <span class="pill">gating · not in objective score</span><button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, this objective's gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':''}/> chain by date</label></h3>`;
-  if(addingFor && addingFor.type==="stageGate") html+=renderSubEditor("stageGate", {});
-  if(editingSub && editingSub.type==="stageGate"){ const r=gates.find(x=>x.id===editingSub.id); if(r) html+=renderSubEditor("stageGate", r); }
-  if(!gates.length) html+=`<p class="hint">none yet</p>`;
-  gates.forEach(g=>{
-    const s=RD.stageGateScore(g.id, emForCore());
-    html+=`<div class="hostcard"><div class="hosthead">
-      <span class="hn">${esc(g.name||g.id)}</span>
-      <span class="hs" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-      <span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
-      <span class="ha"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
+  const td=todayDay();
+  let inner="";
+  if(addingFor && addingFor.type==="stageGate") inner+=renderSubEditor("stageGate", {});
+  if(editingSub && editingSub.type==="stageGate"){ const r=gates.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("stageGate", r); }
+  if(!gates.length) inner+=`<p class="hint">none yet</p>`;
+  gates.forEach((g,idx)=>{
+    const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">G${idx+1}</span>
+      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
+      <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>
+      <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
+      <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
+        <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
-        <button class="ghost mini" data-edit="stageGate:${g.id}">edit</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div>${gateSchedRow(g)}${kpiTable("stageGate", g.id, selectedObj)}</div>`;
+      </div><div class="icard-meta">${gateSchedRow(g)}${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
   });
-  host.innerHTML=html; wireExec(host);
+  const chainOn=(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':'';
+  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${chainOn}/> chain by date</label>`;
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",gates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  wireExec(host);
 }
 function renderTasks(){
   const host=document.getElementById("subTASK");
   const rows=exec.tasks.filter(r=>r.objectiveId===selectedObj);
-  let html=`<h3>Execution tasks <span class="pill">execution level · gating, not in objective score</span><button class="ghost mini" data-addtask="1">+ add task</button></h3>`;
-  if(addingFor && addingFor.type==="task") html+=renderSubEditor("task", {});
-  if(editingSub && editingSub.type==="task"){ const r=rows.find(x=>x.id===editingSub.id); if(r) html+=renderSubEditor("task", r); }
-  if(!rows.length) html+=`<p class="hint">none yet</p>`;
-  rows.forEach(t=>{
-    html+=`<div class="hostcard"><div class="hosthead">
-      <span class="hn">${esc(t.name||t.id)}</span>
-      <span class="gate-meta">${dayToIso(t.plannedStart)||'—'} → ${dayToIso(t.plannedEnd)||'—'} ·
+  let inner="";
+  if(addingFor && addingFor.type==="task") inner+=renderSubEditor("task", {});
+  if(editingSub && editingSub.type==="task"){ const r=rows.find(x=>x.id===editingSub.id); if(r) inner+=renderSubEditor("task", r); }
+  if(!rows.length) inner+=`<p class="hint">none yet</p>`;
+  rows.forEach((t,idx)=>{
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-num" data-edit="task:${t.id}" title="edit">T${idx+1}</span>
+      <span class="icard-title click" data-edit="task:${t.id}">${esc(t.name||t.id)}</span>
+      <span class="icard-actions"><span class="gate-meta">${dayToIso(t.plannedStart)||'—'} → ${dayToIso(t.plannedEnd)||'—'} ·
         <input class="tiny" type="number" min="0" max="100" data-pct="${t.id}" value="${t.percentComplete!=null?t.percentComplete:0}"/>% ·
         end <input class="sm" type="date" data-actend="${t.id}" value="${dayToIso(t.actualEnd)}"/></span>
-      <span class="ha"><button class="ghost mini" data-addkpi="task:${t.id}">+ KPI</button>
+        <button class="ghost mini" data-addkpi="task:${t.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="task:${t.id}">+ link</button>
-        <button class="ghost mini" data-edit="task:${t.id}">edit</button>
         <button class="ghost mini danger ${armedDel===t.id?'armed':''}" data-del="task:${t.id}">${armedDel===t.id?'confirm':'del'}</button></span>
-      </div>${kpiTable("task", t.id, selectedObj)}</div>`;
+      </div><div class="icard-meta">${kpiTable("task", t.id, selectedObj)}</div></div>`;
   });
-  host.innerHTML=html; wireExec(host);
+  const acts=`<button class="ghost mini" data-addtask="1">+ add task</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("TASK","Execution tasks",rows.length,acts)}<div class="item-list${listOpen("TASK")}">${inner}</div></div>`;
+  wireExec(host);
 }
 function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
@@ -576,6 +646,7 @@ function wireExec(host){
   host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed (Save to persist).","ok"); });
   host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); setMsg("Task updated (Save to persist).","ok"); });
   host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; setMsg("Task updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
 }
 
 /* ---------------- wiring ---------------- */
