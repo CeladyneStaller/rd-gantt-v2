@@ -361,6 +361,122 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(r3.cycles.length > 0, 'cycle reported');
 })();
 
+/* ---- cascade: gate chaining, locks, committed baselines ------------------ */
+(function () {
+  var today = 50;
+  // O with three gates; G1 finished LATE at 70, G2/G3 undone (pfGate floors to today=50).
+  function build(chain) {
+    return {
+      initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
+      milestones: [], milestoneEdges: [],
+      objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [], chainGatesByDate: chain }],
+      objectiveEdges: [], stageGateEdges: []
+    };
+  }
+  var execChain = { 'D': { stageGates: [
+    { id: 'G1', objectiveId: 'O', plannedDate: 30, actualDate: 70 },
+    { id: 'G2', objectiveId: 'O', plannedDate: 40 },
+    { id: 'G3', objectiveId: 'O', plannedDate: 45 }
+  ] } };
+
+  // no chain: each gate stands alone (gateEff == pfGate)
+  var rNo = C.cascade(build(false), execChain, today);
+  approx(rNo.gateEffective['G1'], 70, 'solo G1 = its late actual (70)');
+  approx(rNo.gateEffective['G2'], 50, 'solo G2 = max(plannedDate 40, today 50) = 50');
+  ok(rNo.gateEffective['G3'] === 50, 'solo G3 floors to today, not pushed by G1');
+
+  // chainGatesByDate: G1(30)->G2(40)->G3(45); late G1 pushes both to 70
+  var rCh = C.cascade(build(true), execChain, today);
+  approx(rCh.gateEffective['G2'], 70, 'chained G2 pushed to late G1 end (70)');
+  approx(rCh.gateEffective['G3'], 70, 'chained G3 pushed through the chain (70)');
+  approx(rCh.objectiveProjectedEnd['O'], 70, 'chained gate end flows into objective projEnd');
+
+  // lock exempts the locked gate from inherited push, and shields downstream
+  var execLock = JSON.parse(JSON.stringify(execChain));
+  execLock['D'].stageGates[1].locked = true;       // lock G2
+  execLock['D'].stageGates[1].baselineDate = 40;   // committed to 40
+  var rLk = C.cascade(build(true), execLock, today);
+  approx(rLk.gateEffective['G2'], 50, 'locked G2 holds at its own pfGate (50), not pushed to 70');
+  approx(rLk.gateEffective['G3'], 50, 'locked G2 shields G3 (inherits committed 50, not 70)');
+
+  // lock NEVER fakes on-time: a locked, overdue, undone gate still floors to today AND slips
+  var pSolo = {
+    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
+    milestones: [], milestoneEdges: [],
+    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }],
+    objectiveEdges: [], stageGateEdges: []
+  };
+  var execOv = { 'D': { stageGates: [{ id: 'GL', objectiveId: 'O', plannedDate: 30, baselineDate: 30, locked: true }] } };
+  var rOv = C.cascade(pSolo, execOv, today);
+  approx(rOv.gateEffective['GL'], 50, 'locked overdue gate still forecasts to today (50), not frozen at 30');
+  ok(rOv.gateSlipped['GL'] === true, 'locked overdue gate is flagged slipped vs its committed baseline');
+
+  // baseline-aware slip thresholds (all finished at 70)
+  var execBl = { 'D': { stageGates: [
+    { id: 'B60', objectiveId: 'O', plannedDate: 40, actualDate: 70, baselineDate: 60 },
+    { id: 'B80', objectiveId: 'O', plannedDate: 40, actualDate: 70, baselineDate: 80 },
+    { id: 'BNo', objectiveId: 'O', plannedDate: 40, actualDate: 70 }
+  ] } };
+  var rBl = C.cascade(pSolo, execBl, today);
+  ok(rBl.gateSlipped['B60'] === true, 'committed 60, finished 70 -> slipped');
+  ok(rBl.gateSlipped['B80'] === false, 'committed 80, finished 70 -> not slipped');
+  ok(rBl.gateSlipped['BNo'] === false, 'no committed baseline -> never slipped');
+
+  // explicit stageGateEdges across objectives, with lag
+  var pEdge = {
+    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
+    milestones: [], milestoneEdges: [],
+    objectives: [
+      { id: 'Oa', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] },
+      { id: 'Ob', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }
+    ],
+    objectiveEdges: [], stageGateEdges: [{ fromGate: 'Ga', toGate: 'Gb', lagDays: 5 }]
+  };
+  var execEdge = { 'D': { stageGates: [
+    { id: 'Ga', objectiveId: 'Oa', plannedDate: 30, actualDate: 70 },
+    { id: 'Gb', objectiveId: 'Ob', plannedDate: 40 }
+  ] } };
+  var rEd = C.cascade(pEdge, execEdge, today);
+  approx(rEd.gateEffective['Gb'], 75, 'cross-objective edge: Gb = Ga end (70) + lag 5');
+
+  // gate cycle guard: Gx<->Gy terminates and is reported
+  var pCyc = {
+    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
+    milestones: [], milestoneEdges: [],
+    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }],
+    objectiveEdges: [], stageGateEdges: [{ fromGate: 'Gx', toGate: 'Gy', lagDays: 0 }, { fromGate: 'Gy', toGate: 'Gx', lagDays: 0 }]
+  };
+  var execCyc = { 'D': { stageGates: [
+    { id: 'Gx', objectiveId: 'O', plannedDate: 40 },
+    { id: 'Gy', objectiveId: 'O', plannedDate: 45 }
+  ] } };
+  var rCy = C.cascade(pCyc, execCyc, today);
+  ok(rCy.gateEffective['Gx'] != null && rCy.gateEffective['Gy'] != null, 'gate cycle terminates with values');
+  ok(rCy.cycles.some(function (c) { return c.indexOf('GATE:') === 0; }), 'gate cycle reported');
+
+  // backward compat: with no new fields, gateEffective == pfGate, no slip flags
+  var execPlain = { 'D': { stageGates: [
+    { id: 'P1', objectiveId: 'O', plannedDate: 90 },                 // future, undone -> max(90,50)=90
+    { id: 'P2', objectiveId: 'O', plannedDate: 30, actualDate: 35 }  // done -> 35
+  ] } };
+  var rPl = C.cascade(pSolo, execPlain, today);
+  ok(rPl.gateEffective['P1'] === 90 && rPl.gateEffective['P2'] === 35, 'no new fields -> gateEffective == pfGate (forecast unchanged)');
+  ok(rPl.gateSlipped['P1'] === false && rPl.gateSlipped['P2'] === false, 'no baselines -> no slip flags');
+})();
+
+/* ---- classifyGate: pure state machine ------------------------------------ */
+(function () {
+  var T = 50;
+  ok(C.classifyGate({ actualDate: 40, plannedDate: 50 }, T) === 'passed', 'done on/before plan -> passed');
+  ok(C.classifyGate({ actualDate: 70, plannedDate: 50 }, T) === 'passed-late', 'done after plan (no baseline) -> passed-late');
+  ok(C.classifyGate({ actualDate: 70, plannedDate: 50, baselineDate: 55 }, T) === 'passed-late', 'done after committed baseline -> passed-late');
+  ok(C.classifyGate({ actualDate: 58, plannedDate: 60, baselineDate: 55 }, T) === 'passed-late', 'baseline precedence: 58 > committed 55 -> passed-late even though < plan 60');
+  ok(C.classifyGate({ actualDate: 52, plannedDate: 60, baselineDate: 55 }, T) === 'passed', 'done before committed baseline -> passed');
+  ok(C.classifyGate({ plannedDate: 30 }, T) === 'overdue', 'undone & plan past due -> overdue');
+  ok(C.classifyGate({ plannedDate: 90 }, T) === 'pending', 'undone & plan in future -> pending');
+  ok(C.classifyGate(null, T) === 'pending', 'null gate -> pending');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');

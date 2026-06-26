@@ -502,15 +502,29 @@
     return mean(scores);
   }
 
+  // ---- stage-gate state classifier (pure; baseline-aware) ------------------
+  // passed-late compares the actual finish to the COMMITTED reference
+  // (baselineDate if set, else plannedDate); overdue is about the current plan.
+  function classifyGate(g, today) {
+    if (!g) return 'pending';
+    var ref = (g.baselineDate != null) ? g.baselineDate : g.plannedDate;
+    if (g.actualDate != null) {
+      return (ref != null && g.actualDate > ref) ? 'passed-late' : 'passed';
+    }
+    if (g.plannedDate != null && g.plannedDate < today) return 'overdue';
+    return 'pending';
+  }
+
   // ---- schedule cascade (§6) -----------------------------------------------
   // cascade(portfolio, execDocs, today) ->
   //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
-  //     longTermSlip, cycles }
+  //     longTermSlip, gateEffective, gateSlipped, cycles }
   function cascade(portfolio, execDocs, today) {
     var objs = portfolio.objectives || [];
     var inits = portfolio.initiatives || [];
     var miles = portfolio.milestones || [];
     var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
+    var cycles = [];
 
     function execFor(divId) { return execDocs[divId] || {}; }
     function childrenOf(obj) {
@@ -536,12 +550,67 @@
       return Math.max(s.plannedDate, today);
     }
 
-    // Stage 1: intrinsic projected end per objective
+    // Stage 1a: gather children once; index every gate globally
+    var childCache = {}, gateById = {}, gateObjOf = {};
+    objs.forEach(function (o) {
+      var c = childrenOf(o);
+      childCache[o.id] = c;
+      c.sgs.forEach(function (s) { gateById[s.id] = s; gateObjOf[s.id] = o; });
+    });
+
+    // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
+    // Both are additive; with neither, a gate has no preds and gateEff == pfGate.
+    var gatePreds = {};
+    Object.keys(gateById).forEach(function (gid) { gatePreds[gid] = []; });
+    (portfolio.stageGateEdges || []).forEach(function (e) {
+      if (gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 });
+    });
+    objs.forEach(function (o) {
+      if (!o.chainGatesByDate) return;
+      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
+        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+      for (var i = 1; i < seq.length; i++) {
+        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+    });
+
+    // Stage 1b: gate->gate forward pass, seeded from pfGate (cycle-guarded, lagged).
+    // A locked gate is exempt from INHERITED push (committed date holds), but it
+    // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
+    // read as on-time: the seed still floors at today via pfGate.
+    var gateEff = {}, gateStack = {};
+    function computeGateEff(gid) {
+      if (gateEff[gid] != null) return gateEff[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      var seed = pfGate(g);
+      if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
+      gateStack[gid] = true;
+      var res = seed, preds = gatePreds[gid];
+      for (var i = 0; i < preds.length; i++) {
+        if (gateStack[preds[i].from]) { cycles.push('GATE:' + preds[i].from); continue; }
+        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag);
+      }
+      gateStack[gid] = false;
+      gateEff[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
+
+    // baseline-aware slip per gate: slipped iff committed and now forecast past it.
+    var gateSlipped = {};
+    Object.keys(gateById).forEach(function (gid) {
+      var g = gateById[gid];
+      gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
+    });
+
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
     var intrinsic = {};
     objs.forEach(function (o) {
-      var c = childrenOf(o), vals = [];
+      var c = childCache[o.id], vals = [];
       c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
-      c.sgs.forEach(function (s) { vals.push(pfGate(s)); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
       intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
     });
 
@@ -550,7 +619,7 @@
     (portfolio.objectiveEdges || []).forEach(function (e) {
       if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
     });
-    var projEnd = {}, objStack = {}, cycles = [];
+    var projEnd = {}, objStack = {};
     function computeProjEnd(id) {
       if (projEnd[id] != null) return projEnd[id];
       var o = objById[id];
@@ -623,6 +692,8 @@
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
+      gateEffective: gateEff,
+      gateSlipped: gateSlipped,
       cycles: cycles
     };
   }
@@ -659,6 +730,7 @@
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
+    classifyGate: classifyGate,
     // exposed for tests / shells
     _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
   };
