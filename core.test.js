@@ -506,6 +506,77 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(C.classifyGate(null, T) === 'pending', 'null gate -> pending');
 })();
 
+/* ---- KR tracking modes: statistics, statistical/binary KPIs, %, sub-KRs --- */
+(function(){
+  // computeStat
+  approx(C.computeStat('average', [10,20,30,40]), 25, 'stat average');
+  approx(C.computeStat('median', [10,20,30,40]), 25, 'stat median (even)');
+  approx(C.computeStat('median', [10,20,30]), 20, 'stat median (odd)');
+  approx(C.computeStat('max', [10,20,30,40]), 40, 'stat max');
+  approx(C.computeStat('min', [10,20,30,40]), 10, 'stat min');
+  approx(C.computeStat('range', [10,20,30,40]), 30, 'stat range');
+  approx(C.computeStat('stddev', [10,20,30,40]), 12.909944, 'stat stddev (sample n-1)', 1e-4);
+  approx(C.computeStat('cv', [10,20,30,40]), 51.639778, 'stat cv (%)', 1e-4);
+
+  // statistical KPI: aggregate latest readCount readings, then grade vs target
+  var exStat = { D: {
+    keyResults: [{ id:'KRs', objectiveId:'O', trackingType:'kpi' }],
+    kpis: [{ id:'Ks', hostType:'keyResult', hostId:'KRs', objectiveId:'O', direction:'up', target:30, targetType:'statistical', statistic:'average', readCount:3, groupId:null }],
+    kpiUpdates: [{kpiId:'Ks',value:10,timestamp:1},{kpiId:'Ks',value:20,timestamp:2},{kpiId:'Ks',value:30,timestamp:3},{kpiId:'Ks',value:40,timestamp:4}]
+  }};
+  approx(C.keyResultScore('KRs', exStat), 100, 'statistical KPI: avg of latest 3 (40,30,20)=30 vs target 30 -> 100');
+  exStat.D.kpis[0].readCount = '';
+  exStat.D.kpis[0].target = 25;
+  approx(C.keyResultScore('KRs', exStat), 100, 'statistical readCount blank -> avg all (25) vs target 25 -> 100');
+
+  // binary KPI: met (>=1) -> 100, else 0
+  var exBin = { D: {
+    keyResults: [{ id:'KRb', objectiveId:'O', trackingType:'kpi' }],
+    kpis: [{ id:'Kb', hostType:'keyResult', hostId:'KRb', objectiveId:'O', targetType:'binary', groupId:null }],
+    kpiUpdates: [{ kpiId:'Kb', value:1, timestamp:1 }]
+  }};
+  approx(C.keyResultScore('KRb', exBin), 100, 'binary KPI met (1) -> 100');
+  exBin.D.kpiUpdates = [{ kpiId:'Kb', value:0, timestamp:1 }];
+  approx(C.keyResultScore('KRb', exBin), 0, 'binary KPI not met (0) -> 0');
+  ok(C.kpiScore({ targetType:'binary' }, 1) === 100 && C.kpiScore({ targetType:'binary' }, 0) === 0 && C.kpiScore({ targetType:'binary' }, null) === null, 'kpiScore binary 1/0/null');
+
+  // percentage KR -> manual progress
+  var exPct = { D: { keyResults:[{ id:'KRp', objectiveId:'O', trackingType:'percentage', progress:70 }], kpis:[], kpiUpdates:[] }};
+  approx(C.keyResultScore('KRp', exPct), 70, 'percentage KR -> manual progress 70');
+  exPct.D.keyResults[0] = { id:'KRp', objectiveId:'O', trackingType:'percentage' };
+  ok(C.keyResultScore('KRp', exPct) === null, 'percentage KR with no progress -> null');
+
+  // sub-KR weighted rollup
+  var exSub = { D: { keyResults:[{ id:'KRx', objectiveId:'O', trackingType:'subkr', subKrs:[
+    { name:'a', weight:1, trackingType:'percentage', progress:80 },
+    { name:'b', weight:3, trackingType:'kpi', kpis:[{ type:'demonstration', direction:'up', target:50, current:50 }] }
+  ]}], kpis:[], kpiUpdates:[] }};
+  approx(C.keyResultScore('KRx', exSub), 95, 'subkr KR: weighted (1*80 + 3*100)/4 = 95');
+
+  // embedded-KPI scoring units
+  approx(C.scoreEmbeddedKpi({ type:'demonstration', direction:'up', target:100, current:80 }), 80, 'embedded up: 80/100 -> 80');
+  approx(C.scoreEmbeddedKpi({ direction:'decrease', target:50, current:50 }), 100, 'embedded decrease at target -> 100');
+  approx(C.scoreEmbeddedKpi({ direction:'decrease', target:50, current:100 }), 50, 'embedded decrease over target -> 50');
+  ok(C.scoreEmbeddedKpi({ type:'binary', current:1 }) === 100, 'embedded binary met -> 100');
+  ok(C.scoreEmbeddedKpi({ type:'binary', current:0 }) === 0, 'embedded binary unmet -> 0');
+  ok(C.scoreEmbeddedKpi({ type:'demonstration', direction:'up', target:100, current:null }) === null, 'embedded unmeasured -> null');
+
+  // subKrScore null handling
+  approx(C.subKrScore([
+    { weight:1, trackingType:'percentage', progress:80 },
+    { weight:3, trackingType:'kpi', kpis:[{ type:'demonstration', direction:'up', target:50, current:null }] }
+  ]), 80, 'subKrScore skips unmeasured sub-KR (only the 80 counts)');
+  ok(C.subKrScore([]) === null, 'empty subKrs -> null');
+
+  // back-compat: KR with no trackingType behaves as KPI-mean (unchanged)
+  var exCompat = { D: {
+    keyResults: [{ id:'KRc', objectiveId:'O' }],
+    kpis: [{ id:'Kc', hostType:'keyResult', hostId:'KRc', objectiveId:'O', direction:'up', target:100, groupId:null }],
+    kpiUpdates: [{ kpiId:'Kc', value:80, timestamp:1 }]
+  }};
+  approx(C.keyResultScore('KRc', exCompat), 80, 'back-compat: KR with no trackingType -> KPI mean (80)');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');

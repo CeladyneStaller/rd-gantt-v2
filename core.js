@@ -110,6 +110,52 @@
     return 100 * Math.max(0, 1 - d / width);
   }
 
+  // ---- statistics (for statistical KPI targets) ----------------------------
+  function statSum(xs){ var s=0; for(var i=0;i<xs.length;i++) s+=xs[i]; return s; }
+  function statAverage(xs){ return xs.length ? statSum(xs)/xs.length : null; }
+  function statMedian(xs){ if(!xs.length) return null; var a=xs.slice().sort(function(p,q){return p-q;}); var m=Math.floor(a.length/2); return a.length%2 ? a[m] : (a[m-1]+a[m])/2; }
+  function statMax(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]>m) m=xs[i]; return m; }
+  function statMin(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]<m) m=xs[i]; return m; }
+  function statStdDev(xs){ if(xs.length<2) return xs.length?0:null; var mu=statAverage(xs),s=0; for(var i=0;i<xs.length;i++){ var d=xs[i]-mu; s+=d*d; } return Math.sqrt(s/(xs.length-1)); }
+  function statCV(xs){ var mu=statAverage(xs); if(mu==null||mu===0) return null; var sd=statStdDev(xs); return sd==null?null:(sd/Math.abs(mu))*100; }
+  function statRange(xs){ if(!xs.length) return null; return statMax(xs)-statMin(xs); }
+  function computeStat(name, xs){
+    switch(name){
+      case 'average': return statAverage(xs);
+      case 'median':  return statMedian(xs);
+      case 'stddev':  return statStdDev(xs);
+      case 'cv':      return statCV(xs);
+      case 'range':   return statRange(xs);
+      case 'max':     return statMax(xs);
+      case 'min':     return statMin(xs);
+    }
+    return statAverage(xs);
+  }
+  // all readings posted to a kpi id, newest first
+  function readingsFor(kpiId, execDocs){
+    var out=[];
+    for(var div in execDocs){ if(!execDocs.hasOwnProperty(div)) continue;
+      var ups=execDocs[div].kpiUpdates||[];
+      for(var i=0;i<ups.length;i++) if(ups[i].kpiId===kpiId) out.push(ups[i]);
+    }
+    out.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    return out;
+  }
+  // resolved value for a member id honoring the definer's targetType:
+  // 'statistical' aggregates the latest readCount readings; else the newest reading.
+  function resolvedReadingValue(kpiId, defn, execDocs){
+    var ups=readingsFor(kpiId, execDocs);
+    if(!ups.length) return null;
+    if(defn && defn.targetType==='statistical'){
+      var n=parseInt(defn.readCount,10);
+      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
+      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      if(!xs.length) return null;
+      return computeStat(defn.statistic||'average', xs);
+    }
+    return ups[0].value;
+  }
+
   // latest reading posted to a specific KPI id (the host where it was entered)
   function kpiCurrentValue(kpiId, execDocs) {
     var latest = null;
@@ -175,11 +221,12 @@
   // effective VALUE: self, then nearest lower level (cascades up)
   function effValue(kpi, kpis, execDocs) {
     var members = groupMembers(kpi, kpis);
+    var defn = definerOf(kpi, kpis);
     var lvl = KPI_LEVEL[kpi.hostType];
     for (var L = lvl; L >= 0; L--) {
       var m = memberAtLevel(members, L, kpi.objectiveId);
       if (m) {
-        var v = kpiCurrentValue(m.id, execDocs);
+        var v = resolvedReadingValue(m.id, defn, execDocs);
         if (v != null) return v;
       }
     }
@@ -189,6 +236,10 @@
   // kpiScore(kpi, currentValue) -> 0..100 or null. Pure formula against the
   // kpi's own direction/target (used for standalone KPIs and unit tests).
   function kpiScore(kpi, currentValue) {
+    if (kpi.targetType === 'binary') {
+      if (currentValue == null) return null;
+      return currentValue >= 1 ? 100 : 0;
+    }
     if (kpi.target == null) return null;
     if (currentValue == null) return null;
     var raw;
@@ -203,6 +254,12 @@
   // group/level-aware score: resolved target (down) vs resolved value (up),
   // direction from the definer.
   function kpiScoreResolved(kpi, kpis, execDocs) {
+    var defn = definerOf(kpi, kpis);
+    if (defn.targetType === 'binary') {
+      var bv = effValue(kpi, kpis, execDocs);
+      if (bv == null) return null;
+      return bv >= 1 ? 100 : 0;
+    }
     var target = effTarget(kpi, kpis);
     if (target == null) return null;
     var value = effValue(kpi, kpis, execDocs);
@@ -236,8 +293,58 @@
     return mean(scores);
   }
 
-  // keyResultScore -> mean of the KR's KPIs' resolved scores (null if none scorable)
-  function keyResultScore(krId, execDocs) { return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs); }
+  // find a KR object across exec docs
+  function findKr(krId, execDocs) {
+    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div)) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].id === krId) return krs[i];
+    }
+    return null;
+  }
+  // score one embedded KPI (sub-KR tracker) from its stored `current`
+  function scoreEmbeddedKpi(k) {
+    var tt = k.targetType || k.type || 'demonstration';
+    if (tt === 'binary') {
+      if (k.current == null) return null;
+      return Number(k.current) >= 1 ? 100 : 0;
+    }
+    if (k.current == null) return null;
+    var cur = Number(k.current); if (isNaN(cur)) return null;
+    if (k.target == null || k.target === '') return null;
+    var tgt = Number(k.target); if (isNaN(tgt)) return null;
+    var dir = (k.direction === 'down' || k.direction === 'decrease') ? 'down' : 'up';
+    return clamp(progressLinear(cur, tgt, dir), 0, 100);
+  }
+  function meanEmbedded(kpis) {
+    var scores = [];
+    for (var i = 0; i < (kpis || []).length; i++) { var s = scoreEmbeddedKpi(kpis[i]); if (s != null) scores.push(s); }
+    return mean(scores);
+  }
+  // weighted mean of sub-KR scores (percentage -> progress, kpi -> embedded KPI mean)
+  function subKrScore(subKrs) {
+    var totalW = 0, sum = 0, any = false;
+    for (var i = 0; i < (subKrs || []).length; i++) {
+      var skr = subKrs[i], pct;
+      if ((skr.trackingType || 'percentage') === 'kpi') pct = meanEmbedded(skr.kpis || []);
+      else pct = (skr.progress == null) ? null : clamp(Number(skr.progress), 0, 100);
+      if (pct == null) continue;
+      var w = Number(skr.weight) || 1;
+      totalW += w; sum += w * pct; any = true;
+    }
+    return (any && totalW > 0) ? sum / totalW : null;
+  }
+  // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
+  // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
+  function keyResultScore(krId, execDocs) {
+    var kr = findKr(krId, execDocs);
+    var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
+    if (tt === 'percentage') {
+      if (!kr || kr.progress == null) return null;
+      return clamp(Number(kr.progress), 0, 100);
+    }
+    if (tt === 'subkr') return subKrScore(kr.subKrs || []);
+    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
+  }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
 
@@ -617,6 +724,9 @@
     kpiName: kpiName,
     effTarget: effTarget,
     effValue: effValue,
+    computeStat: computeStat,
+    scoreEmbeddedKpi: scoreEmbeddedKpi,
+    subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
     krsForObjective: krsForObjective,
