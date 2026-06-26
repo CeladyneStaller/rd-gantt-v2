@@ -150,6 +150,10 @@
   .skr-row .skr-name:hover{color:var(--accent)}
   .skr-row .skr-meta{font-family:var(--mono);font-size:10px;color:var(--muted);flex:none}
   .skr-empty{font-size:12px;color:var(--muted)}
+  #kpiTgtBody{padding:16px 18px}
+  #kpiTgtBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
+  #kpiTgtBody .modal-field input[type=text],#kpiTgtBody .modal-field input[type=number],#kpiTgtBody .modal-field select{width:100%}
+  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
   /* quarter/week header */
   .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
   .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -206,6 +210,7 @@
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
 <div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
+<div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
 
 <script>/*__CORE__*/</script>
 <script>
@@ -336,7 +341,7 @@ function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = nul
 
 function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
 function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; closeSubKrModal(); restoreReturn(); renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -624,11 +629,14 @@ function draftSubKrListHtml(){
   const subs=draftKr.subKrs;
   if(!subs.length) return `<div class="skr-empty">none yet — add a weighted sub-result</div>`;
   return subs.map((s,i)=>{
-    let meta;
-    if((s.trackingType||"percentage")==="percentage") meta=(Number(s.progress)||0)+"%";
+    let meta, measured="";
+    if((s.trackingType||"percentage")==="percentage"){ meta=(Number(s.progress)||0)+"%"; }
     else { const k=(s.kpis&&s.kpis[0])||{}; const tp=k.targetType||k.type||"demo";
-      meta = (tp==="binary") ? "binary" : tp+((k.target!=null&&k.target!=="")?(" "+(k.direction==="down"?"≤":"≥")+" "+esc(String(k.target))+(k.unit?" "+esc(k.unit):"")):""); }
-    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
+      meta = (tp==="binary") ? "binary" : tp+((k.target!=null&&k.target!=="")?(" "+(k.direction==="down"?"≤":"≥")+" "+esc(String(k.target))+(k.unit?" "+esc(k.unit):"")):"");
+      if(tp==="binary"){ measured = (k.current!=null) ? ` · ${Number(k.current)>=1?"met":"not met"}` : ` · unmeasured`; }
+      else if(k.current!=null){ const sc=RD.scoreEmbeddedKpi(k); measured=` · now ${esc(String(k.current))}${k.unit?" "+esc(k.unit):""}`+(sc!=null?` (${Math.round(sc)}%)`:""); }
+      else measured=` · unmeasured`; }
+    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}${measured}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
   }).join("");
 }
 function krModalBody(){
@@ -719,7 +727,10 @@ function openSubKrModal(idx){
     target:(k&&k.target!=null)?k.target:"",
     unit:(k&&k.unit)?k.unit:"",
     statistic:(k&&k.statistic)?k.statistic:"average",
-    readCount:(k&&k.readCount!=null)?k.readCount:""
+    readCount:(k&&k.readCount!=null)?k.readCount:"",
+    current:(k&&k.current!=null)?k.current:"",
+    readings:(k&&k.readings!=null)?k.readings:"",
+    metFlag:(k&&k.current!=null)?(Number(k.current)>=1?"1":"0"):""
   };
   document.getElementById("subkrTitle").textContent=(idx!=null)?"Edit sub-KR":"Add sub-KR";
   document.getElementById("subkrBody").innerHTML=subKrModalBody();
@@ -729,7 +740,7 @@ function openSubKrModal(idx){
 function closeSubKrModal(){ document.getElementById("subkrOverlay").classList.remove("open"); document.getElementById("subkrBody").innerHTML=""; draftSubKr=null; draftSubKrIdx=null; }
 function subKrModalBody(){
   const d=draftSubKr, t=d.trackingType;
-  const isPct=t==="percentage", isStat=t==="statistical", isBin=t==="binary", hideKpi=(isPct||isBin);
+  const isPct=t==="percentage", isDemo=t==="demonstration", isStat=t==="statistical", isBin=t==="binary", hideKpi=(isPct||isBin);
   return `
     <div class="modal-field"><span class="lbl">Tracking type</span>${segHtml([["percentage","% completion"],["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],t,"skrtype")}</div>
     <div class="modal-field"><span class="lbl">Sub-KR name</span><input type="text" data-sf="name" value="${esc(d.name)}" placeholder="e.g. Achieve power density"></div>
@@ -740,6 +751,9 @@ function subKrModalBody(){
     <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Target</span><input type="text" data-sf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
     <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-sf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
     <div class="modal-field" style="display:${isPct?"block":"none"}"><span class="lbl">Initial progress</span><div class="pct-row"><input type="range" min="0" max="100" data-sf="progress" value="${esc(d.progress)}" style="flex:1" data-spctslider><span class="pct-val" data-spctval>${Number(d.progress)||0}%</span></div></div>
+    <div class="modal-field" style="display:${isDemo?"block":"none"}"><span class="lbl">Current measurement</span><input type="text" data-sf="current" value="${esc(d.current)}" placeholder="latest measured value"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Readings <span style="color:var(--muted);font-weight:400">(newest first — commas, spaces, or newlines)</span></span><textarea data-sf="readings" rows="2" placeholder="e.g. 1.02, 0.98, 1.05">${esc(d.readings)}</textarea><div class="hint" style="margin:4px 0 0" data-statpreview>${statPreview(d)}</div></div>
+    <div class="modal-field" style="display:${isBin?"block":"none"}"><span class="lbl">Status</span>${segHtml([["","Unmeasured"],["0","Not met"],["1","✓ Met"]],String(d.metFlag||""),"skrmet")}</div>
     <div class="row-actions"><button class="act mini" type="button" data-subkrsave>Save sub-KR</button><button class="ghost mini" type="button" data-subkrcancel>Cancel</button></div>`;
 }
 function wireSubKrModal(){
@@ -747,6 +761,10 @@ function wireSubKrModal(){
   body.querySelectorAll("[data-sf]").forEach(el=>el.oninput=()=>{ draftSubKr[el.dataset.sf]=el.value; });
   const sl=body.querySelector("[data-spctslider]"), pv=body.querySelector("[data-spctval]");
   if(sl&&pv) sl.oninput=()=>{ draftSubKr.progress=sl.value; pv.textContent=sl.value+"%"; };
+  const refreshStat=()=>{ const p=body.querySelector("[data-statpreview]"); if(p) p.textContent=statPreview(draftSubKr); };
+  const rd=body.querySelector('[data-sf="readings"]'); if(rd) rd.oninput=()=>{ draftSubKr.readings=rd.value; refreshStat(); };
+  const st=body.querySelector('[data-sf="statistic"]'); if(st) st.oninput=()=>{ draftSubKr.statistic=st.value; refreshStat(); };
+  body.querySelectorAll("[data-skrmet]").forEach(b=>b.onclick=()=>{ draftSubKr.metFlag=b.dataset.skrmet; body.querySelectorAll("[data-skrmet]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
   body.querySelectorAll("[data-skrtype]").forEach(b=>b.onclick=()=>{ draftSubKr.trackingType=b.dataset.skrtype; document.getElementById("subkrBody").innerHTML=subKrModalBody(); wireSubKrModal(); });
   body.querySelectorAll("[data-skrdir]").forEach(b=>b.onclick=()=>{ draftSubKr.dir=b.dataset.skrdir; body.querySelectorAll("[data-skrdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
   const sv=body.querySelector("[data-subkrsave]"); if(sv) sv.onclick=saveSubKrModal;
@@ -762,13 +780,80 @@ function saveSubKrModal(){
   if(d.trackingType==="percentage"){ skr={ name:nm, weight:w, trackingType:"percentage", progress:clampPct(d.progress), kpis:[] }; }
   else {
     const k={ type:d.trackingType, targetType:d.trackingType, name:nm, current:null };
-    if(d.trackingType!=="binary"){ k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
-      if(d.trackingType==="statistical"){ k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
-    if(draftSubKrIdx!=null){ const ex=draftKr.subKrs[draftSubKrIdx], ek=(ex&&ex.kpis&&ex.kpis[0])||null; if(ek&&ek.current!=null) k.current=ek.current; }
+    if(d.trackingType==="binary"){
+      k.current = (d.metFlag===""||d.metFlag==null) ? null : Number(d.metFlag);
+    } else {
+      k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
+      if(d.trackingType==="statistical"){
+        k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        k.readings=String(d.readings||"").trim();
+        const nums=parseNums(d.readings);
+        k.current = nums.length ? RD.computeStat(k.statistic, nums) : null;
+      } else { /* demonstration */
+        k.current = parseTargetNum(d.current);
+      }
+    }
     skr={ name:nm, weight:w, trackingType:"kpi", progress:0, kpis:[k] };
   }
   if(draftSubKrIdx!=null) draftKr.subKrs[draftSubKrIdx]=skr; else draftKr.subKrs.push(skr);
   closeSubKrModal(); refreshKrSubList();
+}
+
+/* ---------------- stage-gate target editor (matches KR KPI form) ---------------- */
+let draftTgt=null, draftTgtGate=null, draftTgtId=null;
+function parseNums(str){ return String(str||"").split(/[\s,;]+/).map(x=>Number(x)).filter(x=>!isNaN(x)); }
+function statPreview(d){ const nums=parseNums(d.readings); if(!nums.length) return "no readings yet"; const v=RD.computeStat(d.statistic||"average", nums); return "→ "+(d.statistic||"average")+": "+(v==null?"—":(Math.round(v*1000)/1000))+" ("+nums.length+" reads)"; }
+function openTgtModal(gateId, kpiId){
+  draftTgtGate=gateId; draftTgtId=kpiId||null;
+  const pk=kpiId?exec.kpis.find(k=>k.id===kpiId):null;
+  draftTgt={
+    name:pk?(pk.name||""):"",
+    type:pk?(pk.targetType||"demonstration"):"demonstration",
+    dir:(pk&&pk.direction==="down")?"decrease":"increase",
+    target:(pk&&pk.target!=null)?pk.target:"",
+    unit:(pk&&pk.unit)?pk.unit:"",
+    statistic:(pk&&pk.statistic)?pk.statistic:"average",
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+  };
+  document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit gate target":"Add gate target";
+  document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
+  document.getElementById("kpiTgtOverlay").classList.add("open");
+  wireTgtModal();
+}
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
+function tgtModalBody(){
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  return `
+    <div class="modal-field"><span class="lbl">Target name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Power density"></div>
+    <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
+    <div class="hint" style="margin:0 0 12px">readings are posted from the gate's target table; statistical targets aggregate the latest reads</div>
+    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update target":"Save target"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
+}
+function wireTgtModal(){
+  const body=document.getElementById("kpiTgtBody");
+  body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
+  body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
+  const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
+}
+function saveTgtModal(){
+  const body=document.getElementById("kpiTgtBody");
+  body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
+  const d=draftTgt;
+  if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
+  let pk=draftTgtId?exec.kpis.find(k=>k.id===draftTgtId):null;
+  if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:"stageGate", hostId:draftTgtGate, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
+  pk.name=String(d.name).trim(); pk.targetType=d.type;
+  if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
+  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
+    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
+  closeTgtModal(); renderAll(); setMsg("Gate target saved (Save to persist).","ok");
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -989,11 +1074,11 @@ function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
-  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
-  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); subOpenEdit(t,id); });
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
@@ -1016,6 +1101,8 @@ document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
 document.getElementById("subkrX").onclick = closeSubKrModal;
 document.getElementById("subkrOverlay").onclick = (e)=>{ if(e.target.id==="subkrOverlay") closeSubKrModal(); };
+document.getElementById("kpiTgtX").onclick = closeTgtModal;
+document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiTgtOverlay") closeTgtModal(); };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
 window.addEventListener("beforeunload", stopPoll);
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
