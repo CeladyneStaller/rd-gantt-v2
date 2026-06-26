@@ -695,14 +695,20 @@
     });
 
     // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
-    // Both are additive; with neither, a gate has no preds and gateEff == pfGate.
+    // Edges and the chain flag may live on the portfolio (cross-division) OR in an
+    // execDoc (per-division, authored in the execution app). Both are merged here.
+    // With none of them, a gate has no preds and gateEff == pfGate.
     var gatePreds = {};
     Object.keys(gateById).forEach(function (gid) { gatePreds[gid] = []; });
-    (portfolio.stageGateEdges || []).forEach(function (e) {
-      if (gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 });
-    });
+    function addGateEdge(e) { if (e && gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 }); }
+    (portfolio.stageGateEdges || []).forEach(addGateEdge);
+    for (var dk in execDocs) {
+      if (!execDocs.hasOwnProperty(dk)) continue;
+      (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
+    }
     objs.forEach(function (o) {
-      if (!o.chainGatesByDate) return;
+      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
+      if (!o.chainGatesByDate && !exChain) return;
       var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
         .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
       for (var i = 1; i < seq.length; i++) {

@@ -68,6 +68,17 @@
   table.kpitable tbody tr:last-child td{border-bottom:none}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
+  .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
+  .gate-sched .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .gate-sched .sched-sep{color:var(--line)}
+  .dep-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:2px 6px}
+  .dep-chip button{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;line-height:1;padding:0}
+  .dep-chip button:hover{color:var(--bad)}
+  .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:#3a2f10;border:1px solid #5a4a18;border-radius:5px;padding:2px 7px}
+  select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
+  input.laginp{width:56px}
+  .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
+  .chain-toggle input{width:auto;padding:0;margin:0}
 </style>
 </head>
 <body>
@@ -131,7 +142,7 @@ let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[] }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return m; }
 
@@ -480,10 +491,32 @@ function renderKRs(){
   });
   host.innerHTML=html; wireExec(host);
 }
+function gateSchedRow(g){
+  const committed = g.baselineDate!=null;
+  const preds = (exec.stageGateEdges||[]).filter(e=>e.toGate===g.id);
+  const taken = new Set(preds.map(e=>e.fromGate));
+  // exclude self, existing preds, and gates this gate already precedes (blocks 2-cycles)
+  const downstream = new Set((exec.stageGateEdges||[]).filter(e=>e.fromGate===g.id).map(e=>e.toGate));
+  const cand = exec.stageGates.filter(x=>x.id!==g.id && !taken.has(x.id) && !downstream.has(x.id));
+  let h=`<div class="gate-sched">`;
+  if(committed) h+=`<span class="committed-badge" title="committed baseline — locked from upstream push">committed ${dayToIso(g.baselineDate)}</span><button class="ghost mini" data-release="${g.id}">release</button>`;
+  else h+=`<button class="ghost mini" data-commit="${g.id}"${g.plannedDate==null?' disabled title="set a planned date first"':''}>commit baseline</button>`;
+  h+=`<span class="sched-sep">|</span><span class="lbl">after</span>`;
+  if(!preds.length) h+=`<span class="hint" style="margin:0">—</span>`;
+  preds.forEach(e=>{ h+=`<span class="dep-chip">${esc(gateName(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
+  if(cand.length){
+    h+=`<select class="edgepick" data-edgepick="${g.id}"><option value="">+ predecessor…</option>`+
+       cand.map(x=>`<option value="${x.id}">${esc(x.name||x.id)}</option>`).join('')+`</select>`+
+       `<input class="laginp" type="number" min="0" placeholder="lag d" data-edgelag="${g.id}"/>`+
+       `<button class="ghost mini" data-addedge="${g.id}">add</button>`;
+  }
+  h+=`</div>`;
+  return h;
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
-  let html=`<h3>Stage-gates <span class="pill">gating · not in objective score</span><button class="ghost mini" data-addsg="1">+ add gate</button></h3>`;
+  let html=`<h3>Stage-gates <span class="pill">gating · not in objective score</span><button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, this objective's gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':''}/> chain by date</label></h3>`;
   if(addingFor && addingFor.type==="stageGate") html+=renderSubEditor("stageGate", {});
   if(editingSub && editingSub.type==="stageGate"){ const r=gates.find(x=>x.id===editingSub.id); if(r) html+=renderSubEditor("stageGate", r); }
   if(!gates.length) html+=`<p class="hint">none yet</p>`;
@@ -497,7 +530,7 @@ function renderGates(){
         <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
         <button class="ghost mini" data-edit="stageGate:${g.id}">edit</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div>${kpiTable("stageGate", g.id, selectedObj)}</div>`;
+      </div>${gateSchedRow(g)}${kpiTable("stageGate", g.id, selectedObj)}</div>`;
   });
   host.innerHTML=html; wireExec(host);
 }
@@ -536,6 +569,11 @@ function wireExec(host){
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
   host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; setMsg("Gate updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective (Save to persist).","ok"); });
+  host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+" (Save to persist).","ok"); });
+  host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released (Save to persist).","ok"); });
+  host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added (Save to persist).","ok"); });
+  host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed (Save to persist).","ok"); });
   host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); setMsg("Task updated (Save to persist).","ok"); });
   host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; setMsg("Task updated (Save to persist).","ok"); });
 }

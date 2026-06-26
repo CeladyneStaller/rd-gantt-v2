@@ -464,6 +464,35 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(rPl.gateSlipped['P1'] === false && rPl.gateSlipped['P2'] === false, 'no baselines -> no slip flags');
 })();
 
+/* ---- cascade: gate edges + chain flag sourced from execDocs -------------- */
+(function () {
+  var today = 50;
+  var portfolio = {
+    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
+    milestones: [], milestoneEdges: [],
+    objectives: [
+      { id: 'Oa', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] },
+      { id: 'Ob', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }
+    ],
+    objectiveEdges: []   // NO portfolio.stageGateEdges, NO objective.chainGatesByDate
+  };
+  // edge + chain flag live in the execDoc, as the execution app writes them
+  var exec = { 'D': {
+    stageGates: [
+      { id: 'Ga', objectiveId: 'Oa', plannedDate: 30, actualDate: 70 },
+      { id: 'Gb', objectiveId: 'Ob', plannedDate: 40 },
+      { id: 'Gc1', objectiveId: 'Oa', plannedDate: 32 },
+      { id: 'Gc2', objectiveId: 'Oa', plannedDate: 38 }
+    ],
+    stageGateEdges: [{ fromGate: 'Ga', toGate: 'Gb', lagDays: 5 }],
+    chainGatesByDate: { 'Oa': true }
+  } };
+  var r = C.cascade(portfolio, exec, today);
+  approx(r.gateEffective['Gb'], 75, 'execDoc edge: Gb = Ga end (70) + lag 5');
+  approx(r.gateEffective['Gc1'], 70, 'execDoc chain flag: Gc1 pushed by late Ga (70)');
+  approx(r.gateEffective['Gc2'], 70, 'execDoc chain flag: Gc2 pushed through the chain (70)');
+})();
+
 /* ---- classifyGate: pure state machine ------------------------------------ */
 (function () {
   var T = 50;
