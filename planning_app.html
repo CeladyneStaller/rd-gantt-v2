@@ -139,6 +139,16 @@
   .gdia{position:absolute;top:10px;width:10px;height:10px;transform:translateX(-50%) rotate(45deg);border-radius:2px}
   .gdia.planned{background:transparent;border:1.5px solid #6f8aa3}
   .gdia.eff{background:var(--warn)}
+  .gdia.passed{background:var(--ok);border:1.5px solid var(--ok)}
+  .gdia.passed-late{background:var(--warn);border:1.5px solid var(--warn)}
+  .gdia.overdue{background:var(--bad);border:1.5px solid var(--bad)}
+  .gdia.pending{background:transparent;border:1.5px solid #6f8aa3}
+  .gdia.ghost{background:transparent;border:1.5px dashed #5a728c;opacity:.55}
+  .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:#5a728c;opacity:.5;pointer-events:none}
+  .gconn.committed{background:var(--bad);opacity:.7}
+  .glegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .glegend span{display:flex;align-items:center;gap:7px}
+  .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
   .gtoday{position:absolute;top:0;bottom:0;border-left:1px solid var(--accent);opacity:.65;pointer-events:none}
   .gtodaylbl{position:absolute;top:0;font-size:9px;color:var(--accent);font-family:var(--mono);pointer-events:none;opacity:.9}
   .tabsec{display:none} .tabsec.active{display:block}
@@ -1380,7 +1390,7 @@ function renderGantt(){
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
   function geom(entity, r){
-    if(entity==="stagegate") return {kind:"diamond", planned:r.plannedDate, eff:(r.plannedDate==null?null:pfGate(r))};
+    if(entity==="stagegate"){ const ge=casc.gateEffective[r.id]; return {kind:"diamond", gate:true, planned:r.plannedDate, eff:(ge!=null?ge:(r.plannedDate==null?null:pfGate(r))), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
     if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
@@ -1430,7 +1440,7 @@ function renderGantt(){
   });
   roots.forEach(function s(n){ const g=n.g;
     if(g.kind==="bar"){ if(g.ds!=null)lo=Math.min(lo,g.ds); if(g.de!=null)hi=Math.max(hi,g.de); if(g.pe!=null)hi=Math.max(hi,g.pe); }
-    else { if(g.planned!=null){lo=Math.min(lo,g.planned);hi=Math.max(hi,g.planned);} if(g.eff!=null)hi=Math.max(hi,g.eff); }
+    else { if(g.planned!=null){lo=Math.min(lo,g.planned);hi=Math.max(hi,g.planned);} if(g.eff!=null)hi=Math.max(hi,g.eff); if(g.baseline!=null){lo=Math.min(lo,g.baseline);hi=Math.max(hi,g.baseline);} }
     n.kids.forEach(s);
   });
   if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
@@ -1440,6 +1450,7 @@ function renderGantt(){
   const ticks=quarterTicks(lo,hi);
   // ---- flatten respecting collapse ----
   const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
+  const hasGates = rows.some(n=>n.entity==="stagegate");
   const NAV={division:1,initiative:1,objective:1,milestone:1};
   const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegate:"font-size:12.5px;font-weight:400"};
   let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
@@ -1464,6 +1475,18 @@ function renderGantt(){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id));
       html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+    } else if(g.gate){
+      const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
+      if(g.slipped && g.baseline!=null){
+        const bx=x(g.baseline);
+        html+=`<div class="gconn committed" style="left:${Math.min(bx,ex)}px;width:${Math.max(2,Math.abs(ex-bx))}px"></div>`;
+        html+=`<div class="gdia ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
+      } else if(g.eff!=null && g.planned!=null && g.eff!==g.planned){
+        const px=x(g.planned);
+        html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
+        html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
+      }
+      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       html+=`<div class="gdia planned" style="left:${x(g.planned)}px" title="planned"></div>`;
       if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
@@ -1471,6 +1494,7 @@ function renderGantt(){
     html+=`</div></div>`;
   });
   html+=`</div>`;
+  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid #6f8aa3"></i>pending</span><span><i style="border:1.5px dashed #5a728c;opacity:.6"></i>committed / planned</span></div>`;
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
