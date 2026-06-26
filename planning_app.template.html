@@ -60,6 +60,20 @@
   button.danger{color:var(--bad);border-color:#5e2230}
   button.danger.armed{background:var(--bad);color:#1a0a0c}
   .row-actions{display:flex;gap:6px}
+  .pf-toolbar{display:flex;justify-content:flex-end;margin-bottom:12px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(7,11,16,0.68);display:flex;align-items:flex-start;justify-content:center;padding:46px 16px;z-index:60;overflow:auto}
+  .modal-overlay[hidden]{display:none}
+  .modal-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(700px,94vw);box-shadow:0 24px 64px rgba(0,0,0,0.55);animation:popin .12s ease-out}
+  @keyframes popin{from{transform:translateY(6px);opacity:.55}to{transform:none;opacity:1}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);border-radius:14px 14px 0 0}
+  .modal-head span{font-weight:600;font-size:15px;color:var(--ink)}
+  .modal-x{background:none;border:none;color:var(--muted);font-size:17px;line-height:1;cursor:pointer;padding:3px 9px;border-radius:6px}
+  .modal-x:hover{background:var(--panel2);color:var(--ink)}
+  .modal-err{margin:12px 18px 0;padding:8px 11px;border-radius:8px;background:#3a1c1c;border:1px solid #5e2c2c;color:#f4aaaa;font-size:12px;line-height:1.5}
+  .modal-err[hidden]{display:none}
+  #pfModalBody{padding:16px 18px 18px}
+  #pfModalBody .ed{background:transparent;border:none;padding:0;margin:0}
+  #pfModalBody .row-actions{margin-top:18px}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
   .entity-tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px}
@@ -97,8 +111,16 @@
   <section class="tabsec active" id="tab-company"></section>
   <section class="tabsec" id="tab-portfolio">
     <div class="entity-tabs" id="entityTabs"></div>
-    <div id="editorPanel"></div>
+    <div id="pfToolbar"></div>
     <div id="entityTable"></div>
+    <div id="pfModal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfModalTitle">
+        <div class="modal-head"><span id="pfModalTitle">Add</span>
+          <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
+        <div id="pfModalErr" class="modal-err" hidden></div>
+        <div id="pfModalBody"></div>
+      </div>
+    </div>
   </section>
   <section class="tabsec" id="tab-gantt">
     <div class="legend">
@@ -311,13 +333,17 @@ function renderPortfolio(){
   const tabs = document.getElementById("entityTabs");
   tabs.innerHTML = Object.keys(SCHEMAS).map(k=>
     `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
-  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; editingId=null; renderPortfolio(); });
-  renderEditor();
+  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; closeEditor(); renderPortfolio(); });
+  const tb = document.getElementById("pfToolbar");
+  tb.innerHTML = `<div class="pf-toolbar"><button class="act" id="addEntityBtn">+ New ${activeEntity}</button></div>`;
+  document.getElementById("addEntityBtn").onclick = ()=>openEditor(null);
   renderTable();
 }
-function renderEditor(){
-  const panel = document.getElementById("editorPanel");
+function openEditor(id){
+  editingId = id || null;
   const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : {};
+  document.getElementById("pfModalTitle").textContent = (editingId?"Edit ":"Add ")+cap(activeEntity);
+  hideEditorErr();
   let html = `<div class="ed">`;
   for(const [k,label,type] of SCHEMAS[activeEntity]){
     html += `<label>${label}${refFieldNote(k)}`;
@@ -336,18 +362,28 @@ function renderEditor(){
     }
     html += `</label>`;
   }
-  html += `</div><div class="row-actions" style="margin-bottom:16px">
+  html += `</div><div class="row-actions">
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
-    ${editingId?'<button class="ghost" id="cancelEdit">Cancel</button>':''}</div>`;
-  panel.innerHTML = html;
+    <button class="ghost" id="cancelEdit">Cancel</button></div>`;
+  document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
-  const ce = document.getElementById("cancelEdit"); if(ce) ce.onclick=()=>{ editingId=null; renderPortfolio(); };
+  document.getElementById("cancelEdit").onclick = closeEditor;
+  document.getElementById("pfModal").hidden = false;
+  const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
+function closeEditor(){
+  editingId = null;
+  const m = document.getElementById("pfModal"); if(m) m.hidden = true;
+  const b = document.getElementById("pfModalBody"); if(b) b.innerHTML = "";
+  hideEditorErr();
+}
+function showEditorErr(t){ const e=document.getElementById("pfModalErr"); if(e){ e.textContent=t; e.hidden=false; } }
+function hideEditorErr(){ const e=document.getElementById("pfModalErr"); if(e){ e.hidden=true; e.textContent=""; } }
 function refFieldNote(k){ return (k==="productId"||k==="modelId") ? ' <span class="pill">classification</span>' : ''; }
 
 function readEditor(){
   const out = {};
-  document.querySelectorAll("#editorPanel [data-f]").forEach(el=>{
+  document.querySelectorAll("#pfModalBody [data-f]").forEach(el=>{
     const k = el.dataset.f;
     if(el.multiple){ out[k]=Array.from(el.selectedOptions).map(o=>o.value); }
     else if(el.type==="date"){ out[k]=isoToDay(el.value)||null; }
@@ -361,25 +397,27 @@ function readEditor(){
 function saveRecord(){
   const data = readEditor();
   const list = SEL[activeEntity]();
+  hideEditorErr();
   if(editingId){
     const rec = list.find(x=>x.id===editingId);
+    const merged = Object.assign({}, rec, data);
+    if(!validateAndWarn(activeEntity, merged)) return;   // validate before mutating
     Object.assign(rec, data);
-    if(!validateAndWarn(activeEntity, rec)) return;
   } else {
     const id = allocFor(activeEntity, data);
     const rec = Object.assign({id}, data);
     if(!validateAndWarn(activeEntity, rec)) return;
     list.push(rec);
   }
-  editingId=null; renderPortfolio(); renderCompany(); setMsg(cap(activeEntity)+" saved (remember to Save to the broker).", "ok");
+  closeEditor(); renderPortfolio(); renderCompany(); setMsg(cap(activeEntity)+" saved (remember to Save to the broker).", "ok");
 }
 function validateAndWarn(entity, rec){
   if(entity==="objective" || entity==="initiative"){
     // objective validates against its initiative; initiative validates only its own both-set invariant
-    if(rec.productId && rec.modelId){ setMsg("A node can pin a product OR a model, not both.", "err"); return false; }
+    if(rec.productId && rec.modelId){ showEditorErr("A node can pin a product OR a model, not both."); return false; }
     if(entity==="objective"){
       const v = RD.validateClassification(rec, portfolio);
-      if(!v.ok){ setMsg("Classification blocked: "+v.reason, "err"); return false; }
+      if(!v.ok){ showEditorErr("Classification blocked: "+v.reason); return false; }
     }
   }
   return true;
@@ -411,7 +449,7 @@ function renderTable(){
   html += `</tbody></table>`;
   if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
   document.getElementById("entityTable").innerHTML = html;
-  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ editingId=b.dataset.edit; armedDelete=null; renderPortfolio(); });
+  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ armedDelete=null; renderTable(); openEditor(b.dataset.edit); });
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.del;
     if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
@@ -526,6 +564,7 @@ function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
 
 /* ---------------- nav + wiring ---------------- */
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
+  closeEditor();
   document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
   document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
@@ -538,6 +577,8 @@ document.querySelectorAll("#modeToggle button").forEach(b=>b.onclick=()=>{
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
+document.getElementById("pfModalClose").onclick = closeEditor;
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ const m=document.getElementById("pfModal"); if(m && !m.hidden) closeEditor(); } });
 window.addEventListener("beforeunload", stopPoll);
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
