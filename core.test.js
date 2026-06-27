@@ -577,6 +577,52 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   approx(C.keyResultScore('KRc', exCompat), 80, 'back-compat: KR with no trackingType -> KPI mean (80)');
 })();
 
+/* ---- cross-document KPI resolution (portfolio target ↓ / exec readings ↑) -- */
+(function(){
+  var pf = {
+    objectives: [{ id:'O1', initiativeId:'INIT1', divisionId:'D', quarter:'Q1' }],
+    kpis: [{ id:'PK1', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G1', direction:'up', target:80, unit:'A/g' }],
+    keyResults: [{ id:'KR1', objectiveId:'O1' }]   // duplicate structure that must NOT be double-counted
+  };
+  var ex = {
+    keyResults: [{ id:'KR1', objectiveId:'O1' }],
+    kpis: [{ id:'EK1', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G1' }],
+    kpiUpdates: [{ kpiId:'EK1', value:60, timestamp:1 }]
+  };
+  var combined = C.withPortfolio(pf, { D: ex });
+  ok(combined['__portfolio__'] === pf && combined.D === ex, 'withPortfolio builds reserved-key map');
+  ok(C.PORTFOLIO_KEY === '__portfolio__', 'PORTFOLIO_KEY exported');
+  ok(C.krsForObjective('O1', combined).length === 1, 'structural iterators skip portfolio keyResults (no double-count)');
+
+  var pool = ex.kpis.concat(pf.kpis); // mimics allKpis(combined)
+  approx(C.effTarget(ex.kpis[0], pool), 80, 'exec member effTarget climbs into portfolio definer -> 80');
+  approx(C.effValue(ex.kpis[0], pool, combined), 60, 'exec member effValue resolves its own reading -> 60');
+  approx(C.effValue(pf.kpis[0], pool, combined), 60, 'initiative definer value descends across objective scope to exec reading -> 60');
+  approx(C.kpiScoreResolved(pf.kpis[0], pool, combined), 75, 'initiative KPI scored from exec reading -> 75');
+  approx(C.keyResultScore('KR1', combined), 75, 'cross-doc KR: target 80 (portfolio) vs value 60 (exec) -> 75');
+
+  approx(C.rollupObjective('O1', pf, combined), 75, 'rollupObjective reads cross-doc cascade -> 75');
+  approx(C.rollupInitiative('INIT1', pf, combined), 75, 'rollupInitiative cross-doc -> 75');
+  approx(C.rollupDivision('D', pf, combined), 75, 'rollupDivision cross-doc -> 75');
+  approx(C.rollupCompany(pf, combined), 75, 'rollupCompany cross-doc -> 75');
+
+  // statistical portfolio target aggregating exec readings
+  var pf2 = { objectives:[{id:'O1',initiativeId:'INIT1',divisionId:'D',quarter:'Q1'}],
+    kpis:[{ id:'PK2', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G2', direction:'up', target:30, targetType:'statistical', statistic:'average', readCount:3 }] };
+  var ex2 = { keyResults:[{id:'KR1',objectiveId:'O1'}],
+    kpis:[{ id:'EK2', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G2' }],
+    kpiUpdates:[{kpiId:'EK2',value:10,timestamp:1},{kpiId:'EK2',value:20,timestamp:2},{kpiId:'EK2',value:30,timestamp:3},{kpiId:'EK2',value:40,timestamp:4}] };
+  approx(C.keyResultScore('KR1', C.withPortfolio(pf2,{D:ex2})), 100, 'cross-doc statistical: avg latest 3 (40,30,20)=30 vs portfolio target 30 -> 100');
+
+  // binary portfolio target met by exec reading
+  var pf3 = { objectives:[{id:'O1',initiativeId:'INIT1',divisionId:'D',quarter:'Q1'}],
+    kpis:[{ id:'PK3', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G3', targetType:'binary' }] };
+  var ex3 = { keyResults:[{id:'KR1',objectiveId:'O1'}],
+    kpis:[{ id:'EK3', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G3' }],
+    kpiUpdates:[{kpiId:'EK3',value:1,timestamp:1}] };
+  approx(C.keyResultScore('KR1', C.withPortfolio(pf3,{D:ex3})), 100, 'cross-doc binary: exec reading 1 vs portfolio binary target -> 100');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');

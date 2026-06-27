@@ -97,6 +97,7 @@
   // A KPI with no groupId is a standalone singleton (its own definer) -> the
   // resolution collapses to its own target/value, identical to v1.3.
   var KPI_LEVEL = { initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
+  var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
 
   function progressLinear(value, target, direction) {
     if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
@@ -203,7 +204,8 @@
       var m = members[i];
       if (KPI_LEVEL[m.hostType] !== level) continue;
       if (level === KPI_LEVEL.initiative) return m;
-      if (m.objectiveId === objectiveId) return m;
+      // objectiveId null => the scored KPI is initiative-agnostic; descend into any objective's member
+      if (objectiveId == null || m.objectiveId === objectiveId) return m;
     }
     return null;
   }
@@ -295,7 +297,7 @@
 
   // find a KR object across exec docs
   function findKr(krId, execDocs) {
-    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div)) continue;
+    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
       var krs = execDocs[div].keyResults || [];
       for (var i = 0; i < krs.length; i++) if (krs[i].id === krId) return krs[i];
     }
@@ -352,7 +354,7 @@
   function krsForObjective(objId, execDocs) {
     var out = [];
     for (var div in execDocs) {
-      if (!execDocs.hasOwnProperty(div)) continue;
+      if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
       var krs = execDocs[div].keyResults || [];
       for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
     }
@@ -414,6 +416,16 @@
   function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
   function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
   function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+
+  // Combine the portfolio doc into a docs map for cross-document KPI resolution.
+  // Portfolio KPIs join the resolution pool (their targets/identity cascade down
+  // to linked exec members; values cascade up from exec readings). The reserved
+  // key is skipped by structural iteration, so KRs/gates/objectives never double.
+  function withPortfolio(portfolio, execDocs) {
+    var m = {}; m[PORTFOLIO_KEY] = portfolio || {};
+    for (var k in execDocs) { if (execDocs.hasOwnProperty(k)) m[k] = execDocs[k]; }
+    return m;
+  }
 
   function band(s) {
     if (s == null) return 'no-band';
@@ -573,7 +585,7 @@
     function addGateEdge(e) { if (e && gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 }); }
     (portfolio.stageGateEdges || []).forEach(addGateEdge);
     for (var dk in execDocs) {
-      if (!execDocs.hasOwnProperty(dk)) continue;
+      if (!execDocs.hasOwnProperty(dk) || dk === PORTFOLIO_KEY) continue;
       (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
     }
     objs.forEach(function (o) {
@@ -738,6 +750,8 @@
     rollupInitiative: rollupInitiative,
     rollupDivision: rollupDivision,
     rollupCompany: rollupCompany,
+    withPortfolio: withPortfolio,
+    PORTFOLIO_KEY: PORTFOLIO_KEY,
     ownClass: ownClass,
     effClass: effClass,
     effProduct: effProduct,
