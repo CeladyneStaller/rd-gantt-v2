@@ -74,7 +74,34 @@
   #pfModalBody{padding:16px 18px 18px}
   #pfModalBody .ed{background:transparent;border:none;padding:0;margin:0}
   #pfModalBody .row-actions{margin-top:18px}
+  /* initiative targets (KPIs authored in the portfolio) */
+  .pftargets{margin-top:20px;border-top:1px solid var(--line);padding-top:15px}
+  .pft-head{display:flex;align-items:center;justify-content:space-between}
+  .pft-head>span{font-weight:600;font-size:12.5px;color:var(--ink)}
+  .pft-list{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+  .pft-row{display:grid;grid-template-columns:auto minmax(90px,1.2fr) minmax(110px,1.5fr) auto auto;align-items:center;gap:10px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-size:12px}
+  .pft-name{font-weight:600;color:var(--ink)}
+  .pft-sum{color:var(--muted);font-size:11.5px}
+  .pft-cur{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+  .pft-cur .muted{color:var(--muted);font-variant-numeric:normal}
+  .pft-acts{display:flex;gap:5px;justify-content:flex-end}
+  .pft-acts .ghost{padding:4px 9px;font-size:11px}
+  .pft-acts .danger.armed{background:#3a1c1c;border-color:#5e2c2c;color:#f4aaaa}
+  /* KPI editor form (target authoring) */
+  #pfKpiBody{padding:16px 18px 18px}
+  .pfkform{display:flex;flex-direction:column;gap:13px}
+  .pffield{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
+  .pffield>span{font-size:11px;color:var(--muted);letter-spacing:.01em}
+  .pffield input,.pffield select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit}
+  .pffield input:focus,.pffield select:focus{outline:none;border-color:var(--accent)}
+  .pfrow2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pfseg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;width:fit-content}
+  .pfsegb{background:var(--panel2);border:none;color:var(--muted);padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit}
+  .pfsegb.on{background:var(--accent);color:#08121a;font-weight:600}
+  .pfsegb+.pfsegb{border-left:1px solid var(--line)}
   a.idlink{color:var(--accent2);cursor:pointer;text-decoration:none;border-bottom:1px dotted transparent}
+  tr.erow{cursor:pointer}
+  tr.erow:hover>td{background:var(--panel2)}
   a.idlink:hover{border-bottom-color:var(--accent2)}
   #lnBody{padding:16px 18px 18px}
   .lncrumb{font-size:12px;color:var(--muted);margin:0 0 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -200,6 +227,13 @@
         <div id="pfModalBody"></div>
       </div>
     </div>
+    <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfKpiTitle" style="width:min(560px,94vw)">
+        <div class="modal-head"><span id="pfKpiTitle">Target</span>
+          <button class="modal-x" id="pfKpiClose" aria-label="Close">&#10005;</button></div>
+        <div id="pfKpiBody"></div>
+      </div>
+    </div>
     <div id="lnModal" class="modal-overlay" hidden>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
         <div class="modal-head">
@@ -270,9 +304,14 @@ let mode = "overall";            // overall | quarterly
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
-  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpiDefs:[] }; }
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
+// docs map for cross-document KPI resolution: portfolio targets + exec readings
+function pfMap(){ return RD.withPortfolio(portfolio, execMap()); }
+// flatten every doc's KPIs into the resolution pool (mirrors core allKpis)
+function poolOf(pm){ const out=[]; for(const k in pm){ const ks=(pm[k].kpis)||[]; for(let i=0;i<ks.length;i++) out.push(ks[i]); } return out; }
+function fmtNum(v){ return v==null?"—":(Math.round(v*100)/100)+""; }
 
 /* ---------------- messaging (no native modals) ---------------- */
 function setMsg(text, kind){ const el=document.getElementById("msg"); el.textContent=text;
@@ -370,7 +409,7 @@ function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.re
 /* ---------------- COMPANY tab ---------------- */
 function renderCompany(){
   const root = document.getElementById("tab-company");
-  const em = execMap();
+  const em = pfMap();
   const comp = RD.rollupCompany(portfolio, em);
   let hero = `<div class="company-hero">
       <div><div class="big" style="color:${scoreColor(comp)}">${fmtScore(comp)}</div></div>
@@ -495,9 +534,11 @@ function openEditor(id){
   html += `</div><div class="row-actions">
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
     <button class="ghost" id="cancelEdit">Cancel</button></div>`;
+  if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; html += initTargetsHtml(editingId); }
   document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = closeEditor;
+  if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); }
   document.getElementById("pfModal").hidden = false;
   const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
@@ -509,6 +550,151 @@ function closeEditor(){
 }
 function showEditorErr(t){ const e=document.getElementById("pfModalErr"); if(e){ e.textContent=t; e.hidden=false; } }
 function hideEditorErr(){ const e=document.getElementById("pfModalErr"); if(e){ e.hidden=true; e.textContent=""; } }
+
+/* ---------------- initiative targets (portfolio-defined KPIs) ---------------- */
+const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Std dev"],["cv","CV %"],["range","Range"],["max","Max"],["min","Min"]];
+let pfTgtArmed=null;                          // kpiId armed for removal
+let pfKpiInit=null, pfKpiEditId=null, pfKpiDraft=null;   // KPI sub-editor state
+
+function targetSummary(k){
+  const tt=k.targetType||"demonstration";
+  if(tt==="binary") return "Binary · met / not met";
+  const dir=k.direction==="down"?"≤":"≥";
+  const tgt=(k.target!=null&&k.target!=="")?k.target:"—";
+  const unit=k.unit?(" "+k.unit):"";
+  if(tt==="statistical"){
+    const st=(STAT_OPTS.find(o=>o[0]===(k.statistic||"average"))||["","value"])[1];
+    const n=(k.readCount!=null&&k.readCount!=="")?("last "+k.readCount):"all";
+    return `${st} of ${n} ${dir} ${tgt}${unit}`;
+  }
+  return `${dir} ${tgt}${unit}`;
+}
+function initTargetsHtml(initId){
+  const list=(portfolio.kpis||[]).filter(k=>k.hostType==="initiative" && k.hostId===initId);
+  const pm=pfMap(), pool=poolOf(pm);
+  let h=`<div class="pftargets"><div class="pft-head"><span>Targets — initiative KPIs</span>`+
+    `<button class="ghost" id="pfAddTarget">+ Add target</button></div>`;
+  if(!list.length){
+    h+=`<p class="hint" style="margin:8px 0 0">No targets yet. Define an initiative-level KPI here; link Key Results, stage-gates, or tasks to it from the execution app to feed its value.</p>`;
+  } else {
+    h+=`<div class="pft-list">`;
+    list.forEach(k=>{
+      const val=RD.effValue(k,pool,pm), sc=RD.kpiScoreResolved(k,pool,pm), bnd=RD.band(sc);
+      const valTxt=(val==null)?`<span class="muted">no read</span>`:`${esc(fmtNum(val))}${k.unit?(" "+esc(k.unit)):""}`;
+      const armed=pfTgtArmed===k.id;
+      h+=`<div class="pft-row" data-tgtid="${k.id}">`+
+        `<span class="tdot" style="background:${bandColor(bnd)}" title="${bnd}"></span>`+
+        `<span class="pft-name">${esc(k.name||k.id)}</span>`+
+        `<span class="pft-sum">${esc(targetSummary(k))}</span>`+
+        `<span class="pft-cur">${valTxt}</span>`+
+        `<span class="pft-acts"><button class="ghost" data-tedit="${k.id}">edit</button>`+
+        `<button class="ghost danger ${armed?'armed':''}" data-tdel="${k.id}">${armed?'confirm':'remove'}</button></span>`+
+      `</div>`;
+    });
+    h+=`</div>`;
+  }
+  return h+`</div>`;
+}
+function refreshInitTargets(initId){
+  const host=document.querySelector("#pfModalBody .pftargets");
+  if(!host) return;
+  const tmp=document.createElement("div"); tmp.innerHTML=initTargetsHtml(initId);
+  host.replaceWith(tmp.firstElementChild);
+  wireInitTargets(initId);
+}
+function wireInitTargets(initId){
+  const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(initId,null);
+  document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(initId,b.dataset.tedit));
+  document.querySelectorAll("#pfModalBody [data-tdel]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.tdel;
+    if(pfTgtArmed!==id){ pfTgtArmed=id; refreshInitTargets(initId); return; }
+    pfTgtArmed=null; removeTarget(initId,id);
+  });
+}
+function removeTarget(initId,kpiId){
+  portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId);
+  refreshInitTargets(initId); renderCompany();
+  persistPortfolio(()=>{ portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId); }, "Target removed.");
+}
+
+/* ---- KPI sub-editor (rich target form, mirrors the execution gate-target editor) ---- */
+function pfSeg(name,val,opts){
+  return `<div class="pfseg" data-seg="${name}">`+
+    opts.map(o=>`<button type="button" class="pfsegb ${val===o[0]?'on':''}" data-segv="${o[0]}">${o[1]}</button>`).join("")+`</div>`;
+}
+function pfKpiFormHtml(d){
+  const tt=d.targetType||"demonstration";
+  let h=`<div class="pfkform">`;
+  h+=`<label class="pffield"><span>Name</span><input data-k="name" type="text" value="${esc(d.name||'')}" placeholder="e.g. Mass activity"/></label>`;
+  h+=`<label class="pffield"><span>Target type</span>${pfSeg("targetType",tt,[["demonstration","Demonstration"],["statistical","Statistical"],["binary","Binary"]])}</label>`;
+  if(tt==="statistical"){
+    h+=`<div class="pfrow2">`+
+      `<label class="pffield"><span>Readings used</span><input data-k="readCount" type="number" min="1" value="${d.readCount!=null?d.readCount:''}" placeholder="all"/></label>`+
+      `<label class="pffield"><span>Statistic</span><select data-k="statistic">`+
+        STAT_OPTS.map(o=>`<option value="${o[0]}" ${(d.statistic||'average')===o[0]?'selected':''}>${o[1]}</option>`).join("")+
+      `</select></label></div>`;
+  }
+  if(tt!=="binary"){
+    h+=`<div class="pfrow2">`+
+      `<label class="pffield"><span>Direction</span>${pfSeg("direction",(d.direction==='down'?'down':'up'),[["up","Increase"],["down","Decrease"]])}</label>`+
+      `<label class="pffield"><span>Target value</span><input data-k="target" type="number" value="${d.target!=null?d.target:''}" placeholder="value"/></label></div>`;
+    h+=`<label class="pffield"><span>Unit</span><input data-k="unit" type="text" value="${esc(d.unit||'')}" placeholder="e.g. A/g, %, mV"/></label>`;
+  }
+  h+=`</div><div class="row-actions"><button class="act" id="pfKpiSave">Save target</button>`+
+     `<button class="ghost" id="pfKpiCancel">Cancel</button></div>`;
+  return h;
+}
+function openKpiEditor(initId,kpiId){
+  pfKpiInit=initId; pfKpiEditId=kpiId||null;
+  const ex=kpiId?(portfolio.kpis||[]).find(k=>k.id===kpiId):null;
+  pfKpiDraft=ex?Object.assign({},ex):{targetType:"demonstration",direction:"up"};
+  document.getElementById("pfKpiTitle").textContent=kpiId?"Edit target":"Add target";
+  renderKpiEditor();
+  document.getElementById("pfKpiModal").hidden=false;
+}
+function renderKpiEditor(){
+  const body=document.getElementById("pfKpiBody");
+  body.innerHTML=pfKpiFormHtml(pfKpiDraft);
+  body.querySelectorAll("[data-seg]").forEach(seg=>{
+    const key=seg.dataset.seg;
+    seg.querySelectorAll("[data-segv]").forEach(b=>b.onclick=()=>{ pfKpiDraft[key]=b.dataset.segv; renderKpiEditor(); });
+  });
+  body.querySelectorAll("[data-k]").forEach(el=>{
+    el.onchange=()=>{ const k=el.dataset.k; pfKpiDraft[k]=(el.type==="number")?(el.value===""?null:Number(el.value)):el.value; };
+  });
+  document.getElementById("pfKpiSave").onclick=saveKpiEditor;
+  document.getElementById("pfKpiCancel").onclick=closeKpiEditor;
+  const f=body.querySelector("[data-k]"); if(f) f.focus();
+}
+function closeKpiEditor(){ pfKpiInit=null; pfKpiEditId=null; pfKpiDraft=null; const m=document.getElementById("pfKpiModal"); if(m) m.hidden=true; }
+function saveKpiEditor(){
+  const d=pfKpiDraft, initId=pfKpiInit;
+  const tt=d.targetType||"demonstration";
+  const rec={ hostType:"initiative", hostId:initId, objectiveId:null, isDefiner:true, groupId:null,
+    name:(d.name||"").trim(), targetType:tt };
+  if(tt!=="binary"){
+    rec.direction=(d.direction==="down")?"down":"up";
+    rec.target=(d.target!=null&&d.target!=="")?Number(d.target):null;
+    rec.unit=(d.unit||"").trim();
+  }
+  if(tt==="statistical"){
+    rec.statistic=d.statistic||"average";
+    rec.readCount=(d.readCount!=null&&d.readCount!=="")?Number(d.readCount):null;
+  }
+  portfolio.kpis=portfolio.kpis||[];
+  let reapply;
+  if(pfKpiEditId){
+    const id=pfKpiEditId, k=portfolio.kpis.find(x=>x.id===id); if(k) Object.assign(k,rec);
+    reapply=()=>{ portfolio.kpis=portfolio.kpis||[]; const t=portfolio.kpis.find(x=>x.id===id); if(t) Object.assign(t,rec); else portfolio.kpis.push(Object.assign({id},rec)); };
+  } else {
+    const id=RD.allocId("kpi", initId, portfolio.kpis.map(x=>x.id)); rec.id=id;
+    portfolio.kpis.push(rec);
+    reapply=()=>{ portfolio.kpis=portfolio.kpis||[]; if(!portfolio.kpis.some(x=>x.id===id)) portfolio.kpis.push(rec); };
+  }
+  closeKpiEditor();
+  refreshInitTargets(initId); renderCompany();
+  persistPortfolio(reapply, "Target saved.");
+}
 
 /* ---------------- lineage navigator (read-only) ---------------- */
 const TAG={division:"div",product:"prod",model:"model",initiative:"init",milestone:"ms",objective:"obj"};
@@ -538,7 +724,7 @@ function hasArchChildren(entity,id){
 }
 /* ---- health band → colour (shared by tree + gantt) ---- */
 function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
-function nodeBand(entity,id){ const em=execMap(); let s=null;
+function nodeBand(entity,id){ const em=pfMap(); let s=null;
   if(entity==="division") s=RD.rollupDivision(id,portfolio,em);
   else if(entity==="initiative") s=RD.rollupInitiative(id,portfolio,em);
   else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
@@ -712,18 +898,18 @@ function renderTable(){
   const list = SEL[activeEntity]();
   let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
   for(const r of list){
-    html += `<tr><td class="mono"><a class="idlink" data-lineage="${activeEntity}:${r.id}">${r.id}</a></td>`+
+    html += `<tr class="erow" data-editrow="${r.id}" title="click to edit"><td class="mono"><a class="idlink" data-lineage="${activeEntity}:${r.id}">${r.id}</a></td>`+
       cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
       `<td class="row-actions">
-        <button class="ghost" data-edit="${r.id}">edit</button>
         <button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
   }
   html += `</tbody></table>`;
   if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
   document.getElementById("entityTable").innerHTML = html;
-  document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
-  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ armedDelete=null; renderTable(); openEditor(b.dataset.edit); });
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  document.querySelectorAll("#entityTable [data-editrow]").forEach(tr=>tr.onclick=()=>{ armedDelete=null; openEditor(tr.dataset.editrow); });
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=(e)=>{
+    e.stopPropagation();
     const id=b.dataset.del;
     if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
     const ent = activeEntity;
@@ -743,7 +929,7 @@ function cellVal(col,v){
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
 function renderGantt(){
-  const em = execMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
+  const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
@@ -861,7 +1047,7 @@ function renderGantt(){
 /* ---------------- SLICES tab ---------------- */
 function renderSlices(){
   const root = document.getElementById("tab-slices");
-  const em = execMap();
+  const em = pfMap();
   if(!portfolio.products.length){ root.innerHTML='<p class="hint">No products defined yet. Add products and models in the Portfolio tab to see sliced scores.</p>'; return; }
   const qs = mode==="quarterly" ? quartersAll() : [null];
   let html = `<table><thead><tr><th>Product / Model</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
@@ -900,6 +1086,7 @@ document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
 document.getElementById("pfModalClose").onclick = closeEditor;
+document.getElementById("pfKpiClose").onclick = closeKpiEditor;
 document.getElementById("lnClose").onclick = closeLineage;
 document.getElementById("lnEdit").onclick = editFocused;
 document.addEventListener("keydown", e=>{ if(e.key==="Escape"){
