@@ -1019,7 +1019,11 @@ let pollTimer = null;
 
 function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
-function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return m; }
+// docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
+// to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
+function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return RD.withPortfolio(portfolio, m); }
+// resolution pool: this division's KPIs + the portfolio's initiative-level definers
+function allKpisPool(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? exec.kpis.concat(portfolio.kpis) : exec.kpis; }
 
 /* ---------------- messaging ---------------- */
 function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
@@ -1654,21 +1658,27 @@ function linkCandidates(hostType, hostId){
   const O = hostType==="initiative" ? null : selectedObj;
   const initId = O ? initiativeIdOf(O) : null;
   const here = LEVEL[hostType];
+  const pool = allKpisPool();
   const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
   const seen=new Set(), out=[];
-  exec.kpis.forEach(k=>{
+  pool.forEach(k=>{
     const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId);
     if(!inScope) return;
     const g=groupOf(k);
     if(seen.has(g) || occupied.has(g)) return;
-    seen.add(g); out.push(RD.definerOf(k, exec.kpis));
+    seen.add(g); out.push(RD.definerOf(k, pool));
   });
   return out;
 }
 function makeLinkMember(hostType, hostId, definerId){
-  const def = exec.kpis.find(k=>k.id===definerId); if(!def) return;
+  const pool = allKpisPool();
+  const def = pool.find(k=>k.id===definerId); if(!def) return;
+  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in the portfolio doc (read-only here)
   let g = def.groupId;
-  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  if(!g){
+    if(portfolioDef){ g = def.id; }                  // use its effGroup; never mutate the portfolio from exec
+    else { g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  }
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
   exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
@@ -1677,8 +1687,9 @@ function makeLinkMember(hostType, hostId, definerId){
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
-  m.name = RD.kpiName(m, exec.kpis); m.direction = RD.kpiDirection(m, exec.kpis); m.unit = RD.kpiUnit(m, exec.kpis);
-  if(m.target==null) m.target = RD.effTarget(m, exec.kpis);
+  const pool = allKpisPool();
+  m.name = RD.kpiName(m, pool); m.direction = RD.kpiDirection(m, pool); m.unit = RD.kpiUnit(m, pool);
+  if(m.target==null) m.target = RD.effTarget(m, pool);
   m.groupId = null; m.isDefiner = true;
   renderAll(); setMsg("Unlinked (Save to persist).","ok");
 }
@@ -1687,14 +1698,15 @@ function renderLinkEditor(hostType, hostId){
   if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, or one at the initiative level, first.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return `<div class="ed"><label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, exec.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+
+    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, allKpisPool())||d.id)} · ${hostLabel(d)}</option>`).join("")+
     `</select></label></div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
 function renderKpiOverrideEditor(rec){
-  const dir = RD.kpiDirection(rec, exec.kpis), unit = RD.kpiUnit(rec, exec.kpis);
-  const inhT = RD.effTarget(rec, exec.kpis), own = rec.target;
+  const pool = allKpisPool();
+  const dir = RD.kpiDirection(rec, pool), unit = RD.kpiUnit(rec, pool);
+  const inhT = RD.effTarget(rec, pool), own = rec.target;
   let tEd;
   if(dir==="range"){
     tEd = `<label>Override lo<input data-f="targetLo" class="tiny" type="number" value="${(own&&typeof own==='object')?own.lo:''}"/></label>
@@ -1704,7 +1716,7 @@ function renderKpiOverrideEditor(rec){
     tEd = `<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
   }
   return `<div class="ed">
-    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,exec.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,exec.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
+    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,pool)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,pool))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
     ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-save="1">Save override</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
@@ -1715,20 +1727,44 @@ function renderInitPanel(){
   let inner="";
   if(!inits.length) inner=`<p class="hint">no initiatives in this division</p>`;
   else inits.forEach(I=>{
-    const n = exec.kpis.filter(k=>k.hostType==="initiative" && k.hostId===I.id).length;
+    const pf = (portfolio.kpis||[]).filter(k=>k.hostType==="initiative" && k.hostId===I.id);
+    const legacy = exec.kpis.filter(k=>k.hostType==="initiative" && k.hostId===I.id);
+    const n = pf.length + legacy.length;
     inner+=`<div class="icard"><div class="icard-top">
       <span class="icard-title">${esc(I.name||I.id)}</span>
-      <span class="pill">${n} metric${n===1?'':'s'}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="initiative:${I.id}">+ KPI</button></span>
-      </div><div class="icard-meta">${kpiTable("initiative", I.id, null)}</div></div>`;
+      <span class="pill">${n} target${n===1?'':'s'}</span>
+      </div><div class="icard-meta">${initKpiTableRO(I.id)}</div></div>`;
   });
-  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared · link from a Key Result</span>`;
+  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">defined in Planning · link from a KR / gate / task</span>`;
   host.innerHTML=`<div class="panel">${panelHead("INIT","Initiative-level metrics · "+divName(divisionId),inits.length||null,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`;
   wireExec(host);
 }
+// read-only initiative-KPI table: portfolio definers (+ any not-yet-migrated local ones), cross-doc status
+function initKpiTableRO(initId){
+  const pool = allKpisPool(), EM = emForCore();
+  const pf = (portfolio.kpis||[]).filter(k=>k.hostType==="initiative" && k.hostId===initId);
+  const legacy = exec.kpis.filter(k=>k.hostType==="initiative" && k.hostId===initId);
+  const rows = pf.concat(legacy);
+  let h = `<table class="kpitable"><thead><tr><th>KPI</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>links</th></tr></thead><tbody>`;
+  if(!rows.length){ h += `<tr><td colspan="6" class="hint">none yet — add initiative targets in the Planning app</td></tr>`; }
+  rows.forEach(k=>{
+    const isLegacy = exec.kpis.indexOf(k)>=0;
+    const name=RD.kpiName(k,pool), dir=RD.kpiDirection(k,pool), unit=RD.kpiUnit(k,pool);
+    const tgt=RD.effTarget(k,pool), cv=RD.effValue(k,pool,EM), s=RD.kpiScoreResolved(k,pool,EM);
+    const links=exec.kpis.filter(m=>m.id!==k.id && groupOf(m)===groupOf(k)).length;
+    const tag = isLegacy ? ` <span class="pill" title="defined locally — move it to the portfolio from the Planning app">local</span>` : '';
+    h += `<tr><td>${esc(name||'')||'(unnamed)'}${tag}</td><td class="mono">${dir||''}</td>
+      <td class="mono">${fmtTarget(tgt,unit)}</td>
+      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
+      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
+      <td>${links>0?`<span class="linkbadge">🔗 ${links}</span>`:'<span class="pill">—</span>'}</td></tr>`;
+  });
+  h += `</tbody></table>`;
+  return h;
+}
 
 function kpiTable(hostType, hostId, objScope){
-  const AK = exec.kpis, EM = emForCore();
+  const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   let h = `<table class="kpitable"><thead><tr><th>KPI</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
   if(!rows.length) h += `<tr><td colspan="7" class="hint">no KPIs yet — add or link a measurement</td></tr>`;
