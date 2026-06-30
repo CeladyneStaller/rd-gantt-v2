@@ -195,7 +195,10 @@
   <div class="msg" id="msg"></div>
 
   <div id="settingsPanel" style="display:none" class="settings">
-    <h3>Product families</h3>
+    <h3>Sync</h3>
+    <p class="hint">The broker is baked in; the token lives in this browser only. The division is taken from <code>?division=DIV-FC</code> (or your last session). An SSO embed can pass <code>?token=…</code>; it strips itself. No token ⇒ this document is kept locally in the browser.</p>
+    <label class="read-row" style="max-width:520px">Broker token <input class="mono" id="tokenInput" type="password" style="min-width:280px" placeholder="paste token"/><button class="act mini" id="tokenSave">Save</button></label>
+    <h3 style="margin-top:20px">Product families</h3>
     <p class="hint">Models belong to a product family. Product-level KPIs are shared across a family's models and can be linked from any specification or component.</p>
     <div id="prodList"></div>
     <div class="read-row" style="margin-top:8px"><input id="newProdName" placeholder="New product family name" style="min-width:260px"/><button class="act mini" id="addProdBtn">Add</button></div>
@@ -246,8 +249,24 @@ const RD = window.RDCore;
 const PSD_KEY = "psd_doc_v1";
 const DOCID   = "DOC";
 
+/* ---------------- broker (shared with planning / execution) ---------------- */
+const BROKER = "https://web-production-b17a2.up.railway.app";
+(function seedToken(){ const u=new URL(location.href); const t=u.searchParams.get("token");
+  if(t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({},"",u.toString()); } })();
+const tok = () => localStorage.getItem("rd_broker_token") || "";
+const auth = () => { const t=tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
+async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
+async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
+async function apiPut(id,d,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+  headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc:d})}); if(!r.ok) throw r; return r.json(); }
+
 let doc = blankDoc();
 let selectedModel = null;
+let portfolio = null;                 // read-only: division resolution now; products/models in step 3
+let divisionId = null;
+let specEtag = "0", specVersion = 0, portfolioVersion = 0, pollTimer = null;
+function specId(){ return "SPEC-"+divisionId; }
+function resolveDivision(){ const u=new URL(location.href); return u.searchParams.get("division") || localStorage.getItem("rd_division") || null; }
 
 function blankDoc(){ return { products:[], models:[], keyResults:[], stageGates:[], kpis:[], kpiUpdates:[] }; }
 function emForCore(){ const m={}; m[DOCID]=doc; return m; }
@@ -257,12 +276,54 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
   if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
 
 /* ---------------- persistence ---------------- */
-function persist(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
-function loadDoc(){
+function persistLocal(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
+async function persist(){
+  if(!tok()){ persistLocal(); return; }
+  try{
+    const res = await apiPut(specId(), doc, specEtag);
+    specEtag = res.etag; specVersion = res.version; setMsg("Saved.","ok");
+  }catch(e){
+    if(e.status===412){
+      try{ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); }
+        setMsg("Another editor saved first — reloaded; re-apply your change.","err"); }
+      catch(e2){ setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
+    } else setMsg("Save failed ("+(e.status||e)+").","err");
+  }
+}
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); specEtag=s.etag; specVersion=s.version;
+  if(!doc.models.find(m=>m.id===selectedModel)) selectedModel=(doc.models[0]&&doc.models[0].id)||null; }
+function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=seedDoc(); } }
   else doc=seedDoc();
   selectedModel=(doc.models[0]&&doc.models[0].id)||null;
+}
+async function loadAll(){
+  if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
+  try{
+    const p = await apiGet("portfolio");
+    if(!p){ setMsg("No portfolio on the broker yet — create it in the Planning app first.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); return; }
+    portfolio = p.doc; portfolioVersion = p.version;
+    if(!divisionId) divisionId = resolveDivision() || (portfolio.divisions && portfolio.divisions[0] && portfolio.divisions[0].id);
+    if(!divisionId){ setMsg("No divisions exist yet — add one in Planning.","err"); return; }
+    localStorage.setItem("rd_division", divisionId);
+    const s = await apiGet(specId());
+    if(s){ adoptSpec(s); } else { doc=blankDoc(); specEtag="0"; specVersion=0; selectedModel=null; }
+    fillModelSelect(); renderProdList(); renderAll();
+    setMsg("Loaded "+specId()+".","ok");
+    startPoll();
+  }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); }
+}
+function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
+function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+async function pollOnce(){
+  if(!tok()) return;
+  try{
+    const pv=await apiVersion("portfolio");
+    if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; renderAll(); } }
+    const sv=await apiVersion(specId());
+    if(sv.version!==specVersion){ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Updated from another editor.","info"); } }
+  }catch(e){}
 }
 function exportDoc(){
   const blob=new Blob([JSON.stringify(doc,null,2)],{type:"application/json"});
@@ -1100,8 +1161,9 @@ function seedDoc(){
 }
 
 /* ---------------- top-level wiring + boot ---------------- */
-document.getElementById("saveBtn").onclick = ()=>{ persist(); setMsg("Saved.","ok"); };
-document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); const show=p.style.display==="none"; p.style.display=show?"block":"none"; if(show) renderProdList(); };
+document.getElementById("saveBtn").onclick = persist;
+document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); const show=p.style.display==="none"; p.style.display=show?"block":"none"; if(show){ document.getElementById("tokenInput").value=tok(); renderProdList(); } };
+document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
 document.getElementById("addModelBtn").onclick = ()=>openModelEditor(null);
 document.getElementById("modalX").onclick = ()=>{ if(modelEditing!=null) closeModelEditor(); else subCancel(); };
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay"){ if(modelEditing!=null) closeModelEditor(); else subCancel(); } };
@@ -1113,13 +1175,10 @@ document.getElementById("exportBtn").onclick = exportDoc;
 document.getElementById("importInput").onchange = (e)=>{ if(e.target.files&&e.target.files[0]) importDoc(e.target.files[0]); e.target.value=""; };
 document.getElementById("resetBtn").onclick = resetDoc;
 document.getElementById("addProdBtn").onclick = addProduct;
-window.addEventListener("beforeunload", persist);
+window.addEventListener("beforeunload", persistLocal);
 
 /* boot */
-loadDoc();
-fillModelSelect();
-renderProdList();
-renderAll();
+loadAll();
 </script>
 </body>
 </html>
