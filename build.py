@@ -19,13 +19,14 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = "."
+OUT = "/mnt/user-data/outputs"
 CORE = os.path.join(HERE, "core.js")
 MARKER = "/*__CORE__*/"
 
 TARGETS = [
     ("planning_app.template.html", "planning_app.html"),
     ("execution_app.template.html", "execution_app.html"),
+    ("product_designer.template.html", "product_designer.html"),
 ]
 
 

@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Product Specification — Model</title>
+<style>
+  :root{
+    --bg:#0f1620; --panel:#15202d; --panel2:#1b2937; --line:#26384a;
+    --ink:#e6edf3; --muted:#8aa0b4; --accent:#3fd0c9; --accent2:#7ca8ff;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --none:#5b7186;
+    --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
+  header h1 .dot{color:var(--accent)}
+  header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
+  .spacer{flex:1}
+  main{padding:18px;max-width:1080px;margin:0 auto}
+  .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
+  .msg.show{display:block}
+  .msg.info{background:#13314a;color:#add4ff;border:1px solid #1d4a6e}
+  .msg.err{background:#3a1620;color:#ffb4bd;border:1px solid #5e2230}
+  .msg.ok{background:#13311f;color:#9ff0c4;border:1px solid #1d5e3a}
+  select.obj{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:8px;font-size:14px;min-width:340px}
+  .objhead{display:flex;align-items:center;gap:16px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+  .objhead .sc{font-size:40px;font-weight:800;line-height:1}
+  .objhead .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
+  .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .band.on-track{background:#10371f;color:var(--ok)} .band.at-risk{background:#3a2f10;color:var(--warn)}
+  .band.off-track{background:#3a1414;color:var(--bad)} .band.no-band{background:#1c2733;color:var(--none)}
+  .sub{margin:18px 0}
+  .sub h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:10px}
+  .sub h3 button{margin-left:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .mono{font-family:var(--mono);font-size:12px}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:6px;font-family:var(--sans);font-size:13px}
+  input.mono{font-family:var(--mono)}
+  input.tiny{width:70px} input.sm{width:120px}
+  button.act{background:var(--accent);color:#08121a;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
+  button.ghost{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+  button.danger{color:var(--bad);border-color:#5e2230}
+  button.danger.armed{background:var(--bad);color:#1a0a0c}
+  button.mini{padding:3px 8px;font-size:12px}
+  .row-actions{display:flex;gap:6px;align-items:center}
+  .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+  .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  .hint{color:var(--muted);font-size:12px;margin:8px 0}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .kpi-now{font-family:var(--mono);font-size:12px}
+  .read-row{display:flex;gap:6px;align-items:center}
+  code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+  .settings label{display:block;margin-bottom:10px;max-width:520px}
+  .scwrap{display:flex;align-items:baseline;gap:10px}
+  .hostcard{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden;background:var(--panel)}
+  .hosthead{display:flex;align-items:center;gap:12px;padding:9px 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .hosthead .hn{font-weight:600}
+  .hosthead .hs{font-family:var(--mono);font-weight:700;font-size:15px}
+  .hosthead .ha{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .hosthead .gate-meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  table.kpitable{margin:0}
+  table.kpitable td,table.kpitable th{padding:6px 14px}
+  table.kpitable tbody tr:last-child td{border-bottom:none}
+  .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
+  .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
+  .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
+  .gate-sched .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .gate-sched .sched-sep{color:var(--line)}
+  .dep-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:2px 6px}
+  .dep-chip button{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;line-height:1;padding:0}
+  .dep-chip button:hover{color:var(--bad)}
+  .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:#3a2f10;border:1px solid #5a4a18;border-radius:5px;padding:2px 7px}
+  select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
+  input.laginp{width:56px}
+  .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
+  .chain-toggle input{width:auto;padding:0;margin:0}
+  /* dashboard layout (tracker QT pattern, dark theme) */
+  .obj-title{font-size:14px;color:var(--ink);margin:14px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 18px}
+  .mc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+  .mc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:8px}
+  .mc-val{font-size:23px;font-weight:600;line-height:1;color:var(--ink)}
+  .mc-val.small{font-size:14px;font-family:var(--mono)}
+  .mc-sub{font-size:11px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:14px 0}
+  .panel-header{display:flex;align-items:center;gap:10px;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .panel-title .chev{font-size:9px;transition:transform .15s;display:inline-block;color:var(--none)}
+  .panel-title.collapsed .chev{transform:rotate(-90deg)}
+  .panel-title .cnt{font-family:var(--mono);font-size:10px;color:var(--none);font-weight:400}
+  .panel-header .ha{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .item-list{display:flex;flex-direction:column;gap:8px}
+  .item-list.collapsed{display:none}
+  .icard{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .icard-top{display:flex;align-items:center;gap:10px;padding:8px 12px}
+  .icard-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
+  .icard-title{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .icard-title.click{cursor:pointer}
+  .icard-title.click:hover{color:var(--accent)}
+  .rowedit{cursor:pointer;color:var(--ink);text-decoration:none;border-bottom:1px dotted transparent}
+  .rowedit:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  .icard-score{font-family:var(--mono);font-weight:700;font-size:15px;flex:none}
+  .icard-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+  .icard-actions .gate-meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .icard-meta{border-top:1px solid var(--line);background:var(--panel)}
+  .statepill{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:2px 7px;flex:none}
+  .statepill.passed{background:#10371f;color:var(--ok)}
+  .statepill.passed-late{background:#3a2f10;color:var(--warn)}
+  .statepill.overdue{background:#3a1414;color:var(--bad)}
+  .statepill.pending{background:#1c2733;color:var(--none)}
+  /* modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
+  .overlay.open{display:flex}
+  .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
+  .modal-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .modal-title{font-size:14px;font-weight:600;color:var(--ink);flex:1}
+  .modal-x{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0 4px}
+  .modal-x:hover{color:var(--ink)}
+  #modalBody{padding:16px 18px}
+  #modalBody .ed{margin:0 0 14px}
+  #modalBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0 !important}
+  .modal-section-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:var(--mono);margin:14px 0 8px;display:block}
+  .gt-head{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+  .gt-acts{margin-left:auto;display:flex;gap:6px;flex:none}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg-btn{background:var(--panel2);border:none;border-right:1px solid var(--line);color:var(--muted);padding:6px 13px;font-size:12px;cursor:pointer}
+  .seg-btn:last-child{border-right:none}
+  .seg-btn:hover{color:var(--ink)}
+  .seg-btn.seg-pending{background:#1c2733;color:var(--ink)}
+  .seg-btn.seg-active{background:#16233e;color:var(--accent2)}
+  .seg-btn.seg-hit{background:#10371f;color:var(--ok)}
+  .seg-btn.seg-missed{background:#3a1414;color:var(--bad)}
+  .seg-btn.on{background:#16233e;color:var(--accent2)}
+  .modal-field{margin:0 0 12px}
+  .modal-field>.lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+  #modalBody .modal-field input[type=text],#modalBody .modal-field input[type=number],#modalBody .modal-field select,#subkrBody .modal-field input[type=text],#subkrBody .modal-field input[type=number],#subkrBody .modal-field select{width:100%}
+  #subkrBody{padding:16px 18px}
+  #subkrBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
+  input[type=range]{accent-color:var(--accent);height:4px}
+  .pct-row{display:flex;align-items:center;gap:10px}
+  .pct-val{font-family:var(--mono);font-size:12px;font-weight:600;min-width:34px;text-align:right;color:var(--ink)}
+  .skr-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .skr-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--panel2)}
+  .skr-row .skr-name{flex:1;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+  .skr-row .skr-name:hover{color:var(--accent)}
+  .skr-row .skr-meta{font-family:var(--mono);font-size:10px;color:var(--muted);flex:none}
+  .skr-empty{font-size:12px;color:var(--muted)}
+  #kpiTgtBody{padding:16px 18px}
+  #kpiTgtBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
+  #kpiTgtBody .modal-field input[type=text],#kpiTgtBody .modal-field input[type=number],#kpiTgtBody .modal-field select{width:100%}
+  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
+  /* quarter/week header */
+  .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+  .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .qw-now{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-left:auto}
+  .qw-weeks{display:flex;gap:3px}
+  .qw-cell{width:18px;height:7px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
+  .qw-cell.done{background:#24405e;border-color:#2a3a5a}
+  .qw-cell.now{background:var(--accent);border-color:var(--accent)}
+  .qw-track{flex:1;min-width:120px;height:7px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .qw-fill{height:100%;background:var(--accent)}
+  /* metric mini-bar */
+  .mc-bar{height:4px;background:var(--panel2);border-radius:3px;overflow:hidden;margin:9px 0 0}
+  .mc-bar-fill{height:100%}
+  /* signal bars */
+  .bar-area{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:0 0 18px}
+  .bar-area-head{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+  .bar-area-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  .sig-legend{display:flex;gap:12px;margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .sig-legend span{display:inline-flex;align-items:center;gap:4px}
+  .sig-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .sig-row{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .sig-lbl{font-size:12px;color:var(--ink);width:230px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sig-track{flex:1;height:9px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  .sig-fill{height:100%;border-radius:4px 0 0 4px}
+  .sig-val{font-family:var(--mono);font-weight:700;font-size:13px;width:32px;text-align:right;flex:none}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot">▤</span> Product Specification</h1>
+  <span class="div-pill" id="docPill">—</span>
+  <div class="spacer"></div>
+  <select class="obj" id="modelSelect"><option>loading…</option></select>
+  <button class="ghost" id="addModelBtn" style="margin-left:8px">+ Model</button>
+  <button class="act" id="saveBtn" style="margin-left:8px">Save</button>
+  <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
+</header>
+<main>
+  <div class="msg" id="msg"></div>
+
+  <div id="settingsPanel" style="display:none" class="settings">
+    <h3>Product families</h3>
+    <p class="hint">Models belong to a product family. Product-level KPIs are shared across a family's models and can be linked from any specification or component.</p>
+    <div id="prodList"></div>
+    <div class="read-row" style="margin-top:8px"><input id="newProdName" placeholder="New product family name" style="min-width:260px"/><button class="act mini" id="addProdBtn">Add</button></div>
+    <h3 style="margin-top:20px">Document</h3>
+    <p class="hint">This document is stored in your browser. Export to share or back up; import to load a saved document.</p>
+    <div class="read-row">
+      <button class="ghost" id="exportBtn">Export JSON</button>
+      <label class="ghost" id="importLbl" style="cursor:pointer;display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:6px;color:var(--muted)">Import JSON<input type="file" id="importInput" accept="application/json,.json" style="display:none"/></label>
+      <button class="ghost danger" id="resetBtn">Reset to sample…</button>
+    </div>
+  </div>
+
+  <div id="modelHeadWrap"></div>
+  <div id="subKR" class="sub"></div>
+  <div id="subSG" class="sub"></div>
+  <div id="initPanel" class="sub"></div>
+</main>
+<div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
+<div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
+<div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
+<datalist id="maturityList"><option value="Concept"></option><option value="Prototype"></option><option value="Pilot"></option><option value="Pre-production"></option><option value="Production"></option></datalist>
+
+<script>
+/* ============================================================================
+   Unified R&D Suite — Shared Core (frozen spec v1.3)
+   Pure logic only. No DOM, no network. Runs headless in Node and injects into
+   the browser shells via build.py (between the CORE markers).
+
+   Conventions (spec v1.3)
+   -----------------------
+   - Dates are integer day-counts (days since an arbitrary epoch). Shells convert
+     ISO <-> day-count; the core only does max / +lag arithmetic.
+   - percentComplete is an integer 0..100.
+   - A KPI is the measurement atom, hosted by exactly one Key Result or one
+     stage-gate (kpi.hostType / kpi.hostId). A value enters ONLY via kpiUpdates
+     (in an exec doc), keyed by kpiId; a KPI's current value = the latest update
+     by timestamp.
+   - Scoring rolls up: KPI score -> Key Result score (mean of its KPIs) ->
+     Objective score (mean of its Key Results). Stage-gate KPIs are gating only
+     and never feed the objective OKR score (spec v1.3 §A, decision #1).
+   - Unscored: a KPI with a null target or no read yet is excluded from its KR's
+     mean (g1). A KR with no scorable KPIs is unscored; an objective with no
+     scorable KRs has no band, not zero. No synthesized KRs (decision #3).
+   - For direction 'range', score is 100 inside [lo,hi] and falls off linearly to
+     0 at one full band-width outside the band.
+   ============================================================================ */
+
+(function (root) {
+  'use strict';
+
+  // ---- small helpers --------------------------------------------------------
+  function mean(arr) {
+    if (!arr.length) return null;
+    var s = 0;
+    for (var i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+  }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+  // ---- IDs ------------------------------------------------------------------
+  // Type-prefixed, parent-scoped, monotonic counter. The counter is an
+  // ALLOCATION number, never a position: reordering existing ids never changes
+  // the next id. Display order lives in the separate `order` field.
+  var ID_PREFIX = {
+    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
+  };
+  // Structural levels pad to 2 digits; leaf metrics use plain integers.
+  var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
+
+  function stemFromParent(type, parentId, opts) {
+    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
+    if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
+    return parentStem;
+  }
+
+  // allocId(type, parentId, existingIds, opts?)
+  //   division:  opts.code required (parentId may be null)
+  //   objective: opts.quarter required, parentId = division id
+  //   others:    parentId = immediate logical parent (initiative / objective / host)
+  function allocId(type, parentId, existingIds, opts) {
+    opts = opts || {};
+    var prefix = ID_PREFIX[type];
+    if (!prefix) throw new Error('allocId: unknown type ' + type);
+    var stem = stemFromParent(type, parentId, opts);
+    if (type === 'division') {
+      var did = prefix + '-' + stem;
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      return did;
+    }
+    var base = prefix + '-' + stem + '-';
+    var max = 0;
+    for (var i = 0; i < existingIds.length; i++) {
+      var id = existingIds[i];
+      if (id.indexOf(base) === 0) {
+        var n = parseInt(id.slice(base.length), 10);
+        if (!isNaN(n) && n > max) max = n;
+      }
+    }
+    var next = max + 1;
+    var pad = ID_PAD[type] || 0;
+    var num = pad ? String(next).padStart(pad, '0') : String(next);
+    return base + num;
+  }
+
+  // ---- KPI link groups, level resolution & scoring (v1.3.1) ----------------
+  // A KPI is the measurement atom, hosted at a level: initiative > keyResult >
+  // stageGate > task(=execution). KPIs may share a free-standing groupId to form
+  // a LINK GROUP; exactly one member carries isDefiner and owns the IDENTITY
+  // (name/direction/unit). Resolution is asymmetric (decision v1.3.1):
+  //   - TARGET cascades DOWN: a member's effective target = its own if set, else
+  //     the nearest HIGHER level's (self overrides ancestor). Within-objective
+  //     levels resolve against the same objective; the initiative level is
+  //     objective-agnostic (one definition spanning every linked objective).
+  //   - VALUE cascades UP: a member's effective value = its own latest reading if
+  //     present, else the nearest LOWER level's. A higher-level reading never
+  //     leaks downward; a higher level's own reading overrides a lower one for
+  //     that higher level (positional override).
+  // A KPI with no groupId is a standalone singleton (its own definer) -> the
+  // resolution collapses to its own target/value, identical to v1.3.
+  var KPI_LEVEL = { initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
+  var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
+
+  function progressLinear(value, target, direction) {
+    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
+    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    return 0;
+  }
+  function progressRange(value, lo, hi) {
+    if (value >= lo && value <= hi) return 100;
+    var width = (hi - lo) || 1;
+    var d = value < lo ? (lo - value) : (value - hi);
+    return 100 * Math.max(0, 1 - d / width);
+  }
+
+  // ---- statistics (for statistical KPI targets) ----------------------------
+  function statSum(xs){ var s=0; for(var i=0;i<xs.length;i++) s+=xs[i]; return s; }
+  function statAverage(xs){ return xs.length ? statSum(xs)/xs.length : null; }
+  function statMedian(xs){ if(!xs.length) return null; var a=xs.slice().sort(function(p,q){return p-q;}); var m=Math.floor(a.length/2); return a.length%2 ? a[m] : (a[m-1]+a[m])/2; }
+  function statMax(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]>m) m=xs[i]; return m; }
+  function statMin(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]<m) m=xs[i]; return m; }
+  function statStdDev(xs){ if(xs.length<2) return xs.length?0:null; var mu=statAverage(xs),s=0; for(var i=0;i<xs.length;i++){ var d=xs[i]-mu; s+=d*d; } return Math.sqrt(s/(xs.length-1)); }
+  function statCV(xs){ var mu=statAverage(xs); if(mu==null||mu===0) return null; var sd=statStdDev(xs); return sd==null?null:(sd/Math.abs(mu))*100; }
+  function statRange(xs){ if(!xs.length) return null; return statMax(xs)-statMin(xs); }
+  function computeStat(name, xs){
+    switch(name){
+      case 'average': return statAverage(xs);
+      case 'median':  return statMedian(xs);
+      case 'stddev':  return statStdDev(xs);
+      case 'cv':      return statCV(xs);
+      case 'range':   return statRange(xs);
+      case 'max':     return statMax(xs);
+      case 'min':     return statMin(xs);
+    }
+    return statAverage(xs);
+  }
+  // all readings posted to a kpi id, newest first
+  function readingsFor(kpiId, execDocs){
+    var out=[];
+    for(var div in execDocs){ if(!execDocs.hasOwnProperty(div)) continue;
+      var ups=execDocs[div].kpiUpdates||[];
+      for(var i=0;i<ups.length;i++) if(ups[i].kpiId===kpiId) out.push(ups[i]);
+    }
+    out.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    return out;
+  }
+  // resolved value for a member id honoring the definer's targetType:
+  // 'statistical' aggregates the latest readCount readings; else the newest reading.
+  function resolvedReadingValue(kpiId, defn, execDocs){
+    var ups=readingsFor(kpiId, execDocs);
+    if(!ups.length) return null;
+    if(defn && defn.targetType==='statistical'){
+      var n=parseInt(defn.readCount,10);
+      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
+      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      if(!xs.length) return null;
+      return computeStat(defn.statistic||'average', xs);
+    }
+    return ups[0].value;
+  }
+
+  // latest reading posted to a specific KPI id (the host where it was entered)
+  function kpiCurrentValue(kpiId, execDocs) {
+    var latest = null;
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ups = execDocs[div].kpiUpdates || [];
+      for (var i = 0; i < ups.length; i++) {
+        if (ups[i].kpiId === kpiId) {
+          if (!latest || ups[i].timestamp > latest.timestamp) latest = ups[i];
+        }
+      }
+    }
+    return latest ? latest.value : null;
+  }
+
+  function allKpis(execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ks = execDocs[div].kpis || [];
+      for (var i = 0; i < ks.length; i++) out.push(ks[i]);
+    }
+    return out;
+  }
+  function effGroup(kpi) { return kpi.groupId || kpi.id; }
+  function groupMembers(kpi, kpis) {
+    var g = effGroup(kpi), out = [];
+    for (var i = 0; i < kpis.length; i++) if (effGroup(kpis[i]) === g) out.push(kpis[i]);
+    return out;
+  }
+  // the definer owns identity; a lone member is its own definer
+  function definerOf(kpi, kpis) {
+    var members = groupMembers(kpi, kpis);
+    for (var i = 0; i < members.length; i++) if (members[i].isDefiner) return members[i];
+    return members[0] || kpi;
+  }
+  function kpiDirection(kpi, kpis) { return definerOf(kpi, kpis).direction; }
+  function kpiUnit(kpi, kpis) { return definerOf(kpi, kpis).unit; }
+  function kpiName(kpi, kpis) { return definerOf(kpi, kpis).name; }
+
+  // the group member sitting at a given level (within objectiveId for the
+  // within-objective levels; objective-agnostic at the initiative level)
+  function memberAtLevel(members, level, objectiveId) {
+    for (var i = 0; i < members.length; i++) {
+      var m = members[i];
+      if (KPI_LEVEL[m.hostType] !== level) continue;
+      if (level === KPI_LEVEL.initiative) return m;
+      // objectiveId null => the scored KPI is initiative-agnostic; descend into any objective's member
+      if (objectiveId == null || m.objectiveId === objectiveId) return m;
+    }
+    return null;
+  }
+
+  // effective TARGET: self, then nearest higher level (cascades down)
+  function effTarget(kpi, kpis) {
+    var members = groupMembers(kpi, kpis);
+    var lvl = KPI_LEVEL[kpi.hostType];
+    for (var L = lvl; L <= KPI_LEVEL.initiative; L++) {
+      var m = memberAtLevel(members, L, kpi.objectiveId);
+      if (m && m.target != null) return m.target;
+    }
+    return null;
+  }
+  // effective VALUE: self, then nearest lower level (cascades up)
+  function effValue(kpi, kpis, execDocs) {
+    var members = groupMembers(kpi, kpis);
+    var defn = definerOf(kpi, kpis);
+    var lvl = KPI_LEVEL[kpi.hostType];
+    for (var L = lvl; L >= 0; L--) {
+      var m = memberAtLevel(members, L, kpi.objectiveId);
+      if (m) {
+        var v = resolvedReadingValue(m.id, defn, execDocs);
+        if (v != null) return v;
+      }
+    }
+    return null;
+  }
+
+  // kpiScore(kpi, currentValue) -> 0..100 or null. Pure formula against the
+  // kpi's own direction/target (used for standalone KPIs and unit tests).
+  function kpiScore(kpi, currentValue) {
+    if (kpi.targetType === 'binary') {
+      if (currentValue == null) return null;
+      return currentValue >= 1 ? 100 : 0;
+    }
+    if (kpi.target == null) return null;
+    if (currentValue == null) return null;
+    var raw;
+    if (kpi.direction === 'range') {
+      raw = progressRange(currentValue, kpi.target.lo, kpi.target.hi);
+    } else {
+      raw = progressLinear(currentValue, kpi.target, kpi.direction);
+    }
+    return clamp(raw, 0, 100);
+  }
+
+  // group/level-aware score: resolved target (down) vs resolved value (up),
+  // direction from the definer.
+  function kpiScoreResolved(kpi, kpis, execDocs) {
+    var defn = definerOf(kpi, kpis);
+    if (defn.targetType === 'binary') {
+      var bv = effValue(kpi, kpis, execDocs);
+      if (bv == null) return null;
+      return bv >= 1 ? 100 : 0;
+    }
+    var target = effTarget(kpi, kpis);
+    if (target == null) return null;
+    var value = effValue(kpi, kpis, execDocs);
+    if (value == null) return null;
+    var dir = kpiDirection(kpi, kpis);
+    var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
+                                : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
+
+  // all KPIs hosted by (hostType, hostId), scanned across exec docs
+  function kpisFor(hostType, hostId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ks = execDocs[div].kpis || [];
+      for (var i = 0; i < ks.length; i++) {
+        if (ks[i].hostType === hostType && ks[i].hostId === hostId) out.push(ks[i]);
+      }
+    }
+    return out;
+  }
+
+  function meanScorable(kpis, execDocs) {
+    var all = allKpis(execDocs);
+    var scores = [];
+    for (var i = 0; i < kpis.length; i++) {
+      var s = kpiScoreResolved(kpis[i], all, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // find a KR object across exec docs
+  function findKr(krId, execDocs) {
+    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].id === krId) return krs[i];
+    }
+    return null;
+  }
+  // score one embedded KPI (sub-KR tracker) from its stored `current`
+  function scoreEmbeddedKpi(k) {
+    var tt = k.targetType || k.type || 'demonstration';
+    if (tt === 'binary') {
+      if (k.current == null) return null;
+      return Number(k.current) >= 1 ? 100 : 0;
+    }
+    if (k.current == null) return null;
+    var cur = Number(k.current); if (isNaN(cur)) return null;
+    if (k.target == null || k.target === '') return null;
+    var tgt = Number(k.target); if (isNaN(tgt)) return null;
+    var dir = (k.direction === 'down' || k.direction === 'decrease') ? 'down' : 'up';
+    return clamp(progressLinear(cur, tgt, dir), 0, 100);
+  }
+  function meanEmbedded(kpis) {
+    var scores = [];
+    for (var i = 0; i < (kpis || []).length; i++) { var s = scoreEmbeddedKpi(kpis[i]); if (s != null) scores.push(s); }
+    return mean(scores);
+  }
+  // weighted mean of sub-KR scores (percentage -> progress, kpi -> embedded KPI mean)
+  function subKrScore(subKrs) {
+    var totalW = 0, sum = 0, any = false;
+    for (var i = 0; i < (subKrs || []).length; i++) {
+      var skr = subKrs[i], pct;
+      if ((skr.trackingType || 'percentage') === 'kpi') pct = meanEmbedded(skr.kpis || []);
+      else pct = (skr.progress == null) ? null : clamp(Number(skr.progress), 0, 100);
+      if (pct == null) continue;
+      var w = Number(skr.weight) || 1;
+      totalW += w; sum += w * pct; any = true;
+    }
+    return (any && totalW > 0) ? sum / totalW : null;
+  }
+  // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
+  // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
+  function keyResultScore(krId, execDocs) {
+    var kr = findKr(krId, execDocs);
+    var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
+    if (tt === 'percentage') {
+      if (!kr || kr.progress == null) return null;
+      return clamp(Number(kr.progress), 0, 100);
+    }
+    if (tt === 'subkr') return subKrScore(kr.subKrs || []);
+    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
+  }
+  // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
+  function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+
+  // ---- objective & tier scores ---------------------------------------------
+  function krsForObjective(objId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
+    }
+    return out;
+  }
+
+  // objectiveScore -> mean of scorable Key Result scores; null when none are
+  // scorable (an objective with no Key Result is unscored -> no band, decision #3).
+  function objectiveScore(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs);
+    var scores = [];
+    for (var i = 0; i < krs.length; i++) {
+      var s = keyResultScore(krs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores); // null if empty
+  }
+
+  function objectivesInScope(entityType, entityId, portfolio) {
+    var objs = portfolio.objectives || [];
+    switch (entityType) {
+      case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
+      case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
+      case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'company':    return objs.slice();
+      default: return [];
+    }
+  }
+
+  // score(entityType, entityId, portfolio, execDocs, quarter?)
+  //   quarter omitted -> OVERALL (grand mean of the entity's objectives)
+  //   quarter given   -> QUARTERLY (objectives stamped that quarter)
+  // Returns 0..100 or null (no scorable objectives in the bound -> no band).
+  function score(entityType, entityId, portfolio, execDocs, quarter) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // boundsOf -> sorted distinct quarters in scope. length 1 => caller collapses
+  // quarterly and overall into a single number.
+  function boundsOf(entityType, entityId, portfolio) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    var seen = {}, out = [];
+    for (var i = 0; i < objs.length; i++) {
+      var q = objs[i].quarter;
+      if (q && !seen[q]) { seen[q] = 1; out.push(q); }
+    }
+    out.sort();
+    return out;
+  }
+
+  function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
+  function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
+  function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
+  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+
+  // Combine the portfolio doc into a docs map for cross-document KPI resolution.
+  // Portfolio KPIs join the resolution pool (their targets/identity cascade down
+  // to linked exec members; values cascade up from exec readings). The reserved
+  // key is skipped by structural iteration, so KRs/gates/objectives never double.
+  function withPortfolio(portfolio, execDocs) {
+    var m = {}; m[PORTFOLIO_KEY] = portfolio || {};
+    for (var k in execDocs) { if (execDocs.hasOwnProperty(k)) m[k] = execDocs[k]; }
+    return m;
+  }
+
+  function band(s) {
+    if (s == null) return 'no-band';
+    if (s >= 90) return 'on-track';
+    if (s >= 70) return 'at-risk';
+    return 'off-track';
+  }
+
+  // ---- product / model classification (§5) ---------------------------------
+  function ownClass(node) {
+    if (node.modelId) return { kind: 'model', modelId: node.modelId };
+    if (node.productId) return { kind: 'product', productId: node.productId };
+    return { kind: 'agnostic' };
+  }
+  function parentProductOf(modelId, portfolio) {
+    var ms = portfolio.models || [];
+    for (var i = 0; i < ms.length; i++) if (ms[i].id === modelId) return ms[i].productId;
+    return null;
+  }
+  function initiativeOf(obj, portfolio) {
+    var inits = portfolio.initiatives || [];
+    for (var i = 0; i < inits.length; i++) if (inits[i].id === obj.initiativeId) return inits[i];
+    return null;
+  }
+  function effClass(obj, portfolio) {
+    var c = ownClass(obj);
+    if (c.kind === 'agnostic') {
+      var init = initiativeOf(obj, portfolio);
+      if (init) c = ownClass(init);
+    }
+    return c;
+  }
+  function effProduct(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    if (c.kind === 'model') return parentProductOf(c.modelId, portfolio);
+    if (c.kind === 'product') return c.productId;
+    return null;
+  }
+  function effModel(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    return c.kind === 'model' ? c.modelId : null;
+  }
+
+  // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
+  // Enforces the node invariant (at most one of productId/modelId) and the
+  // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
+  function validateClassification(obj, portfolio) {
+    if (obj.productId && obj.modelId) return { ok: false, reason: 'objective sets both productId and modelId' };
+    var init = initiativeOf(obj, portfolio);
+    if (!init) return { ok: false, reason: 'objective has no initiative' };
+    if (init.productId && init.modelId) return { ok: false, reason: 'initiative sets both productId and modelId' };
+
+    var io = ownClass(init);
+    var oo = ownClass(obj);
+    if (oo.kind === 'agnostic') return { ok: true };           // inherits; always valid
+    if (io.kind === 'agnostic') return { ok: true };           // anything allowed below agnostic
+
+    if (io.kind === 'product') {
+      if (oo.kind === 'product') {
+        return oo.productId === io.productId
+          ? { ok: true }
+          : { ok: false, reason: 'objective pins a different product than its initiative' };
+      }
+      // oo is model -> must be under the initiative's product
+      return parentProductOf(oo.modelId, portfolio) === io.productId
+        ? { ok: true }
+        : { ok: false, reason: 'objective model belongs to a different product than its initiative' };
+    }
+
+    if (io.kind === 'model') {
+      // initiative is at the finest grain: objective must match exactly (no broaden)
+      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+    }
+    return { ok: true };
+  }
+
+  // sliceScore(axis, id, portfolio, execDocs, quarter?) -> 0..100 or null
+  function sliceScore(axis, id, portfolio, execDocs, quarter) {
+    var objs = (portfolio.objectives || []).filter(function (o) {
+      var match = axis === 'product' ? (effProduct(o, portfolio) === id)
+                                     : (effModel(o, portfolio) === id);
+      if (!match) return false;
+      if (quarter != null && o.quarter !== quarter) return false;
+      return true;
+    });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // ---- stage-gate state classifier (pure; baseline-aware) ------------------
+  // passed-late compares the actual finish to the COMMITTED reference
+  // (baselineDate if set, else plannedDate); overdue is about the current plan.
+  function classifyGate(g, today) {
+    if (!g) return 'pending';
+    var ref = (g.baselineDate != null) ? g.baselineDate : g.plannedDate;
+    if (g.actualDate != null) {
+      return (ref != null && g.actualDate > ref) ? 'passed-late' : 'passed';
+    }
+    if (g.plannedDate != null && g.plannedDate < today) return 'overdue';
+    return 'pending';
+  }
+
+  // ---- schedule cascade (§6) -----------------------------------------------
+  // cascade(portfolio, execDocs, today) ->
+  //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
+  //     longTermSlip, gateEffective, gateSlipped, cycles }
+  function cascade(portfolio, execDocs, today) {
+    var objs = portfolio.objectives || [];
+    var inits = portfolio.initiatives || [];
+    var miles = portfolio.milestones || [];
+    var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
+    var cycles = [];
+
+    function execFor(divId) { return execDocs[divId] || {}; }
+    function childrenOf(obj) {
+      var ex = execFor(obj.divisionId);
+      var sgs = (ex.stageGates || []).filter(function (s) { return s.objectiveId === obj.id; });
+      var tasks = (ex.tasks || []).filter(function (t) { return t.objectiveId === obj.id; });
+      return { sgs: sgs, tasks: tasks };
+    }
+
+    function pfTask(t) {
+      if (t.actualEnd != null) return t.actualEnd;
+      var started = (t.actualStart != null) || (t.percentComplete && t.percentComplete > 0);
+      if (started) {
+        var frac = clamp((t.percentComplete || 0) / 100, 0, 1);
+        return Math.max(t.plannedEnd, today + Math.ceil((1 - frac) * (t.plannedEnd - t.plannedStart)));
+      }
+      return t.plannedEnd; // not started
+    }
+    // A stage-gate is a checkpoint: done -> actualDate; otherwise it cannot have
+    // finished before now, so it projects to max(plannedDate, today).
+    function pfGate(s) {
+      if (s.actualDate != null) return s.actualDate;
+      return Math.max(s.plannedDate, today);
+    }
+
+    // Stage 1a: gather children once; index every gate globally
+    var childCache = {}, gateById = {}, gateObjOf = {};
+    objs.forEach(function (o) {
+      var c = childrenOf(o);
+      childCache[o.id] = c;
+      c.sgs.forEach(function (s) { gateById[s.id] = s; gateObjOf[s.id] = o; });
+    });
+
+    // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
+    // Edges and the chain flag may live on the portfolio (cross-division) OR in an
+    // execDoc (per-division, authored in the execution app). Both are merged here.
+    // With none of them, a gate has no preds and gateEff == pfGate.
+    var gatePreds = {};
+    Object.keys(gateById).forEach(function (gid) { gatePreds[gid] = []; });
+    function addGateEdge(e) { if (e && gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 }); }
+    (portfolio.stageGateEdges || []).forEach(addGateEdge);
+    for (var dk in execDocs) {
+      if (!execDocs.hasOwnProperty(dk) || dk === PORTFOLIO_KEY) continue;
+      (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
+    }
+    objs.forEach(function (o) {
+      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
+      if (!o.chainGatesByDate && !exChain) return;
+      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
+        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+      for (var i = 1; i < seq.length; i++) {
+        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+    });
+
+    // Stage 1b: gate->gate forward pass, seeded from pfGate (cycle-guarded, lagged).
+    // A locked gate is exempt from INHERITED push (committed date holds), but it
+    // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
+    // read as on-time: the seed still floors at today via pfGate.
+    var gateEff = {}, gateStack = {};
+    function computeGateEff(gid) {
+      if (gateEff[gid] != null) return gateEff[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      var seed = pfGate(g);
+      if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
+      gateStack[gid] = true;
+      var res = seed, preds = gatePreds[gid];
+      for (var i = 0; i < preds.length; i++) {
+        if (gateStack[preds[i].from]) { cycles.push('GATE:' + preds[i].from); continue; }
+        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag);
+      }
+      gateStack[gid] = false;
+      gateEff[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
+
+    // baseline-aware slip per gate: slipped iff committed and now forecast past it.
+    var gateSlipped = {};
+    Object.keys(gateById).forEach(function (gid) {
+      var g = gateById[gid];
+      gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
+    });
+
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
+    var intrinsic = {};
+    objs.forEach(function (o) {
+      var c = childCache[o.id], vals = [];
+      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
+      intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+    });
+
+    // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
+    var objPreds = {}; objs.forEach(function (o) { objPreds[o.id] = []; });
+    (portfolio.objectiveEdges || []).forEach(function (e) {
+      if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
+    });
+    var projEnd = {}, objStack = {};
+    function computeProjEnd(id) {
+      if (projEnd[id] != null) return projEnd[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objStack[id]) { cycles.push('OBJ:' + id); return intrinsic[id]; } // break cycle
+      objStack[id] = true;
+      var cs = o.plannedStart;
+      var preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objStack[preds[i].from]) { cycles.push('OBJ:' + preds[i].from); continue; }
+        cs = Math.max(cs, computeProjEnd(preds[i].from) + preds[i].lag);
+      }
+      var dur = o.plannedEnd - o.plannedStart;
+      var res = Math.max(intrinsic[id], cs + dur);
+      objStack[id] = false;
+      projEnd[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // Stage 3: vertical lift into milestones
+    var effective = {};
+    miles.forEach(function (m) { effective[m.id] = m.plannedDate; });
+    objs.forEach(function (o) {
+      (o.milestoneIds || []).forEach(function (mid) {
+        if (effective[mid] != null) effective[mid] = Math.max(effective[mid], projEnd[o.id]);
+      });
+    });
+
+    // Stage 4: lateral MS->MS forward pass (topological, cycle-guarded)
+    var msById = {}; miles.forEach(function (m) { msById[m.id] = m; });
+    var msPreds = {}; miles.forEach(function (m) { msPreds[m.id] = []; });
+    (portfolio.milestoneEdges || []).forEach(function (e) {
+      if (msPreds[e.toMs]) msPreds[e.toMs].push({ from: e.fromMs, lag: e.lagDays || 0 });
+    });
+    var msDone = {}, msStack = {};
+    function liftMilestone(id) {
+      if (msDone[id]) return effective[id];
+      if (!msById[id]) return effective[id] || 0;
+      if (msStack[id]) { cycles.push('MS:' + id); return effective[id]; }
+      msStack[id] = true;
+      var preds = msPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (msStack[preds[i].from]) { cycles.push('MS:' + preds[i].from); continue; }
+        effective[id] = Math.max(effective[id], liftMilestone(preds[i].from) + preds[i].lag);
+      }
+      msStack[id] = false;
+      msDone[id] = true;
+      return effective[id];
+    }
+    miles.forEach(function (m) { liftMilestone(m.id); });
+
+    // Stage 5: initiative projected end + headline slip
+    var initProjEnd = {}, slip = {};
+    inits.forEach(function (I) {
+      var vals = [I.plannedEnd];
+      miles.forEach(function (m) { if (m.initiativeId === I.id) vals.push(effective[m.id]); });
+      objs.forEach(function (o) {
+        if (o.initiativeId === I.id && (!o.milestoneIds || o.milestoneIds.length === 0)) {
+          vals.push(projEnd[o.id]);
+        }
+      });
+      var pe = Math.max.apply(null, vals);
+      initProjEnd[I.id] = pe;
+      slip[I.id] = pe - I.plannedEnd;
+    });
+
+    return {
+      objectiveProjectedEnd: projEnd,
+      milestoneEffective: effective,
+      initiativeProjectedEnd: initProjEnd,
+      longTermSlip: slip,
+      gateEffective: gateEff,
+      gateSlipped: gateSlipped,
+      cycles: cycles
+    };
+  }
+
+  // ---- exports --------------------------------------------------------------
+  var API = {
+    allocId: allocId,
+    kpiScore: kpiScore,
+    kpiScoreResolved: kpiScoreResolved,
+    kpiCurrentValue: kpiCurrentValue,
+    kpisFor: kpisFor,
+    groupMembers: groupMembers,
+    definerOf: definerOf,
+    kpiDirection: kpiDirection,
+    kpiUnit: kpiUnit,
+    kpiName: kpiName,
+    effTarget: effTarget,
+    effValue: effValue,
+    computeStat: computeStat,
+    scoreEmbeddedKpi: scoreEmbeddedKpi,
+    subKrScore: subKrScore,
+    keyResultScore: keyResultScore,
+    stageGateScore: stageGateScore,
+    krsForObjective: krsForObjective,
+    objectiveScore: objectiveScore,
+    score: score,
+    boundsOf: boundsOf,
+    band: band,
+    rollupObjective: rollupObjective,
+    rollupInitiative: rollupInitiative,
+    rollupDivision: rollupDivision,
+    rollupCompany: rollupCompany,
+    withPortfolio: withPortfolio,
+    PORTFOLIO_KEY: PORTFOLIO_KEY,
+    ownClass: ownClass,
+    effClass: effClass,
+    effProduct: effProduct,
+    effModel: effModel,
+    validateClassification: validateClassification,
+    sliceScore: sliceScore,
+    cascade: cascade,
+    classifyGate: classifyGate,
+    // exposed for tests / shells
+    _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.RDCore = API;
+
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+"use strict";
+const RD = window.RDCore;
+
+/* ============================================================================
+   Product Specification Document — app layer
+   Re-skins the proven execution shell over the unchanged RDCore engine.
+
+     Initiative          -> Product (family; product-level shared KPIs)
+     Objective           -> Product Model (the selected entity)
+     Key Result          -> Product Specification (requirement the product meets)
+     Stage-gate          -> Component (a part of the product)
+     Stage-gate target   -> Component Specification (a metric the component meets)
+
+   KPI atom + link groups are unchanged: a Component Specification can LINK to a
+   Product Specification (or a Product KPI). Target cascades DOWN (the product
+   target flows to the component); measured value cascades UP (a component
+   reading satisfies the product spec). Scoring rolls Specification KPIs up to the
+   Model conformance score; component readiness is gating only, exactly as before.
+
+   Storage: a single document in this browser (localStorage). Export / import
+   JSON to share or back up. No broker, no network.
+   ============================================================================ */
+
+const PSD_KEY = "psd_doc_v1";
+const DOCID   = "DOC";
+
+let doc = blankDoc();
+let selectedModel = null;
+
+function blankDoc(){ return { products:[], models:[], keyResults:[], stageGates:[], kpis:[], kpiUpdates:[] }; }
+function emForCore(){ const m={}; m[DOCID]=doc; return m; }
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
+  if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
+
+/* ---------------- persistence ---------------- */
+function persist(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
+function loadDoc(){
+  let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
+  if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=seedDoc(); } }
+  else doc=seedDoc();
+  selectedModel=(doc.models[0]&&doc.models[0].id)||null;
+}
+function exportDoc(){
+  const blob=new Blob([JSON.stringify(doc,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="product-spec.json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function importDoc(file){
+  const r=new FileReader();
+  r.onload=()=>{ try{ const obj=JSON.parse(r.result); doc=Object.assign(blankDoc(), obj);
+      selectedModel=(doc.models[0]&&doc.models[0].id)||null; persist(); fillModelSelect(); renderProdList(); renderAll(); setMsg("Imported.","ok"); }
+    catch(e){ setMsg("Import failed — not a valid document.","err"); } };
+  r.readAsText(file);
+}
+let armedReset=false;
+function resetDoc(){
+  const b=document.getElementById("resetBtn");
+  if(!armedReset){ armedReset=true; if(b){ b.textContent="confirm reset"; b.classList.add("armed"); }
+    setTimeout(()=>{ armedReset=false; if(b){ b.textContent="Reset to sample…"; b.classList.remove("armed"); } },3000); return; }
+  armedReset=false; if(b){ b.textContent="Reset to sample…"; b.classList.remove("armed"); }
+  doc=seedDoc(); selectedModel=(doc.models[0]&&doc.models[0].id)||null; persist(); fillModelSelect(); renderProdList(); renderAll(); setMsg("Reset to sample document.","ok");
+}
+
+/* ---------------- id minting (models/products outside RDCore prefixes) ------- */
+function mintId(prefix, existing){
+  let max=0; const re=new RegExp("^"+prefix+"-(\\d+)$");
+  existing.forEach(id=>{ const m=String(id).match(re); if(m){ const n=+m[1]; if(n>max) max=n; } });
+  return prefix+"-"+(max+1);
+}
+
+/* ---------------- lookups ---------------- */
+function allModels(){ return doc.models||[]; }
+function modelById(id){ return (doc.models||[]).find(m=>m.id===id)||null; }
+function productById(id){ return (doc.products||[]).find(p=>p.id===id)||null; }
+function productName(id){ const p=productById(id); return p?p.name:id; }
+function productIdOf(modelId){ const m=modelById(modelId); return m?m.productId:null; }
+function specName(id){ const r=(doc.keyResults||[]).find(x=>x.id===id); return r?(r.statement||r.id):id; }
+function componentName(id){ const g=(doc.stageGates||[]).find(x=>x.id===id); return g?(g.name||g.id):id; }
+function hostLabel(k){
+  if(k.hostType==="initiative") return "product: "+esc(productName(k.hostId));
+  if(k.hostType==="keyResult")  return "spec: "+esc(specName(k.hostId));
+  if(k.hostType==="stageGate")  return "component: "+esc(componentName(k.hostId));
+  return esc(k.hostId);
+}
+
+/* ---------------- model select ---------------- */
+function fillModelSelect(){
+  const s=document.getElementById("modelSelect"), ms=allModels();
+  s.innerHTML = ms.length ? ms.map(m=>`<option value="${m.id}">${esc(m.name||m.id)}</option>`).join("")
+                          : `<option value="">no models yet</option>`;
+  if(ms.length){ if(!selectedModel || !ms.find(m=>m.id===selectedModel)) selectedModel=ms[0].id; s.value=selectedModel; }
+  s.onchange=()=>{ selectedModel=s.value; modelEditing=null; addingFor=null; editingSub=null; renderAll(); };
+}
+
+/* ---------------- generic sub-entity editor ---------------- */
+const SUB = {
+  keyResult:{ arr:()=>doc.keyResults, label:"Specification", idType:"keyResult", schema:[["statement","Statement","text"]] },
+  kpi:      { arr:()=>doc.kpis,       label:"Metric",        idType:"kpi",
+    schema:[["name","Name","text"],["direction","Direction","dir"],["target","Target","target"],["unit","Unit","text"]] },
+  stageGate:{ arr:()=>doc.stageGates, label:"Component",     idType:"stageGate", schema:[["name","Name","text"]] }
+};
+let addingFor=null, editingSub=null, armedDel=null, subReturn=null;
+function captureReturn(forType){ subReturn=((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
+function restoreReturn(){ if(subReturn){ editingSub=subReturn; addingFor=null; subReturn=null; return true; } return false; }
+function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor={type, hostType, hostId}; editingSub=null; armedDel=null; renderAll(); }
+function subOpenEdit(type, id){ captureReturn(type); editingSub={type, id}; addingFor=null; armedDel=null; renderAll(); }
+function subCancel(){ addingFor=null; editingSub=null; draftKr=null; draftKrFor=null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
+
+function renderSubEditor(type, rec){
+  const cfg=SUB[type]; rec=rec||{};
+  const editing=!!(editingSub && editingSub.type===type);
+  let html=`<div class="ed">`;
+  for(const [k,label,t] of cfg.schema){
+    if(t==="dir"){
+      html += `<label>${label}<select data-f="direction">`+["up","down","range"].map(d=>`<option ${rec.direction===d?'selected':''}>${d}</option>`).join("")+`</select></label>`;
+    } else if(t==="target"){
+      const tgt=rec.target;
+      html += `<label>Target (up/down)<input data-f="target" class="sm" type="number" value="${(tgt!=null&&typeof tgt!=='object')?tgt:''}"/></label>`;
+      html += `<label>Range lo<input data-f="targetLo" class="tiny" type="number" value="${(tgt&&typeof tgt==='object')?tgt.lo:''}"/></label>`;
+      html += `<label>Range hi<input data-f="targetHi" class="tiny" type="number" value="${(tgt&&typeof tgt==='object')?tgt.hi:''}"/></label>`;
+    } else {
+      const val=(rec[k]!=null?rec[k]:"");
+      html += `<label>${label}<input data-f="${k}" type="${t==='number'?'number':'text'}" value="${esc(String(val))}"/></label>`;
+    }
+  }
+  html += `</div><div class="row-actions" style="margin:0 0 8px"><button class="act mini" data-save="1">${editing?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return html;
+}
+function readSubEditor(scope){
+  const out={};
+  scope.querySelectorAll("[data-f]").forEach(el=>{
+    const k=el.dataset.f;
+    if(el.type==="number") out[k]= el.value===""?null:Number(el.value);
+    else out[k]= el.value===""?null:el.value;
+  });
+  if(out.direction==="range"){ out.target=(out.targetLo!=null&&out.targetHi!=null)?{lo:out.targetLo,hi:out.targetHi}:null; }
+  delete out.targetLo; delete out.targetHi;
+  return out;
+}
+function saveSub(){
+  const a=addingFor, e=editingSub;
+  const type=a?a.type:(e&&e.type);
+  if(!type) return;
+  const scope=document.querySelector(".ed");
+  if(!scope) return;
+  const data=readSubEditor(scope);
+  const arr=SUB[type].arr();
+  if(e){
+    const rec=arr.find(x=>x.id===e.id);
+    if(type==="kpi" && isMemberKpi(rec)){ rec.target=(data.target===undefined?null:data.target); }
+    else Object.assign(rec, data);
+  } else {
+    const initHost=(type==="kpi" && a.hostType==="initiative");
+    const objScope=initHost?null:selectedModel;
+    const parent=initHost?a.hostId:selectedModel;
+    const id=RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
+    const base={ id, objectiveId:objScope };
+    if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
+    arr.push(Object.assign(base, data));
+  }
+  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved.","ok");
+}
+function delSub(type, id){
+  if(type==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && isDefinerWithLinks(k)){ setMsg("This metric defines a linked group — unlink its members first.","err"); return; } }
+  if(armedDel!==id){ armedDel=id; renderAll(); return; }
+  armedDel=null;
+  if(type==="keyResult" || type==="stageGate"){
+    const kids=doc.kpis.filter(k=>k.hostType===type && k.hostId===id).map(k=>k.id);
+    doc.kpis=doc.kpis.filter(k=>!(k.hostType===type && k.hostId===id));
+    doc.kpiUpdates=doc.kpiUpdates.filter(u=>kids.indexOf(u.kpiId)===-1);
+    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+  } else if(type==="kpi"){
+    doc.kpis.splice(doc.kpis.findIndex(x=>x.id===id),1);
+    doc.kpiUpdates=doc.kpiUpdates.filter(u=>u.kpiId!==id);
+  } else { const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1); }
+  renderAll(); setMsg("Deleted.","ok");
+}
+function postRead(host, kpiId){
+  const inp=host.querySelector(`[data-read="${kpiId}"]`);
+  if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
+  doc.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
+  renderAll(); setMsg("Reading posted.","ok");
+}
+
+/* ---------------- render root ---------------- */
+function renderAll(){
+  if(!doc){ document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); renderModal(); return; }
+  const models=allModels();
+  if(models.length && (!selectedModel || !models.find(m=>m.id===selectedModel))) selectedModel=models[0].id;
+  const pid = selectedModel?productIdOf(selectedModel):null;
+  document.getElementById("docPill").textContent = pid?productName(pid):"Product specification";
+  renderProductPanel();
+  if(!models.length){
+    document.getElementById("modelHeadWrap").innerHTML='<p class="hint">No product models yet. Use <b>+ Model</b> in the header to create one, or open ⚙ and reset to the sample.</p>';
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML="";
+  } else if(!selectedModel){
+    document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Select a model.</p>';
+  } else {
+    const m=models.find(x=>x.id===selectedModel);
+    document.getElementById("modelHeadWrap").innerHTML = modelHeader(m)+modelMetricStrip(m)+signalBars();
+    const eb=document.querySelector("[data-editmodel]"); if(eb) eb.onclick=()=>openModelEditor(modelById(eb.dataset.editmodel));
+    renderSpecs(); renderComponents();
+  }
+  renderModal();
+  persist();
+}
+function clearSubs(){ ["KR","SG"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
+function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
+
+/* ---------------- dashboard shell ---------------- */
+const panelCollapsed = new Set(["INIT"]);
+function panelHead(key, title, cnt, actionsHtml){
+  const open=!panelCollapsed.has(key);
+  return `<div class="panel-header"><span class="panel-title${open?'':' collapsed'}" data-panel="${key}"><span class="chev">▼</span>${esc(title)}${cnt!=null?` <span class="cnt">${cnt}</span>`:''}</span><span class="ha">${actionsHtml||''}</span></div>`;
+}
+function listOpen(key){ return panelCollapsed.has(key)?" collapsed":""; }
+
+function modelMetricStrip(m){
+  const em=emForCore();
+  const sc=RD.objectiveScore(selectedModel, em), b=RD.band(sc);
+  const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  const specOn=specs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  const compOn=comps.filter(g=>RD.band(RD.stageGateScore(g.id, em))==="on-track").length;
+  const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
+  const measured=modelKpis.filter(k=>RD.effValue(k, doc.kpis, em)!=null).length;
+  const pid=productIdOf(selectedModel);
+  const prodKpis=pid?doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===pid).length:0;
+  const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
+  return `<div class="metrics">
+    <div class="mc"><div class="mc-label">Spec conformance</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
+    <div class="mc"><div class="mc-label">Specifications</div><div class="mc-val">${specs.length}</div><div class="mc-sub">${specOn} on target</div></div>
+    <div class="mc"><div class="mc-label">Components</div><div class="mc-val">${comps.length}</div><div class="mc-sub">${compOn} conformant</div></div>
+    <div class="mc"><div class="mc-label">Metrics measured</div><div class="mc-val">${measured}<span style="font-size:13px;color:var(--muted)"> / ${modelKpis.length}</span></div><div class="mc-sub">have a reading</div></div>
+    <div class="mc"><div class="mc-label">Product family</div><div class="mc-val small">${pid?esc(productName(pid)):"—"}</div><div class="mc-sub">${prodKpis} product KPI${prodKpis===1?"":"s"}</div></div>
+  </div>`;
+}
+function modelHeader(m){
+  const pid=m.productId, sub=[];
+  sub.push("Product: "+(pid?esc(productName(pid)):"unassigned"));
+  if(m.application) sub.push("Application: "+esc(m.application));
+  const matPill = m.maturity?`<span class="pill mono" style="text-transform:none;letter-spacing:0">${esc(m.maturity)}</span>`:"";
+  const notes = m.notes?`<div class="hint" style="margin:6px 0 0">${esc(m.notes)}</div>`:"";
+  return `<div class="obj-title">${esc(m.name||m.id)} <span class="pill mono">${m.id}</span> ${matPill}
+    <button class="ghost mini" data-editmodel="${m.id}" style="margin-left:auto">edit model</button></div>
+    <div class="qweek"><span class="qw-label">${sub.join(" · ")}</span></div>${notes}`;
+}
+function signalBars(){
+  const em=emForCore();
+  const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  if(!specs.length) return "";
+  let rows="";
+  specs.forEach((kr,idx)=>{
+    const s=RD.keyResultScore(kr.id, em), b=RD.band(s);
+    rows+=`<div class="sig-row"><span class="sig-lbl" title="${esc(kr.statement||kr.id)}">S${idx+1} · ${esc(kr.statement||kr.id)}</span><div class="sig-track"><div class="sig-fill" style="width:${s==null?0:Math.round(s)}%;background:${col(b)}"></div></div><span class="sig-val" style="color:${col(b)}">${s==null?"—":Math.round(s)}</span></div>`;
+  });
+  const legend=`<div class="sig-legend"><span><i style="background:var(--ok)"></i>meets</span><span><i style="background:var(--warn)"></i>marginal</span><span><i style="background:var(--bad)"></i>off target</span><span><i style="background:var(--none)"></i>no data</span></div>`;
+  return `<div class="bar-area"><div class="bar-area-head"><span class="bar-area-title">Specification conformance</span>${legend}</div>${rows}</div>`;
+}
+
+/* ---------------- modal plumbing ---------------- */
+function openModal(title, body){
+  document.getElementById("modalTitle").textContent=title||"";
+  const mb=document.getElementById("modalBody"); mb.innerHTML=body;
+  document.getElementById("modalOverlay").classList.add("open");
+  wireExec(mb);
+}
+function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); document.getElementById("modalBody").innerHTML=""; }
+
+function renderModal(){
+  // 0) product-model editor
+  if(modelEditing!=null){
+    document.getElementById("modalTitle").textContent = modelEditing==="__NEW__"?"New product model":"Edit product model";
+    const mb=document.getElementById("modalBody"); mb.innerHTML=modelEditorBody();
+    document.getElementById("modalOverlay").classList.add("open");
+    const sv=mb.querySelector("[data-modelsave]"); if(sv) sv.onclick=saveModelEditor;
+    const cx=mb.querySelector("[data-modelcancel]"); if(cx) cx.onclick=closeModelEditor;
+    const dl=mb.querySelector("[data-modeldel]"); if(dl) dl.onclick=delModelArmed;
+    return;
+  }
+  // 1) specification (draft-backed) modal
+  const krTarget = (editingSub && editingSub.type==="keyResult") ? editingSub.id
+                 : (addingFor && addingFor.type==="keyResult") ? "__NEW__" : null;
+  if(krTarget!==null){
+    if(draftKrFor!==krTarget){
+      const kr = krTarget==="__NEW__" ? null : doc.keyResults.find(x=>x.id===krTarget);
+      draftKr=initDraftKr(kr); draftKrFor=krTarget;
+      document.getElementById("modalTitle").textContent = kr?"Edit specification":"Add specification";
+      document.getElementById("modalBody").innerHTML = krModalBody();
+      document.getElementById("modalOverlay").classList.add("open");
+      wireKrModal();
+    }
+    return;
+  }
+  draftKr=null; draftKrFor=null;
+  let title=null, body=null;
+  if(editingSub){
+    const id=editingSub.id;
+    if(editingSub.type==="stageGate"){ const g=doc.stageGates.find(x=>x.id===id); if(g){ title="Edit component"; body=componentModalBody(g); } }
+    else if(editingSub.type==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k){ title=isMemberKpi(k)?"Override metric target":"Edit metric"; body=isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k); } }
+  } else if(addingFor){
+    if(addingFor.type==="stageGate"){ title="Add component"; body=componentModalBody(null); }
+    else if(addingFor.type==="kpi"){ title="Add metric"; body=renderSubEditor("kpi", {}); }
+    else if(addingFor.type==="link"){ title="Link a metric"; body=renderLinkEditor(addingFor.hostType, addingFor.hostId); }
+  }
+  if(body==null){ closeModal(); return; }
+  openModal(title, body);
+}
+
+/* ---------------- component modal (was stage-gate) ---------------- */
+function componentModalBody(g){
+  g=g||{}; const isEdit=!!g.id;
+  let h=`<div class="ed">
+    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}" placeholder="e.g. Membrane Electrode Assembly (MEA)"/></label>
+    <label>Type (optional)<input data-f="ctype" type="text" value="${esc(g.ctype||'')}" placeholder="e.g. MEA"/></label>
+    <label>Status (optional)<input data-f="status" type="text" value="${esc(g.status||'')}" placeholder="e.g. Prototype"/></label>
+  </div>`;
+  if(isEdit){
+    h+=`<span class="modal-section-lbl">Component specifications</span>
+      <div class="gt-head"><span class="hint" style="margin:0">measurable criteria this component must meet — link one to a product specification to feed its value upward, or add a component-only metric</span>
+        <span class="gt-acts"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ spec</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></span></div>
+      ${kpiTable("stageGate", g.id, selectedModel)}`;
+  } else {
+    h+=`<p class="hint" style="margin:14px 0 0">Add the component first, then reopen it to define its specifications.</p>`;
+  }
+  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return h;
+}
+
+/* ---------------- specification modal (was KR; tracking modes) ---------------- */
+let draftKr=null, draftKrFor=null;
+let draftSubKr=null, draftSubKrIdx=null;
+const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
+function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
+function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
+function parseNums(str){ return String(str||"").split(/[\s,;]+/).map(x=>Number(x)).filter(x=>!isNaN(x)); }
+function statPreview(d){ const nums=parseNums(d.readings); if(!nums.length) return "no readings yet"; const v=RD.computeStat(d.statistic||"average", nums); return "→ "+(d.statistic||"average")+": "+(v==null?"—":(Math.round(v*1000)/1000))+" ("+nums.length+" reads)"; }
+function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
+function krPrimaryKpi(krId){ return doc.kpis.find(k=>k.hostType==="keyResult" && k.hostId===krId) || null; }
+function initDraftKr(kr){
+  const isNew=!kr, pk=isNew?null:krPrimaryKpi(kr.id);
+  return {
+    id:isNew?null:kr.id,
+    statement:isNew?"":(kr.statement||""),
+    trackingType:(kr&&kr.trackingType)||(isNew?"percentage":"kpi"),
+    progress:(kr&&kr.progress!=null)?kr.progress:0,
+    kpiType:pk?(pk.targetType||"demonstration"):"demonstration",
+    kpiDir:(pk&&pk.direction==="down")?"decrease":"increase",
+    kpiTarget:(pk&&pk.target!=null)?pk.target:"",
+    kpiUnit:(pk&&pk.unit)?pk.unit:"",
+    kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
+    kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
+  };
+}
+function draftSubKrListHtml(){
+  const subs=draftKr.subKrs;
+  if(!subs.length) return `<div class="skr-empty">none yet — add a weighted sub-specification</div>`;
+  return subs.map((s,i)=>{
+    let meta, measured="";
+    if((s.trackingType||"percentage")==="percentage"){ meta=(Number(s.progress)||0)+"%"; }
+    else { const k=(s.kpis&&s.kpis[0])||{}; const tp=k.targetType||k.type||"demo";
+      meta = (tp==="binary") ? "binary" : tp+((k.target!=null&&k.target!=="")?(" "+(k.direction==="down"?"≤":"≥")+" "+esc(String(k.target))+(k.unit?" "+esc(k.unit):"")):"");
+      if(tp==="binary"){ measured = (k.current!=null) ? ` · ${Number(k.current)>=1?"met":"not met"}` : ` · unmeasured`; }
+      else if(k.current!=null){ const sc=RD.scoreEmbeddedKpi(k); measured=` · now ${esc(String(k.current))}${k.unit?" "+esc(k.unit):""}`+(sc!=null?` (${Math.round(sc)}%)`:""); }
+      else measured=` · unmeasured`; }
+    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-spec "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}${measured}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
+  }).join("");
+}
+function krModalBody(){
+  const d=draftKr, tt=d.trackingType;
+  const isStat=d.kpiType==="statistical", isBin=d.kpiType==="binary";
+  const kpiSection=
+    `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.kpiType,"krktype")}</div>`+
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-f="kpiReadCount" value="${esc(d.kpiReadCount)}" placeholder="e.g. 10"></div>`+
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.kpiDir,"krkdir")}</div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.2"></div>`+
+    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
+  return `
+    <div class="modal-field"><span class="lbl">Specification</span><input type="text" data-f="statement" value="${esc(d.statement)}" placeholder="e.g. Peak power density ≥ 1.2 W/cm²"></div>
+    <div class="modal-field"><span class="lbl">Tracking type</span>
+      <select data-krtype>
+        <option value="percentage"${tt==="percentage"?" selected":""}>% completion</option>
+        <option value="kpi"${tt==="kpi"?" selected":""}>Single metric</option>
+        <option value="subkr"${tt==="subkr"?" selected":""}>Sub-specifications</option>
+      </select></div>
+    <div style="display:${tt==="percentage"?"block":"none"}">
+      <div class="modal-field"><span class="lbl">Progress</span><div class="pct-row"><input type="range" min="0" max="100" data-f="progress" value="${esc(d.progress)}" style="flex:1" data-pctslider><span class="pct-val" data-pctval>${Number(d.progress)||0}%</span></div></div>
+    </div>
+    <div style="display:${tt==="kpi"?"block":"none"}">${kpiSection}</div>
+    <div style="display:${tt==="subkr"?"block":"none"}">
+      <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-specifications</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-spec</button></div>
+        <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
+    </div>
+    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+}
+function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
+function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
+function wireKrModal(){
+  const body=document.getElementById("modalBody");
+  body.querySelectorAll("[data-f]").forEach(el=>el.oninput=()=>{ draftKr[el.dataset.f]=el.value; });
+  const sl=body.querySelector("[data-pctslider]"), pv=body.querySelector("[data-pctval]");
+  if(sl&&pv) sl.oninput=()=>{ draftKr.progress=sl.value; pv.textContent=sl.value+"%"; };
+  const tsel=body.querySelector("[data-krtype]");
+  if(tsel) tsel.onchange=()=>{ draftKr.trackingType=tsel.value; krRerenderBody(); };
+  body.querySelectorAll("[data-krktype]").forEach(b=>b.onclick=()=>{ draftKr.kpiType=b.dataset.krktype; krRerenderBody(); });
+  body.querySelectorAll("[data-krkdir]").forEach(b=>b.onclick=()=>{ draftKr.kpiDir=b.dataset.krkdir; body.querySelectorAll("[data-krkdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
+  body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
+  body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
+  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=saveKrModal;
+  const cx=body.querySelector("[data-krcancel]"); if(cx) cx.onclick=subCancel;
+}
+function saveKrModal(){
+  const body=document.getElementById("modalBody");
+  body.querySelectorAll("[data-f]").forEach(el=>{ draftKr[el.dataset.f]=el.value; });
+  const d=draftKr;
+  if(!String(d.statement||"").trim()){ setMsg("Specification needs a statement.","err"); const s=body.querySelector('[data-f="statement"]'); if(s) s.focus(); return; }
+  let kr=d.id?doc.keyResults.find(x=>x.id===d.id):null;
+  if(!kr){ const id=RD.allocId("keyResult", selectedModel, doc.keyResults.map(x=>x.id)); kr={ id, objectiveId:selectedModel }; doc.keyResults.push(kr); }
+  kr.statement=String(d.statement).trim();
+  kr.trackingType=d.trackingType;
+  if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; }
+  else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
+  else { delete kr.progress; delete kr.subKrs; }
+  if(d.trackingType==="kpi"){
+    let pk=krPrimaryKpi(kr.id);
+    if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true }; doc.kpis.push(pk); }
+    pk.name=kr.statement;
+    pk.targetType=d.kpiType;
+    if(d.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
+    else {
+      pk.direction=(d.kpiDir==="decrease")?"down":"up";
+      pk.target=parseTargetNum(d.kpiTarget);
+      pk.unit=d.kpiUnit||null;
+      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount); }
+      else { delete pk.statistic; delete pk.readCount; }
+    }
+  }
+  draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
+  renderAll(); setMsg("Specification saved.","ok");
+}
+/* sub-specification sub-modal */
+function openSubKrModal(idx){
+  draftSubKrIdx=idx;
+  const ex=(idx!=null)?draftKr.subKrs[idx]:null;
+  const k=(ex&&ex.kpis&&ex.kpis[0])||null;
+  draftSubKr={
+    name:ex?ex.name:"",
+    weight:(ex&&ex.weight!=null)?ex.weight:1,
+    trackingType:ex ? ((ex.trackingType==="kpi") ? (k?(k.targetType||k.type||"demonstration"):"demonstration") : "percentage") : "percentage",
+    progress:(ex&&ex.progress!=null)?ex.progress:0,
+    dir:(k&&k.direction==="down")?"decrease":"increase",
+    target:(k&&k.target!=null)?k.target:"",
+    unit:(k&&k.unit)?k.unit:"",
+    statistic:(k&&k.statistic)?k.statistic:"average",
+    readCount:(k&&k.readCount!=null)?k.readCount:"",
+    current:(k&&k.current!=null)?k.current:"",
+    readings:(k&&k.readings!=null)?k.readings:"",
+    metFlag:(k&&k.current!=null)?(Number(k.current)>=1?"1":"0"):""
+  };
+  document.getElementById("subkrTitle").textContent=(idx!=null)?"Edit sub-specification":"Add sub-specification";
+  document.getElementById("subkrBody").innerHTML=subKrModalBody();
+  document.getElementById("subkrOverlay").classList.add("open");
+  wireSubKrModal();
+}
+function closeSubKrModal(){ document.getElementById("subkrOverlay").classList.remove("open"); document.getElementById("subkrBody").innerHTML=""; draftSubKr=null; draftSubKrIdx=null; }
+function subKrModalBody(){
+  const d=draftSubKr, t=d.trackingType;
+  const isPct=t==="percentage", isDemo=t==="demonstration", isStat=t==="statistical", isBin=t==="binary", hideKpi=(isPct||isBin);
+  return `
+    <div class="modal-field"><span class="lbl">Tracking type</span>${segHtml([["percentage","% completion"],["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],t,"skrtype")}</div>
+    <div class="modal-field"><span class="lbl">Sub-spec name</span><input type="text" data-sf="name" value="${esc(d.name)}" placeholder="e.g. Achieve power density"></div>
+    <div class="modal-field"><span class="lbl">Weight</span><input type="number" min="0.1" step="0.1" data-sf="weight" value="${esc(d.weight)}"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-sf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-sf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.dir,"skrdir")}</div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Target</span><input type="text" data-sf="target" value="${esc(d.target)}" placeholder="e.g. 1.2"></div>
+    <div class="modal-field" style="display:${hideKpi?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-sf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
+    <div class="modal-field" style="display:${isPct?"block":"none"}"><span class="lbl">Initial progress</span><div class="pct-row"><input type="range" min="0" max="100" data-sf="progress" value="${esc(d.progress)}" style="flex:1" data-spctslider><span class="pct-val" data-spctval>${Number(d.progress)||0}%</span></div></div>
+    <div class="modal-field" style="display:${isDemo?"block":"none"}"><span class="lbl">Current measurement</span><input type="text" data-sf="current" value="${esc(d.current)}" placeholder="latest measured value"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Readings <span style="color:var(--muted);font-weight:400">(newest first — commas, spaces, or newlines)</span></span><textarea data-sf="readings" rows="2" placeholder="e.g. 1.22, 1.18, 1.25">${esc(d.readings)}</textarea><div class="hint" style="margin:4px 0 0" data-statpreview>${statPreview(d)}</div></div>
+    <div class="modal-field" style="display:${isBin?"block":"none"}"><span class="lbl">Status</span>${segHtml([["","Unmeasured"],["0","Not met"],["1","✓ Met"]],String(d.metFlag||""),"skrmet")}</div>
+    <div class="row-actions"><button class="act mini" type="button" data-subkrsave>Save sub-spec</button><button class="ghost mini" type="button" data-subkrcancel>Cancel</button></div>`;
+}
+function wireSubKrModal(){
+  const body=document.getElementById("subkrBody");
+  body.querySelectorAll("[data-sf]").forEach(el=>el.oninput=()=>{ draftSubKr[el.dataset.sf]=el.value; });
+  const sl=body.querySelector("[data-spctslider]"), pv=body.querySelector("[data-spctval]");
+  if(sl&&pv) sl.oninput=()=>{ draftSubKr.progress=sl.value; pv.textContent=sl.value+"%"; };
+  const refreshStat=()=>{ const p=body.querySelector("[data-statpreview]"); if(p) p.textContent=statPreview(draftSubKr); };
+  const rd=body.querySelector('[data-sf="readings"]'); if(rd) rd.oninput=()=>{ draftSubKr.readings=rd.value; refreshStat(); };
+  const st=body.querySelector('[data-sf="statistic"]'); if(st) st.oninput=()=>{ draftSubKr.statistic=st.value; refreshStat(); };
+  body.querySelectorAll("[data-skrmet]").forEach(b=>b.onclick=()=>{ draftSubKr.metFlag=b.dataset.skrmet; body.querySelectorAll("[data-skrmet]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  body.querySelectorAll("[data-skrtype]").forEach(b=>b.onclick=()=>{ draftSubKr.trackingType=b.dataset.skrtype; document.getElementById("subkrBody").innerHTML=subKrModalBody(); wireSubKrModal(); });
+  body.querySelectorAll("[data-skrdir]").forEach(b=>b.onclick=()=>{ draftSubKr.dir=b.dataset.skrdir; body.querySelectorAll("[data-skrdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const sv=body.querySelector("[data-subkrsave]"); if(sv) sv.onclick=saveSubKrModal;
+  const cx=body.querySelector("[data-subkrcancel]"); if(cx) cx.onclick=closeSubKrModal;
+}
+function saveSubKrModal(){
+  const body=document.getElementById("subkrBody");
+  body.querySelectorAll("[data-sf]").forEach(el=>{ draftSubKr[el.dataset.sf]=el.value; });
+  const d=draftSubKr;
+  if(!String(d.name||"").trim()){ const n=body.querySelector('[data-sf="name"]'); if(n) n.focus(); return; }
+  const w=parseFloat(d.weight)||1, nm=String(d.name).trim();
+  let skr;
+  if(d.trackingType==="percentage"){ skr={ name:nm, weight:w, trackingType:"percentage", progress:clampPct(d.progress), kpis:[] }; }
+  else {
+    const k={ type:d.trackingType, targetType:d.trackingType, name:nm, current:null };
+    if(d.trackingType==="binary"){ k.current=(d.metFlag===""||d.metFlag==null)?null:Number(d.metFlag); }
+    else {
+      k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
+      if(d.trackingType==="statistical"){
+        k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        k.readings=String(d.readings||"").trim();
+        const nums=parseNums(d.readings); k.current=nums.length?RD.computeStat(k.statistic, nums):null;
+      } else { k.current=parseTargetNum(d.current); }
+    }
+    skr={ name:nm, weight:w, trackingType:"kpi", progress:0, kpis:[k] };
+  }
+  if(draftSubKrIdx!=null) draftKr.subKrs[draftSubKrIdx]=skr; else draftKr.subKrs.push(skr);
+  closeSubKrModal(); refreshKrSubList();
+}
+
+/* ---------------- component-specification editor (was gate target) ---------------- */
+let draftTgt=null, draftTgtGate=null, draftTgtId=null;
+function openTgtModal(gateId, kpiId){
+  draftTgtGate=gateId; draftTgtId=kpiId||null;
+  const pk=kpiId?doc.kpis.find(k=>k.id===kpiId):null;
+  draftTgt={
+    name:pk?(pk.name||""):"",
+    type:pk?(pk.targetType||"demonstration"):"demonstration",
+    dir:(pk&&pk.direction==="down")?"decrease":"increase",
+    target:(pk&&pk.target!=null)?pk.target:"",
+    unit:(pk&&pk.unit)?pk.unit:"",
+    statistic:(pk&&pk.statistic)?pk.statistic:"average",
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+  };
+  document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit component specification":"Add component specification";
+  document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
+  document.getElementById("kpiTgtOverlay").classList.add("open");
+  wireTgtModal();
+}
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
+function tgtModalBody(){
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  return `
+    <div class="modal-field"><span class="lbl">Specification name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
+    <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
+    <div class="hint" style="margin:0 0 12px">readings are posted from the component's specification table; statistical targets aggregate the latest reads</div>
+    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
+}
+function wireTgtModal(){
+  const body=document.getElementById("kpiTgtBody");
+  body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
+  body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
+  const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
+}
+function saveTgtModal(){
+  const body=document.getElementById("kpiTgtBody");
+  body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
+  const d=draftTgt;
+  if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
+  let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"stageGate", hostId:draftTgtGate, groupId:null, isDefiner:true }; doc.kpis.push(pk); }
+  pk.name=String(d.name).trim(); pk.targetType=d.type;
+  if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
+  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
+    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
+  closeTgtModal(); renderAll(); setMsg("Component specification saved.","ok");
+}
+
+/* ---------------- KPI link groups ---------------- */
+const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
+function groupOf(k){ return k.groupId||k.id; }
+function groupMemberCount(g){ return doc.kpis.filter(k=>groupOf(k)===g).length; }
+function isMemberKpi(k){ return !!k.groupId && !k.isDefiner; }
+function isDefinerWithLinks(k){ return !!k.groupId && k.isDefiner && groupMemberCount(k.groupId)>1; }
+function groupIdsInUse(){ return doc.kpis.map(k=>k.groupId).filter(Boolean); }
+function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
+
+function linkCandidates(hostType, hostId){
+  const O = hostType==="initiative" ? null : selectedModel;
+  const prodId = O ? productIdOf(O) : null;
+  const here = LEVEL[hostType];
+  const occupied = new Set(doc.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
+  const seen=new Set(), out=[];
+  doc.kpis.forEach(k=>{
+    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===prodId);
+    if(!inScope) return;
+    const g=groupOf(k);
+    if(seen.has(g) || occupied.has(g)) return;
+    seen.add(g); out.push(RD.definerOf(k, doc.kpis));
+  });
+  return out;
+}
+function makeLinkMember(hostType, hostId, definerId){
+  const def=doc.kpis.find(k=>k.id===definerId); if(!def) return;
+  let g=def.groupId;
+  if(!g){ g=RD.allocId("kpiGroup", DOCID, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  const objScope = hostType==="initiative" ? null : selectedModel;
+  const id=RD.allocId("kpi", objScope || hostId, doc.kpis.map(x=>x.id));
+  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
+                  name:null, direction:null, unit:null, target:null, order:0 });
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked.","ok");
+}
+function unlinkKpi(id){
+  const m=doc.kpis.find(k=>k.id===id); if(!m) return;
+  m.name=RD.kpiName(m, doc.kpis); m.direction=RD.kpiDirection(m, doc.kpis); m.unit=RD.kpiUnit(m, doc.kpis);
+  if(m.target==null) m.target=RD.effTarget(m, doc.kpis);
+  m.groupId=null; m.isDefiner=true;
+  renderAll(); setMsg("Unlinked.","ok");
+}
+function renderLinkEditor(hostType, hostId){
+  const cands=linkCandidates(hostType, hostId);
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a specification metric here, or a product KPI, first.</p></div>
+    <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  return `<div class="ed"><label style="grid-column:1/-1">Link to a product or specification metric — its target flows down, your readings flow up
+    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, doc.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+
+    `</select></label></div><div class="row-actions" style="margin:0 0 8px">
+    <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
+    <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+}
+function renderKpiOverrideEditor(rec){
+  const dir=RD.kpiDirection(rec, doc.kpis), unit=RD.kpiUnit(rec, doc.kpis);
+  const inhT=RD.effTarget(rec, doc.kpis), own=rec.target;
+  let tEd;
+  if(dir==="range"){
+    tEd=`<label>Override lo<input data-f="targetLo" class="tiny" type="number" value="${(own&&typeof own==='object')?own.lo:''}"/></label>
+         <label>Override hi<input data-f="targetHi" class="tiny" type="number" value="${(own&&typeof own==='object')?own.hi:''}"/></label>
+         <input type="hidden" data-f="direction" value="range"/>`;
+  } else {
+    tEd=`<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
+  }
+  return `<div class="ed">
+    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,doc.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,doc.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
+    ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
+    <button class="act mini" data-save="1">Save override</button>
+    <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+}
+
+/* ---------------- product KPI panel (was initiative metrics) ---------------- */
+function renderProductPanel(){
+  const host=document.getElementById("initPanel");
+  const pid = selectedModel?productIdOf(selectedModel):null;
+  if(!pid){
+    host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?'This model has no product family. Assign one via <b>edit model</b> to define product-level KPIs that specifications and components can link to.':'—'}</p></div></div>`;
+    wireExec(host); return;
+  }
+  const pname=productName(pid);
+  const n=doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===pid).length;
+  const inner=`<div class="icard"><div class="icard-top">
+      <span class="icard-title">${esc(pname)}</span>
+      <span class="pill">${n} metric${n===1?'':'s'}</span>
+      <span class="icard-actions"><button class="ghost mini" data-addkpi="initiative:${pid}">+ KPI</button></span>
+      </div><div class="icard-meta">${kpiTable("initiative", pid, null)}</div></div>`;
+  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared across this product · link from a specification or component</span>`;
+  host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`;
+  wireExec(host);
+}
+
+/* ---------------- metric table ---------------- */
+function kpiTable(hostType, hostId, objScope){
+  const AK=doc.kpis, EM=emForCore();
+  const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
+  let h=`<table class="kpitable"><thead><tr><th>Metric</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
+  if(!rows.length) h += `<tr><td colspan="7" class="hint">no metrics yet — add or link a measurement</td></tr>`;
+  rows.forEach(k=>{
+    const name=RD.kpiName(k, AK), dir=RD.kpiDirection(k, AK), unit=RD.kpiUnit(k, AK);
+    const tgt=RD.effTarget(k, AK), cv=RD.effValue(k, AK, EM), s=RD.kpiScoreResolved(k, AK, EM);
+    const member=isMemberKpi(k), defLinks=isDefinerWithLinks(k);
+    const tgtCell=fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
+    let badge='';
+    if(member) badge=`<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
+    else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${groupMemberCount(k.groupId)-1}</span>`;
+    const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
+    h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
+      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
+      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
+      <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
+        <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
+      <td class="row-actions">${acts}
+        <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
+  });
+  h += `</tbody></table>`;
+  return h;
+}
+
+/* ---------------- specification list (was KRs) ---------------- */
+function renderSpecs(){
+  const host=document.getElementById("subKR");
+  const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  let inner="";
+  if(!specs.length) inner+=`<p class="hint">none yet — a product specification is a requirement the product must meet; its metrics roll up to the model's conformance score</p>`;
+  specs.forEach((kr,idx)=>{
+    const s=RD.keyResultScore(kr.id, emForCore());
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
+      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
+      <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
+      <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
+        <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
+        <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}</div></div>`;
+  });
+  const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
+  wireExec(host);
+}
+
+/* ---------------- component list (was stage-gates; no scheduling) ---------------- */
+function renderComponents(){
+  const host=document.getElementById("subSG");
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  let inner="";
+  if(!comps.length) inner+=`<p class="hint">none yet — components are the parts that must meet specifications to deliver the product specs</p>`;
+  comps.forEach((g,idx)=>{
+    const s=RD.stageGateScore(g.id, emForCore());
+    const tags=[];
+    if(g.ctype) tags.push(`<span class="pill">${esc(g.ctype)}</span>`);
+    if(g.status) tags.push(`<span class="statepill pending">${esc(g.status)}</span>`);
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">C${idx+1}</span>
+      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
+      ${tags.join(" ")}
+      <span class="icard-score" style="color:${col(RD.band(s))}" title="conformance to component specifications">${s==null?'—':Math.round(s)}</span>
+      <span class="icard-actions">
+        <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ spec</button>
+        <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
+        <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
+      </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedModel)}</div></div>`;
+  });
+  const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  wireExec(host);
+}
+
+/* ---------------- shared wiring ---------------- */
+function wireExec(host){
+  host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
+  host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
+  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
+  host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
+    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="stageGate" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
+    subOpenEdit(t,id); });
+  host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
+  host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
+  host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
+  host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
+  host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
+}
+
+/* ---------------- product-model editor ---------------- */
+let modelEditing=null, armedDelModel=false;
+function openModelEditor(m){ modelEditing=m?m.id:"__NEW__"; armedDelModel=false; addingFor=null; editingSub=null; renderAll(); }
+function closeModelEditor(){ modelEditing=null; armedDelModel=false; renderAll(); }
+function modelEditorBody(){
+  const isNew=modelEditing==="__NEW__";
+  const m=isNew?{}:(modelById(modelEditing)||{});
+  const prodOpts=`<option value="">(no product family)</option>`+doc.products.map(p=>`<option value="${p.id}"${m.productId===p.id?" selected":""}>${esc(p.name)} (${p.id})</option>`).join("");
+  return `
+    <div class="modal-field"><span class="lbl">Model name</span><input type="text" data-mf="name" value="${esc(m.name||'')}" placeholder="e.g. FCS-100 — 100 kW Stack"></div>
+    <div class="modal-field"><span class="lbl">Product family</span><select data-mf="productId">${prodOpts}</select><div class="hint" style="margin:4px 0 0">manage product families in ⚙ settings</div></div>
+    <div class="modal-field"><span class="lbl">Target application</span><input type="text" data-mf="application" value="${esc(m.application||'')}" placeholder="e.g. Heavy-duty truck range extender"></div>
+    <div class="modal-field"><span class="lbl">Maturity</span><input type="text" data-mf="maturity" value="${esc(m.maturity||'')}" placeholder="e.g. Concept / Prototype / Pilot / Production" list="maturityList"></div>
+    <div class="modal-field"><span class="lbl">Notes</span><textarea data-mf="notes" rows="2" placeholder="optional">${esc(m.notes||'')}</textarea></div>
+    <div class="row-actions">
+      ${isNew?'':`<button class="ghost mini danger ${armedDelModel?'armed':''}" type="button" data-modeldel="1" style="margin-right:auto">${armedDelModel?'confirm delete':'Delete model'}</button>`}
+      <button class="act mini" type="button" data-modelsave="1">${isNew?'Create model':'Update model'}</button>
+      <button class="ghost mini" type="button" data-modelcancel="1">Cancel</button></div>`;
+}
+function saveModelEditor(){
+  const mb=document.getElementById("modalBody"), d={};
+  mb.querySelectorAll("[data-mf]").forEach(el=>d[el.dataset.mf]=(el.value||"").trim());
+  if(!d.name){ const n=mb.querySelector('[data-mf="name"]'); if(n) n.focus(); return; }
+  let m=modelEditing==="__NEW__"?null:modelById(modelEditing);
+  if(!m){ m={ id:mintId("MDL", doc.models.map(x=>x.id)) }; doc.models.push(m); selectedModel=m.id; }
+  m.name=d.name; m.productId=d.productId||null; m.application=d.application||""; m.maturity=d.maturity||""; m.notes=d.notes||"";
+  modelEditing=null; armedDelModel=false; fillModelSelect(); renderAll(); setMsg("Model saved.","ok");
+}
+function delModelArmed(){
+  if(!armedDelModel){ armedDelModel=true; renderModal(); return; }
+  const id=modelEditing; armedDelModel=false; modelEditing=null;
+  deleteModel(id);
+  if(selectedModel===id) selectedModel=(doc.models[0]&&doc.models[0].id)||null;
+  fillModelSelect(); renderAll(); setMsg("Model deleted.","ok");
+}
+function deleteModel(id){
+  doc.keyResults=doc.keyResults.filter(r=>r.objectiveId!==id);
+  doc.stageGates=doc.stageGates.filter(r=>r.objectiveId!==id);
+  const kill=doc.kpis.filter(k=>k.objectiveId===id).map(k=>k.id);
+  doc.kpis=doc.kpis.filter(k=>k.objectiveId!==id);
+  doc.kpiUpdates=doc.kpiUpdates.filter(u=>kill.indexOf(u.kpiId)===-1);
+}
+
+/* ---------------- product families (settings) ---------------- */
+let armedProd=null;
+function renderProdList(){
+  const el=document.getElementById("prodList"); if(!el) return;
+  if(!doc.products.length){ el.innerHTML=`<p class="hint" style="margin:6px 0 0">none yet</p>`; return; }
+  el.innerHTML=doc.products.map(p=>{
+    const mc=doc.models.filter(m=>m.productId===p.id).length;
+    const kc=doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===p.id).length;
+    return `<div class="skr-row"><span class="skr-name" style="cursor:default">${esc(p.name)} <span class="pill">${p.id}</span></span><span class="skr-meta">${mc} model${mc===1?'':'s'} · ${kc} KPI${kc===1?'':'s'}</span><button class="ghost mini danger ${armedProd===p.id?'armed':''}" data-proddel="${p.id}">${armedProd===p.id?'confirm':'del'}</button></div>`;
+  }).join("");
+  el.querySelectorAll("[data-proddel]").forEach(b=>b.onclick=()=>delProduct(b.dataset.proddel));
+}
+function delProduct(id){
+  if(armedProd!==id){ armedProd=id; renderProdList(); return; }
+  armedProd=null;
+  doc.models.forEach(m=>{ if(m.productId===id) m.productId=null; });
+  const kill=doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===id).map(k=>k.id);
+  doc.kpis=doc.kpis.filter(k=>!(k.hostType==="initiative"&&k.hostId===id));
+  doc.kpiUpdates=doc.kpiUpdates.filter(u=>kill.indexOf(u.kpiId)===-1);
+  doc.products=doc.products.filter(p=>p.id!==id);
+  renderProdList(); renderAll(); setMsg("Product family removed.","ok");
+}
+function addProduct(){
+  const inp=document.getElementById("newProdName"), name=(inp.value||"").trim();
+  if(!name){ inp.focus(); return; }
+  doc.products.push({ id:mintId("PRD", doc.products.map(p=>p.id)), name });
+  inp.value=""; renderProdList(); renderAll(); setMsg("Product family added.","ok");
+}
+
+/* ---------------- sample document ---------------- */
+function seedDoc(){
+  const t=Date.now();
+  const rd=(kpiId,value,off)=>({ id:"UPD-"+kpiId+"-"+(t-off), kpiId, value, timestamp:t-off, note:"" });
+  return {
+    products:[{ id:"PRD-1", name:"PEM Fuel Cell Stack" }],
+    models:[{ id:"MDL-1", name:"FCS-100 — 100 kW Stack", productId:"PRD-1",
+      application:"Heavy-duty truck range extender", maturity:"Prototype",
+      notes:"Automotive-class PEM stack targeting heavy-duty performance and durability metrics." }],
+    keyResults:[
+      { id:"KR-1-1", objectiveId:"MDL-1", statement:"Rated net power ≥ 100 kW", trackingType:"kpi" },
+      { id:"KR-1-2", objectiveId:"MDL-1", statement:"Peak power density ≥ 1.2 W/cm²", trackingType:"kpi" },
+      { id:"KR-1-3", objectiveId:"MDL-1", statement:"Beginning-of-life efficiency ≥ 55% at rated power", trackingType:"kpi" },
+      { id:"KR-1-4", objectiveId:"MDL-1", statement:"Durability ≥ 25,000 h to 10% voltage loss", trackingType:"kpi" }
+    ],
+    stageGates:[
+      { id:"SG-1-1", objectiveId:"MDL-1", name:"Membrane Electrode Assembly (MEA)", ctype:"MEA", status:"Prototype" },
+      { id:"SG-1-2", objectiveId:"MDL-1", name:"Bipolar Plate", ctype:"BPP", status:"Design" },
+      { id:"SG-1-3", objectiveId:"MDL-1", name:"Gas Diffusion Layer (GDL)", ctype:"GDL", status:"" }
+    ],
+    kpis:[
+      { id:"KPI-1-1", objectiveId:"MDL-1", hostType:"keyResult", hostId:"KR-1-1", isDefiner:true, groupId:null, name:"Rated net power", targetType:"demonstration", direction:"up", target:100, unit:"kW" },
+      { id:"KPI-1-2", objectiveId:"MDL-1", hostType:"keyResult", hostId:"KR-1-2", isDefiner:true, groupId:"KPG-1", name:"Peak power density", targetType:"demonstration", direction:"up", target:1.2, unit:"W/cm²" },
+      { id:"KPI-1-3", objectiveId:"MDL-1", hostType:"keyResult", hostId:"KR-1-3", isDefiner:true, groupId:null, name:"BoL efficiency", targetType:"demonstration", direction:"up", target:55, unit:"%" },
+      { id:"KPI-1-4", objectiveId:"MDL-1", hostType:"keyResult", hostId:"KR-1-4", isDefiner:true, groupId:null, name:"Durability", targetType:"demonstration", direction:"up", target:25000, unit:"h" },
+      { id:"KPI-1-5", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-1", isDefiner:true, groupId:null, name:"Cathode Pt loading", targetType:"demonstration", direction:"down", target:0.25, unit:"mg/cm²" },
+      { id:"KPI-1-6", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-1", isDefiner:true, groupId:null, name:"HFR (iR)", targetType:"demonstration", direction:"down", target:50, unit:"mΩ·cm²" },
+      { id:"KPI-1-7", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-1", isDefiner:false, groupId:"KPG-1", name:null, direction:null, unit:null, target:null, order:0 },
+      { id:"KPI-1-8", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-2", isDefiner:true, groupId:null, name:"Areal contact resistance", targetType:"demonstration", direction:"down", target:10, unit:"mΩ·cm²" },
+      { id:"KPI-1-9", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-2", isDefiner:true, groupId:null, name:"Plate thickness", targetType:"demonstration", direction:"down", target:1.2, unit:"mm" },
+      { id:"KPI-1-10", objectiveId:"MDL-1", hostType:"stageGate", hostId:"SG-1-3", isDefiner:true, groupId:null, name:"Through-plane resistance", targetType:"demonstration", direction:"down", target:8, unit:"mΩ·cm²" },
+      { id:"KPI-1-11", objectiveId:null, hostType:"initiative", hostId:"PRD-1", isDefiner:true, groupId:null, name:"Stack cost", targetType:"demonstration", direction:"down", target:50, unit:"$/kW" }
+    ],
+    kpiUpdates:[
+      rd("KPI-1-1",92,9000), rd("KPI-1-3",53,8000),
+      rd("KPI-1-5",0.30,7000), rd("KPI-1-6",48,6000), rd("KPI-1-7",1.10,5000),
+      rd("KPI-1-8",12,4000), rd("KPI-1-9",1.15,3000), rd("KPI-1-10",9,2000),
+      rd("KPI-1-11",62,1000)
+    ]
+  };
+}
+
+/* ---------------- top-level wiring + boot ---------------- */
+document.getElementById("saveBtn").onclick = ()=>{ persist(); setMsg("Saved.","ok"); };
+document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); const show=p.style.display==="none"; p.style.display=show?"block":"none"; if(show) renderProdList(); };
+document.getElementById("addModelBtn").onclick = ()=>openModelEditor(null);
+document.getElementById("modalX").onclick = ()=>{ if(modelEditing!=null) closeModelEditor(); else subCancel(); };
+document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay"){ if(modelEditing!=null) closeModelEditor(); else subCancel(); } };
+document.getElementById("subkrX").onclick = closeSubKrModal;
+document.getElementById("subkrOverlay").onclick = (e)=>{ if(e.target.id==="subkrOverlay") closeSubKrModal(); };
+document.getElementById("kpiTgtX").onclick = closeTgtModal;
+document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiTgtOverlay") closeTgtModal(); };
+document.getElementById("exportBtn").onclick = exportDoc;
+document.getElementById("importInput").onchange = (e)=>{ if(e.target.files&&e.target.files[0]) importDoc(e.target.files[0]); e.target.value=""; };
+document.getElementById("resetBtn").onclick = resetDoc;
+document.getElementById("addProdBtn").onclick = addProduct;
+window.addEventListener("beforeunload", persist);
+
+/* boot */
+loadDoc();
+fillModelSelect();
+renderProdList();
+renderAll();
+</script>
+</body>
+</html>
