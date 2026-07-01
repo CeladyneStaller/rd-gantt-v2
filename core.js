@@ -213,6 +213,22 @@
       var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
     return false;
   }
+  // ── product composition (model-to-model): edges are { id, parent, child }, meaning parent-model CONTAINS child-model.
+  // A child model plugged into a parent model is a "sub-product". This edge list is the canonical graph (planning reads
+  // it directly; the designer hosts the imported specs on a refModel-marked component). All four helpers are pure over
+  // the edge array — no portfolio, no DOM.
+  function compositionChildren(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].parent===modelId) out.push(composition[i].child); return out; }
+  function compositionParents(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].child===modelId) out.push(composition[i].parent); return out; }
+  function descendantModels(modelId, composition){ composition=composition||[]; var out={}, stack=[modelId];
+    while(stack.length){ var kids=compositionChildren(stack.pop(), composition);
+      for(var i=0;i<kids.length;i++) if(!out[kids[i]]){ out[kids[i]]=1; stack.push(kids[i]); } }
+    var arr=[]; for(var k in out) arr.push(k); return arr; }
+  // true if making parentModel contain childModel would form a composition cycle — i.e. same model, or childModel
+  // already (transitively) contains parentModel. (A duplicate direct edge is the caller's check, not a cycle.)
+  function wouldComposeCycle(parentModel, childModel, composition){
+    if(parentModel===childModel) return true;
+    return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -778,6 +794,10 @@
     linkOf: linkOf,
     rootOf: rootOf,
     wouldCreateCycle: wouldCreateCycle,
+    compositionChildren: compositionChildren,
+    compositionParents: compositionParents,
+    descendantModels: descendantModels,
+    wouldComposeCycle: wouldComposeCycle,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
