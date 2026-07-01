@@ -271,7 +271,12 @@ function blankDoc(){ return { keyResults:[], stageGates:[], kpis:[], kpiUpdates:
 // on load: materialize legacy links, then re-tag designer hostTypes (product KPIs, components)
 function normalizeKpis(kpis){ if(!kpis) return; RD.migrateKpiLinks(kpis);
   for(const k of kpis){ if(k.hostType==="initiative") k.hostType="product"; else if(k.hostType==="stageGate") k.hostType="component"; } }
-function emForCore(){ const m={}; m[DOCID]=doc; return m; }
+// resolver reads span the union of this spec doc + the portfolio registry (product/initiative KPIs live there);
+// writes stay in doc.kpis (link members are spec-doc-hosted, pointing at a registry KPI id).
+function allKpis(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? doc.kpis.concat(portfolio.kpis) : doc.kpis; }
+function emForCore(){ return RD.withPortfolio(portfolio, {[DOCID]:doc}); }
+// initiative ids owned by this division (objectives carry divisionId + initiativeId) — for cross-doc link candidates
+function portfolioDivInitiatives(){ const s=new Set(); if(portfolio && portfolio.objectives) portfolio.objectives.forEach(o=>{ if(o.divisionId===divisionId && o.initiativeId) s.add(o.initiativeId); }); return s; }
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
@@ -515,7 +520,7 @@ function modelMetricStrip(m){
   const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
   const compOn=comps.filter(g=>RD.band(RD.hostScore("component", g.id, em))==="on-track").length;
   const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
-  const measured=modelKpis.filter(k=>RD.effValue(k, doc.kpis, em)!=null).length;
+  const measured=modelKpis.filter(k=>RD.effValue(k, allKpis(), em)!=null).length;
   const pid=productIdOf(selectedModel);
   const prodKpis=pid?doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
@@ -717,7 +722,7 @@ function saveKrModal(){
   else { delete kr.progress; delete kr.subKrs; }
   if(d.trackingType==="kpi"){
     let pk=krPrimaryKpi(kr.id);
-    if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:kr.id, linkParent:null }; doc.kpis.push(pk); }
+    if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:kr.id, linkParent:null }; doc.kpis.push(pk); }
     pk.name=kr.statement;
     pk.targetType=d.kpiType;
     if(d.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
@@ -861,7 +866,7 @@ function saveTgtModal(){
   const d=draftTgt;
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
-  if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"component", hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"component", hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
@@ -877,37 +882,40 @@ const LINK_DEFAULTS = { 'product>component':'specification','product>initiative'
   'initiative>keyResult':'contribute','initiative>stageGate':'contribute','initiative>task':'contribute',
   'keyResult>stageGate':'contribute','keyResult>task':'contribute' };
 function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType+'>'+childType] || 'contribute'; }
-function childCount(k){ return RD.childrenOf(k.id, doc.kpis).length; }
-function isMemberKpi(k){ return RD.linkOf(k, doc.kpis).parent != null; }
-function isDefinerWithLinks(k){ return RD.linkOf(k, doc.kpis).parent == null && childCount(k) > 0; }
+function childCount(k){ return RD.childrenOf(k.id, allKpis()).length; }
+function isMemberKpi(k){ return RD.linkOf(k, allKpis()).parent != null; }
+function isDefinerWithLinks(k){ return RD.linkOf(k, allKpis()).parent == null && childCount(k) > 0; }
 function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
 
 function linkCandidates(hostType, hostId){
   const O = hostType==="product" ? null : selectedModel;
   const prodId = O ? productIdOf(O) : null;
+  const AK = allKpis(), divInits = portfolioDivInitiatives();
   const seen=new Set(), out=[];
-  doc.kpis.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="product" && k.hostId===prodId);
+  AK.forEach(k=>{
+    const inScope = (k.objectiveId===O)
+      || (k.hostType==="product" && k.hostId===prodId)
+      || (k.hostType==="initiative" && divInits.has(k.hostId));   // registry initiative KPIs in this division
     if(!inScope) return;
-    const root=RD.rootOf(k, doc.kpis);
+    const root=RD.rootOf(k, AK);
     if(seen.has(root.id) || root.hostId===hostId) return;   // don't offer a metric already hosted here
     seen.add(root.id); out.push(root);
   });
   return out;
 }
 function makeLinkMember(hostType, hostId, parentId, linkType){
-  const parent=doc.kpis.find(k=>k.id===parentId); if(!parent) return;
+  const AK=allKpis(); const parent=AK.find(k=>k.id===parentId); if(!parent) return;
   const objScope = hostType==="product" ? null : selectedModel;
-  const id=RD.allocId("kpi", objScope || hostId, doc.kpis.map(x=>x.id));
+  const id=RD.allocId("kpi", objScope || hostId, AK.map(x=>x.id));
   const type=linkType || defaultLinkType(parent.hostType, hostType);
   doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
                   name:null, direction:null, unit:null, target:null, order:0 });
   addingFor=null; restoreReturn(); renderAll(); setMsg("Linked ("+type+").","ok");
 }
 function unlinkKpi(id){
-  const m=doc.kpis.find(k=>k.id===id); if(!m) return;
-  m.name=RD.kpiName(m, doc.kpis); m.direction=RD.kpiDirection(m, doc.kpis); m.unit=RD.kpiUnit(m, doc.kpis);
-  if(m.target==null) m.target=RD.effTarget(m, doc.kpis);
+  const AK=allKpis(); const m=doc.kpis.find(k=>k.id===id); if(!m) return;
+  m.name=RD.kpiName(m, AK); m.direction=RD.kpiDirection(m, AK); m.unit=RD.kpiUnit(m, AK);
+  if(m.target==null) m.target=RD.effTarget(m, AK);
   m.linkParent=null; m.linkType=null; delete m.linkPriority; m.groupId=null; m.isDefiner=true;
   renderAll(); setMsg("Unlinked.","ok");
 }
@@ -919,16 +927,17 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const defType=defaultLinkType(cands[0].hostType, hostType);
   return `<div class="ed"><label style="grid-column:1/-1">Link to a product or specification metric
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, doc.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+`</select></label>
+    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, allKpis())||d.id)} · ${hostLabel(d)}</option>`).join("")+`</select></label>
     <label style="grid-column:1/-1">Relationship <select data-linkrel>`+['direct','contribute','specification'].map(t=>`<option value="${t}"${t===defType?' selected':''}>${t}</option>`).join("")+`</select><span class="hint" style="display:block;margin-top:2px">${REL_HINT}</span></label>
     </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
 function renderKpiOverrideEditor(rec){
-  const lk=RD.linkOf(rec, doc.kpis);
-  const dir=RD.kpiDirection(rec, doc.kpis), unit=RD.kpiUnit(rec, doc.kpis);
-  const inhT=RD.effTarget(rec, doc.kpis), own=rec.target;
+  const AK=allKpis();
+  const lk=RD.linkOf(rec, AK);
+  const dir=RD.kpiDirection(rec, AK), unit=RD.kpiUnit(rec, AK);
+  const inhT=RD.effTarget(rec, AK), own=rec.target;
   let tEd;
   if(lk.type==="direct"){
     tEd=`<p class="hint" style="grid-column:1/-1;margin:0">A <b>direct</b> link mirrors the parent's target and value exactly — no override here.</p>`;
@@ -940,7 +949,7 @@ function renderKpiOverrideEditor(rec){
     tEd=`<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
   }
   return `<div class="ed">
-    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,doc.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,doc.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b></div>
+    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,AK)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,AK))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b></div>
     <label style="grid-column:1/-1">Relationship ${relSelect('linkType', lk.type)}<span class="hint" style="display:block;margin-top:2px">${REL_HINT}</span></label>
     <label>Priority (higher wins ties)<input data-f="linkPriority" class="tiny" type="number" value="${lk.priority||0}"/></label>
     ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
@@ -970,7 +979,7 @@ function renderProductPanel(){
 
 /* ---------------- metric table ---------------- */
 function kpiTable(hostType, hostId, objScope){
-  const AK=doc.kpis, EM=emForCore();
+  const AK=allKpis(), EM=emForCore();
   const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   let h=`<table class="kpitable"><thead><tr><th>Metric</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
   if(!rows.length) h += `<tr><td colspan="7" class="hint">no metrics yet — add or link a measurement</td></tr>`;
