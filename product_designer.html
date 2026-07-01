@@ -598,6 +598,8 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
+  function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -997,6 +999,7 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    hostScore: hostScore,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,
@@ -1074,6 +1077,9 @@ function specId(){ return "SPEC-"+divisionId; }
 function resolveDivision(){ const u=new URL(location.href); return u.searchParams.get("division") || localStorage.getItem("rd_division") || null; }
 
 function blankDoc(){ return { keyResults:[], stageGates:[], kpis:[], kpiUpdates:[], modelSpec:{} }; }
+// on load: materialize legacy links, then re-tag designer hostTypes (product KPIs, components)
+function normalizeKpis(kpis){ if(!kpis) return; RD.migrateKpiLinks(kpis);
+  for(const k of kpis){ if(k.hostType==="initiative") k.hostType="product"; else if(k.hostType==="stageGate") k.hostType="component"; } }
 function emForCore(){ const m={}; m[DOCID]=doc; return m; }
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -1095,12 +1101,12 @@ async function persist(){
     } else setMsg("Save failed ("+(e.status||e)+").","err");
   }
 }
-function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); if(doc.kpis) RD.migrateKpiLinks(doc.kpis); specEtag=s.etag; specVersion=s.version; }
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=blankDoc(); } }
   else doc=blankDoc();
-  if(doc.kpis) RD.migrateKpiLinks(doc.kpis);
+  normalizeKpis(doc.kpis);
 }
 async function loadAll(){
   if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
@@ -1155,9 +1161,9 @@ function divName(){ const d=(portfolio&&portfolio.divisions||[]).find(x=>x.id===
 function specName(id){ const r=(doc.keyResults||[]).find(x=>x.id===id); return r?(r.statement||r.id):id; }
 function componentName(id){ const g=(doc.stageGates||[]).find(x=>x.id===id); return g?(g.name||g.id):id; }
 function hostLabel(k){
-  if(k.hostType==="initiative") return "product: "+esc(productName(k.hostId));
+  if(k.hostType==="product") return "product: "+esc(productName(k.hostId));
   if(k.hostType==="keyResult")  return "spec: "+esc(specName(k.hostId));
-  if(k.hostType==="stageGate")  return "component: "+esc(componentName(k.hostId));
+  if(k.hostType==="component")  return "component: "+esc(componentName(k.hostId));
   return esc(k.hostId);
 }
 
@@ -1241,7 +1247,7 @@ function saveSub(){
     }
     else Object.assign(rec, data);
   } else {
-    const initHost=(type==="kpi" && a.hostType==="initiative");
+    const initHost=(type==="kpi" && a.hostType==="product");
     const objScope=initHost?null:selectedModel;
     const parent=initHost?a.hostId:selectedModel;
     const id=RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
@@ -1256,8 +1262,9 @@ function delSub(type, id){
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
   armedDel=null;
   if(type==="keyResult" || type==="stageGate"){
-    const kids=doc.kpis.filter(k=>k.hostType===type && k.hostId===id).map(k=>k.id);
-    doc.kpis=doc.kpis.filter(k=>!(k.hostType===type && k.hostId===id));
+    const kh = type==="stageGate" ? "component" : type;
+    const kids=doc.kpis.filter(k=>k.hostType===kh && k.hostId===id).map(k=>k.id);
+    doc.kpis=doc.kpis.filter(k=>!(k.hostType===kh && k.hostId===id));
     doc.kpiUpdates=doc.kpiUpdates.filter(u=>kids.indexOf(u.kpiId)===-1);
     const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
   } else if(type==="kpi"){
@@ -1315,11 +1322,11 @@ function modelMetricStrip(m){
   const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
   const specOn=specs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
   const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
-  const compOn=comps.filter(g=>RD.band(RD.stageGateScore(g.id, em))==="on-track").length;
+  const compOn=comps.filter(g=>RD.band(RD.hostScore("component", g.id, em))==="on-track").length;
   const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
   const measured=modelKpis.filter(k=>RD.effValue(k, doc.kpis, em)!=null).length;
   const pid=productIdOf(selectedModel);
-  const prodKpis=pid?doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===pid).length:0;
+  const prodKpis=pid?doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   return `<div class="metrics">
     <div class="mc"><div class="mc-label">Spec conformance</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
@@ -1411,8 +1418,8 @@ function componentModalBody(g){
   if(isEdit){
     h+=`<span class="modal-section-lbl">Component specifications</span>
       <div class="gt-head"><span class="hint" style="margin:0">measurable criteria this component must meet — link one to a product specification to feed its value upward, or add a component-only metric</span>
-        <span class="gt-acts"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ spec</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></span></div>
-      ${kpiTable("stageGate", g.id, selectedModel)}`;
+        <span class="gt-acts"><button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button><button class="ghost mini" data-addlink="component:${g.id}">+ link</button></span></div>
+      ${kpiTable("component", g.id, selectedModel)}`;
   } else {
     h+=`<p class="hint" style="margin:14px 0 0">Add the component first, then reopen it to define its specifications.</p>`;
   }
@@ -1519,7 +1526,7 @@ function saveKrModal(){
   else { delete kr.progress; delete kr.subKrs; }
   if(d.trackingType==="kpi"){
     let pk=krPrimaryKpi(kr.id);
-    if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true }; doc.kpis.push(pk); }
+    if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:kr.id, linkParent:null }; doc.kpis.push(pk); }
     pk.name=kr.statement;
     pk.targetType=d.kpiType;
     if(d.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
@@ -1663,7 +1670,7 @@ function saveTgtModal(){
   const d=draftTgt;
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
-  if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"stageGate", hostId:draftTgtGate, groupId:null, isDefiner:true }; doc.kpis.push(pk); }
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, doc.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"component", hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
@@ -1672,7 +1679,7 @@ function saveTgtModal(){
 }
 
 /* ---------------- KPI link groups ---------------- */
-const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
+const LEVEL = { product:5, component:4, initiative:3, keyResult:2, stageGate:1, task:0 };
 // default link relation by (parentHostType, childHostType) — §5; universal fallback = contribute
 const LINK_DEFAULTS = { 'product>component':'specification','product>initiative':'direct','product>keyResult':'contribute',
   'component>initiative':'direct','component>keyResult':'contribute',
@@ -1685,11 +1692,11 @@ function isDefinerWithLinks(k){ return RD.linkOf(k, doc.kpis).parent == null && 
 function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
 
 function linkCandidates(hostType, hostId){
-  const O = hostType==="initiative" ? null : selectedModel;
+  const O = hostType==="product" ? null : selectedModel;
   const prodId = O ? productIdOf(O) : null;
   const seen=new Set(), out=[];
   doc.kpis.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===prodId);
+    const inScope = (k.objectiveId===O) || (k.hostType==="product" && k.hostId===prodId);
     if(!inScope) return;
     const root=RD.rootOf(k, doc.kpis);
     if(seen.has(root.id) || root.hostId===hostId) return;   // don't offer a metric already hosted here
@@ -1699,7 +1706,7 @@ function linkCandidates(hostType, hostId){
 }
 function makeLinkMember(hostType, hostId, parentId, linkType){
   const parent=doc.kpis.find(k=>k.id===parentId); if(!parent) return;
-  const objScope = hostType==="initiative" ? null : selectedModel;
+  const objScope = hostType==="product" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, doc.kpis.map(x=>x.id));
   const type=linkType || defaultLinkType(parent.hostType, hostType);
   doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
@@ -1759,12 +1766,12 @@ function renderProductPanel(){
     wireExec(host); return;
   }
   const pname=productName(pid);
-  const n=doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===pid).length;
+  const n=doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===pid).length;
   const inner=`<div class="icard"><div class="icard-top">
       <span class="icard-title">${esc(pname)}</span>
       <span class="pill">${n} metric${n===1?'':'s'}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="initiative:${pid}">+ KPI</button></span>
-      </div><div class="icard-meta">${kpiTable("initiative", pid, null)}</div></div>`;
+      <span class="icard-actions"><button class="ghost mini" data-addkpi="product:${pid}">+ KPI</button></span>
+      </div><div class="icard-meta">${kpiTable("product", pid, null)}</div></div>`;
   const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared across this product · link from a specification or component</span>`;
   host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`;
   wireExec(host);
@@ -1826,7 +1833,7 @@ function renderComponents(){
   let inner="";
   if(!comps.length) inner+=`<p class="hint">none yet — components are the parts that must meet specifications to deliver the product specs</p>`;
   comps.forEach((g,idx)=>{
-    const s=RD.stageGateScore(g.id, emForCore());
+    const s=RD.hostScore("component", g.id, emForCore());
     const tags=[];
     if(g.ctype) tags.push(`<span class="pill">${esc(g.ctype)}</span>`);
     if(g.status) tags.push(`<span class="statepill pending">${esc(g.status)}</span>`);
@@ -1836,10 +1843,10 @@ function renderComponents(){
       ${tags.join(" ")}
       <span class="icard-score" style="color:${col(RD.band(s))}" title="conformance to component specifications">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions">
-        <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ spec</button>
-        <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
+        <button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button>
+        <button class="ghost mini" data-addlink="component:${g.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedModel)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("component", g.id, selectedModel)}</div></div>`;
   });
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
@@ -1850,12 +1857,12 @@ function renderComponents(){
 function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
-  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
-    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="stageGate" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
+    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="component" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
     subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
@@ -1895,7 +1902,7 @@ function renderProdList(){
   if(!prods.length){ el.innerHTML=`<p class="hint" style="margin:6px 0 0">${tok()?"No products in this division yet — add them in the Planning app.":"Connect a broker token to load products."}</p>`; return; }
   el.innerHTML=prods.map(p=>{
     const mc=divModels().filter(m=>m.productId===p.id).length;
-    const kc=doc.kpis.filter(k=>k.hostType==="initiative"&&k.hostId===p.id).length;
+    const kc=doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===p.id).length;
     return `<div class="skr-row"><span class="skr-name" style="cursor:default">${esc(p.name)} <span class="pill">${p.id}</span></span><span class="skr-meta">${mc} model${mc===1?'':'s'} · ${kc} metric${kc===1?'':'s'}</span></div>`;
   }).join("");
 }

@@ -763,6 +763,18 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   })();
 })();
 
+/* ---- hostScore: generic host-level scoring (product/component) ------------ */
+(function(){
+  var kpis=[
+    { id:'P', hostType:'product', hostId:'PRD', direction:'down', target:50, linkParent:null },
+    { id:'C', hostType:'component', hostId:'CMP', direction:'up', target:100, linkParent:null }
+  ];
+  var em={ D:{ kpis:kpis, kpiUpdates:[{kpiId:'P',value:62,timestamp:1},{kpiId:'C',value:80,timestamp:1}] } };
+  approx(C.hostScore('product','PRD',em), C.kpiScore({targetType:'demonstration',direction:'down',target:50},62), 'hostScore(product) = product KPI score');
+  approx(C.hostScore('component','CMP',em), 80, 'hostScore(component) up 100 vs 80 = 80');
+  ok(C.hostScore('product','NONE',em)==null, 'hostScore with no KPIs on host = null');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');

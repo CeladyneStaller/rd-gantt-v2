@@ -376,6 +376,8 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
+  function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -775,6 +777,7 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    hostScore: hostScore,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,
