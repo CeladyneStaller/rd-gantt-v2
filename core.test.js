@@ -623,6 +623,146 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   approx(C.keyResultScore('KR1', C.withPortfolio(pf3,{D:ex3})), 100, 'cross-doc binary: exec reading 1 vs portfolio binary target -> 100');
 })();
 
+/* ---- Unified KPI Model: typed links (Phase B) ---------------------------- */
+(function(){
+  function docOf(kpis, ups){ return { D: { kpis:kpis, kpiUpdates:ups||[] } }; }
+
+  eq(C.KPI_LEVEL.product, 5, 'level: product = 5');
+  eq(C.KPI_LEVEL.component, 4, 'level: component = 4');
+
+  // direct: child shows parent target exactly (own ignored); value flows up
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
+      { id:'C', hostType:'initiative', hostId:'I', target:55, linkParent:'R', linkType:'direct' }
+    ];
+    var ex=docOf(kpis,[{kpiId:'C',value:80,timestamp:1}]);
+    approx(C.effectiveTarget(kpis[1], kpis), 100, 'direct: child target = parent (own 55 ignored)');
+    approx(C.effectiveValue(kpis[0], kpis, ex), 80, 'direct: child value flows up to root');
+  })();
+
+  // contribute: child overrides target (else inherits); value flows up
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
+      { id:'Ca', hostType:'keyResult', hostId:'K1', target:90, linkParent:'R', linkType:'contribute' },
+      { id:'Cb', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
+    ];
+    approx(C.effectiveTarget(kpis[1], kpis), 90, 'contribute: own target override wins');
+    approx(C.effectiveTarget(kpis[2], kpis), 100, 'contribute: no own target -> inherit parent');
+    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Ca',value:45,timestamp:1}])), 45, 'contribute: value flows up');
+  })();
+
+  // specification: target inherits/overrides; value does NOT flow up (firewall)
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
+      { id:'C', hostType:'component', hostId:'CMP', linkParent:'R', linkType:'specification' }
+    ];
+    var ex=docOf(kpis,[{kpiId:'C',value:70,timestamp:1}]);
+    approx(C.effectiveTarget(kpis[1], kpis), 100, 'specification: target cascades down');
+    ok(C.effectiveValue(kpis[0], kpis, ex)==null, 'specification firewall: component value hidden from product');
+    approx(C.effectiveValue(kpis[1], kpis, ex), 70, 'specification child still reads its own value');
+  })();
+
+  // precedence: direct outranks contribute among children (no linkPriority)
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
+      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
+      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
+    ];
+    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cd',value:70,timestamp:1},{kpiId:'Cc',value:40,timestamp:5}])), 70,
+      'precedence: direct child (70) beats contribute child (40) despite older reading');
+  })();
+
+  // precedence: a node's own reading outranks its children
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'keyResult', hostId:'K', direction:'up', target:100, linkParent:null },
+      { id:'C', hostType:'stageGate', hostId:'G', linkParent:'R', linkType:'contribute' }
+    ];
+    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'C',value:40,timestamp:5},{kpiId:'R',value:90,timestamp:1}])), 90,
+      'precedence: parent own reading (90) outranks contribute child (40)');
+  })();
+
+  // precedence: quarter descending among same-type children
+  (function(){
+    var pf={ objectives:[{id:'Oq1',quarter:'Q1'},{id:'Oq2',quarter:'Q2'}] };
+    var kpis=[
+      { id:'R', hostType:'initiative', hostId:'I', objectiveId:null, direction:'up', target:100, linkParent:null },
+      { id:'Cq1', hostType:'keyResult', hostId:'K1', objectiveId:'Oq1', linkParent:'R', linkType:'contribute' },
+      { id:'Cq2', hostType:'keyResult', hostId:'K2', objectiveId:'Oq2', linkParent:'R', linkType:'contribute' }
+    ];
+    var ex=C.withPortfolio(pf, { D:{ kpis:kpis, kpiUpdates:[{kpiId:'Cq1',value:30,timestamp:9},{kpiId:'Cq2',value:60,timestamp:1}] } });
+    approx(C.effectiveValue(kpis[0], kpis, ex), 60, 'precedence: Q2 contributor (60) beats Q1 (30) despite older reading');
+  })();
+
+  // precedence: explicit linkPriority overrides relationRank
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
+      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
+      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute', linkPriority:5 }
+    ];
+    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cd',value:70,timestamp:1},{kpiId:'Cc',value:40,timestamp:1}])), 40,
+      'precedence: linkPriority 5 lifts contribute (40) above direct (70)');
+  })();
+
+  // fall-through: unmeasured top-ranked contributor skipped -> next with a value
+  (function(){
+    var kpis=[
+      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
+      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
+      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
+    ];
+    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cc',value:55,timestamp:1}])), 55,
+      'fall-through: unmeasured direct child skipped, contribute value (55) used');
+  })();
+
+  // multi-hop chain: product -> component -> initiative -> KR
+  (function(){
+    var kpis=[
+      { id:'RP', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
+      { id:'CMP', hostType:'component', hostId:'C', linkParent:'RP', linkType:'specification' },
+      { id:'INI', hostType:'initiative', hostId:'I', linkParent:'CMP', linkType:'contribute' },
+      { id:'KR', hostType:'keyResult', hostId:'K', linkParent:'INI', linkType:'contribute' }
+    ];
+    var ex=docOf(kpis,[{kpiId:'KR',value:80,timestamp:1}]);
+    approx(C.effectiveTarget(kpis[3], kpis), 100, 'chain: target cascades product -> KR');
+    approx(C.effectiveValue(kpis[1], kpis, ex), 80, 'chain: KR value flows up through initiative to component');
+    ok(C.effectiveValue(kpis[0], kpis, ex)==null, 'chain: specification edge firewalls component value from product');
+  })();
+
+  // cycle safety: a linkParent cycle must terminate, not hang
+  (function(){
+    var kpis=[
+      { id:'A', hostType:'initiative', hostId:'I', direction:'up', linkParent:'B', linkType:'contribute' },
+      { id:'B', hostType:'keyResult', hostId:'K', linkParent:'A', linkType:'contribute' }
+    ];
+    var ex=docOf(kpis,[{kpiId:'A',value:25,timestamp:1}]);
+    ok(C.effectiveTarget(kpis[0], kpis)!==undefined, 'cycle: effectiveTarget terminates');
+    ok(C.effectiveValue(kpis[0], kpis, ex)!==undefined, 'cycle: effectiveValue terminates');
+  })();
+
+  // migrateKpiLinks: legacy groupId/isDefiner -> link fields, identical scores
+  (function(){
+    var legacy=[
+      { id:'D', hostType:'keyResult', hostId:'K', objectiveId:'O', groupId:'G', isDefiner:true, direction:'up', target:100 },
+      { id:'M', hostType:'stageGate', hostId:'G1', objectiveId:'O', groupId:'G', isDefiner:false }
+    ];
+    var ex=docOf(legacy,[{kpiId:'M',value:80,timestamp:1}]);
+    var before=C.effectiveValue(legacy[0], legacy, ex);
+    ok(C.migrateKpiLinks(legacy)===true, 'migrate: reports a change');
+    eq(legacy[0].linkParent, null, 'migrate: definer becomes root');
+    eq(legacy[1].linkParent, 'D', 'migrate: member links to its definer');
+    eq(legacy[1].linkType, 'contribute', 'migrate: member link is contribute');
+    approx(C.effectiveValue(legacy[0], legacy, ex), before, 'migrate: value identical before/after');
+    approx(C.effectiveValue(legacy[0], legacy, ex), 80, 'migrate: value is the member reading');
+    ok(C.migrateKpiLinks(legacy)===false, 'migrate: idempotent second time');
+  })();
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');
