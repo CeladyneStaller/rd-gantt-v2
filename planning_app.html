@@ -1680,18 +1680,25 @@ function compItem(modelId){
 }
 function relatedGroups(entity,id){
   const P=portfolio, item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)}), out=[];
+  const classOf = rec => { const c=[];
+    if(rec&&rec.productId){ const p=byId("product",rec.productId); if(p) c.push(item("product",p)); }
+    if(rec&&rec.modelId){ const m=byId("model",rec.modelId); if(m) c.push(item("model",m)); }
+    return c; };
   if(entity==="objective"){
-    const o=byId("objective",id), cls=[];
-    if(o&&o.productId){ const p=byId("product",o.productId); if(p) cls.push(item("product",p)); }
-    if(o&&o.modelId){ const m=byId("model",o.modelId); if(m) cls.push(item("model",m)); }
-    if(cls.length) out.push({title:"Classification", items:cls});
+    const o=byId("objective",id);
+    const cls=classOf(o); if(cls.length) out.push({title:"Classification", items:cls});
     const mils=((o&&o.milestoneIds)||[]).map(mid=>byId("milestone",mid)).filter(Boolean);
     if(mils.length) out.push({title:"Linked milestones", items:mils.map(m=>item("milestone",m))});
+  } else if(entity==="initiative"){
+    const cls=classOf(byId("initiative",id)); if(cls.length) out.push({title:"Classification", items:cls});
   } else if(entity==="milestone"){
     const objs=P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(id)>=0);
     if(objs.length) out.push({title:"Objectives linking this", items:objs.map(o=>item("objective",o))});
   } else if(entity==="product"||entity==="model"){
-    const objs=P.objectives.filter(o=>(entity==="product"?o.productId:o.modelId)===id);
+    const key = entity==="product"?"productId":"modelId";
+    const inits=P.initiatives.filter(i=>i[key]===id);
+    if(inits.length) out.push({title:"Initiatives classified here", items:inits.map(i=>item("initiative",i))});
+    const objs=P.objectives.filter(o=>o[key]===id);
     if(objs.length) out.push({title:"Objectives classified here", items:objs.map(o=>item("objective",o))});
     if(entity==="model"){   // composition (read-only reflection of what the Product Designer authored)
       const comp=P.composition||[];
@@ -1808,16 +1815,19 @@ function renderTable(){
     const id=b.dataset.del;
     if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
     const ent = activeEntity;
-    SEL[ent]().splice(SEL[ent]().findIndex(x=>x.id===id),1);
+    const _di=SEL[ent]().findIndex(x=>x.id===id); if(_di<0){ armedDelete=null; renderTable(); return; }   // already gone — never splice(-1)
+    SEL[ent]().splice(_di,1);
     armedDelete=null; renderPortfolio(); renderCompany();
     persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
   });
 }
+const REF_COL={productId:"product",modelId:"model",divisionId:"division",initiativeId:"initiative"};
 function cellVal(col,v){
   if(v==null||v==="") return '<span class="pill">—</span>';
   if(DATE_FIELDS.has(col)) return `<span class="mono">${dayToIso(v)}</span>`;
   if(Array.isArray(v)) return `<span class="mono">${v.join(", ")||"—"}</span>`;
-  if(col==="productId"||col==="modelId"||col.endsWith("Id")) return `<span class="mono">${esc(String(v))}</span>`;
+  if(REF_COL[col]){ const r=byId(REF_COL[col], v); return r ? esc(nameOf(REF_COL[col], r)) : `<span class="mono" title="unresolved reference">${esc(String(v))}</span>`; }
+  if(col.endsWith("Id")) return `<span class="mono">${esc(String(v))}</span>`;
   return esc(String(v));
 }
 

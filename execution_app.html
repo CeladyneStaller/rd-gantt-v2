@@ -255,7 +255,8 @@
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
+    product: 'PRD', model: 'MDL'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -418,6 +419,47 @@
       if(lk.parent==null) return cur; var p=kpiById(lk.parent,kpis); if(!p) return cur; cur=p; }
     return kpi; }
   function childrenOf(kpiId, kpis){ var out=[]; for(var i=0;i<kpis.length;i++) if(linkOf(kpis[i],kpis).parent===kpiId) out.push(kpis[i]); return out; }
+  // wouldCreateCycle: true if pointing childId's parent at parentId would form a cycle — i.e. childId === parentId,
+  // or childId already sits on parentId's ancestor chain. (A pre-existing upstream cycle is not attributed to this edit.)
+  function wouldCreateCycle(childId, parentId, kpis){
+    if(childId===parentId) return true;
+    var seen={}, cur=kpiById(parentId,kpis);
+    while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
+      var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
+    return false;
+  }
+  // ── product composition (model-to-model): edges are { id, parent, child }, meaning parent-model CONTAINS child-model.
+  // A child model plugged into a parent model is a "sub-product". This edge list is the canonical graph (planning reads
+  // it directly; the designer hosts the imported specs on a refModel-marked component). All four helpers are pure over
+  // the edge array — no portfolio, no DOM.
+  function compositionChildren(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].parent===modelId) out.push(composition[i].child); return out; }
+  function compositionParents(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].child===modelId) out.push(composition[i].parent); return out; }
+  function descendantModels(modelId, composition){ composition=composition||[]; var out={}, stack=[modelId];
+    while(stack.length){ var kids=compositionChildren(stack.pop(), composition);
+      for(var i=0;i<kids.length;i++) if(!out[kids[i]]){ out[kids[i]]=1; stack.push(kids[i]); } }
+    var arr=[]; for(var k in out) arr.push(k); return arr; }
+  // true if making parentModel contain childModel would form a composition cycle — i.e. same model, or childModel
+  // already (transitively) contains parentModel. (A duplicate direct edge is the caller's check, not a cycle.)
+  function wouldComposeCycle(parentModel, childModel, composition){
+    if(parentModel===childModel) return true;
+    return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
+  }
+  // model N's importable specs: the keyResult-hosted DEFINER kpis scoped to that model (its headline specifications).
+  // A parent system references these when N is plugged in as a sub-product; component-level internals are excluded.
+  function importableModelKpis(modelId, kpis){
+    var out=[]; kpis=kpis||[]; for(var i=0;i<kpis.length;i++){ var k=kpis[i];
+      if(k.objectiveId===modelId && k.hostType==='keyResult' && linkOf(k,kpis).parent==null) out.push(k); }
+    return out;
+  }
+  // score a bare value against a bare target (number, or {lo,hi} for range) given direction — 0..100 or null.
+  // used for imported sub-product specs, where the value comes from the child doc and the target may be an override.
+  function rawScore(value, target, dir){
+    if(value==null || target==null) return null;
+    var raw = (dir==='range' && target && typeof target==='object')
+      ? progressRange(value, target.lo, target.hi)
+      : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -591,6 +633,8 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
+  function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -980,6 +1024,13 @@
     effValue: effValue,
     linkOf: linkOf,
     rootOf: rootOf,
+    wouldCreateCycle: wouldCreateCycle,
+    compositionChildren: compositionChildren,
+    compositionParents: compositionParents,
+    descendantModels: descendantModels,
+    wouldComposeCycle: wouldComposeCycle,
+    importableModelKpis: importableModelKpis,
+    rawScore: rawScore,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
@@ -990,6 +1041,7 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    hostScore: hostScore,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,
@@ -1213,21 +1265,23 @@ function saveSub(){
   }
   addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
 }
+function spliceById(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0){ arr.splice(i,1); return true; } return false; }   // never splice(-1) on a stale/missing id
 function delSub(type, id){
   if(type==="kpi"){ const k=exec.kpis.find(x=>x.id===id);
     if(k && isDefinerWithLinks(k)){ setMsg("This KPI defines a linked metric — unlink its members first.","err"); return; } }
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
   armedDel=null;
   if(type==="keyResult" || type==="stageGate"){
+    if(SUB[type].arr().findIndex(x=>x.id===id)<0){ renderAll(); return; }   // already gone
     const kids = exec.kpis.filter(k=>k.hostType===type && k.hostId===id).map(k=>k.id);
     exec.kpis = exec.kpis.filter(k=>!(k.hostType===type && k.hostId===id));
     exec.kpiUpdates = exec.kpiUpdates.filter(u=>kids.indexOf(u.kpiId)===-1);
-    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+    spliceById(SUB[type].arr(), id);
   } else if(type==="kpi"){
-    exec.kpis.splice(exec.kpis.findIndex(x=>x.id===id),1);
+    if(!spliceById(exec.kpis, id)){ renderAll(); return; }
     exec.kpiUpdates = exec.kpiUpdates.filter(u=>u.kpiId!==id);
   } else {
-    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+    spliceById(SUB[type].arr(), id);
   }
   renderAll(); setMsg("Deleted (Save to persist).","ok");
 }
