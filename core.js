@@ -40,7 +40,8 @@
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
+    product: 'PRD', model: 'MDL'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };

@@ -311,7 +311,8 @@
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
+    product: 'PRD', model: 'MDL'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -474,6 +475,15 @@
       if(lk.parent==null) return cur; var p=kpiById(lk.parent,kpis); if(!p) return cur; cur=p; }
     return kpi; }
   function childrenOf(kpiId, kpis){ var out=[]; for(var i=0;i<kpis.length;i++) if(linkOf(kpis[i],kpis).parent===kpiId) out.push(kpis[i]); return out; }
+  // wouldCreateCycle: true if pointing childId's parent at parentId would form a cycle — i.e. childId === parentId,
+  // or childId already sits on parentId's ancestor chain. (A pre-existing upstream cycle is not attributed to this edit.)
+  function wouldCreateCycle(childId, parentId, kpis){
+    if(childId===parentId) return true;
+    var seen={}, cur=kpiById(parentId,kpis);
+    while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
+      var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
+    return false;
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -647,6 +657,8 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
+  function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -1036,6 +1048,7 @@
     effValue: effValue,
     linkOf: linkOf,
     rootOf: rootOf,
+    wouldCreateCycle: wouldCreateCycle,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
@@ -1046,6 +1059,7 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    hostScore: hostScore,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,
