@@ -289,11 +289,12 @@ async function persist(){
     } else setMsg("Save failed ("+(e.status||e)+").","err");
   }
 }
-function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); specEtag=s.etag; specVersion=s.version; }
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); if(doc.kpis) RD.migrateKpiLinks(doc.kpis); specEtag=s.etag; specVersion=s.version; }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=blankDoc(); } }
   else doc=blankDoc();
+  if(doc.kpis) RD.migrateKpiLinks(doc.kpis);
 }
 async function loadAll(){
   if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
@@ -427,7 +428,11 @@ function saveSub(){
   const arr=SUB[type].arr();
   if(e){
     const rec=arr.find(x=>x.id===e.id);
-    if(type==="kpi" && isMemberKpi(rec)){ rec.target=(data.target===undefined?null:data.target); }
+    if(type==="kpi" && isMemberKpi(rec)){
+      if(data.linkType) rec.linkType=data.linkType;
+      if(data.linkPriority!=null) rec.linkPriority=data.linkPriority;
+      rec.target = (rec.linkType==="direct") ? null : (data.target===undefined?null:data.target);
+    }
     else Object.assign(rec, data);
   } else {
     const initHost=(type==="kpi" && a.hostType==="initiative");
@@ -435,7 +440,7 @@ function saveSub(){
     const parent=initHost?a.hostId:selectedModel;
     const id=RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
     const base={ id, objectiveId:objScope };
-    if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
+    if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.linkParent=null; }
     arr.push(Object.assign(base, data));
   }
   addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved.","ok");
@@ -862,60 +867,68 @@ function saveTgtModal(){
 
 /* ---------------- KPI link groups ---------------- */
 const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
-function groupOf(k){ return k.groupId||k.id; }
-function groupMemberCount(g){ return doc.kpis.filter(k=>groupOf(k)===g).length; }
-function isMemberKpi(k){ return !!k.groupId && !k.isDefiner; }
-function isDefinerWithLinks(k){ return !!k.groupId && k.isDefiner && groupMemberCount(k.groupId)>1; }
-function groupIdsInUse(){ return doc.kpis.map(k=>k.groupId).filter(Boolean); }
+// default link relation by (parentHostType, childHostType) — §5; universal fallback = contribute
+const LINK_DEFAULTS = { 'product>component':'specification','product>initiative':'direct','product>keyResult':'contribute',
+  'component>initiative':'direct','component>keyResult':'contribute',
+  'initiative>keyResult':'contribute','initiative>stageGate':'contribute','initiative>task':'contribute',
+  'keyResult>stageGate':'contribute','keyResult>task':'contribute' };
+function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType+'>'+childType] || 'contribute'; }
+function childCount(k){ return RD.childrenOf(k.id, doc.kpis).length; }
+function isMemberKpi(k){ return RD.linkOf(k, doc.kpis).parent != null; }
+function isDefinerWithLinks(k){ return RD.linkOf(k, doc.kpis).parent == null && childCount(k) > 0; }
 function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
 
 function linkCandidates(hostType, hostId){
   const O = hostType==="initiative" ? null : selectedModel;
   const prodId = O ? productIdOf(O) : null;
-  const here = LEVEL[hostType];
-  const occupied = new Set(doc.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
   const seen=new Set(), out=[];
   doc.kpis.forEach(k=>{
     const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===prodId);
     if(!inScope) return;
-    const g=groupOf(k);
-    if(seen.has(g) || occupied.has(g)) return;
-    seen.add(g); out.push(RD.definerOf(k, doc.kpis));
+    const root=RD.rootOf(k, doc.kpis);
+    if(seen.has(root.id) || root.hostId===hostId) return;   // don't offer a metric already hosted here
+    seen.add(root.id); out.push(root);
   });
   return out;
 }
-function makeLinkMember(hostType, hostId, definerId){
-  const def=doc.kpis.find(k=>k.id===definerId); if(!def) return;
-  let g=def.groupId;
-  if(!g){ g=RD.allocId("kpiGroup", DOCID, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+function makeLinkMember(hostType, hostId, parentId, linkType){
+  const parent=doc.kpis.find(k=>k.id===parentId); if(!parent) return;
   const objScope = hostType==="initiative" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, doc.kpis.map(x=>x.id));
-  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
+  const type=linkType || defaultLinkType(parent.hostType, hostType);
+  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
                   name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked.","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked ("+type+").","ok");
 }
 function unlinkKpi(id){
   const m=doc.kpis.find(k=>k.id===id); if(!m) return;
   m.name=RD.kpiName(m, doc.kpis); m.direction=RD.kpiDirection(m, doc.kpis); m.unit=RD.kpiUnit(m, doc.kpis);
   if(m.target==null) m.target=RD.effTarget(m, doc.kpis);
-  m.groupId=null; m.isDefiner=true;
+  m.linkParent=null; m.linkType=null; delete m.linkPriority; m.groupId=null; m.isDefiner=true;
   renderAll(); setMsg("Unlinked.","ok");
 }
+const REL_HINT = 'direct = parent target &amp; value exactly (no override) · contribute = your reading feeds up, target overridable · specification = target only, your value stays here';
+function relSelect(name, sel){ return `<select data-f="${name}">`+['direct','contribute','specification'].map(t=>`<option value="${t}"${t===sel?' selected':''}>${t}</option>`).join("")+`</select>`; }
 function renderLinkEditor(hostType, hostId){
   const cands=linkCandidates(hostType, hostId);
   if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a specification metric here, or a product KPI, first.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
-  return `<div class="ed"><label style="grid-column:1/-1">Link to a product or specification metric — its target flows down, your readings flow up
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, doc.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+
-    `</select></label></div><div class="row-actions" style="margin:0 0 8px">
+  const defType=defaultLinkType(cands[0].hostType, hostType);
+  return `<div class="ed"><label style="grid-column:1/-1">Link to a product or specification metric
+    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, doc.kpis)||d.id)} · ${hostLabel(d)}</option>`).join("")+`</select></label>
+    <label style="grid-column:1/-1">Relationship <select data-linkrel>`+['direct','contribute','specification'].map(t=>`<option value="${t}"${t===defType?' selected':''}>${t}</option>`).join("")+`</select><span class="hint" style="display:block;margin-top:2px">${REL_HINT}</span></label>
+    </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
 function renderKpiOverrideEditor(rec){
+  const lk=RD.linkOf(rec, doc.kpis);
   const dir=RD.kpiDirection(rec, doc.kpis), unit=RD.kpiUnit(rec, doc.kpis);
   const inhT=RD.effTarget(rec, doc.kpis), own=rec.target;
   let tEd;
-  if(dir==="range"){
+  if(lk.type==="direct"){
+    tEd=`<p class="hint" style="grid-column:1/-1;margin:0">A <b>direct</b> link mirrors the parent's target and value exactly — no override here.</p>`;
+  } else if(dir==="range"){
     tEd=`<label>Override lo<input data-f="targetLo" class="tiny" type="number" value="${(own&&typeof own==='object')?own.lo:''}"/></label>
          <label>Override hi<input data-f="targetHi" class="tiny" type="number" value="${(own&&typeof own==='object')?own.hi:''}"/></label>
          <input type="hidden" data-f="direction" value="range"/>`;
@@ -923,9 +936,11 @@ function renderKpiOverrideEditor(rec){
     tEd=`<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
   }
   return `<div class="ed">
-    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,doc.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,doc.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
+    <div class="inherited">inherits <b>${esc(RD.kpiName(rec,doc.kpis)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,doc.kpis))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b></div>
+    <label style="grid-column:1/-1">Relationship ${relSelect('linkType', lk.type)}<span class="hint" style="display:block;margin-top:2px">${REL_HINT}</span></label>
+    <label>Priority (higher wins ties)<input data-f="linkPriority" class="tiny" type="number" value="${lk.priority||0}"/></label>
     ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
-    <button class="act mini" data-save="1">Save override</button>
+    <button class="act mini" data-save="1">Save link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
 
@@ -962,7 +977,7 @@ function kpiTable(hostType, hostId, objScope){
     const tgtCell=fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
     let badge='';
     if(member) badge=`<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
-    else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${groupMemberCount(k.groupId)-1}</span>`;
+    else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${childCount(k)}</span>`;
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
     h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
@@ -1031,7 +1046,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
-  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
+  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
     if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="stageGate" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
