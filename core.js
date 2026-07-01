@@ -229,6 +229,22 @@
     if(parentModel===childModel) return true;
     return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
   }
+  // model N's importable specs: the keyResult-hosted DEFINER kpis scoped to that model (its headline specifications).
+  // A parent system references these when N is plugged in as a sub-product; component-level internals are excluded.
+  function importableModelKpis(modelId, kpis){
+    var out=[]; kpis=kpis||[]; for(var i=0;i<kpis.length;i++){ var k=kpis[i];
+      if(k.objectiveId===modelId && k.hostType==='keyResult' && linkOf(k,kpis).parent==null) out.push(k); }
+    return out;
+  }
+  // score a bare value against a bare target (number, or {lo,hi} for range) given direction — 0..100 or null.
+  // used for imported sub-product specs, where the value comes from the child doc and the target may be an override.
+  function rawScore(value, target, dir){
+    if(value==null || target==null) return null;
+    var raw = (dir==='range' && target && typeof target==='object')
+      ? progressRange(value, target.lo, target.hi)
+      : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -798,6 +814,8 @@
     compositionParents: compositionParents,
     descendantModels: descendantModels,
     wouldComposeCycle: wouldComposeCycle,
+    importableModelKpis: importableModelKpis,
+    rawScore: rawScore,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,

@@ -220,6 +220,7 @@
   <div id="modelHeadWrap"></div>
   <div id="subKR" class="sub"></div>
   <div id="subSG" class="sub"></div>
+  <div id="subCMP" class="sub"></div>
   <div id="initPanel" class="sub"></div>
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
@@ -270,7 +271,8 @@
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
+    product: 'PRD', model: 'MDL'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -441,6 +443,38 @@
     while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
       var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
     return false;
+  }
+  // ── product composition (model-to-model): edges are { id, parent, child }, meaning parent-model CONTAINS child-model.
+  // A child model plugged into a parent model is a "sub-product". This edge list is the canonical graph (planning reads
+  // it directly; the designer hosts the imported specs on a refModel-marked component). All four helpers are pure over
+  // the edge array — no portfolio, no DOM.
+  function compositionChildren(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].parent===modelId) out.push(composition[i].child); return out; }
+  function compositionParents(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].child===modelId) out.push(composition[i].parent); return out; }
+  function descendantModels(modelId, composition){ composition=composition||[]; var out={}, stack=[modelId];
+    while(stack.length){ var kids=compositionChildren(stack.pop(), composition);
+      for(var i=0;i<kids.length;i++) if(!out[kids[i]]){ out[kids[i]]=1; stack.push(kids[i]); } }
+    var arr=[]; for(var k in out) arr.push(k); return arr; }
+  // true if making parentModel contain childModel would form a composition cycle — i.e. same model, or childModel
+  // already (transitively) contains parentModel. (A duplicate direct edge is the caller's check, not a cycle.)
+  function wouldComposeCycle(parentModel, childModel, composition){
+    if(parentModel===childModel) return true;
+    return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
+  }
+  // model N's importable specs: the keyResult-hosted DEFINER kpis scoped to that model (its headline specifications).
+  // A parent system references these when N is plugged in as a sub-product; component-level internals are excluded.
+  function importableModelKpis(modelId, kpis){
+    var out=[]; kpis=kpis||[]; for(var i=0;i<kpis.length;i++){ var k=kpis[i];
+      if(k.objectiveId===modelId && k.hostType==='keyResult' && linkOf(k,kpis).parent==null) out.push(k); }
+    return out;
+  }
+  // score a bare value against a bare target (number, or {lo,hi} for range) given direction — 0..100 or null.
+  // used for imported sub-product specs, where the value comes from the child doc and the target may be an override.
+  function rawScore(value, target, dir){
+    if(value==null || target==null) return null;
+    var raw = (dir==='range' && target && typeof target==='object')
+      ? progressRange(value, target.lo, target.hi)
+      : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
   }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
@@ -1007,6 +1041,12 @@
     linkOf: linkOf,
     rootOf: rootOf,
     wouldCreateCycle: wouldCreateCycle,
+    compositionChildren: compositionChildren,
+    compositionParents: compositionParents,
+    descendantModels: descendantModels,
+    wouldComposeCycle: wouldComposeCycle,
+    importableModelKpis: importableModelKpis,
+    rawScore: rawScore,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
@@ -1091,6 +1131,9 @@ let selectedProduct = null;
 let portfolio = null;                 // read-only: division resolution + products/models registry
 let divisionId = null;
 let specEtag = "0", specVersion = 0, portfolioVersion = 0, portfolioEtag = "0", pollTimer = null;
+let refDocs = {};                     // cross-doc cache: "SPEC-<div>" -> {doc, etag, version, failed?} for sub-product resolution
+let _refBusy = false;                 // guards the lazy referenced-doc fetch so renderAll can't stampede it
+let subAddOpen = false, subPickProduct = null, subPickModel = null;   // "add sub-product" picker state
 function specId(){ return "SPEC-"+divisionId; }
 function resolveDivision(){ const u=new URL(location.href); return u.searchParams.get("division") || localStorage.getItem("rd_division") || null; }
 
@@ -1180,6 +1223,7 @@ async function switchDivision(newDiv){
   divisionId = newDiv;
   localStorage.setItem("rd_division", divisionId);
   selectedProduct=null; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; armedDel=null;
+  refDocs={}; subAddOpen=false; subPickProduct=null; subPickModel=null;
   stopPoll();                                                    // avoid the poll firing mid-switch with a stale version
   if(!tok()){ fillModelSelect(); renderProdList(); renderAll(); return; }   // offline has no portfolio anyway
   try{
@@ -1198,6 +1242,10 @@ async function pollOnce(){
     if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; portfolioEtag=p.etag; renderAll(); } }
     const sv=await apiVersion(specId());
     if(sv.version!==specVersion){ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Updated from another editor.","info"); } }
+    let refChanged=false;
+    for(const id in refDocs){ try{ const cur=refDocs[id]; const v=await apiVersion(id);
+      if(cur.failed || v.version!==cur.version){ const s=await apiGet(id); if(s){ const d=Object.assign(blankDoc(), s.doc); normalizeKpis(d.kpis); refDocs[id]={doc:d, etag:s.etag, version:s.version}; refChanged=true; } } }catch(e){} }
+    if(refChanged) renderAll();
   }catch(e){}
 }
 function exportDoc(){
@@ -1231,6 +1279,51 @@ function hostLabel(k){
   if(k.hostType==="keyResult")  return "spec: "+esc(specName(k.hostId));
   if(k.hostType==="component")  return "component: "+esc(componentName(k.hostId));
   return esc(k.hostId);
+}
+
+/* ---------------- cross-doc resolution (sub-products) ----------------
+   A sub-product is a child MODEL (a specific version of another product) plugged into this model. Its live
+   values live in that product's SPEC bin, which may be in another division — so we fetch + cache those docs
+   and resolve the referenced KPIs in their own doc context. The portfolio.composition edge list is the graph. */
+function refDivOfModel(modelId){ const p=productById(productIdOf(modelId)); return p?p.divisionId:null; }
+function refDocOfModel(modelId){ const div=refDivOfModel(modelId); if(!div) return null;
+  if(div===divisionId) return {doc, etag:specEtag, version:specVersion}; return refDocs["SPEC-"+div]||null; }
+function refAllKpis(rdoc){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? (rdoc.kpis||[]).concat(portfolio.kpis) : (rdoc.kpis||[]); }
+function refEm(rdoc){ return RD.withPortfolio(portfolio, {["REF"]:rdoc}); }
+async function fetchRefDoc(div){
+  if(!div || !tok()) return null;
+  const id="SPEC-"+div; if(id===specId()) return {doc, etag:specEtag, version:specVersion};
+  try{ const s=await apiGet(id); const d=s?Object.assign(blankDoc(), s.doc):blankDoc(); normalizeKpis(d.kpis);
+    refDocs[id]={doc:d, etag:s?s.etag:"0", version:s?s.version:0}; return refDocs[id]; }
+  catch(e){ refDocs[id]={doc:blankDoc(), etag:"0", version:0, failed:true}; return refDocs[id]; }  // stop the render loop; poll retries
+}
+function neededRefDivs(){
+  if(!selectedModel || !portfolio) return [];
+  const s=new Set();
+  RD.compositionChildren(selectedModel, portfolio.composition||[]).forEach(cm=>{
+    const d=refDivOfModel(cm); if(d && d!==divisionId && !refDocs["SPEC-"+d]) s.add(d); });
+  return [...s];
+}
+async function ensureRefDocs(){        // fire-and-forget from renderAll; only re-renders when something new arrives
+  if(_refBusy) return; const divs=neededRefDivs(); if(!divs.length) return;
+  _refBusy=true; let got=false;
+  try{ for(const d of divs){ const r=await fetchRefDoc(d); if(r) got=true; } }
+  finally{ _refBusy=false; if(got) renderAll(); }
+}
+// resolve one imported member row: snapshot identity is the fallback; target/value come live from the child doc.
+function resolveRef(member){
+  let name=member.name, dir=member.direction, unit=member.unit, stackTgt=null, stackVal=null, live=false, pending=false;
+  const rd=refDocOfModel(member.refModel);
+  if(rd && rd.doc){
+    const rk=(rd.doc.kpis||[]).find(k=>k.id===member.refKpi);
+    if(rk){ const RAK=refAllKpis(rd.doc), REM=refEm(rd.doc);
+      name=RD.kpiName(rk,RAK)||name; dir=RD.kpiDirection(rk,RAK)||dir; unit=RD.kpiUnit(rk,RAK)||unit;
+      stackTgt=RD.effTarget(rk,RAK); stackVal=RD.effValue(rk,RAK,REM); live=true; }
+    else live=true;   // doc loaded but the referenced spec is gone
+  } else if(refDivOfModel(member.refModel) && refDivOfModel(member.refModel)!==divisionId){ pending=true; }
+  const tgt=(member.target!=null)?member.target:stackTgt;
+  const score=RD.rawScore(stackVal, tgt, dir);
+  return {name, dir, unit, stackTgt, stackVal, tgt, score, live, pending, overridden:member.target!=null};
 }
 
 /* ---------------- model select ---------------- */
@@ -1389,6 +1482,69 @@ function postRead(host, kpiId){
   renderAll(); setMsg("Reading posted.","ok");
 }
 
+/* ---------------- sub-products (product-as-component, model-to-model) ---------------- */
+function subProductHosts(modelId){ return doc.stageGates.filter(g=>g.objectiveId===modelId && g.refModel); }
+// products with at least one model addable here without a cycle / duplication
+function eligibleSubProducts(){
+  if(!selectedModel || !portfolio) return [];
+  const comp=portfolio.composition||[], already=new Set(RD.compositionChildren(selectedModel, comp));
+  return (portfolio.products||[]).filter(p=>(portfolio.models||[]).some(m=>
+    m.productId===p.id && m.id!==selectedModel && !already.has(m.id) && !RD.wouldComposeCycle(selectedModel, m.id, comp)));
+}
+function eligibleModelsOf(prodId){
+  if(!selectedModel || !portfolio) return [];
+  const comp=portfolio.composition||[], already=new Set(RD.compositionChildren(selectedModel, comp));
+  return (portfolio.models||[]).filter(m=> m.productId===prodId && m.id!==selectedModel
+    && !already.has(m.id) && !RD.wouldComposeCycle(selectedModel, m.id, comp));
+}
+function openSubAdd(){
+  const prods=eligibleSubProducts();
+  subAddOpen=true; subPickProduct=prods.length?prods[0].id:null; subPickModel=null;
+  addingFor=null; editingSub=null; armedDel=null;
+  if(subPickProduct){ const d=(productById(subPickProduct)||{}).divisionId; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); }
+  renderAll();
+}
+function closeSubAdd(){ subAddOpen=false; subPickProduct=null; subPickModel=null; renderAll(); }
+function addSubProduct(childModel){
+  if(!childModel || !selectedModel) return;
+  const comp=(portfolio.composition=portfolio.composition||[]);
+  if(RD.wouldComposeCycle(selectedModel, childModel, comp)){ setMsg("That would create a composition cycle.","err"); return; }
+  if(comp.some(e=>e.parent===selectedModel && e.child===childModel)){ setMsg("That model is already a sub-product here.","err"); return; }
+  const rd=refDocOfModel(childModel);
+  if(!rd || !rd.doc){ setMsg("Still loading that product's specs — try again in a moment.","err"); return; }
+  const RAK=refAllKpis(rd.doc), specs=RD.importableModelKpis(childModel, RAK);
+  const hostId=RD.allocId("stageGate", selectedModel, doc.stageGates.map(x=>x.id));
+  const cpid=productIdOf(childModel), cname=(modelById(childModel)||{}).name||childModel;
+  doc.stageGates.push({ id:hostId, objectiveId:selectedModel, refModel:childModel, refProduct:cpid, name:(productName(cpid)+" · "+cname) });
+  specs.forEach(src=>{
+    const kid=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id));
+    doc.kpis.push({ id:kid, objectiveId:selectedModel, hostType:"component", hostId:hostId,
+      refModel:childModel, refKpi:src.id, linkType:"specification", linkParent:null,
+      name:RD.kpiName(src,RAK), direction:RD.kpiDirection(src,RAK), unit:RD.kpiUnit(src,RAK), target:null });
+  });
+  const edge={ id:"CMP-"+hostId, parent:selectedModel, child:childModel };
+  comp.push(edge);
+  subAddOpen=false; subPickProduct=null; subPickModel=null;
+  renderAll(); persist();
+  persistPortfolio(()=>{ portfolio.composition=portfolio.composition||[]; if(!portfolio.composition.some(e=>e.id===edge.id)) portfolio.composition.push(edge); },
+    "Sub-product added"+(specs.length?" ("+specs.length+" spec"+(specs.length===1?"":"s")+" imported)":""));
+}
+function removeSubProduct(hostId){
+  if(armedDel!==hostId){ armedDel=hostId; renderAll(); return; }
+  armedDel=null;
+  const host=doc.stageGates.find(g=>g.id===hostId); if(!host){ renderAll(); return; }
+  const child=host.refModel;
+  doc.kpis=doc.kpis.filter(k=>!(k.hostType==="component" && k.hostId===hostId));
+  doc.stageGates=doc.stageGates.filter(g=>g.id!==hostId);
+  const gone=e=>e.id==="CMP-"+hostId || (e.parent===selectedModel && e.child===child);
+  const before=(portfolio.composition||[]).length;
+  portfolio.composition=(portfolio.composition||[]).filter(e=>!gone(e));
+  renderAll(); persist();
+  if((portfolio.composition||[]).length!==before){
+    persistPortfolio(()=>{ portfolio.composition=(portfolio.composition||[]).filter(e=>!gone(e)); }, "Sub-product removed");
+  }
+}
+
 /* ---------------- render root ---------------- */
 function renderAll(){
   if(!doc){ document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); renderModal(); return; }
@@ -1399,19 +1555,21 @@ function renderAll(){
   renderProductPanel();
   if(!divProducts().length){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">'+(tok()?'No products in this division yet — add products and models in the <b>Planning</b> app, then reload.':'Add a broker token in ⚙ to load products and models from the portfolio.')+'</p>';
-    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML="";
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else if(!models.length){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">No models in this product yet — add them in the <b>Planning</b> app.</p>';
-    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML="";
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else if(!selectedModel){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Select a model.</p>';
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else {
     const m=models.find(x=>x.id===selectedModel);
     document.getElementById("modelHeadWrap").innerHTML = modelHeader(m)+modelMetricStrip(m)+signalBars();
     const eb=document.querySelector("[data-editmodel]"); if(eb) eb.onclick=()=>openModelEditor(modelById(eb.dataset.editmodel));
-    renderSpecs(); renderComponents();
+    renderSpecs(); renderComponents(); renderSubProducts();
   }
   renderModal();
+  ensureRefDocs();
   persist();
 }
 function clearSubs(){ ["KR","SG"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
@@ -1430,9 +1588,9 @@ function modelMetricStrip(m){
   const sc=RD.objectiveScore(selectedModel, em), b=RD.band(sc);
   const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
   const specOn=specs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
-  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel && !r.refModel);
   const compOn=comps.filter(g=>RD.band(RD.hostScore("component", g.id, em))==="on-track").length;
-  const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
+  const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel && !k.refModel);
   const measured=modelKpis.filter(k=>RD.effValue(k, allKpis(), em)!=null).length;
   const pid=productIdOf(selectedModel);
   const prodKpis=pid?allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
@@ -1478,6 +1636,14 @@ function openModal(title, body){
 function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); document.getElementById("modalBody").innerHTML=""; }
 
 function renderModal(){
+  // add-sub-product picker
+  if(subAddOpen){
+    document.getElementById("modalTitle").textContent="Add sub-product";
+    const mb=document.getElementById("modalBody"); mb.innerHTML=subAddBody();
+    document.getElementById("modalOverlay").classList.add("open");
+    wireSubAdd(mb);
+    return;
+  }
   // 0) product-model editor
   if(modelEditing!=null){
     document.getElementById("modalTitle").textContent = "Model spec details";
@@ -2004,7 +2170,7 @@ function renderSpecs(){
 /* ---------------- component list (was stage-gates; no scheduling) ---------------- */
 function renderComponents(){
   const host=document.getElementById("subSG");
-  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel && !r.refModel);
   let inner="";
   if(!comps.length) inner+=`<p class="hint">none yet — components are the parts that must meet specifications to deliver the product specs</p>`;
   comps.forEach((g,idx)=>{
@@ -2026,6 +2192,90 @@ function renderComponents(){
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
+}
+
+/* ---------------- sub-products panel (model-to-model composition) ---------------- */
+function renderSubProducts(){
+  const host=document.getElementById("subCMP");
+  const hosts=subProductHosts(selectedModel);
+  let inner="";
+  if(!hosts.length) inner+=`<p class="hint">none yet — plug a specific model of another product in as a sub-product; its specs import as <b>specification</b> links (visible here, but they don't roll into this model's conformance)</p>`;
+  hosts.forEach(hst=>{
+    const child=hst.refModel, rd=refDocOfModel(child);
+    const specs=doc.kpis.filter(k=>k.hostType==="component" && k.hostId===hst.id);
+    let note="";
+    if(!rd && refDivOfModel(child) && refDivOfModel(child)!==divisionId) note=`<span class="pill">loading…</span>`;
+    else if(rd && rd.failed) note=`<span class="statepill pending" title="couldn't reach that product's SPEC bin">unreachable</span>`;
+    let rows=`<table class="kpitable"><thead><tr><th>Imported spec</th><th>dir</th><th>stack target</th><th>stack value</th><th>your target</th><th>score</th></tr></thead><tbody>`;
+    if(!specs.length) rows+=`<tr><td colspan="6" class="hint">this model has no importable specifications</td></tr>`;
+    specs.forEach(m=>{
+      const r=resolveRef(m);
+      const st=fmtTarget(r.stackTgt, r.unit), sv=r.stackVal==null?'<span class="pill">no read</span>':esc(String(r.stackVal));
+      const ovrVal=(m.target!=null && typeof m.target!=='object')?m.target:'';
+      rows+=`<tr><td>${esc(r.name||'')||'(unnamed)'}${r.pending?' <span class="pill">…</span>':''}</td><td class="mono">${r.dir||''}</td>`+
+        `<td class="mono">${st}</td><td class="kpi-now">${sv}</td>`+
+        `<td><div class="read-row"><input class="tiny" type="number" data-ovr="${m.id}" value="${ovrVal}" placeholder="${r.stackTgt!=null?esc(String(r.stackTgt)):'inherit'}"/>`+
+        `<button class="ghost mini" data-setovr="${m.id}">set</button></div>${r.overridden?' <span class="pill">override</span>':''}</td>`+
+        `<td style="color:${col(RD.band(r.score))};font-weight:600">${r.score==null?'—':Math.round(r.score)}</td></tr>`;
+    });
+    rows+=`</tbody></table>`;
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-title">${esc(hst.name||child)}</span>
+      <span class="pill mono">${esc(child)}</span> ${note}
+      <span class="icard-actions"><button class="ghost mini danger ${armedDel===hst.id?'armed':''}" data-delsub="${hst.id}">${armedDel===hst.id?'confirm':'remove'}</button></span>
+      </div><div class="icard-meta">${rows}</div></div>`;
+  });
+  const acts=`<button class="ghost mini" data-addsub="1">+ add sub-product</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("CMP","Sub-products",hosts.length,acts)}<div class="item-list${listOpen("CMP")}">${inner}</div></div>`;
+  wireExec(host);
+  host.querySelectorAll("[data-addsub]").forEach(b=>b.onclick=()=>openSubAdd());
+  host.querySelectorAll("[data-delsub]").forEach(b=>b.onclick=()=>removeSubProduct(b.dataset.delsub));
+  host.querySelectorAll("[data-setovr]").forEach(b=>b.onclick=()=>setOverride(host, b.dataset.setovr));
+}
+function setOverride(scope, kid){
+  const m=doc.kpis.find(k=>k.id===kid); if(!m) return;
+  const inp=scope.querySelector(`[data-ovr="${kid}"]`); if(!inp) return;
+  m.target = inp.value==="" ? null : Number(inp.value);
+  renderAll(); persist(); setMsg(m.target==null?"Override cleared — inheriting the stack target.":"Override set.","ok");
+}
+/* the add-sub-product picker (rendered as a modal via renderModal) */
+function subAddBody(){
+  const prods=eligibleSubProducts();
+  if(!prods.length) return `<p class="hint">No other product has a model that can be added here — every candidate would either duplicate an existing sub-product or form a composition cycle.</p>
+    <div class="row-actions"><button class="ghost mini" type="button" data-subcancel="1">Close</button></div>`;
+  if(!subPickProduct || !prods.find(p=>p.id===subPickProduct)) subPickProduct=prods[0].id;
+  const models=eligibleModelsOf(subPickProduct);
+  if(models.length && (!subPickModel || !models.find(m=>m.id===subPickModel))) subPickModel=models[0].id;
+  if(!models.length) subPickModel=null;
+  const byDiv={}; prods.forEach(p=>{ (byDiv[p.divisionId]=byDiv[p.divisionId]||[]).push(p); });
+  const dName=id=>{ const d=(portfolio&&portfolio.divisions||[]).find(x=>x.id===id); return d?(d.name||d.id):id; };
+  let prodOpts=""; Object.keys(byDiv).forEach(dv=>{ prodOpts+=`<optgroup label="${esc(dName(dv))}${dv===divisionId?' · this division':''}">`+
+    byDiv[dv].map(p=>`<option value="${p.id}"${p.id===subPickProduct?' selected':''}>${esc(p.name||p.id)}</option>`).join("")+`</optgroup>`; });
+  const modelOpts= models.length ? models.map(m=>`<option value="${m.id}"${m.id===subPickModel?' selected':''}>${esc(m.name||m.id)}</option>`).join("")
+                                 : `<option value="">no addable models</option>`;
+  let preview="";
+  if(subPickModel){
+    const rd=refDocOfModel(subPickModel);
+    if(!rd || !rd.doc) preview=`<span class="pill">loading specs…</span>`;
+    else if(rd.failed) preview=`<span class="statepill pending">couldn't reach that product's SPEC bin — is it configured on the broker?</span>`;
+    else { const RAK=refAllKpis(rd.doc), specs=RD.importableModelKpis(subPickModel, RAK);
+      preview= specs.length ? `<b>${specs.length}</b> specification${specs.length===1?'':'s'} will import as <b>specification</b> links: `+specs.slice(0,6).map(s=>esc(RD.kpiName(s,RAK)||s.id)).join(", ")+(specs.length>6?", …":"")
+                            : `this model has no importable specifications — it will be added as an empty sub-product`; }
+  }
+  return `<div class="modal-field"><span class="lbl">Product</span><select data-subprod>${prodOpts}</select><div class="hint" style="margin:4px 0 0">Any product in the portfolio; models that would duplicate or form a cycle are hidden.</div></div>
+    <div class="modal-field"><span class="lbl">Model (version)</span><select data-submodel>${modelOpts}</select></div>
+    <div class="modal-field"><span class="lbl">Imports</span><div class="read-row" style="padding:2px 0">${preview||'<span class="hint">select a model</span>'}</div></div>
+    <div class="row-actions">
+      <button class="act mini" type="button" data-subadd="1"${subPickModel?'':' disabled'}>Add sub-product</button>
+      <button class="ghost mini" type="button" data-subcancel="1">Cancel</button></div>`;
+}
+function wireSubAdd(mb){
+  const ps=mb.querySelector("[data-subprod]"); if(ps) ps.onchange=()=>{ subPickProduct=ps.value; subPickModel=null;
+    const d=(productById(subPickProduct)||{}).divisionId; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); else renderAll(); };
+  const msel=mb.querySelector("[data-submodel]"); if(msel) msel.onchange=()=>{ subPickModel=msel.value||null;
+    const d=subPickModel?refDivOfModel(subPickModel):null; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); else renderAll(); };
+  const add=mb.querySelector("[data-subadd]"); if(add) add.onclick=()=>{ if(subPickModel) addSubProduct(subPickModel); };
+  const cx=mb.querySelector("[data-subcancel]"); if(cx) cx.onclick=()=>closeSubAdd();
 }
 
 /* ---------------- shared wiring ---------------- */
