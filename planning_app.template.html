@@ -298,6 +298,7 @@ const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
 /* ---------------- state ---------------- */
 let portfolio = blankPortfolio();
 let execDocs = {};               // EXEC-<div> docId -> doc
+let specDocs = {};               // SPEC-<div> docId -> doc (read-only, from Product Designer)
 let etags = {};                  // docId -> etag (for If-Match)
 let knownVersions = {};          // docId -> version (ignore own echo)
 let mode = "overall";            // overall | quarterly
@@ -319,7 +320,7 @@ function setMsg(text, kind){ const el=document.getElementById("msg"); el.textCon
 function clearMsg(){ document.getElementById("msg").classList.remove("show"); }
 
 /* ---------------- load / save ---------------- */
-function watchedDocs(){ return ["portfolio","gantt-view", ...portfolio.divisions.map(d=>execIdFor(d.id))]; }
+function watchedDocs(){ return ["portfolio","gantt-view", ...portfolio.divisions.map(d=>execIdFor(d.id)), ...portfolio.divisions.map(d=>"SPEC-"+d.id)]; }
 
 async function loadAll(){
   if(!tok()){ setMsg("No broker token yet — add one in Settings to load live data. Showing local scratch.", "info"); return; }
@@ -328,13 +329,16 @@ async function loadAll(){
     if(p){ portfolio = Object.assign(blankPortfolio(), p.doc); etags["portfolio"]=p.etag; knownVersions["portfolio"]=p.version; }
     const gv = await apiGet("gantt-view");
     if(gv){ etags["gantt-view"]=gv.etag; knownVersions["gantt-view"]=gv.version; window._ganttView=gv.doc; }
-    execDocs = {};
+    execDocs = {}; specDocs = {};
     for(const d of portfolio.divisions){
       const id = execIdFor(d.id);
       const ex = await apiGet(id);
       if(ex){ execDocs[id]=ex.doc; etags[id]=ex.etag; knownVersions[id]=ex.version; }
+      const sid = "SPEC-"+d.id;
+      const sp = await apiGet(sid);
+      if(sp){ specDocs[sid]=sp.doc; etags[sid]=sp.etag; knownVersions[sid]=sp.version; }
     }
-    setMsg("Loaded portfolio + "+Object.keys(execDocs).length+" division docs.", "ok");
+    setMsg("Loaded portfolio + "+Object.keys(execDocs).length+" exec + "+Object.keys(specDocs).length+" spec docs.", "ok");
     startPoll();
   }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check the token in Settings.", "err"); }
   renderAll();
@@ -393,6 +397,7 @@ async function pollOnce(){
       if(v.version !== knownVersions[id]){ const fresh = await apiGet(id);
         if(fresh){ if(id==="portfolio") portfolio=Object.assign(blankPortfolio(),fresh.doc);
           else if(id==="gantt-view") window._ganttView=fresh.doc;
+          else if(id.indexOf("SPEC-")===0) specDocs[id]=fresh.doc;
           else execDocs[id]=fresh.doc;
           etags[id]=fresh.etag; knownVersions[id]=fresh.version; renderAll();
           setMsg("Updated from another editor.", "info"); } }
@@ -736,6 +741,20 @@ function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=node
 function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
 function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
 function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}</div>`; }
+// read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
+function specMap(){ return specDocs; }
+function divOfModel(modelId){ const m=byId("model",modelId); if(!m) return null; const p=byId("product",m.productId); return p?p.divisionId:null; }
+function specMetaOf(modelId){ const sd=specDocs["SPEC-"+divOfModel(modelId)]; return (sd&&sd.modelSpec&&sd.modelSpec[modelId])||{}; }
+function modelConformance(modelId){ return RD.objectiveScore(modelId, specMap()); }
+function productConformance(productId){ const ms=portfolio.models.filter(m=>m.productId===productId);
+  const vals=ms.map(m=>modelConformance(m.id)).filter(v=>v!=null); return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null; }
+function modelLeaf(m){
+  const sc=modelConformance(m.id), b=RD.band(sc), meta=specMetaOf(m.id);
+  const dot=`<span class="tdot" style="background:${bandColor(b)}" title="spec conformance · ${b}"></span>`;
+  const bits=[]; if(meta.maturity) bits.push(esc(meta.maturity)); if(sc!=null) bits.push(Math.round(sc)+" conf");
+  const sub=bits.length?`<span class="tsub">${bits.join(" · ")}</span>`:"";
+  return `<div class="tleaf">${dot}${rowName("model",m)}${sub}</div>`;
+}
 function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${esc(tag)}</span><span class="tstatic">${esc(label)}</span></div>`; }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
@@ -758,7 +777,7 @@ function treeChildrenHtml(entity,id){
     P.milestones.filter(m=>m.initiativeId===id).forEach(m=> h+=leafRow("milestone",m));
     P.objectives.filter(o=>o.initiativeId===id).forEach(o=> h+=nodeHtml("objective",o));
   } else if(entity==="product"){
-    P.models.filter(m=>m.productId===id).forEach(m=> h+=leafRow("model",m));
+    P.models.filter(m=>m.productId===id).forEach(m=> h+=modelLeaf(m));
   } else if(entity==="objective"){
     h+=objectiveExecHtml(id);
   }
@@ -1050,17 +1069,20 @@ function renderSlices(){
   const em = pfMap();
   if(!portfolio.products.length){ root.innerHTML='<p class="hint">No products defined yet. Add products and models in the Portfolio tab to see sliced scores.</p>'; return; }
   const qs = mode==="quarterly" ? quartersAll() : [null];
-  let html = `<table><thead><tr><th>Product / Model</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
+  let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
   for(const p of portfolio.products){
     html += `<tr><td><b>${esc(p.name)}</b> <span class="pill">${p.id}</span></td>`+
+      scoreCell(productConformance(p.id))+
       qs.map(q=>scoreCell(RD.sliceScore("product",p.id,portfolio,em,q))).join("")+`</tr>`;
     portfolio.models.filter(m=>m.productId===p.id).forEach(m=>{
-      html += `<tr><td style="padding-left:26px">↳ ${esc(m.name)} <span class="pill">${m.id}</span></td>`+
+      const meta=specMetaOf(m.id), mat=meta.maturity?` <span class="pill">${esc(meta.maturity)}</span>`:"";
+      html += `<tr><td style="padding-left:26px">↳ ${esc(m.name)} <span class="pill">${m.id}</span>${mat}</td>`+
+        scoreCell(modelConformance(m.id))+
         qs.map(q=>scoreCell(RD.sliceScore("model",m.id,portfolio,em,q))).join("")+`</tr>`;
     });
   }
   html += `</tbody></table>
-    <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
+    <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models). Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
   root.innerHTML = html;
 }
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
