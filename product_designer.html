@@ -67,6 +67,13 @@
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
+  .imp-list{padding:2px 4px 6px}
+  .imp-src{font-size:12px;font-weight:600;color:var(--accent2);margin:8px 0 3px;display:flex;align-items:center;gap:6px}
+  .imp-div{font-family:var(--mono);font-size:9px;color:var(--muted);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:0 5px;font-weight:400}
+  .imp-row{display:grid;grid-template-columns:1.4fr 1.4fr auto 26px;gap:8px;align-items:center;padding:3px 6px;border-top:1px solid #1b2740;font-size:12px}
+  .imp-where{color:var(--fg)}.imp-mdl{color:var(--muted)}
+  .imp-kpi{color:var(--fg)}.imp-rel{font-family:var(--mono);font-size:9px;color:var(--muted);border:1px solid #2a3a5a;border-radius:5px;padding:0 4px;margin-left:3px}
+  .imp-val{font-family:var(--mono);font-size:11px;text-align:right}.imp-score{font-family:var(--mono);font-weight:600;text-align:right}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
   .gate-sched .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -425,6 +432,15 @@
       if(lk.parent==null) return cur; var p=kpiById(lk.parent,kpis); if(!p) return cur; cur=p; }
     return kpi; }
   function childrenOf(kpiId, kpis){ var out=[]; for(var i=0;i<kpis.length;i++) if(linkOf(kpis[i],kpis).parent===kpiId) out.push(kpis[i]); return out; }
+  // wouldCreateCycle: true if pointing childId's parent at parentId would form a cycle — i.e. childId === parentId,
+  // or childId already sits on parentId's ancestor chain. (A pre-existing upstream cycle is not attributed to this edit.)
+  function wouldCreateCycle(childId, parentId, kpis){
+    if(childId===parentId) return true;
+    var seen={}, cur=kpiById(parentId,kpis);
+    while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
+      var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
+    return false;
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -989,6 +1005,7 @@
     effValue: effValue,
     linkOf: linkOf,
     rootOf: rootOf,
+    wouldCreateCycle: wouldCreateCycle,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
@@ -1774,6 +1791,7 @@ function makeLinkMember(hostType, hostId, parentId, linkType){
   const AK=allKpis(); const parent=AK.find(k=>k.id===parentId); if(!parent) return;
   const objScope = hostType==="product" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, AK.map(x=>x.id));
+  if(RD.wouldCreateCycle(id, parentId, AK)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
   const thisProd = objScope ? productIdOf(objScope) : (hostType==="product"?hostId:null);
   const type=linkType || linkDefaultFor(parent, hostType, thisProd);
   doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
@@ -1840,6 +1858,40 @@ function renderKpiOverrideEditor(rec){
 }
 
 /* ---------------- product KPI panel (was initiative metrics) ---------------- */
+// outbound cross-product dependencies: this product's specs/components that import another product's registry KPI
+function crossProductImports(prodId){
+  const AK=allKpis(), out=[];
+  doc.kpis.forEach(k=>{
+    if(k.objectiveId==null || productIdOf(k.objectiveId)!==prodId) return;   // only this product's metrics
+    if(RD.linkOf(k, AK).parent==null) return;                                // only linked members
+    if(!importSource(k, AK)) return;                                         // only cross-product
+    out.push({ k, def:RD.definerOf(k, AK) });
+  });
+  return out;
+}
+function importsPanelHtml(pid){
+  const imps=crossProductImports(pid);
+  if(!imps.length) return "";
+  const AK=allKpis(), EM=emForCore(), bySrc={};
+  imps.forEach(im=>{ (bySrc[im.def.hostId]=bySrc[im.def.hostId]||[]).push(im); });
+  let body="";
+  Object.keys(bySrc).forEach(sp=>{
+    const dt=divOfProduct(sp);
+    body+=`<div class="imp-src">${esc(productName(sp))}${dt?`<span class="imp-div">${esc(dt)}</span>`:''}</div>`;
+    bySrc[sp].forEach(im=>{
+      const k=im.k, lk=RD.linkOf(k, AK), unit=RD.kpiUnit(k, AK);
+      const where=(k.hostType==="component"?componentName(k.hostId):specName(k.hostId));
+      const mdl=modelById(k.objectiveId), mdlName=mdl?(mdl.name||mdl.id):k.objectiveId;
+      const nm=RD.kpiName(k, AK)||im.def.id;
+      const tgt=fmtTarget(RD.effTarget(k, AK), unit), cv=RD.effValue(k, AK, EM), s=RD.kpiScoreResolved(k, AK, EM);
+      body+=`<div class="imp-row"><span class="imp-where">${esc(where)}<span class="imp-mdl"> · ${esc(mdlName)}</span></span>`+
+        `<span class="imp-kpi">${esc(nm)} <span class="imp-rel">${lk.type}</span></span>`+
+        `<span class="imp-val">${cv==null?'<span class="muted">no read</span>':esc(String(cv))}<span class="muted"> / ${esc(String(tgt))}</span></span>`+
+        `<span class="imp-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span></div>`;
+    });
+  });
+  return `<div class="panel">${panelHead("IMPORTS","Cross-product dependencies",imps.length,'')}<div class="item-list${listOpen("IMPORTS")}"><div class="imp-list">${body}</div></div></div>`;
+}
 function renderProductPanel(){
   const host=document.getElementById("initPanel");
   const pid = selectedModel?productIdOf(selectedModel):null;
@@ -1855,7 +1907,7 @@ function renderProductPanel(){
       <span class="icard-actions"><button class="ghost mini" data-addkpi="product:${pid}">+ KPI</button></span>
       </div><div class="icard-meta">${kpiTable("product", pid, null)}</div></div>`;
   const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared across this product · link from a specification or component</span>`;
-  host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`;
+  host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`+importsPanelHtml(pid);
   wireExec(host);
 }
 

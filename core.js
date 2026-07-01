@@ -203,6 +203,15 @@
       if(lk.parent==null) return cur; var p=kpiById(lk.parent,kpis); if(!p) return cur; cur=p; }
     return kpi; }
   function childrenOf(kpiId, kpis){ var out=[]; for(var i=0;i<kpis.length;i++) if(linkOf(kpis[i],kpis).parent===kpiId) out.push(kpis[i]); return out; }
+  // wouldCreateCycle: true if pointing childId's parent at parentId would form a cycle — i.e. childId === parentId,
+  // or childId already sits on parentId's ancestor chain. (A pre-existing upstream cycle is not attributed to this edit.)
+  function wouldCreateCycle(childId, parentId, kpis){
+    if(childId===parentId) return true;
+    var seen={}, cur=kpiById(parentId,kpis);
+    while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
+      var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
+    return false;
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -767,6 +776,7 @@
     effValue: effValue,
     linkOf: linkOf,
     rootOf: rootOf,
+    wouldCreateCycle: wouldCreateCycle,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,

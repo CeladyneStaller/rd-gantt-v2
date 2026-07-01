@@ -775,6 +775,17 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(C.hostScore('product','NONE',em)==null, 'hostScore with no KPIs on host = null');
 })();
 
+/* ---- wouldCreateCycle: reject linking that would loop the parent chain ---- */
+(function(){
+  // chain: C -> B -> A(root)
+  var kpis=[ {id:'A',linkParent:null}, {id:'B',linkParent:'A',linkType:'contribute'}, {id:'C',linkParent:'B',linkType:'contribute'} ];
+  ok(C.wouldCreateCycle('A','C',kpis)===true, 'pointing root A at its descendant C = cycle');
+  ok(C.wouldCreateCycle('B','C',kpis)===true, 'pointing B at its descendant C = cycle');
+  ok(C.wouldCreateCycle('X','A',kpis)===false, 'a fresh node X under root A = no cycle');
+  ok(C.wouldCreateCycle('A','A',kpis)===true, 'self-link = cycle');
+  ok(C.wouldCreateCycle('C','A',kpis)===false, 'C under A (already its ancestor, no new loop) = no cycle');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');
