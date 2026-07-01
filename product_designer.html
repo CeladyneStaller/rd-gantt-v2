@@ -1334,16 +1334,20 @@ async function ensureRefDocs(){        // fire-and-forget from renderAll; only r
   try{ for(const d of divs){ const r=await fetchRefDoc(d); if(r) got=true; } }
   finally{ _refBusy=false; if(got) renderAll(); }
 }
-// resolve one imported member row: snapshot identity is the fallback; target/value come live from the child doc.
+// resolve one imported spec row from the child doc: raw KPI value if the spec is KPI-tracked, else its conformance score.
 function resolveRef(member){
-  let name=member.name, dir=member.direction, unit=member.unit, stackTgt=null, stackVal=null, live=false, pending=false;
+  let name=member.name, dir="up", unit=member.unit||"", stackTgt=null, stackVal=null, live=false, pending=false;
   const rd=refDocOfModel(member.refModel);
   if(rd && rd.doc){
-    const rk=(rd.doc.kpis||[]).find(k=>k.id===member.refKpi);
-    if(rk){ const RAK=refAllKpis(rd.doc), REM=refEm(rd.doc);
-      name=RD.kpiName(rk,RAK)||name; dir=RD.kpiDirection(rk,RAK)||dir; unit=RD.kpiUnit(rk,RAK)||unit;
-      stackTgt=RD.effTarget(rk,RAK); stackVal=RD.effValue(rk,RAK,REM); live=true; }
-    else live=true;   // doc loaded but the referenced spec is gone
+    const kr=(rd.doc.keyResults||[]).find(r=>r.id===member.refKr);
+    if(kr){
+      name=kr.statement||name;
+      const RAK=refAllKpis(rd.doc), REM=refEm(rd.doc);
+      const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,RAK).parent==null);
+      if(pk){ dir=RD.kpiDirection(pk,RAK)||"up"; unit=RD.kpiUnit(pk,RAK)||""; stackTgt=RD.effTarget(pk,RAK); stackVal=RD.effValue(pk,RAK,REM); }
+      else { dir="up"; unit="%"; stackTgt=100; stackVal=RD.keyResultScore(kr.id, REM); }   // percentage/sub-spec tracked → conformance
+      live=true;
+    } else live=true;   // doc loaded but the referenced spec is gone
   } else if(refDivOfModel(member.refModel) && refDivOfModel(member.refModel)!==divisionId){ pending=true; }
   const tgt=(member.target!=null)?member.target:stackTgt;
   const score=RD.rawScore(stackVal, tgt, dir);
@@ -1448,7 +1452,8 @@ function saveSub(){
     const arr = isProdKpi ? (portfolio.kpis=portfolio.kpis||[]) : SUB[type].arr();
     const objScope=isProdKpi?null:selectedModel;
     const parent=isProdKpi?a.hostId:selectedModel;
-    const id=RD.allocId(SUB[type].idType, parent, allKpis().map(x=>x.id));
+    const idPool=(type==="kpi")?allKpis().map(x=>x.id):arr.map(x=>x.id);   // stageGates/keyResults must be allocated against THEIR array, not the KPI pool, or every one collides on -1
+    const id=RD.allocId(SUB[type].idType, parent, idPool);
     const base={ id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.linkParent=null; }
     const rec=Object.assign(base, data); arr.push(rec);
@@ -1536,15 +1541,17 @@ function addSubProduct(childModel){
   if(comp.some(e=>e.parent===selectedModel && e.child===childModel)){ setMsg("That model is already a sub-product here.","err"); return; }
   const rd=refDocOfModel(childModel);
   if(!rd || !rd.doc){ setMsg("Still loading that product's specs — try again in a moment.","err"); return; }
-  const RAK=refAllKpis(rd.doc), specs=RD.importableModelKpis(childModel, RAK);
+  const RAK=refAllKpis(rd.doc);
+  const specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===childModel);   // import the child model's SPECIFICATIONS, any tracking type
   const hostId=RD.allocId("stageGate", selectedModel, doc.stageGates.map(x=>x.id));
   const cpid=productIdOf(childModel), cname=(modelById(childModel)||{}).name||childModel;
   doc.stageGates.push({ id:hostId, objectiveId:selectedModel, refModel:childModel, refProduct:cpid, name:(productName(cpid)+" · "+cname) });
   specs.forEach(src=>{
     const kid=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id));
+    const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===src.id && RD.linkOf(k,RAK).parent==null);
     doc.kpis.push({ id:kid, objectiveId:selectedModel, hostType:"component", hostId:hostId,
-      refModel:childModel, refKpi:src.id, linkType:"specification", linkParent:null,
-      name:RD.kpiName(src,RAK), direction:RD.kpiDirection(src,RAK), unit:RD.kpiUnit(src,RAK), target:null });
+      refModel:childModel, refKr:src.id, linkType:"specification", linkParent:null,
+      name:src.statement||src.id, unit:(pk?RD.kpiUnit(pk,RAK):"%"), target:null });
   });
   const edge={ id:"CMP-"+hostId, parent:selectedModel, child:childModel };
   comp.push(edge);
@@ -2282,9 +2289,9 @@ function subAddBody(){
     const rd=refDocOfModel(subPickModel);
     if(!rd || !rd.doc) preview=`<span class="pill">loading specs…</span>`;
     else if(rd.failed) preview=`<span class="statepill pending">couldn't reach that product's SPEC bin — is it configured on the broker?</span>`;
-    else { const RAK=refAllKpis(rd.doc), specs=RD.importableModelKpis(subPickModel, RAK);
-      preview= specs.length ? `<b>${specs.length}</b> specification${specs.length===1?'':'s'} will import as <b>specification</b> links: `+specs.slice(0,6).map(s=>esc(RD.kpiName(s,RAK)||s.id)).join(", ")+(specs.length>6?", …":"")
-                            : `this model has no importable specifications — it will be added as an empty sub-product`; }
+    else { const specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===subPickModel);
+      preview= specs.length ? `<b>${specs.length}</b> specification${specs.length===1?'':'s'} will import: `+specs.slice(0,6).map(s=>esc(s.statement||s.id)).join(", ")+(specs.length>6?", …":"")
+                            : `this model has no specifications yet — it will be added as an empty sub-product`; }
   }
   return `<div class="modal-field"><span class="lbl">Product</span><select data-subprod>${prodOpts}</select><div class="hint" style="margin:4px 0 0">Any product in the portfolio; models that would duplicate or form a cycle are hidden.</div></div>
     <div class="modal-field"><span class="lbl">Model (version)</span><select data-submodel>${modelOpts}</select></div>
