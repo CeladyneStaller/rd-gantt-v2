@@ -1154,23 +1154,44 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
 
 /* ---------------- persistence ---------------- */
 function persistLocal(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
-let _persistBusy=false, _persistAgain=false;
-async function persist(){
-  if(!tok()){ persistLocal(); return; }
-  if(_persistBusy){ _persistAgain=true; return; }   // coalesce rapid saves so they don't race the etag (self-inflicted 412)
-  _persistBusy=true;
+let _savedDoc=null;
+function markSaved(){ try{ _savedDoc=JSON.stringify(doc); }catch(e){ _savedDoc=null; } }   // call after load/adopt/save
+function docDirty(){ let s; try{ s=JSON.stringify(doc); }catch(e){ return false; } return s!==_savedDoc; }
+
+// --- autosave scheduling: batch rapid real edits into fewer broker writes ---
+// persist() (what renders + mutations call) only SCHEDULES a write, and only when the doc actually changed;
+// the write is debounced (a quiet gap) with a hard max-wait cap so a change can't sit unsaved indefinitely.
+const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
+let _saveT=null, _saveMaxT=null;
+function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
+function persist(){
+  if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
+  if(_saveT) clearTimeout(_saveT);
+  _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
+  if(!_saveMaxT) _saveMaxT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_MAXWAIT_MS);
+}
+// immediate, awaitable flush — MUST run before any context change (division switch, remote adopt, page hide/unload)
+function flushPersist(){ _clearSaveTimers(); return persistNow(); }
+
+// the actual write, serialized through a promise chain so writes never overlap (no self-inflicted 412),
+// dirty-checked, and bin-guarded so a write that resolves after a division switch can't clobber the new bin's etag.
+let _saveChain=Promise.resolve();
+function persistNow(){ _saveChain=_saveChain.then(_doPersist).catch(function(){}); return _saveChain; }
+async function _doPersist(){
+  if(!docDirty()) return;                                  // already saved (e.g. coalesced with a prior write)
+  const snap=JSON.stringify(doc);
+  if(!tok()){ persistLocal(); _savedDoc=snap; return; }
+  const targetId=specId();                                 // remember which bin this write is for
   try{
-    const res = await apiPut(specId(), doc, specEtag);
-    specEtag = res.etag; specVersion = res.version; setMsg("Saved.","ok");
+    const res=await apiPut(targetId, doc, specEtag);
+    if(specId()===targetId){ specEtag=res.etag; specVersion=res.version; _savedDoc=snap; setMsg("Saved.","ok"); }
+    // else: division changed while this write was in flight — it landed, but leave the current bin's etag alone
   }catch(e){
+    if(specId()!==targetId) return;                        // stale write for a bin we're no longer viewing
     if(e.status===412){
-      try{ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); }
-        setMsg("Another editor saved first — reloaded; re-apply your change.","err"); }
-      catch(e2){ setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
+      try{ const s=await apiGet(targetId); if(s && specId()===targetId){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Another editor saved first — reloaded; re-apply your change.","err"); } }
+      catch(e2){ if(specId()===targetId) setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
     } else setMsg("Save failed ("+(e.status||e)+").","err");
-  }finally{
-    _persistBusy=false;
-    if(_persistAgain){ _persistAgain=false; persist(); }   // one coalesced follow-up saves the latest state with the fresh etag
   }
 }
 // product-KPI records + their readings live in the shared portfolio; write it with If-Match, auto-merging on conflict.
@@ -1194,12 +1215,13 @@ async function persistPortfolio(reapply, okMsg){
     } else setMsg("Portfolio save failed ("+(e.status||e)+").","err");
   }
 }
-function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; }
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; markSaved(); }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=blankDoc(); } }
   else doc=blankDoc();
   normalizeKpis(doc.kpis);
+  markSaved();
 }
 async function loadAll(){
   if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
@@ -1219,12 +1241,13 @@ async function loadAll(){
 }
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
 async function switchDivision(newDiv){
-  if(!newDiv || newDiv===divisionId) return;                     // current doc is already autosaved, so no confirm
+  if(!newDiv || newDiv===divisionId) return;
+  stopPoll();                                                    // no poll mid-switch
+  await flushPersist();                                          // save the current division fully before repointing doc/specId
   divisionId = newDiv;
   localStorage.setItem("rd_division", divisionId);
   selectedProduct=null; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; armedDel=null;
   refDocs={}; subAddOpen=false; subPickProduct=null; subPickModel=null;
-  stopPoll();                                                    // avoid the poll firing mid-switch with a stale version
   if(!tok()){ fillModelSelect(); renderProdList(); renderAll(); return; }   // offline has no portfolio anyway
   try{
     const s = await apiGet(specId());
@@ -1238,6 +1261,7 @@ function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } 
 async function pollOnce(){
   if(!tok()) return;
   try{
+    await flushPersist();   // write any pending local edits before reconciling against remote versions
     const pv=await apiVersion("portfolio");
     if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; portfolioEtag=p.etag; renderAll(); } }
     const sv=await apiVersion(specId());
@@ -2345,7 +2369,8 @@ document.getElementById("kpiTgtX").onclick = closeTgtModal;
 document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiTgtOverlay") closeTgtModal(); };
 document.getElementById("exportBtn").onclick = exportDoc;
 document.getElementById("importInput").onchange = (e)=>{ if(e.target.files&&e.target.files[0]) importDoc(e.target.files[0]); e.target.value=""; };
-window.addEventListener("beforeunload", persistLocal);
+window.addEventListener("beforeunload", ()=>{ flushPersist(); persistLocal(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 
 /* boot */
 loadAll();
