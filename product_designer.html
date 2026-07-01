@@ -1182,6 +1182,7 @@ function modelById(id){ return (portfolio&&portfolio.models||[]).find(m=>m.id===
 function productById(id){ return (portfolio&&portfolio.products||[]).find(p=>p.id===id)||null; }
 function productName(id){ const p=productById(id); return p?p.name:id; }
 function productIdOf(modelId){ const m=modelById(modelId); return m?m.productId:null; }
+function divOfProduct(pid){ const p=productById(pid); if(!p) return null; const d=(portfolio&&portfolio.divisions||[]).find(x=>x.id===p.divisionId); return d?(d.name||d.id):(p.divisionId||null); }
 function modelSpecOf(id){ return (doc.modelSpec&&doc.modelSpec[id])||{}; }
 function divName(){ const d=(portfolio&&portfolio.divisions||[]).find(x=>x.id===divisionId); return d?d.name:(divisionId||"—"); }
 function specName(id){ const r=(doc.keyResults||[]).find(x=>x.id===id); return r?(r.statement||r.id):id; }
@@ -1736,6 +1737,18 @@ const LINK_DEFAULTS = { 'product>component':'specification','product>initiative'
   'initiative>keyResult':'contribute','initiative>stageGate':'contribute','initiative>task':'contribute',
   'keyResult>stageGate':'contribute','keyResult>task':'contribute' };
 function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType+'>'+childType] || 'contribute'; }
+// cross-product import: linking to ANOTHER product's registry KPI must never feed value back into it → specification (firewall).
+function linkDefaultFor(parent, hostType, thisProd){
+  if(parent.hostType==="product" && thisProd && parent.hostId!==thisProd) return "specification";
+  return defaultLinkType(parent.hostType, hostType);
+}
+// provenance: source product name when a member inherits from a product KPI hosted on a DIFFERENT product; else null.
+function importSource(k, AK){
+  const def=RD.definerOf(k, AK);
+  if(!def || def.hostType!=="product") return null;
+  const myProd = k.objectiveId ? productIdOf(k.objectiveId) : (k.hostType==="product"?k.hostId:null);
+  return (def.hostId!==myProd) ? productName(def.hostId) : null;
+}
 function childCount(k){ return RD.childrenOf(k.id, allKpis()).length; }
 function isMemberKpi(k){ return RD.linkOf(k, allKpis()).parent != null; }
 function isDefinerWithLinks(k){ return RD.linkOf(k, allKpis()).parent == null && childCount(k) > 0; }
@@ -1748,7 +1761,7 @@ function linkCandidates(hostType, hostId){
   const seen=new Set(), out=[];
   AK.forEach(k=>{
     const inScope = (k.objectiveId===O)
-      || (k.hostType==="product" && k.hostId===prodId)
+      || (k.hostType==="product")   // this product's + every other product's registry KPI (cross-product import)
       || (k.hostType==="initiative" && divInits.has(k.hostId));   // registry initiative KPIs in this division
     if(!inScope) return;
     const root=RD.rootOf(k, AK);
@@ -1761,7 +1774,8 @@ function makeLinkMember(hostType, hostId, parentId, linkType){
   const AK=allKpis(); const parent=AK.find(k=>k.id===parentId); if(!parent) return;
   const objScope = hostType==="product" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, AK.map(x=>x.id));
-  const type=linkType || defaultLinkType(parent.hostType, hostType);
+  const thisProd = objScope ? productIdOf(objScope) : (hostType==="product"?hostId:null);
+  const type=linkType || linkDefaultFor(parent, hostType, thisProd);
   doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
                   name:null, direction:null, unit:null, target:null, order:0 });
   addingFor=null; restoreReturn(); renderAll(); setMsg("Linked ("+type+").","ok");
@@ -1779,9 +1793,23 @@ function renderLinkEditor(hostType, hostId){
   const cands=linkCandidates(hostType, hostId);
   if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a specification metric here, or a product KPI, first.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
-  const defType=defaultLinkType(cands[0].hostType, hostType);
-  return `<div class="ed"><label style="grid-column:1/-1">Link to a product or specification metric
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, allKpis())||d.id)} · ${hostLabel(d)}</option>`).join("")+`</select></label>
+  const AK=allKpis();
+  const thisProd = hostType==="product" ? hostId : (selectedModel?productIdOf(selectedModel):null);
+  // group by provenance: this product's own metrics / division initiatives / OTHER products' registry KPIs (import)
+  const mine=[], inits=[], others={};
+  cands.forEach(d=>{
+    if(d.hostType==="product" && d.hostId!==thisProd){ (others[d.hostId]=others[d.hostId]||[]).push(d); }
+    else if(d.hostType==="initiative"){ inits.push(d); }
+    else mine.push(d);
+  });
+  const opt=d=>`<option value="${d.id}" data-defrel="${linkDefaultFor(d, hostType, thisProd)}">${esc(RD.kpiName(d, AK)||d.id)} · ${hostLabel(d)}</option>`;
+  const grp=(lbl,arr)=>arr.length?`<optgroup label="${esc(lbl)}">`+arr.map(opt).join("")+`</optgroup>`:"";
+  let optionsHtml=grp("This product", mine)+grp("Division initiatives", inits);
+  Object.keys(others).forEach(pid=>{ const dt=divOfProduct(pid); optionsHtml+=grp("Import from "+productName(pid)+(dt?" ["+dt+"]":""), others[pid]); });
+  const first=mine[0]||inits[0]||(others[Object.keys(others)[0]]||[])[0]||cands[0];
+  const defType=linkDefaultFor(first, hostType, thisProd);
+  return `<div class="ed"><label style="grid-column:1/-1">Link to a product, specification, or another product's KPI
+    <select data-linkdef>`+optionsHtml+`</select></label>
     <label style="grid-column:1/-1">Relationship <select data-linkrel>`+['direct','contribute','specification'].map(t=>`<option value="${t}"${t===defType?' selected':''}>${t}</option>`).join("")+`</select><span class="hint" style="display:block;margin-top:2px">${REL_HINT}</span></label>
     </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
@@ -1843,7 +1871,7 @@ function kpiTable(hostType, hostId, objScope){
     const member=isMemberKpi(k), defLinks=isDefinerWithLinks(k);
     const tgtCell=fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
     let badge='';
-    if(member) badge=`<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
+    if(member){ const imp=importSource(k, AK); badge = imp ? `<span class="linkbadge" title="imported from ${esc(imp)}">🔗 imported · ${esc(imp)}</span>` : `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`; }
     else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${childCount(k)}</span>`;
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
     h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
@@ -1913,6 +1941,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
+  host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{ const rel=host.querySelector("[data-linkrel]"); const o=sel.options[sel.selectedIndex]; if(rel && o && o.dataset.defrel) rel.value=o.dataset.defrel; });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
