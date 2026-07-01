@@ -1402,6 +1402,9 @@ function openEditor(id){
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = closeEditor;
   if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); }
+  // product & model classification are mutually exclusive — setting one clears the other so a chosen value is never silently dropped
+  const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
+  if(_ps && _ms){ _ps.addEventListener("change",()=>{ if(_ps.value) _ms.value=""; }); _ms.addEventListener("change",()=>{ if(_ms.value) _ps.value=""; }); }
   document.getElementById("pfModal").hidden = false;
   const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
@@ -1736,8 +1739,6 @@ function readEditor(){
     else if(el.type==="number"){ out[k]= el.value===""?0:Number(el.value); }
     else out[k] = el.value==="" ? null : el.value;
   });
-  // classification: at most one of productId/modelId — model wins, clear the other
-  if(out.modelId){ out.productId=null; }
   return out;
 }
 function saveRecord(){
