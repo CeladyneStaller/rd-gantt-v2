@@ -1072,7 +1072,7 @@ let selectedModel = null;
 let selectedProduct = null;
 let portfolio = null;                 // read-only: division resolution + products/models registry
 let divisionId = null;
-let specEtag = "0", specVersion = 0, portfolioVersion = 0, pollTimer = null;
+let specEtag = "0", specVersion = 0, portfolioVersion = 0, portfolioEtag = "0", pollTimer = null;
 function specId(){ return "SPEC-"+divisionId; }
 function resolveDivision(){ const u=new URL(location.href); return u.searchParams.get("division") || localStorage.getItem("rd_division") || null; }
 
@@ -1106,6 +1106,27 @@ async function persist(){
     } else setMsg("Save failed ("+(e.status||e)+").","err");
   }
 }
+// product-KPI records + their readings live in the shared portfolio; write it with If-Match, auto-merging on conflict.
+// reapply() re-applies this specific delta onto a freshly-fetched portfolio, then re-PUTs. Offline has no portfolio
+// (hence no products, hence no product KPIs), so the no-token branch is a safe no-op message.
+async function persistPortfolio(reapply, okMsg){
+  if(!tok() || !portfolio){ setMsg((okMsg||"Saved")+" (local only — ⚙ to sync).","info"); return; }
+  try{
+    const res = await apiPut("portfolio", portfolio, portfolioEtag);
+    portfolioEtag=res.etag; portfolioVersion=res.version; setMsg(okMsg||"Saved.","ok");
+  }catch(e){
+    if(e.status===412){
+      try{
+        const p=await apiGet("portfolio");
+        if(p){ portfolio=p.doc; portfolioEtag=p.etag; portfolioVersion=p.version; }
+        if(reapply) reapply();
+        const res2=await apiPut("portfolio", portfolio, portfolioEtag);
+        portfolioEtag=res2.etag; portfolioVersion=res2.version; renderAll();
+        setMsg((okMsg||"Saved.")+" (merged with a concurrent change)","ok");
+      }catch(e2){ renderAll(); setMsg("Portfolio save conflict couldn't merge ("+(e2.status||e2)+") — reloaded; re-apply.","err"); }
+    } else setMsg("Portfolio save failed ("+(e.status||e)+").","err");
+  }
+}
 function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
@@ -1118,7 +1139,7 @@ async function loadAll(){
   try{
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio on the broker yet — create it in the Planning app first.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); return; }
-    portfolio = p.doc; portfolioVersion = p.version;
+    portfolio = p.doc; portfolioVersion = p.version; portfolioEtag = p.etag;
     if(!divisionId) divisionId = resolveDivision() || (portfolio.divisions && portfolio.divisions[0] && portfolio.divisions[0].id);
     if(!divisionId){ setMsg("No divisions exist yet — add one in Planning.","err"); return; }
     localStorage.setItem("rd_division", divisionId);
@@ -1135,7 +1156,7 @@ async function pollOnce(){
   if(!tok()) return;
   try{
     const pv=await apiVersion("portfolio");
-    if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; renderAll(); } }
+    if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; portfolioEtag=p.etag; renderAll(); } }
     const sv=await apiVersion(specId());
     if(sv.version!==specVersion){ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Updated from another editor.","info"); } }
   }catch(e){}
@@ -1242,30 +1263,47 @@ function saveSub(){
   const scope=document.querySelector(".ed");
   if(!scope) return;
   const data=readSubEditor(scope);
-  const arr=SUB[type].arr();
+  let prodRec=null;   // set when the write targets a product KPI (stored in the portfolio registry)
   if(e){
+    // a KPI being edited may live in the registry (product KPIs) rather than the spec doc
+    const inReg = (type==="kpi" && portfolio && (portfolio.kpis||[]).some(k=>k.id===e.id));
+    const arr = inReg ? portfolio.kpis : SUB[type].arr();
     const rec=arr.find(x=>x.id===e.id);
+    if(!rec) return;
     if(type==="kpi" && isMemberKpi(rec)){
       if(data.linkType) rec.linkType=data.linkType;
       if(data.linkPriority!=null) rec.linkPriority=data.linkPriority;
       rec.target = (rec.linkType==="direct") ? null : (data.target===undefined?null:data.target);
     }
     else Object.assign(rec, data);
+    if(rec.hostType==="product") prodRec=rec;
   } else {
-    const initHost=(type==="kpi" && a.hostType==="product");
-    const objScope=initHost?null:selectedModel;
-    const parent=initHost?a.hostId:selectedModel;
-    const id=RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
+    const isProdKpi=(type==="kpi" && a.hostType==="product");
+    const arr = isProdKpi ? (portfolio.kpis=portfolio.kpis||[]) : SUB[type].arr();
+    const objScope=isProdKpi?null:selectedModel;
+    const parent=isProdKpi?a.hostId:selectedModel;
+    const id=RD.allocId(SUB[type].idType, parent, allKpis().map(x=>x.id));
     const base={ id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.linkParent=null; }
-    arr.push(Object.assign(base, data));
+    const rec=Object.assign(base, data); arr.push(rec);
+    if(isProdKpi) prodRec=rec;
   }
-  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved.","ok");
+  addingFor=null; editingSub=null; restoreReturn(); renderAll();
+  if(prodRec){ const patch=Object.assign({},prodRec);
+    persistPortfolio(()=>{ portfolio.kpis=portfolio.kpis||[]; const k=portfolio.kpis.find(x=>x.id===patch.id); if(k) Object.assign(k,patch); else portfolio.kpis.push(patch); }, SUB[type].label+" saved."); }
+  else setMsg(SUB[type].label+" saved.","ok");
 }
 function delSub(type, id){
-  if(type==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && isDefinerWithLinks(k)){ setMsg("This metric defines a linked group — unlink its members first.","err"); return; } }
+  if(type==="kpi"){ const k=allKpis().find(x=>x.id===id); if(k && isDefinerWithLinks(k)){ setMsg("This metric defines a linked group — unlink its members first.","err"); return; } }
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
   armedDel=null;
+  if(type==="kpi" && portfolio && (portfolio.kpis||[]).some(k=>k.id===id)){   // product KPI lives in the registry
+    portfolio.kpis=portfolio.kpis.filter(k=>k.id!==id);
+    portfolio.kpiUpdates=(portfolio.kpiUpdates||[]).filter(u=>u.kpiId!==id);
+    renderAll();
+    persistPortfolio(()=>{ portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==id); portfolio.kpiUpdates=(portfolio.kpiUpdates||[]).filter(u=>u.kpiId!==id); }, "Deleted.");
+    return;
+  }
   if(type==="keyResult" || type==="stageGate"){
     const kh = type==="stageGate" ? "component" : type;
     const kids=doc.kpis.filter(k=>k.hostType===kh && k.hostId===id).map(k=>k.id);
@@ -1281,7 +1319,14 @@ function delSub(type, id){
 function postRead(host, kpiId){
   const inp=host.querySelector(`[data-read="${kpiId}"]`);
   if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
-  doc.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
+  const reading={ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" };
+  if(portfolio && (portfolio.kpis||[]).some(k=>k.id===kpiId)){   // reading for a registry-hosted product KPI
+    portfolio.kpiUpdates=portfolio.kpiUpdates||[]; portfolio.kpiUpdates.push(reading);
+    renderAll();
+    persistPortfolio(()=>{ portfolio.kpiUpdates=portfolio.kpiUpdates||[]; if(!portfolio.kpiUpdates.some(u=>u.id===reading.id)) portfolio.kpiUpdates.push(reading); }, "Reading posted.");
+    return;
+  }
+  doc.kpiUpdates.push(reading);
   renderAll(); setMsg("Reading posted.","ok");
 }
 
@@ -1331,7 +1376,7 @@ function modelMetricStrip(m){
   const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
   const measured=modelKpis.filter(k=>RD.effValue(k, allKpis(), em)!=null).length;
   const pid=productIdOf(selectedModel);
-  const prodKpis=pid?doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
+  const prodKpis=pid?allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   return `<div class="metrics">
     <div class="mc"><div class="mc-label">Spec conformance</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
@@ -1775,7 +1820,7 @@ function renderProductPanel(){
     wireExec(host); return;
   }
   const pname=productName(pid);
-  const n=doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===pid).length;
+  const n=allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length;
   const inner=`<div class="icard"><div class="icard-top">
       <span class="icard-title">${esc(pname)}</span>
       <span class="pill">${n} metric${n===1?'':'s'}</span>
@@ -1911,7 +1956,7 @@ function renderProdList(){
   if(!prods.length){ el.innerHTML=`<p class="hint" style="margin:6px 0 0">${tok()?"No products in this division yet — add them in the Planning app.":"Connect a broker token to load products."}</p>`; return; }
   el.innerHTML=prods.map(p=>{
     const mc=divModels().filter(m=>m.productId===p.id).length;
-    const kc=doc.kpis.filter(k=>k.hostType==="product"&&k.hostId===p.id).length;
+    const kc=allKpis().filter(k=>k.hostType==="product"&&k.hostId===p.id).length;
     return `<div class="skr-row"><span class="skr-name" style="cursor:default">${esc(p.name)} <span class="pill">${p.id}</span></span><span class="skr-meta">${mc} model${mc===1?'':'s'} · ${kc} metric${kc===1?'':'s'}</span></div>`;
   }).join("");
 }
