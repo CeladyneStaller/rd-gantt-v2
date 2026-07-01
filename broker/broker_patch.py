@@ -62,7 +62,9 @@ _JSONBIN = "https://api.jsonbin.io/v3/b"
 _UA = "Mozilla/5.0 (compatible; CeladyneRD/1.0)"
 _KEY = os.environ.get("JSONBIN_MASTER_KEY")
 _DIVISIONS = [d.strip() for d in os.environ.get("UNIFIED_DIVISIONS", "DIV-FC").split(",") if d.strip()]
-_DOC_IDS = ["portfolio", "gantt-view"] + [f"EXEC-{d}" for d in _DIVISIONS]
+_DOC_IDS = (["portfolio", "gantt-view"]
+            + [f"EXEC-{d}" for d in _DIVISIONS]
+            + [f"SPEC-{d}" for d in _DIVISIONS])   # SPEC-<div>: product-designer per-division spec docs
 
 
 def _env_name(doc_id: str) -> str:
@@ -111,9 +113,12 @@ def _load_raw(doc_id: str) -> Optional[Dict[str, Any]]:
 def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
     bin_id = BIN_FOR.get(doc_id)
     if not bin_id:
-        raise RuntimeError(
-            f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)} "
-            f"(and add the division to UNIFIED_DIVISIONS if it is an EXEC doc)"
+        # HTTPException (not RuntimeError) so the message flows back through the CORS
+        # middleware and is readable client-side instead of a masked 500/"CORS" error.
+        raise HTTPException(
+            status_code=500,
+            detail=(f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)} "
+                    f"(and add the division to UNIFIED_DIVISIONS)"),
         )
     _jsonbin_put(bin_id, wrapped)
 
