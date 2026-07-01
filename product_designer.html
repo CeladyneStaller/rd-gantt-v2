@@ -193,7 +193,8 @@
   <h1><span class="dot">▤</span> Product Specification</h1>
   <span class="div-pill" id="docPill">—</span>
   <div class="spacer"></div>
-  <select class="obj" id="prodSelect"><option>loading…</option></select>
+  <select class="obj" id="divSelect"><option>loading…</option></select>
+  <select class="obj" id="prodSelect" style="margin-left:6px"><option>loading…</option></select>
   <select class="obj" id="modelSelect" style="margin-left:6px"><option>loading…</option></select>
   <button class="act" id="saveBtn" style="margin-left:8px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
@@ -1168,6 +1169,21 @@ async function loadAll(){
   }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); }
 }
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
+async function switchDivision(newDiv){
+  if(!newDiv || newDiv===divisionId) return;                     // current doc is already autosaved, so no confirm
+  divisionId = newDiv;
+  localStorage.setItem("rd_division", divisionId);
+  selectedProduct=null; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; armedDel=null;
+  stopPoll();                                                    // avoid the poll firing mid-switch with a stale version
+  if(!tok()){ fillModelSelect(); renderProdList(); renderAll(); return; }   // offline has no portfolio anyway
+  try{
+    const s = await apiGet(specId());
+    if(s){ adoptSpec(s); } else { doc=blankDoc(); specEtag="0"; specVersion=0; }
+    fillModelSelect(); renderProdList(); renderAll();
+    setMsg("Switched to "+divName()+".","ok");
+  }catch(e){ setMsg("Couldn't load "+specId()+" ("+(e.status||e)+") — is its SPEC bin configured on the broker?","err"); }
+  startPoll();
+}
 function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
 async function pollOnce(){
   if(!tok()) return;
@@ -1212,7 +1228,16 @@ function hostLabel(k){
 }
 
 /* ---------------- model select ---------------- */
+function fillDivSelect(){
+  const ds=document.getElementById("divSelect"); if(!ds) return;
+  const divs=(portfolio&&portfolio.divisions)||[];
+  ds.innerHTML = divs.length ? divs.map(d=>`<option value="${d.id}">${esc(d.name||d.id)}</option>`).join("")
+                             : `<option value="">no divisions</option>`;
+  if(divisionId && divs.find(d=>d.id===divisionId)) ds.value=divisionId;
+  ds.onchange=()=>switchDivision(ds.value);
+}
 function fillModelSelect(){
+  fillDivSelect();
   const ps=document.getElementById("prodSelect"), prods=divProducts();
   if(ps){
     ps.innerHTML = prods.length ? prods.map(p=>`<option value="${p.id}">${esc(p.name||p.id)}</option>`).join("")
