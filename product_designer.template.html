@@ -292,8 +292,11 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
 
 /* ---------------- persistence ---------------- */
 function persistLocal(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
+let _persistBusy=false, _persistAgain=false;
 async function persist(){
   if(!tok()){ persistLocal(); return; }
+  if(_persistBusy){ _persistAgain=true; return; }   // coalesce rapid saves so they don't race the etag (self-inflicted 412)
+  _persistBusy=true;
   try{
     const res = await apiPut(specId(), doc, specEtag);
     specEtag = res.etag; specVersion = res.version; setMsg("Saved.","ok");
@@ -303,6 +306,9 @@ async function persist(){
         setMsg("Another editor saved first — reloaded; re-apply your change.","err"); }
       catch(e2){ setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
     } else setMsg("Save failed ("+(e.status||e)+").","err");
+  }finally{
+    _persistBusy=false;
+    if(_persistAgain){ _persistAgain=false; persist(); }   // one coalesced follow-up saves the latest state with the fresh etag
   }
 }
 // product-KPI records + their readings live in the shared portfolio; write it with If-Match, auto-merging on conflict.
@@ -517,6 +523,7 @@ function saveSub(){
     persistPortfolio(()=>{ portfolio.kpis=portfolio.kpis||[]; const k=portfolio.kpis.find(x=>x.id===patch.id); if(k) Object.assign(k,patch); else portfolio.kpis.push(patch); }, SUB[type].label+" saved."); }
   else setMsg(SUB[type].label+" saved.","ok");
 }
+function spliceById(arr, id){ const i=arr.findIndex(x=>x.id===id); if(i>=0){ arr.splice(i,1); return true; } return false; }
 function delSub(type, id){
   if(type==="kpi"){ const k=allKpis().find(x=>x.id===id); if(k && isDefinerWithLinks(k)){ setMsg("This metric defines a linked group — unlink its members first.","err"); return; } }
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
@@ -529,15 +536,24 @@ function delSub(type, id){
     return;
   }
   if(type==="keyResult" || type==="stageGate"){
+    const arr=SUB[type].arr();
+    if(arr.findIndex(x=>x.id===id)<0){ renderAll(); return; }   // already gone (stale/duplicate click) — never splice(-1)
     const kh = type==="stageGate" ? "component" : type;
-    const kids=doc.kpis.filter(k=>k.hostType===kh && k.hostId===id).map(k=>k.id);
-    doc.kpis=doc.kpis.filter(k=>!(k.hostType===kh && k.hostId===id));
-    doc.kpiUpdates=doc.kpiUpdates.filter(u=>kids.indexOf(u.kpiId)===-1);
-    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+    const AK=allKpis();
+    const kidSet=new Set(doc.kpis.filter(k=>k.hostType===kh && k.hostId===id).map(k=>k.id));
+    // a member inheriting from a to-be-deleted metric would be left with a dangling parent — materialize its
+    // identity/target and unlink it first, so nothing points at a deleted id.
+    doc.kpis.forEach(m=>{ if(m.linkParent!=null && kidSet.has(m.linkParent) && !kidSet.has(m.id)){
+      m.name=RD.kpiName(m,AK); m.direction=RD.kpiDirection(m,AK); m.unit=RD.kpiUnit(m,AK);
+      if(m.target==null) m.target=RD.effTarget(m,AK);
+      m.linkParent=null; m.linkType=null; delete m.linkPriority; } });
+    doc.kpis=doc.kpis.filter(k=>!kidSet.has(k.id));
+    doc.kpiUpdates=doc.kpiUpdates.filter(u=>!kidSet.has(u.kpiId));
+    spliceById(arr, id);
   } else if(type==="kpi"){
-    doc.kpis.splice(doc.kpis.findIndex(x=>x.id===id),1);
+    if(!spliceById(doc.kpis, id)){ renderAll(); return; }   // already gone — no-op
     doc.kpiUpdates=doc.kpiUpdates.filter(u=>u.kpiId!==id);
-  } else { const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1); }
+  } else { spliceById(SUB[type].arr(), id); }
   renderAll(); setMsg("Deleted.","ok");
 }
 function postRead(host, kpiId){
