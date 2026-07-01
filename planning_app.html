@@ -484,6 +484,38 @@
       var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
     return false;
   }
+  // ── product composition (model-to-model): edges are { id, parent, child }, meaning parent-model CONTAINS child-model.
+  // A child model plugged into a parent model is a "sub-product". This edge list is the canonical graph (planning reads
+  // it directly; the designer hosts the imported specs on a refModel-marked component). All four helpers are pure over
+  // the edge array — no portfolio, no DOM.
+  function compositionChildren(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].parent===modelId) out.push(composition[i].child); return out; }
+  function compositionParents(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].child===modelId) out.push(composition[i].parent); return out; }
+  function descendantModels(modelId, composition){ composition=composition||[]; var out={}, stack=[modelId];
+    while(stack.length){ var kids=compositionChildren(stack.pop(), composition);
+      for(var i=0;i<kids.length;i++) if(!out[kids[i]]){ out[kids[i]]=1; stack.push(kids[i]); } }
+    var arr=[]; for(var k in out) arr.push(k); return arr; }
+  // true if making parentModel contain childModel would form a composition cycle — i.e. same model, or childModel
+  // already (transitively) contains parentModel. (A duplicate direct edge is the caller's check, not a cycle.)
+  function wouldComposeCycle(parentModel, childModel, composition){
+    if(parentModel===childModel) return true;
+    return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
+  }
+  // model N's importable specs: the keyResult-hosted DEFINER kpis scoped to that model (its headline specifications).
+  // A parent system references these when N is plugged in as a sub-product; component-level internals are excluded.
+  function importableModelKpis(modelId, kpis){
+    var out=[]; kpis=kpis||[]; for(var i=0;i<kpis.length;i++){ var k=kpis[i];
+      if(k.objectiveId===modelId && k.hostType==='keyResult' && linkOf(k,kpis).parent==null) out.push(k); }
+    return out;
+  }
+  // score a bare value against a bare target (number, or {lo,hi} for range) given direction — 0..100 or null.
+  // used for imported sub-product specs, where the value comes from the child doc and the target may be an override.
+  function rawScore(value, target, dir){
+    if(value==null || target==null) return null;
+    var raw = (dir==='range' && target && typeof target==='object')
+      ? progressRange(value, target.lo, target.hi)
+      : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
   // group = every KPI sharing a root (retained name/semantics for shells)
   function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
   // identity lives on the root (a lone KPI is its own root)
@@ -1049,6 +1081,12 @@
     linkOf: linkOf,
     rootOf: rootOf,
     wouldCreateCycle: wouldCreateCycle,
+    compositionChildren: compositionChildren,
+    compositionParents: compositionParents,
+    descendantModels: descendantModels,
+    wouldComposeCycle: wouldComposeCycle,
+    importableModelKpis: importableModelKpis,
+    rawScore: rawScore,
     childrenOf: childrenOf,
     effectiveTarget: effectiveTarget,
     effectiveValue: effectiveValue,
@@ -1125,7 +1163,7 @@ let mode = "overall";            // overall | quarterly
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
-  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[] }; }
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
@@ -1571,7 +1609,11 @@ function productConformance(productId){ const ms=portfolio.models.filter(m=>m.pr
 function modelLeaf(m){
   const sc=modelConformance(m.id), b=RD.band(sc), meta=specMetaOf(m.id);
   const dot=`<span class="tdot" style="background:${bandColor(b)}" title="spec conformance · ${b}"></span>`;
+  const comp=portfolio.composition||[];
+  const nKids=RD.compositionChildren(m.id, comp).length, nPar=RD.compositionParents(m.id, comp).length;
   const bits=[]; if(meta.maturity) bits.push(esc(meta.maturity)); if(sc!=null) bits.push(Math.round(sc)+" conf");
+  if(nKids) bits.push(nKids+" sub-product"+(nKids>1?"s":""));
+  if(nPar) bits.push("used in "+nPar);
   const sub=bits.length?`<span class="tsub">${bits.join(" · ")}</span>`:"";
   return `<div class="tleaf">${dot}${rowName("model",m)}${sub}</div>`;
 }
@@ -1627,6 +1669,12 @@ function upChain(entity,id){
   else if(entity==="objective"){ const o=byId("objective",id); if(o){ if(o.divisionId) crumb("division",o.divisionId); if(o.initiativeId) crumb("initiative",o.initiativeId); } }
   return up;
 }
+// a composition neighbour rendered as a lineage cross-link (Product · model, division as sub)
+function compItem(modelId){
+  const m=byId("model",modelId); if(!m) return null;
+  const p=byId("product",m.productId), dv=p?byId("division",p.divisionId):null;
+  return { entity:"model", id:modelId, name:(p?nameOf("product",p)+" · ":"")+nameOf("model",m), tag:TAG.model, sub:dv?nameOf("division",dv):"" };
+}
 function relatedGroups(entity,id){
   const P=portfolio, item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)}), out=[];
   if(entity==="objective"){
@@ -1642,6 +1690,13 @@ function relatedGroups(entity,id){
   } else if(entity==="product"||entity==="model"){
     const objs=P.objectives.filter(o=>(entity==="product"?o.productId:o.modelId)===id);
     if(objs.length) out.push({title:"Objectives classified here", items:objs.map(o=>item("objective",o))});
+    if(entity==="model"){   // composition (read-only reflection of what the Product Designer authored)
+      const comp=P.composition||[];
+      const kids=RD.compositionChildren(id, comp).map(compItem).filter(Boolean);
+      if(kids.length) out.push({title:"Composed of", items:kids});
+      const par=RD.compositionParents(id, comp).map(compItem).filter(Boolean);
+      if(par.length) out.push({title:"Used in", items:par});
+    }
   }
   return out;
 }
