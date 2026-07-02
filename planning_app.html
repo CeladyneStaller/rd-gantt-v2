@@ -1115,7 +1115,7 @@
   function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
   function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
   function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
-  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', modes: [blankMode()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
   // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
   function migrateProblem(r) {
     r = r || {};
@@ -1125,6 +1125,7 @@
       objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
       gateId: r.gateId || null,
       status: r.status || 'open',
+      knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
       modes: (r.modes || []).map(function (m) { m = m || {};
         return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
           effects: (m.effects || []).map(function (e) { e = e || {};
@@ -1850,28 +1851,40 @@ function readEditor(){
   if(out.modelId) out.productId = null;
   return out;
 }
+// an objective's product/model must stay consistent with its initiative. If a move makes it incompatible,
+// drop the objective's own product/model (it then inherits the initiative) rather than blocking the move.
+// Only clears when clearing actually resolves the conflict — otherwise let validateAndWarn report the real error.
+function reconcileObjClass(rec){
+  if(rec.productId==null && rec.modelId==null) return false;      // agnostic — always valid
+  if(RD.validateClassification(rec, portfolio).ok) return false;  // already consistent
+  const test = Object.assign({}, rec, {productId:null, modelId:null});
+  if(RD.validateClassification(test, portfolio).ok){ rec.productId=null; rec.modelId=null; return true; }
+  return false;
+}
 function saveRecord(){
   const data = readEditor();
   const ent = activeEntity;
   const list = SEL[ent]();
   hideEditorErr();
-  let reapply;
+  let reapply, cleared=false;
   if(editingId){
     const id = editingId;
     const rec = list.find(x=>x.id===id);
     const merged = Object.assign({}, rec, data);
+    if(ent==="objective" && reconcileObjClass(merged)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, merged)) return;   // validate before mutating
     Object.assign(rec, data);
     reapply = ()=>{ const r=SEL[ent]().find(x=>x.id===id); if(r) Object.assign(r, data); else SEL[ent]().push(Object.assign({id}, data)); };
   } else {
     const id = allocFor(ent, data);
     const rec = Object.assign({id}, data);
+    if(ent==="objective" && reconcileObjClass(rec)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, rec)) return;
     list.push(rec);
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
   closeEditor(); renderPortfolio(); renderCompany();
-  persistPortfolio(reapply, cap(ent)+" saved.");
+  persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
 function validateAndWarn(entity, rec){
   if(entity==="objective" || entity==="initiative"){
