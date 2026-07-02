@@ -1970,7 +1970,8 @@ function openTgtModal(gateId, kpiId){
     target:(pk&&pk.target!=null)?pk.target:"",
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
-    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    gates:(pk&&pk.gates)?pk.gates:""
   };
   document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit component specification":"Add component specification";
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
@@ -1980,6 +1981,8 @@ function openTgtModal(gateId, kpiId){
 function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
 function tgtModalBody(){
   const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  const specs=(doc.keyResults||[]).filter(r=>r.objectiveId===selectedModel);
+  const gateOpts=`<option value="">— none (standalone) —</option>`+specs.map(kr=>`<option value="${kr.id}"${d.gates===kr.id?" selected":""}>${esc(kr.statement||kr.id)}</option>`).join("");
   return `
     <div class="modal-field"><span class="lbl">Specification name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
@@ -1988,6 +1991,7 @@ function tgtModalBody(){
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.dir,"tgtdir")}</div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
+    <div class="modal-field"><span class="lbl">Gates a product specification (optional)</span><select data-tf="gates">${gateOpts}</select><span class="hint" style="display:block;margin-top:2px">a gating spec is a different way to measure the same requirement — it is shown as a gate on that product spec, but keeps its own target &amp; readings and does not roll into the product spec's score</span></div>
     <div class="hint" style="margin:0 0 12px">readings are posted from the component's specification table; statistical targets aggregate the latest reads</div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
@@ -2010,7 +2014,9 @@ function saveTgtModal(){
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg("Component specification saved.","ok");
+  if(d.gates && (doc.keyResults||[]).some(r=>r.id===d.gates)){ pk.gates=d.gates; } else { delete pk.gates; }
+  const gk=pk.gates?(doc.keyResults||[]).find(r=>r.id===pk.gates):null;
+  closeTgtModal(); renderAll(); setMsg(gk?("Gating spec saved — gates “"+(gk.statement||gk.id)+"”."):"Component specification saved.","ok");
 }
 
 /* ---------------- KPI link groups ---------------- */
@@ -2220,6 +2226,7 @@ function kpiTable(hostType, hostId, objScope){
     let badge='';
     if(member){ const imp=importSource(k, AK); badge = imp ? `<span class="linkbadge" title="imported from ${esc(imp)}">🔗 imported · ${esc(imp)}</span>` : `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`; }
     else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${childCount(k)}</span>`;
+    if(k.gates){ const gk=(doc.keyResults||[]).find(r=>r.id===k.gates); badge += `<span class="linkbadge" title="a gate for a product specification (different measure of the same requirement)">⛒ gates ${esc(gk?(gk.statement||gk.id):k.gates)}</span>`; }
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
     h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
@@ -2237,10 +2244,16 @@ function kpiTable(hostType, hostId, objScope){
 function renderSpecs(){
   const host=document.getElementById("subKR");
   const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  const AK=allKpis(), EM=emForCore();
   let inner="";
   if(!specs.length) inner+=`<p class="hint">none yet — a product specification is a requirement the product must meet; its metrics roll up to the model's conformance score</p>`;
   specs.forEach((kr,idx)=>{
     const s=RD.keyResultScore(kr.id, emForCore());
+    const gates=AK.filter(k=>k.gates===kr.id);
+    const gatesHtml = gates.length ? `<div class="hint" style="margin:6px 0 0">⛒ gated by: `+gates.map(g=>{
+      const gs=RD.kpiScoreResolved(g, AK, EM);
+      return `<a class="rowedit" data-edit="kpi:${g.id}" title="on ${esc(componentName(g.hostId))} — a different measure of this requirement">${esc(RD.kpiName(g,AK)||g.id)} <b style="color:${col(RD.band(gs))}">${gs==null?'—':Math.round(gs)}</b></a>`;
+    }).join(" · ")+`</div>` : '';
     inner+=`<div class="icard"><div class="icard-top">
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
       <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
@@ -2248,7 +2261,7 @@ function renderSpecs(){
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}</div></div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
