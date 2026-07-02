@@ -2010,64 +2010,75 @@ function saveSubKrModal(){
 }
 
 /* ---------------- component-specification editor (was gate target) ---------------- */
-let draftTgt=null, draftTgtGate=null, draftTgtId=null;
-function openTgtModal(gateId, kpiId){
-  draftTgtGate=gateId; draftTgtId=kpiId||null;
+let draftTgt=null, draftTgtGate=null, draftTgtId=null, draftTgtHostType="component";
+function openTgtModal(gateId, kpiId, hostType){
+  draftTgtGate=gateId; draftTgtId=kpiId||null; draftTgtHostType=hostType||"component";
   const pk=kpiId?doc.kpis.find(k=>k.id===kpiId):null;
+  const isRange = !!(pk && pk.direction==="range" && pk.target && typeof pk.target==="object");
   draftTgt={
     name:pk?(pk.name||""):"",
     type:pk?(pk.targetType||"demonstration"):"demonstration",
-    dir:(pk&&pk.direction==="down")?"decrease":"increase",
-    target:(pk&&pk.target!=null)?pk.target:"",
+    dir: isRange ? "range" : ((pk&&pk.direction==="down")?"decrease":"increase"),
+    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",
+    targetLo: isRange ? pk.target.lo : "",
+    targetHi: isRange ? pk.target.hi : "",
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
     readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
     gates:(pk&&pk.gates)?pk.gates:""
   };
-  document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit component specification":"Add component specification";
+  const noun = draftTgtHostType==="keyResult" ? "KPI" : "component specification";
+  document.getElementById("kpiTgtTitle").textContent=(kpiId?"Edit ":"Add ")+noun;
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
   wireTgtModal();
 }
-function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; draftTgtHostType="component"; }
 function tgtModalBody(){
-  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isRange=d.dir==="range";
+  const isKr=draftTgtHostType==="keyResult", noun=isKr?"KPI":"specification";
   const specs=(doc.keyResults||[]).filter(r=>r.objectiveId===selectedModel);
   const gateOpts=`<option value="">— none (standalone) —</option>`+specs.map(kr=>`<option value="${kr.id}"${d.gates===kr.id?" selected":""}>${esc(kr.statement||kr.id)}</option>`).join("");
+  const gateField = isKr ? "" : `<div class="modal-field"><span class="lbl">Gates a product specification (optional)</span><select data-tf="gates">${gateOpts}</select><span class="hint" style="display:block;margin-top:2px">a gating spec is a different way to measure the same requirement — it is shown as a gate on that product spec, but keeps its own target &amp; readings and does not roll into the product spec's score</span></div>`;
   return `
-    <div class="modal-field"><span class="lbl">Specification name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
+    <div class="modal-field"><span class="lbl">Name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.dir,"tgtdir")}</div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"],["range","↔ Range"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${(isBin||isRange)?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
+    <div class="modal-field" style="display:${(!isBin&&isRange)?"block":"none"}"><span class="lbl">Range low</span><input type="number" step="any" data-tf="targetLo" value="${esc(d.targetLo)}" placeholder="e.g. 2"></div>
+    <div class="modal-field" style="display:${(!isBin&&isRange)?"block":"none"}"><span class="lbl">Range high</span><input type="number" step="any" data-tf="targetHi" value="${esc(d.targetHi)}" placeholder="e.g. 4"></div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
-    <div class="modal-field"><span class="lbl">Gates a product specification (optional)</span><select data-tf="gates">${gateOpts}</select><span class="hint" style="display:block;margin-top:2px">a gating spec is a different way to measure the same requirement — it is shown as a gate on that product spec, but keeps its own target &amp; readings and does not roll into the product spec's score</span></div>
-    <div class="hint" style="margin:0 0 12px">readings are posted from the component's specification table; statistical targets aggregate the latest reads</div>
-    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
+    ${gateField}
+    <div class="hint" style="margin:0 0 12px">readings are posted from the ${isKr?"specification's metric":"component's specification"} table; statistical targets aggregate the latest reads</div>
+    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update ":"Save "}${noun}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
 function wireTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
   body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
-  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
   const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
   const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
 }
 function saveTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
-  const d=draftTgt;
+  const d=draftTgt, isKr=draftTgtHostType==="keyResult";
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
-  if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"component", hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:draftTgtHostType, hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
-  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
+  else {
+    if(d.dir==="range"){ pk.direction="range"; const lo=parseTargetNum(d.targetLo), hi=parseTargetNum(d.targetHi); pk.target=(lo!=null&&hi!=null)?{lo,hi}:null; }
+    else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); }
+    pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  if(d.gates && (doc.keyResults||[]).some(r=>r.id===d.gates)){ pk.gates=d.gates; } else { delete pk.gates; }
+  if(!isKr && d.gates && (doc.keyResults||[]).some(r=>r.id===d.gates)){ pk.gates=d.gates; } else { delete pk.gates; }
   const gk=pk.gates?(doc.keyResults||[]).find(r=>r.id===pk.gates):null;
-  closeTgtModal(); renderAll(); setMsg(gk?("Gating spec saved — gates “"+(gk.statement||gk.id)+"”."):"Component specification saved.","ok");
+  closeTgtModal(); renderAll(); setMsg(gk?("Gating spec saved — gates “"+(gk.statement||gk.id)+"”."):(isKr?"KPI saved.":"Component specification saved."),"ok");
 }
 
 /* ---------------- KPI link groups ---------------- */
@@ -2532,13 +2543,13 @@ function wireSubAdd(mb){
 function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
-  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else if(ht==="keyResult") openTgtModal(hid, null, "keyResult"); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{ const rel=host.querySelector("[data-linkrel]"); const o=sel.options[sel.selectedIndex]; if(rel && o && o.dataset.defrel) rel.value=o.dataset.defrel; });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
-    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="component" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
+    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && !isMemberKpi(k) && (k.hostType==="component"||k.hostType==="keyResult")){ openTgtModal(k.hostId, id, k.hostType); return; } }
     subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
