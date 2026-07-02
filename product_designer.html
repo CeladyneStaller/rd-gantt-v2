@@ -2023,18 +2023,44 @@ function linkCandidates(hostType, hostId){
     if(seen.has(root.id) || root.hostId===hostId) return;   // don't offer a metric already hosted here
     seen.add(root.id); out.push(root);
   });
+  // product specifications that have no measurement KPI yet (percentage/sub-spec tracked) — offered so a
+  // component metric can still be linked to them; the anchor KPI is materialized on selection.
+  if(hostType!=="product" && O){
+    (doc.keyResults||[]).filter(r=>r.objectiveId===O).forEach(kr=>{
+      const hasKpi=AK.some(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,AK).parent==null);
+      if(!hasKpi) out.push({ id:"SPECREF-"+kr.id, hostType:"keyResult", hostId:kr.id, name:kr.statement||kr.id, direction:"up", target:null, unit:null });
+    });
+  }
   return out;
 }
+// A product specification is linkable only once it has a keyResult-hosted measurement KPI. Percentage/sub-spec
+// specs have none, so we materialize one on demand. For value-flowing links (contribute/direct) the spec then
+// DERIVES its conformance from its linked component metrics (kpi tracking); specification links leave it alone.
+function materializeSpecKpi(krId, deriveFromMetrics){
+  const kr=doc.keyResults.find(r=>r.id===krId); if(!kr) return null;
+  const AK=allKpis();
+  let pk=doc.kpis.find(k=>k.hostType==="keyResult" && k.hostId===krId && RD.linkOf(k,AK).parent==null);
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, AK.map(x=>x.id));
+    pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:krId, linkParent:null, name:kr.statement||krId, direction:"up", target:null, unit:null };
+    doc.kpis.push(pk); }
+  if(deriveFromMetrics && kr.trackingType!=="kpi"){ kr.trackingType="kpi"; delete kr.progress; delete kr.subKrs; }
+  return pk.id;
+}
 function makeLinkMember(hostType, hostId, parentId, linkType){
-  const AK=allKpis(); const parent=AK.find(k=>k.id===parentId); if(!parent) return;
+  const AK0=allKpis(); let parent0=AK0.find(k=>k.id===parentId), realParentId=parentId;
+  let synthKr=null;
+  if(!parent0 && typeof parentId==="string" && parentId.indexOf("SPECREF-")===0) synthKr=parentId.slice("SPECREF-".length);
+  const thisProd = hostType==="product" ? hostId : (selectedModel?productIdOf(selectedModel):null);
+  const type = linkType || (synthKr ? "contribute" : linkDefaultFor(parent0, hostType, thisProd));
+  if(synthKr){ realParentId=materializeSpecKpi(synthKr, type!=="specification"); if(!realParentId) return; }
+  const AK=allKpis(); const parent=AK.find(k=>k.id===realParentId); if(!parent) return;
   const objScope = hostType==="product" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, AK.map(x=>x.id));
-  if(RD.wouldCreateCycle(id, parentId, AK)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-  const thisProd = objScope ? productIdOf(objScope) : (hostType==="product"?hostId:null);
-  const type=linkType || linkDefaultFor(parent, hostType, thisProd);
-  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
+  if(RD.wouldCreateCycle(id, realParentId, AK)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:realParentId, linkType:type, linkPriority:0,
                   name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked ("+type+").","ok");
+  addingFor=null; restoreReturn(); renderAll();
+  setMsg(synthKr ? ("Linked to specification ("+type+")"+(type!=="specification"?" — its conformance now derives from linked metrics":"")) : ("Linked ("+type+")."),"ok");
 }
 function unlinkKpi(id){
   const AK=allKpis(); const m=doc.kpis.find(k=>k.id===id); if(!m) return;
@@ -2051,18 +2077,20 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const AK=allKpis();
   const thisProd = hostType==="product" ? hostId : (selectedModel?productIdOf(selectedModel):null);
-  // group by provenance: this product's own metrics / division initiatives / OTHER products' registry KPIs (import)
-  const mine=[], inits=[], others={};
+  // group by provenance: product specifications / this product's own metrics / division initiatives / OTHER products' registry KPIs (import)
+  const mine=[], specs=[], inits=[], others={};
   cands.forEach(d=>{
     if(d.hostType==="product" && d.hostId!==thisProd){ (others[d.hostId]=others[d.hostId]||[]).push(d); }
     else if(d.hostType==="initiative"){ inits.push(d); }
+    else if(d.hostType==="keyResult"){ specs.push(d); }
     else mine.push(d);
   });
-  const opt=d=>`<option value="${d.id}" data-defrel="${linkDefaultFor(d, hostType, thisProd)}">${esc(RD.kpiName(d, AK)||d.id)} · ${hostLabel(d)}</option>`;
+  const opt=d=>{ const nm=esc((d.name!=null?d.name:RD.kpiName(d, AK))||d.id);
+    return `<option value="${d.id}" data-defrel="${linkDefaultFor(d, hostType, thisProd)}">${nm}${d.hostType==="keyResult"?"":" · "+hostLabel(d)}</option>`; };
   const grp=(lbl,arr)=>arr.length?`<optgroup label="${esc(lbl)}">`+arr.map(opt).join("")+`</optgroup>`:"";
-  let optionsHtml=grp("This product", mine)+grp("Division initiatives", inits);
+  let optionsHtml=grp("Product specifications", specs)+grp("This product's metrics", mine)+grp("Division initiatives", inits);
   Object.keys(others).forEach(pid=>{ const dt=divOfProduct(pid); optionsHtml+=grp("Import from "+productName(pid)+(dt?" ["+dt+"]":""), others[pid]); });
-  const first=mine[0]||inits[0]||(others[Object.keys(others)[0]]||[])[0]||cands[0];
+  const first=specs[0]||mine[0]||inits[0]||(others[Object.keys(others)[0]]||[])[0]||cands[0];
   const defType=linkDefaultFor(first, hostType, thisProd);
   return `<div class="ed"><label style="grid-column:1/-1">Link to a product, specification, or another product's KPI
     <select data-linkdef>`+optionsHtml+`</select></label>
