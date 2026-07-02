@@ -1359,9 +1359,11 @@ async function fetchRefDoc(div){
 }
 function neededRefDivs(){
   if(!selectedModel || !portfolio) return [];
-  const s=new Set();
-  RD.compositionChildren(selectedModel, portfolio.composition||[]).forEach(cm=>{
+  const s=new Set(), comp=portfolio.composition||[];
+  RD.compositionChildren(selectedModel, comp).forEach(cm=>{      // sub-products (down)
     const d=refDivOfModel(cm); if(d && d!==divisionId && !refDocs["SPEC-"+d]) s.add(d); });
+  RD.compositionParents(selectedModel, comp).forEach(pm=>{       // owners this model is a component in (up)
+    const d=refDivOfModel(pm); if(d && d!==divisionId && !refDocs["SPEC-"+d]) s.add(d); });
   return [...s];
 }
 async function ensureRefDocs(){        // fire-and-forget from renderAll; only re-renders when something new arrives
@@ -1612,6 +1614,35 @@ function removeSubProduct(hostId){
   }
 }
 
+/* keep a sub-product's imported specs in sync with the child model's current specifications: add a member for
+   any child spec not yet imported, so specs added to the sub-product later show up automatically. */
+function syncSubProductSpecs(){
+  let changed=false;
+  subProductHosts(selectedModel).forEach(hst=>{
+    const child=hst.refModel, rd=refDocOfModel(child);
+    if(!rd || !rd.doc || rd.failed) return;   // child specs unknown right now → leave existing imports alone
+    const RAK=refAllKpis(rd.doc);
+    const childSpecs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===child);
+    const have=new Set(doc.kpis.filter(k=>k.hostType==="component" && k.hostId===hst.id && k.refKr).map(k=>k.refKr));
+    childSpecs.forEach(src=>{
+      if(have.has(src.id)) return;
+      const kid=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id));
+      const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===src.id && RD.linkOf(k,RAK).parent==null);
+      doc.kpis.push({ id:kid, objectiveId:selectedModel, hostType:"component", hostId:hst.id,
+        refModel:child, refKr:src.id, linkType:"specification", linkParent:null,
+        name:src.statement||src.id, unit:(pk?RD.kpiUnit(pk,RAK):"%"), target:null });
+      changed=true;
+    });
+  });
+  return changed;
+}
+// associate one imported sub-product spec with a product specification of this model (traceability + live-score display)
+function setLinkSpec(kid, krId){
+  const m=doc.kpis.find(k=>k.id===kid); if(!m) return;
+  if(krId && doc.keyResults.some(r=>r.id===krId && r.objectiveId===selectedModel)) m.linkSpec=krId; else delete m.linkSpec;
+  renderAll(); persist(); setMsg(m.linkSpec?"Imported spec linked to a product specification.":"Link cleared.","ok");
+}
+
 /* ---------------- render root ---------------- */
 function renderAll(){
   if(!doc){ document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); renderModal(); return; }
@@ -1619,7 +1650,7 @@ function renderAll(){
   if(models.length && (!selectedModel || !models.find(m=>m.id===selectedModel))) selectedModel=models[0].id;
   const pid = selectedModel?productIdOf(selectedModel):null;
   document.getElementById("docPill").textContent = divisionId ? (divName()+(pid?" · "+productName(pid):"")) : "Product specification";
-  renderProductPanel();
+  renderComponentOwners();
   if(!divProducts().length){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">'+(tok()?'No products in this division yet — add products and models in the <b>Planning</b> app, then reload.':'Add a broker token in ⚙ to load products and models from the portfolio.')+'</p>';
     document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
@@ -1633,6 +1664,7 @@ function renderAll(){
     const m=models.find(x=>x.id===selectedModel);
     document.getElementById("modelHeadWrap").innerHTML = modelHeader(m)+modelMetricStrip(m)+signalBars();
     const eb=document.querySelector("[data-editmodel]"); if(eb) eb.onclick=()=>openModelEditor(modelById(eb.dataset.editmodel));
+    syncSubProductSpecs();
     renderSpecs(); renderComponents(); renderSubProducts();
   }
   renderModal();
@@ -2200,22 +2232,35 @@ function importsPanelHtml(pid){
   });
   return `<div class="panel">${panelHead("IMPORTS","Cross-product dependencies",imps.length,'')}<div class="item-list${listOpen("IMPORTS")}"><div class="imp-list">${body}</div></div></div>`;
 }
-function renderProductPanel(){
+function renderComponentOwners(){
   const host=document.getElementById("initPanel");
+  const comp=portfolio.composition||[];
+  const parents = selectedModel ? RD.compositionParents(selectedModel, comp) : [];
   const pid = selectedModel?productIdOf(selectedModel):null;
-  if(!pid){
-    host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?'This model has no product family in the portfolio.':'—'}</p></div></div>`;
+  if(!parents.length){
+    host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?"This model isn't used as a sub-product in any other model yet. When it is, the owner products and their specifications show here.":"—"}</p></div></div>`+(pid?importsPanelHtml(pid):"");
     wireExec(host); return;
   }
-  const pname=productName(pid);
-  const n=allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length;
-  const inner=`<div class="icard"><div class="icard-top">
-      <span class="icard-title">${esc(pname)}</span>
-      <span class="pill">${n} metric${n===1?'':'s'}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="product:${pid}">+ KPI</button></span>
-      </div><div class="icard-meta">${kpiTable("product", pid, null)}</div></div>`;
-  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared across this product · link from a specification or component</span>`;
-  host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`+importsPanelHtml(pid);
+  // group the owner models by their product
+  const byProd={}; parents.forEach(pm=>{ const ppid=productIdOf(pm); (byProd[ppid]=byProd[ppid]||[]).push(pm); });
+  let inner="";
+  Object.keys(byProd).forEach(ppid=>{
+    const pdiv=divOfProduct(ppid);
+    inner+=`<div class="imp-src">${esc(productName(ppid))}${pdiv?`<span class="imp-div">${esc(pdiv)}</span>`:''}</div>`;
+    byProd[ppid].forEach(pm=>{
+      const rd=refDocOfModel(pm), pmName=(modelById(pm)||{}).name||pm;
+      if(!rd || !rd.doc){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi"><span class="pill">loading…</span></span></div>`; return; }
+      if(rd.failed){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi"><span class="statepill pending">unreachable</span></span></div>`; return; }
+      const REM=refEm(rd.doc), specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===pm);
+      if(!specs.length){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi hint">no specifications yet</span></div>`; return; }
+      specs.forEach(kr=>{ const s=RD.keyResultScore(kr.id, REM);
+        inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}<span class="imp-mdl"> · ${esc(kr.statement||kr.id)}</span></span>`+
+          `<span class="imp-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span></div>`;
+      });
+    });
+  });
+  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">products this model is a component in</span>`;
+  host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",parents.length,acts)}<div class="item-list${listOpen("INIT")}"><div class="imp-list">${inner}</div></div></div>`+(pid?importsPanelHtml(pid):"");
   wireExec(host);
 }
 
@@ -2315,6 +2360,8 @@ function renderSpecs(){
       const gs=RD.kpiScoreResolved(g, AK, EM);
       return `<a class="rowedit" data-edit="kpi:${g.id}" title="on ${esc(componentName(g.hostId))} — a different measure of this requirement">${esc(RD.kpiName(g,AK)||g.id)} <b style="color:${col(RD.band(gs))}">${gs==null?'—':Math.round(gs)}</b></a>`;
     }).join(" · ")+`</div>` : '';
+    const subIn=AK.filter(k=>k.hostType==="component" && k.refKr && k.linkSpec===kr.id);
+    const subHtml = subIn.length ? `<div class="hint" style="margin:6px 0 0">↳ from sub-products: `+subIn.map(k=>{ const r=resolveRef(k); return `<span title="imported sub-product spec">${esc(r.name||k.id)} <b style="color:${col(RD.band(r.score))}">${r.score==null?'—':Math.round(r.score)}</b></span>`; }).join(" · ")+`</div>` : '';
     inner+=`<div class="icard" data-dropzone="${kr.id}"><div class="icard-top">
       <span class="drag-handle" draggable="true" data-draghandle="${kr.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
@@ -2323,7 +2370,7 @@ function renderSpecs(){
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div></div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
@@ -2362,6 +2409,7 @@ function renderComponents(){
 function renderSubProducts(){
   const host=document.getElementById("subCMP");
   const hosts=subProductHosts(selectedModel);
+  const specOptsBase=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
   let inner="";
   if(!hosts.length) inner+=`<p class="hint">none yet — plug a specific model of another product in as a sub-product; its specs import as <b>specification</b> links (visible here, but they don't roll into this model's conformance)</p>`;
   hosts.forEach(hst=>{
@@ -2370,8 +2418,8 @@ function renderSubProducts(){
     let note="";
     if(!rd && refDivOfModel(child) && refDivOfModel(child)!==divisionId) note=`<span class="pill">loading…</span>`;
     else if(rd && rd.failed) note=`<span class="statepill pending" title="couldn't reach that product's SPEC bin">unreachable</span>`;
-    let rows=`<table class="kpitable"><thead><tr><th>Imported spec</th><th>dir</th><th>stack target</th><th>stack value</th><th>your target</th><th>score</th></tr></thead><tbody>`;
-    if(!specs.length) rows+=`<tr><td colspan="6" class="hint">this model has no importable specifications</td></tr>`;
+    let rows=`<table class="kpitable"><thead><tr><th>Imported spec</th><th>dir</th><th>stack target</th><th>stack value</th><th>your target</th><th>score</th><th>links to spec</th></tr></thead><tbody>`;
+    if(!specs.length) rows+=`<tr><td colspan="7" class="hint">this model has no importable specifications</td></tr>`;
     specs.forEach(m=>{
       const r=resolveRef(m);
       const st=fmtTarget(r.stackTgt, r.unit), sv=r.stackVal==null?'<span class="pill">no read</span>':esc(String(r.stackVal));
@@ -2380,7 +2428,8 @@ function renderSubProducts(){
         `<td class="mono">${st}</td><td class="kpi-now">${sv}</td>`+
         `<td><div class="read-row"><input class="tiny" type="number" data-ovr="${m.id}" value="${ovrVal}" placeholder="${r.stackTgt!=null?esc(String(r.stackTgt)):'inherit'}"/>`+
         `<button class="ghost mini" data-setovr="${m.id}">set</button></div>${r.overridden?' <span class="pill">override</span>':''}</td>`+
-        `<td style="color:${col(RD.band(r.score))};font-weight:600">${r.score==null?'—':Math.round(r.score)}</td></tr>`;
+        `<td style="color:${col(RD.band(r.score))};font-weight:600">${r.score==null?'—':Math.round(r.score)}</td>`+
+        `<td><select class="tiny" data-linkspec="${m.id}"><option value="">—</option>`+specOptsBase.map(kr=>`<option value="${kr.id}"${m.linkSpec===kr.id?' selected':''}>${esc(kr.statement||kr.id)}</option>`).join("")+`</select></td></tr>`;
     });
     rows+=`</tbody></table>`;
     inner+=`<div class="icard"><div class="icard-top">
@@ -2395,6 +2444,7 @@ function renderSubProducts(){
   host.querySelectorAll("[data-addsub]").forEach(b=>b.onclick=()=>openSubAdd());
   host.querySelectorAll("[data-delsub]").forEach(b=>b.onclick=()=>removeSubProduct(b.dataset.delsub));
   host.querySelectorAll("[data-setovr]").forEach(b=>b.onclick=()=>setOverride(host, b.dataset.setovr));
+  host.querySelectorAll("[data-linkspec]").forEach(sel=>sel.onchange=()=>setLinkSpec(sel.dataset.linkspec, sel.value));
 }
 function setOverride(scope, kid){
   const m=doc.kpis.find(k=>k.id===kid); if(!m) return;
