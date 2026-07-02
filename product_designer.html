@@ -104,6 +104,13 @@
   .item-list{display:flex;flex-direction:column;gap:8px}
   .item-list.collapsed{display:none}
   .icard{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .drag-handle{cursor:grab;color:var(--muted);font-size:14px;line-height:1;padding:2px 3px;flex:none;user-select:none;opacity:.45}
+  .drag-handle:hover{opacity:1;color:var(--accent2)}
+  .drag-handle:active{cursor:grabbing}
+  .icard.drag-over{box-shadow:inset 0 3px 0 0 var(--accent)}
+  .kpitable .row-grip{font-size:12px;padding:0;margin-right:3px;vertical-align:middle;opacity:.4}
+  .kpitable .row-grip:hover{opacity:1;color:var(--accent2)}
+  .kpitable tr.row-drop-over > td{box-shadow:inset 0 2px 0 0 var(--accent)}
   .icard-top{display:flex;align-items:center;gap:10px;padding:8px 12px}
   .icard-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .icard-title{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2216,6 +2223,8 @@ function renderProductPanel(){
 function kpiTable(hostType, hostId, objScope){
   const AK=allKpis(), EM=emForCore();
   const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
+  const canReorder = hostType!=="product";   // doc-hosted metrics (component/spec) reorder within doc.kpis; product KPIs are a shared registry
+  const hostKey = hostType+"|"+hostId+"|"+(objScope==null?"":objScope);
   let h=`<table class="kpitable"><thead><tr><th>Metric</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
   if(!rows.length) h += `<tr><td colspan="7" class="hint">no metrics yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
@@ -2228,7 +2237,9 @@ function kpiTable(hostType, hostId, objScope){
     else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${childCount(k)}</span>`;
     if(k.gates){ const gk=(doc.keyResults||[]).find(r=>r.id===k.gates); badge += `<span class="linkbadge" title="a gate for a product specification (different measure of the same requirement)">⛒ gates ${esc(gk?(gk.statement||gk.id):k.gates)}</span>`; }
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
-    h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
+    const grip = canReorder ? `<span class="drag-handle row-grip" draggable="true" title="drag to reorder">⠿</span>` : '';
+    const trAttrs = canReorder ? ` data-droprow="${k.id}" data-rowhost="${esc(hostKey)}"` : '';
+    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
       <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
       <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
@@ -2240,6 +2251,56 @@ function kpiTable(hostType, hostId, objScope){
   return h;
 }
 
+/* ---------------- drag-and-drop reorder (product specs + components) ----------------
+   Both lists render in array order, so reordering = moving the element within its array,
+   preserving other models' / sub-product-host entries in place. */
+let _dragId=null, _dragKind=null;
+function reorderWithin(arrName, isMine, fromId, toId){
+  const arr=doc[arrName]||[]; const mine=arr.filter(isMine);
+  const fi=mine.findIndex(r=>r.id===fromId); if(fi<0) return false;
+  const [m]=mine.splice(fi,1); let ti=mine.findIndex(r=>r.id===toId); if(ti<0) ti=mine.length; mine.splice(ti,0,m);
+  let i=0; doc[arrName]=arr.map(r=>isMine(r)?mine[i++]:r); return true;
+}
+function reorderSpec(fromId,toId){ return reorderWithin('keyResults', r=>r.objectiveId===selectedModel, fromId, toId); }
+function reorderComp(fromId,toId){ return reorderWithin('stageGates', r=>r.objectiveId===selectedModel && !r.refModel, fromId, toId); }
+function wireReorder(host, kind){
+  const move = kind==='spec' ? reorderSpec : reorderComp;
+  host.querySelectorAll('[data-draghandle]').forEach(h=>{
+    h.ondragstart=e=>{ _dragId=h.getAttribute('data-draghandle'); _dragKind=kind;
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',_dragId);}catch(_){}
+        const card=h.closest('.icard'); if(card){ try{e.dataTransfer.setDragImage(card,12,12);}catch(_){} } } };
+    h.ondragend=()=>{ _dragId=null; _dragKind=null; host.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); };
+  });
+  host.querySelectorAll('[data-dropzone]').forEach(z=>{
+    z.ondragover=e=>{ if(_dragKind!==kind) return; e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; if(z.getAttribute('data-dropzone')!==_dragId) z.classList.add('drag-over'); };
+    z.ondragleave=()=>z.classList.remove('drag-over');
+    z.ondrop=e=>{ if(_dragKind!==kind) return; e.preventDefault(); z.classList.remove('drag-over');
+      const toId=z.getAttribute('data-dropzone'), fromId=_dragId; _dragId=null; _dragKind=null;
+      if(fromId && toId && fromId!==toId && move(fromId,toId)){ renderAll(); persist(); setMsg('Reordered.','ok'); } };
+  });
+}
+let _rowFrom=null, _rowHost=null;
+function reorderKpiRow(hostKey, fromId, toId){
+  const p=hostKey.split("|"), hostType=p[0], hostId=p[1], objScope=(p[2]===""?null:p[2]);
+  const arr=doc.kpis, isMine=k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId;
+  const mine=arr.filter(isMine); const fi=mine.findIndex(k=>k.id===fromId); if(fi<0) return false;
+  const [m]=mine.splice(fi,1); let ti=mine.findIndex(k=>k.id===toId); if(ti<0) ti=mine.length; mine.splice(ti,0,m);
+  let i=0; doc.kpis=arr.map(k=>isMine(k)?mine[i++]:k); return true;
+}
+function wireKpiRows(host){
+  host.querySelectorAll('tr[data-droprow] .row-grip').forEach(g=>{
+    g.ondragstart=e=>{ const tr=g.closest('tr'); if(!tr) return; _rowFrom=tr.getAttribute('data-droprow'); _rowHost=tr.getAttribute('data-rowhost');
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',_rowFrom);}catch(_){} try{e.dataTransfer.setDragImage(tr,12,8);}catch(_){} } e.stopPropagation(); };
+    g.ondragend=()=>{ _rowFrom=null; _rowHost=null; host.querySelectorAll('tr.row-drop-over').forEach(x=>x.classList.remove('row-drop-over')); };
+  });
+  host.querySelectorAll('tr[data-droprow]').forEach(tr=>{
+    tr.ondragover=e=>{ if(_rowFrom==null || tr.getAttribute('data-rowhost')!==_rowHost) return; e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; if(tr.getAttribute('data-droprow')!==_rowFrom) tr.classList.add('row-drop-over'); };
+    tr.ondragleave=()=>tr.classList.remove('row-drop-over');
+    tr.ondrop=e=>{ if(_rowFrom==null || tr.getAttribute('data-rowhost')!==_rowHost) return; e.preventDefault(); e.stopPropagation(); tr.classList.remove('row-drop-over');
+      const toId=tr.getAttribute('data-droprow'), fromId=_rowFrom, hk=_rowHost; _rowFrom=null; _rowHost=null;
+      if(fromId && toId && fromId!==toId && reorderKpiRow(hk, fromId, toId)){ renderAll(); persist(); setMsg('Reordered.','ok'); } };
+  });
+}
 /* ---------------- specification list (was KRs) ---------------- */
 function renderSpecs(){
   const host=document.getElementById("subKR");
@@ -2254,7 +2315,8 @@ function renderSpecs(){
       const gs=RD.kpiScoreResolved(g, AK, EM);
       return `<a class="rowedit" data-edit="kpi:${g.id}" title="on ${esc(componentName(g.hostId))} — a different measure of this requirement">${esc(RD.kpiName(g,AK)||g.id)} <b style="color:${col(RD.band(gs))}">${gs==null?'—':Math.round(gs)}</b></a>`;
     }).join(" · ")+`</div>` : '';
-    inner+=`<div class="icard"><div class="icard-top">
+    inner+=`<div class="icard" data-dropzone="${kr.id}"><div class="icard-top">
+      <span class="drag-handle" draggable="true" data-draghandle="${kr.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
       <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
       <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
@@ -2265,7 +2327,7 @@ function renderSpecs(){
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
-  wireExec(host);
+  wireExec(host); wireReorder(host,'spec');
 }
 
 /* ---------------- component list (was stage-gates; no scheduling) ---------------- */
@@ -2279,7 +2341,8 @@ function renderComponents(){
     const tags=[];
     if(g.ctype) tags.push(`<span class="pill">${esc(g.ctype)}</span>`);
     if(g.status) tags.push(`<span class="statepill pending">${esc(g.status)}</span>`);
-    inner+=`<div class="icard"><div class="icard-top">
+    inner+=`<div class="icard" data-dropzone="${g.id}"><div class="icard-top">
+      <span class="drag-handle" draggable="true" data-draghandle="${g.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">C${idx+1}</span>
       <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
       ${tags.join(" ")}
@@ -2292,7 +2355,7 @@ function renderComponents(){
   });
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
-  wireExec(host);
+  wireExec(host); wireReorder(host,'comp');
 }
 
 /* ---------------- sub-products panel (model-to-model composition) ---------------- */
@@ -2396,6 +2459,7 @@ function wireExec(host){
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
   host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
+  wireKpiRows(host);
 }
 
 /* ---------------- product-model editor ---------------- */
