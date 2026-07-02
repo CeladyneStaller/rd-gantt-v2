@@ -74,6 +74,17 @@
   .imp-where{color:var(--fg)}.imp-mdl{color:var(--muted)}
   .imp-kpi{color:var(--fg)}.imp-rel{font-family:var(--mono);font-size:9px;color:var(--muted);border:1px solid #2a3a5a;border-radius:5px;padding:0 4px;margin-left:3px}
   .imp-val{font-family:var(--mono);font-size:11px;text-align:right}.imp-score{font-family:var(--mono);font-weight:600;text-align:right}
+  .own-head{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12px}
+  .own-head .chev{font-size:9px;transition:transform .15s;display:inline-block;color:var(--none)}
+  .own-head.collapsed .chev{transform:rotate(-90deg)}
+  .own-prod-head{color:var(--accent2);font-weight:600;margin:8px 0 2px}
+  .own-model-head{color:var(--fg);font-weight:500;padding-left:14px;margin:2px 0}
+  .own-body.collapsed{display:none}
+  .own-spec{display:grid;grid-template-columns:1.5fr auto 30px;gap:8px;align-items:center;padding:3px 6px 3px 28px;border-top:1px solid #1b2740;font-size:12px}
+  .own-spec-name{color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .own-spec-tgt{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+  .own-spec-score{font-family:var(--mono);font-weight:600;text-align:right}
+  .own-note{padding:3px 6px 3px 28px;font-size:12px}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
   .gate-sched .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -1676,6 +1687,7 @@ function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b
 
 /* ---------------- dashboard shell ---------------- */
 const panelCollapsed = new Set(["INIT"]);
+let ownerCollapsed = new Set();   // collapse state for Component-owner product/model groups
 function panelHead(key, title, cnt, actionsHtml){
   const open=!panelCollapsed.has(key);
   return `<div class="panel-header"><span class="panel-title${open?'':' collapsed'}" data-panel="${key}"><span class="chev">▼</span>${esc(title)}${cnt!=null?` <span class="cnt">${cnt}</span>`:''}</span><span class="ha">${actionsHtml||''}</span></div>`;
@@ -2232,6 +2244,21 @@ function importsPanelHtml(pid){
   });
   return `<div class="panel">${panelHead("IMPORTS","Cross-product dependencies",imps.length,'')}<div class="item-list${listOpen("IMPORTS")}"><div class="imp-list">${body}</div></div></div>`;
 }
+// target of an owner spec, for reference while building this model's specs: KPI-tracked → its ≥/≤ target+unit
+// (or ✓ pass for binary); percentage/sub-spec tracked → 100% conformance.
+function ownerSpecTarget(kr, rd){
+  const RAK=refAllKpis(rd.doc);
+  const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,RAK).parent==null);
+  if(pk){
+    if(pk.targetType==="binary") return "✓ pass";
+    const dir=RD.kpiDirection(pk,RAK), unit=RD.kpiUnit(pk,RAK), tgt=RD.effTarget(pk,RAK);
+    if(tgt==null) return "—";
+    const arrow=(typeof tgt==="object")?"":(dir==="down"?"≤ ":dir==="up"?"≥ ":"");
+    return arrow+fmtTarget(tgt, unit);
+  }
+  const tt=kr.trackingType||"kpi";
+  return (tt==="percentage"||tt==="subkr") ? "100%" : "—";
+}
 function renderComponentOwners(){
   const host=document.getElementById("initPanel");
   const comp=portfolio.composition||[];
@@ -2241,27 +2268,36 @@ function renderComponentOwners(){
     host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?"This model isn't used as a sub-product in any other model yet. When it is, the owner products and their specifications show here.":"—"}</p></div></div>`+(pid?importsPanelHtml(pid):"");
     wireExec(host); return;
   }
-  // group the owner models by their product
+  const col2=k=>ownerCollapsed.has(k);   // collapsed?
   const byProd={}; parents.forEach(pm=>{ const ppid=productIdOf(pm); (byProd[ppid]=byProd[ppid]||[]).push(pm); });
   let inner="";
   Object.keys(byProd).forEach(ppid=>{
-    const pdiv=divOfProduct(ppid);
-    inner+=`<div class="imp-src">${esc(productName(ppid))}${pdiv?`<span class="imp-div">${esc(pdiv)}</span>`:''}</div>`;
+    const pdiv=divOfProduct(ppid), pk="OWNP:"+ppid, pc=col2(pk);
+    let mbody="";
     byProd[ppid].forEach(pm=>{
-      const rd=refDocOfModel(pm), pmName=(modelById(pm)||{}).name||pm;
-      if(!rd || !rd.doc){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi"><span class="pill">loading…</span></span></div>`; return; }
-      if(rd.failed){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi"><span class="statepill pending">unreachable</span></span></div>`; return; }
-      const REM=refEm(rd.doc), specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===pm);
-      if(!specs.length){ inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}</span><span class="imp-kpi hint">no specifications yet</span></div>`; return; }
-      specs.forEach(kr=>{ const s=RD.keyResultScore(kr.id, REM);
-        inner+=`<div class="imp-row"><span class="imp-where">${esc(pmName)}<span class="imp-mdl"> · ${esc(kr.statement||kr.id)}</span></span>`+
-          `<span class="imp-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span></div>`;
-      });
+      const mk="OWNM:"+pm, mc=col2(mk), rd=refDocOfModel(pm), pmName=(modelById(pm)||{}).name||pm;
+      let sbody="";
+      if(!rd || !rd.doc){ sbody=`<div class="own-note hint">loading…</div>`; }
+      else if(rd.failed){ sbody=`<div class="own-note"><span class="statepill pending" title="couldn't reach that product's SPEC bin">unreachable</span></div>`; }
+      else {
+        const REM=refEm(rd.doc), specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===pm);
+        if(!specs.length) sbody=`<div class="own-note hint">no specifications yet</div>`;
+        else specs.forEach(kr=>{ const s=RD.keyResultScore(kr.id, REM);
+          sbody+=`<div class="own-spec"><span class="own-spec-name" title="${esc(kr.statement||kr.id)}">${esc(kr.statement||kr.id)}</span>`+
+            `<span class="own-spec-tgt">${esc(ownerSpecTarget(kr, rd))}</span>`+
+            `<span class="own-spec-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span></div>`;
+        });
+      }
+      mbody+=`<div class="own-grp"><div class="own-head own-model-head${mc?' collapsed':''}" data-owntoggle="${esc(mk)}"><span class="chev">▼</span><span>${esc(pmName)}</span></div>`+
+             `<div class="own-body${mc?' collapsed':''}">${sbody}</div></div>`;
     });
+    inner+=`<div class="own-grp"><div class="own-head own-prod-head${pc?' collapsed':''}" data-owntoggle="${esc(pk)}"><span class="chev">▼</span><span>${esc(productName(ppid))}</span>${pdiv?`<span class="imp-div">${esc(pdiv)}</span>`:''}</div>`+
+           `<div class="own-body${pc?' collapsed':''}">${mbody}</div></div>`;
   });
   const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">products this model is a component in</span>`;
   host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",parents.length,acts)}<div class="item-list${listOpen("INIT")}"><div class="imp-list">${inner}</div></div></div>`+(pid?importsPanelHtml(pid):"");
   wireExec(host);
+  host.querySelectorAll("[data-owntoggle]").forEach(el=>el.onclick=(e)=>{ e.stopPropagation(); const k=el.dataset.owntoggle; if(ownerCollapsed.has(k)) ownerCollapsed.delete(k); else ownerCollapsed.add(k); renderComponentOwners(); });
 }
 
 /* ---------------- metric table ---------------- */
