@@ -1141,6 +1141,33 @@ function blankDoc(){ return { keyResults:[], stageGates:[], kpis:[], kpiUpdates:
 // on load: materialize legacy links, then re-tag designer hostTypes (product KPIs, components)
 function normalizeKpis(kpis){ if(!kpis) return; RD.migrateKpiLinks(kpis);
   for(const k of kpis){ if(k.hostType==="initiative") k.hostType="product"; else if(k.hostType==="stageGate") k.hostType="component"; } }
+// One-time repair for docs written before component ids were allocated against the stageGate array: multiple
+// components (and sometimes a sub-product host) collided on one id, so a KPI on one appeared on all of them.
+// Re-id every colliding stageGate; re-home its KPIs where we can tell them apart (sub-product members carry
+// refModel), and collapse the genuinely-ambiguous plain-component metrics onto the first such component.
+function dedupeStructuralIds(){
+  let changed=false;
+  const sgs=doc.stageGates||[], kpis=doc.kpis||[];
+  const groups={}; sgs.forEach(g=>{ (groups[g.id]=groups[g.id]||[]).push(g); });
+  const used=new Set(sgs.map(g=>g.id));
+  Object.keys(groups).forEach(oldId=>{
+    const grp=groups[oldId]; if(grp.length<2) return;   // no collision on this id
+    changed=true;
+    const hosted=kpis.filter(k=>k.hostType==="component" && k.hostId===oldId);
+    grp.forEach(g=>{ const fresh=RD.allocId("stageGate", g.objectiveId||selectedModel, [...used]); used.add(fresh); g.__newId=fresh; });
+    const firstNormal=grp.find(g=>!g.refModel) || grp[0];
+    hosted.forEach(k=>{
+      let host=null;
+      if(k.refModel) host=grp.find(g=>g.refModel===k.refModel);   // sub-product member → its own host, by refModel
+      k.hostId=(host||firstNormal).__newId;                       // else → the first plain component
+    });
+    grp.forEach(g=>{ g.id=g.__newId; delete g.__newId; });
+  });
+  // keyResults were always allocated correctly, but de-dup defensively (ids only)
+  const krs=doc.keyResults||[]; const kseen=new Set(); const kused=new Set(krs.map(k=>k.id));
+  krs.forEach(kr=>{ if(kseen.has(kr.id)){ const fresh=RD.allocId("keyResult", kr.objectiveId||selectedModel, [...kused]); kr.id=fresh; kused.add(fresh); changed=true; } kseen.add(kr.id); });
+  return changed;
+}
 // resolver reads span the union of this spec doc + the portfolio registry (product/initiative KPIs live there);
 // writes stay in doc.kpis (link members are spec-doc-hosted, pointing at a registry KPI id).
 function allKpis(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? doc.kpis.concat(portfolio.kpis) : doc.kpis; }
@@ -1215,13 +1242,15 @@ async function persistPortfolio(reapply, okMsg){
     } else setMsg("Portfolio save failed ("+(e.status||e)+").","err");
   }
 }
-function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; markSaved(); }
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version;
+  markSaved(); if(dedupeStructuralIds()){ persistLocal(); persist(); } }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=blankDoc(); } }
   else doc=blankDoc();
   normalizeKpis(doc.kpis);
-  markSaved();
+  dedupeStructuralIds();
+  persistLocal(); markSaved();
 }
 async function loadAll(){
   if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
