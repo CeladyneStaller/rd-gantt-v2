@@ -1276,7 +1276,7 @@ function resolveDivision(){
 
 /* ---------------- load / save ---------------- */
 // single adopt path: whole-doc replace + risks shape-normalize, so no load site can drift
-function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; }
+function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
 async function loadAll(){
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
   try{
@@ -1288,29 +1288,55 @@ async function loadAll(){
     localStorage.setItem("rd_division", divisionId);
     fillDivSelect();   // populate + select the resolved division (header selector)
     const ex = await apiGet(execId());
-    if(ex){ adoptExec(ex); } else { exec = blankExec(); execEtag = "0"; execVersion = 0; }
+    if(ex){ adoptExec(ex); } else { exec = blankExec(); execEtag = "0"; execVersion = 0; markSaved(); }
     fillObjSelect();
     setMsg("Loaded "+divName(divisionId)+".", "ok");
     startPoll();
   }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
   renderAll();
 }
-async function saveExec(){
-  if(!tok()){ setMsg("Add a broker token first.", "err"); return; }
+/* ---- autosave (same protocol as the product designer; per-division EXEC bin) ----
+   Renders/mutations call persist(), which only SCHEDULES a write, and only when the doc
+   actually changed. The write is debounced with a hard max-wait cap, serialized so writes
+   never overlap (no self-inflicted 412), and bin-guarded so a write that resolves after a
+   division switch can't clobber the new bin's etag. Flushed on switch / poll / tab-hide / unload. */
+let _savedDoc=null;
+function markSaved(){ try{ _savedDoc=JSON.stringify(exec); }catch(e){ _savedDoc=null; } }   // call after load/adopt/save
+function docDirty(){ let s; try{ s=JSON.stringify(exec); }catch(e){ return false; } return s!==_savedDoc; }
+const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
+let _saveT=null, _saveMaxT=null;
+function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
+function persist(){
+  if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
+  if(_saveT) clearTimeout(_saveT);
+  _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
+  if(!_saveMaxT) _saveMaxT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_MAXWAIT_MS);
+}
+function flushPersist(){ _clearSaveTimers(); return persistNow(); }
+let _saveChain=Promise.resolve();
+function persistNow(){ _saveChain=_saveChain.then(_doPersist).catch(function(){}); return _saveChain; }
+async function _doPersist(){
+  if(!docDirty()) return;                                  // already saved (coalesced with a prior write)
+  const snap=JSON.stringify(exec);
+  if(!tok()){ _savedDoc=snap; return; }                    // no token → scratch; nothing to persist
+  const targetId=execId();                                 // remember which bin this write is for
   try{
-    const res = await apiPut(execId(), exec, execEtag);
-    execEtag = res.etag; execVersion = res.version;   // record own version -> next poll ignores echo
-    setMsg("Saved.", "ok");
+    const res=await apiPut(targetId, exec, execEtag);
+    if(execId()===targetId){ execEtag=res.etag; execVersion=res.version; _savedDoc=snap; setMsg("Saved.","ok"); }
+    // else: division changed while this write was in flight — it landed, but leave the current bin's etag alone
   }catch(e){
-    if(e.status===412){ setMsg("Another editor saved first — reloading, then re-apply.", "err");
-      const ex=await apiGet(execId()); if(ex){ adoptExec(ex); renderAll(); } }
-    else setMsg("Save failed ("+(e.status||e)+").", "err");
+    if(execId()!==targetId) return;                        // stale write for a bin we're no longer viewing
+    if(e.status===412){
+      try{ const ex=await apiGet(targetId); if(ex && execId()===targetId){ adoptExec(ex); fillObjSelect(); renderAll(); setMsg("Another editor saved first — reloaded; re-apply your change.","err"); } }
+      catch(e2){ if(execId()===targetId) setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
+    } else setMsg("Save failed ("+(e.status||e)+").","err");
   }
 }
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
 function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
 async function pollOnce(){
   try{
+    await flushPersist();                                   // push any pending local edit before comparing versions
     const pv = await apiVersion("portfolio");
     if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; fillObjSelect(); } }
     const ev = await apiVersion(execId());
@@ -1326,13 +1352,14 @@ function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionI
 async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
+  await flushPersist();                                                       // save the current division fully before repointing the bin
   document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));   // close any open modal
   divisionId=newDiv; localStorage.setItem("rd_division",divisionId);
   selectedObj=null; addingFor=null; editingSub=null; armedDel=null; armedDelRisk=null; draftRisk=null; editingRiskId=null;
   if(!tok()){ fillObjSelect(); renderAll(); return; }
   try{
     const ex=await apiGet(execId());
-    if(ex){ adoptExec(ex); } else { exec=blankExec(); execEtag="0"; execVersion=0; }
+    if(ex){ adoptExec(ex); } else { exec=blankExec(); execEtag="0"; execVersion=0; markSaved(); }
     fillObjSelect(); renderAll(); setMsg("Switched to "+divName(divisionId)+".","ok");
   }catch(e){ setMsg("Load failed for "+divName(divisionId)+" ("+(e.status||e)+"). Check token in ⚙.","err"); }
   startPoll();
@@ -1430,7 +1457,7 @@ function saveSub(){
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     arr.push(Object.assign(base, data));
   }
-  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
+  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved", "ok");
 }
 function spliceById(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0){ arr.splice(i,1); return true; } return false; }   // never splice(-1) on a stale/missing id
 function delSub(type, id){
@@ -1450,13 +1477,13 @@ function delSub(type, id){
   } else {
     spliceById(SUB[type].arr(), id);
   }
-  renderAll(); setMsg("Deleted (Save to persist).","ok");
+  renderAll(); setMsg("Deleted","ok");
 }
 function postRead(host, kpiId){
   const inp = host.querySelector(`[data-read="${kpiId}"]`);
   if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
-  renderAll(); setMsg("Reading posted (Save to persist).","ok");
+  renderAll(); setMsg("Reading posted","ok");
 }
 
 /* ---------------- render: objective header + sub-tables ---------------- */
@@ -1468,6 +1495,7 @@ function renderAll(){
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
   renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal();
+  if(divisionId) persist();   // autosave: dirty-checked + debounced, so no-op on loads/polls and no work when nothing changed
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
@@ -1746,7 +1774,7 @@ function saveKrModal(){
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
-  renderAll(); setMsg("Key result saved (Save to persist).","ok");
+  renderAll(); setMsg("Key result saved","ok");
 }
 /* sub-KR sub-modal */
 function openSubKrModal(idx){
@@ -1888,7 +1916,7 @@ function saveTgtModal(){
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg("Gate target saved (Save to persist).","ok");
+  closeTgtModal(); renderAll(); setMsg("Gate target saved","ok");
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -1942,7 +1970,7 @@ function makeLinkMember(hostType, hostId, definerId){
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
   exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
                    name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked (Save to persist).","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
@@ -1950,7 +1978,7 @@ function unlinkKpi(id){
   m.name = RD.kpiName(m, pool); m.direction = RD.kpiDirection(m, pool); m.unit = RD.kpiUnit(m, pool);
   if(m.target==null) m.target = RD.effTarget(m, pool);
   m.groupId = null; m.isDefiner = true;
-  renderAll(); setMsg("Unlinked (Save to persist).","ok");
+  renderAll(); setMsg("Unlinked","ok");
 }
 function renderLinkEditor(hostType, hostId){
   const cands = linkCandidates(hostType, hostId);
@@ -2150,14 +2178,14 @@ function wireExec(host){
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
-  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; setMsg("Gate updated (Save to persist).","ok"); });
-  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective (Save to persist).","ok"); });
-  host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+" (Save to persist).","ok"); });
-  host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released (Save to persist).","ok"); });
-  host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added (Save to persist).","ok"); });
-  host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed (Save to persist).","ok"); });
-  host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); setMsg("Task updated (Save to persist).","ok"); });
-  host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; setMsg("Task updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; persist(); setMsg("Gate updated","ok"); });
+  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective","ok"); });
+  host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+"","ok"); });
+  host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released","ok"); });
+  host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added","ok"); });
+  host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed","ok"); });
+  host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); persist(); setMsg("Task updated","ok"); });
+  host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; persist(); setMsg("Task updated","ok"); });
   host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
 }
 
@@ -2275,17 +2303,17 @@ function saveFmea(){
   draftRisk.objectiveId=selectedObj;   // scope tag pinned explicitly — never inferred from a filtered index
   if(editingRiskId!==null){ const i=exec.risks.findIndex(x=>x.rid===editingRiskId); if(i>=0) exec.risks[i]=draftRisk; else exec.risks.push(draftRisk); }
   else exec.risks.push(draftRisk);
-  closeFmeaModal(); renderAll(); setMsg("Problem saved (Save to persist).","ok");
+  closeFmeaModal(); renderAll(); setMsg("Problem saved","ok");
 }
 
 /* ---- register card mutations (by id — safe under the per-objective filter) ---- */
 function findProblem(rid){ return exec.risks.find(x=>x.rid===rid); }
-function setProblemStatus(rid,status){ const p=findProblem(rid); if(!p) return; p.status=status; renderAll(); setMsg("Problem "+status+" (Save to persist).","ok"); }
-function setModeStatus(rid,mid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; m.status=status; renderAll(); setMsg("Failure mode "+status+" (Save to persist).","ok"); }
-function setEffectStatus(rid,mid,eid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.status=status; renderAll(); setMsg("Effect "+status+" (Save to persist).","ok"); }
-function setCauseStatus(rid,mid,eid,cid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; const c=(e.causes||[]).find(x=>x.cid===cid); if(!c) return; c.status=status; renderAll(); setMsg("Cause "+status+" (Save to persist).","ok"); }
-function delCause(rid,mid,eid,cid){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.causes=(e.causes||[]).filter(x=>x.cid!==cid); if(!e.causes.length) m.effects=m.effects.filter(x=>x.eid!==eid); if(!m.effects.length) p.modes=p.modes.filter(x=>x.mid!==mid); renderAll(); setMsg("Cause removed (Save to persist).","ok"); }
-function delProblem(rid){ if(armedDelRisk!==rid){ armedDelRisk=rid; renderAll(); return; } armedDelRisk=null; const i=exec.risks.findIndex(x=>x.rid===rid); if(i<0){ renderAll(); return; } exec.risks.splice(i,1); renderAll(); setMsg("Problem removed (Save to persist).","ok"); }
+function setProblemStatus(rid,status){ const p=findProblem(rid); if(!p) return; p.status=status; renderAll(); setMsg("Problem "+status+"","ok"); }
+function setModeStatus(rid,mid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; m.status=status; renderAll(); setMsg("Failure mode "+status+"","ok"); }
+function setEffectStatus(rid,mid,eid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.status=status; renderAll(); setMsg("Effect "+status+"","ok"); }
+function setCauseStatus(rid,mid,eid,cid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; const c=(e.causes||[]).find(x=>x.cid===cid); if(!c) return; c.status=status; renderAll(); setMsg("Cause "+status+"","ok"); }
+function delCause(rid,mid,eid,cid){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.causes=(e.causes||[]).filter(x=>x.cid!==cid); if(!e.causes.length) m.effects=m.effects.filter(x=>x.eid!==eid); if(!m.effects.length) p.modes=p.modes.filter(x=>x.mid!==mid); renderAll(); setMsg("Cause removed","ok"); }
+function delProblem(rid){ if(armedDelRisk!==rid){ armedDelRisk=rid; renderAll(); return; } armedDelRisk=null; const i=exec.risks.findIndex(x=>x.rid===rid); if(i<0){ renderAll(); return; } exec.risks.splice(i,1); renderAll(); setMsg("Problem removed","ok"); }
 
 /* ---- register render (per objective; rowspans for the mode/effect/cause tree) ---- */
 function renderRisks(){
@@ -2340,7 +2368,7 @@ function renderRisks(){
 }
 
 /* ---------------- wiring ---------------- */
-document.getElementById("saveBtn").onclick = saveExec;
+document.getElementById("saveBtn").onclick = flushPersist;   // autosave handles it; this forces an immediate write
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
 document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
@@ -2351,7 +2379,8 @@ document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiT
 document.getElementById("fmeaX").onclick = closeFmeaModal;
 document.getElementById("fmeaOverlay").onclick = (e)=>{ if(e.target.id==="fmeaOverlay") closeFmeaModal(); };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
-window.addEventListener("beforeunload", stopPoll);
+window.addEventListener("beforeunload", ()=>{ flushPersist(); stopPoll(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* boot */
