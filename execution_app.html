@@ -1542,7 +1542,7 @@ function readSubEditor(scope){
   delete out.targetLo; delete out.targetHi;
   return out;
 }
-function saveSub(){
+function saveSub(thenLink){
   const a = addingFor, e = editingSub;
   const type = a ? a.type : (e && e.type);
   if(!type) return;
@@ -1550,6 +1550,7 @@ function saveSub(){
   if(!scope) return;
   const data = readSubEditor(scope);
   const arr = SUB[type].arr();
+  let newId=null;
   if(e){
     const rec = arr.find(x=>x.id===e.id);
     if(type==="kpi" && isMemberKpi(rec)){ rec.target = (data.target===undefined ? null : data.target); } // override only
@@ -1558,12 +1559,14 @@ function saveSub(){
     const initHost = (type==="kpi" && a.hostType==="initiative");
     const objScope = initHost ? null : selectedObj;
     const parent = initHost ? a.hostId : selectedObj;
-    const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
+    const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id)); newId=id;
     const base = { id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     arr.push(Object.assign(base, data));
   }
-  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved", "ok");
+  addingFor=null; editingSub=null;
+  if(thenLink===true && newId && type==="stageGate"){ addingFor={type:"link", hostType:"stageGate", hostId:newId}; renderAll(); return; }   // save, then link the new gate directly
+  restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved", "ok");
 }
 function spliceById(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0){ arr.splice(i,1); return true; } return false; }   // never splice(-1) on a stale/missing id
 function delSub(type, id){
@@ -1700,6 +1703,7 @@ function closeModal(){
 }
 function wireModalBody(body){
   wireExec(body);
+  const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
   const seg = body.querySelector("[data-seg]");
   if(seg){
     const statusInp = body.querySelector('[data-f="status"]');
@@ -1767,9 +1771,10 @@ function gateModalBody(g){
       ${kpiTable("stageGate", g.id, selectedObj)}
       <span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
   } else {
-    h+=`<p class="hint" style="margin:14px 0 0">Add the gate first, then reopen it to set its targets and predecessors.</p>`;
+    h+=`<p class="hint" style="margin:14px 0 0">Add the gate, or Link it straight to a product / model / initiative metric. You can reopen it later to add more targets and predecessors.</p>`;
   }
-  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
+  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return h;
 }
 
@@ -1837,7 +1842,7 @@ function krModalBody(){
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
-    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link…</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
 function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
@@ -1853,10 +1858,11 @@ function wireKrModal(){
   const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
   body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
   body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
-  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=saveKrModal;
+  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=()=>saveKrModal(false);
+  const lk=body.querySelector("[data-krlink]"); if(lk) lk.onclick=()=>saveKrModal(true);
   const cx=body.querySelector("[data-krcancel]"); if(cx) cx.onclick=subCancel;
 }
-function saveKrModal(){
+function saveKrModal(thenLink){
   const body=document.getElementById("modalBody");
   body.querySelectorAll("[data-f]").forEach(el=>{ draftKr[el.dataset.f]=el.value; });
   const d=draftKr;
@@ -1883,6 +1889,7 @@ function saveKrModal(){
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
+  if(thenLink===true){ addingFor={type:"link", hostType:"keyResult", hostId:kr.id}; renderAll(); return; }   // save, then link the new KR directly
   renderAll(); setMsg("Key result saved","ok");
 }
 /* sub-KR sub-modal */
