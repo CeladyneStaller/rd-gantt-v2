@@ -793,6 +793,81 @@
     };
   }
 
+  // ---- FMEA / risk register (pure) -----------------------------------------
+  // A problem is a modes → effects → causes tree; RPN = severity × occurrence ×
+  // detection (each 1–10). "Unresolved" RPN skips resolved nodes and is zeroed
+  // once the problem is resolved or its linked stage-gate has passed. Scoped to
+  // an objective via objectiveId; optional gateId links to a stage-gate.
+  var FMEA_SCALES = {
+    severity:   ['None','Very minor','Minor','Low','Moderate','Significant','High','Very high','Hazardous','Critical'],
+    occurrence: ['Unlikely','Remote','Very low','Low','Moderate','Medium-high','High','Very high','Very high+','Almost certain'],
+    detection:  ['Almost certain','Very high','High','Moderately high','Moderate','Low','Very low','Remote','Very remote','Undetectable']
+  };
+  function calcRpn(s, o, d) { return (parseInt(s, 10) || 1) * (parseInt(o, 10) || 1) * (parseInt(d, 10) || 1); }
+  function rpnBand(r) { return r >= 200 ? 'high' : r >= 100 ? 'med' : 'low'; }
+  function fmeaScaleLabel(kind, v) { var a = FMEA_SCALES[kind]; if (!a) return ''; return a[(parseInt(v, 10) || 1) - 1] || ''; }
+  function worstRpn(prob) {
+    var max = 0, modes = (prob && prob.modes) || [];
+    for (var i = 0; i < modes.length; i++) { var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function worstUnresolvedRpn(prob, gatePassed) {
+    if (gatePassed) return 0;
+    if (!prob || prob.status === 'resolved') return 0;
+    var max = 0, modes = prob.modes || [];
+    for (var i = 0; i < modes.length; i++) { if (modes[i].status === 'resolved') continue; var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { if (effs[j].status === 'resolved') continue; var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { if (cs[k].status === 'resolved') continue;
+          var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function fmeaProblemsFor(exec, objectiveId) {
+    var out = [], risks = (exec && exec.risks) || [];
+    for (var i = 0; i < risks.length; i++) if (risks[i].objectiveId === objectiveId) out.push(risks[i]);
+    return out;
+  }
+  // rollup over a set of problems. gatePassed is a fn(gateId)->bool (defaults to none passed).
+  function fmeaRollup(problems, gatePassed) {
+    var gp = gatePassed || function () { return false; };
+    var out = { total: problems.length, openHigh: 0, openMed: 0, openLow: 0, clear: 0, worst: 0 };
+    for (var i = 0; i < problems.length; i++) {
+      var u = worstUnresolvedRpn(problems[i], gp(problems[i].gateId));
+      if (u > out.worst) out.worst = u;
+      if (u >= 200) out.openHigh++; else if (u >= 100) out.openMed++; else if (u > 0) out.openLow++; else out.clear++;
+    }
+    return out;
+  }
+  var _fmeaSeq = 0;
+  function fmeaId(prefix) { _fmeaSeq++; return (prefix || 'x') + '_' + Date.now().toString(36) + '_' + _fmeaSeq.toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
+  function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
+  function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', modes: [blankMode()] }; }
+  // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
+  function migrateProblem(r) {
+    r = r || {};
+    return {
+      rid: r.rid || r.id || fmeaId('r'),
+      problem: r.problem || '',
+      objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
+      gateId: r.gateId || null,
+      status: r.status || 'open',
+      modes: (r.modes || []).map(function (m) { m = m || {};
+        return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
+          effects: (m.effects || []).map(function (e) { e = e || {};
+            return { eid: e.eid || fmeaId('e'), effect: e.effect || '', status: e.status || 'open',
+              causes: (e.causes || []).map(function (c) { c = c || {};
+                return { cid: c.cid || fmeaId('c'), cause: c.cause || '',
+                  severity: c.severity || 1, occurrence: c.occurrence || 1, detection: c.detection || 1,
+                  mitigation: c.mitigation || '', status: c.status || 'open' };
+              }) };
+          }) };
+      })
+    };
+  }
+
   // ---- exports --------------------------------------------------------------
   var API = {
     allocId: allocId,
@@ -846,6 +921,21 @@
     sliceScore: sliceScore,
     cascade: cascade,
     classifyGate: classifyGate,
+    // FMEA / risk register
+    calcRpn: calcRpn,
+    rpnBand: rpnBand,
+    fmeaScaleLabel: fmeaScaleLabel,
+    FMEA_SCALES: FMEA_SCALES,
+    worstRpn: worstRpn,
+    worstUnresolvedRpn: worstUnresolvedRpn,
+    fmeaProblemsFor: fmeaProblemsFor,
+    fmeaRollup: fmeaRollup,
+    fmeaId: fmeaId,
+    blankProblem: blankProblem,
+    blankMode: blankMode,
+    blankEffect: blankEffect,
+    blankCause: blankCause,
+    migrateProblem: migrateProblem,
     // exposed for tests / shells
     _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
   };
