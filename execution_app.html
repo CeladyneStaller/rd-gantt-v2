@@ -1071,6 +1071,44 @@
     };
   }
 
+  // ---- cross-doc linkage scope (execution → product/model KPIs) -----------
+  // The product/model KPI targets a division's execution can report against: the products/models its objectives
+  // are classified to (own or inherited from their initiative), the models under any classified product, and
+  // every sub-product reachable by composition (transitive). Pure over the portfolio + the composition edges.
+  // Returns { products:[ids], models:[ids] } (deduped; order not significant).
+  function classifiedTargets(portfolio, composition, divisionId) {
+    var models = (portfolio && portfolio.models) || [];
+    var objs = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o.divisionId === divisionId; });
+    var prod = {}, mod = {};
+    objs.forEach(function (o) {
+      var c = effClass(o, portfolio);
+      if (c.kind === 'model') mod[c.modelId] = 1;
+      else if (c.kind === 'product') prod[c.productId] = 1;
+    });
+    for (var i = 0; i < models.length; i++) if (prod[models[i].productId]) mod[models[i].id] = 1;   // a classified product → its models are seeds
+    Object.keys(mod).forEach(function (mid) {                                                        // + sub-products, transitively
+      var d = descendantModels(mid, composition); for (var j = 0; j < d.length; j++) mod[d[j]] = 1;
+    });
+    for (var k = 0; k < models.length; k++) if (mod[models[k].id] && models[k].productId) prod[models[k].productId] = 1;   // product-level targets of every in-scope model
+    return { products: Object.keys(prod), models: Object.keys(mod) };
+  }
+  // The linkable DEFINER kpis for a set of in-scope targets, over a pool of spec-doc kpis: each in-scope model's
+  // headline specs (keyResult-hosted definers) + each in-scope product's product-level definer kpis.
+  function targetKpisInScope(targets, kpis) {
+    var pset = {}, out = [], seen = {};
+    (targets.products || []).forEach(function (p) { pset[p] = 1; });
+    kpis = kpis || [];
+    (targets.models || []).forEach(function (m) {
+      var mk = importableModelKpis(m, kpis);
+      for (var i = 0; i < mk.length; i++) if (!seen[mk[i].id]) { seen[mk[i].id] = 1; out.push(mk[i]); }
+    });
+    for (var j = 0; j < kpis.length; j++) {
+      var k = kpis[j];
+      if (k.hostType === 'product' && pset[k.hostId] && linkOf(k, kpis).parent == null && !seen[k.id]) { seen[k.id] = 1; out.push(k); }
+    }
+    return out;
+  }
+
   // ---- FMEA / risk register (pure) -----------------------------------------
   // A problem is a modes → effects → causes tree; RPN = severity × occurrence ×
   // detection (each 1–10). "Unresolved" RPN skips resolved nodes and is zeroed
@@ -1200,6 +1238,8 @@
     sliceScore: sliceScore,
     cascade: cascade,
     classifyGate: classifyGate,
+    classifiedTargets: classifiedTargets,
+    targetKpisInScope: targetKpisInScope,
     // FMEA / risk register
     calcRpn: calcRpn,
     rpnBand: rpnBand,
@@ -1263,8 +1303,54 @@ function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
 function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return RD.withPortfolio(portfolio, m); }
-// resolution pool: this division's KPIs + the portfolio's initiative-level definers
-function allKpisPool(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? exec.kpis.concat(portfolio.kpis) : exec.kpis; }
+
+/* ---- cross-doc product/model KPI targets (link execution up to product specs) ----
+   The products/models this division's objectives are classified to (+ sub-products) live in SPEC-<div>
+   bins. We fetch those, expose their headline KPIs as link targets, and add them to the resolution pool
+   so a KR/gate/task KPI can report up against them via linkParent + linkType. */
+let refDocs = {};            // "SPEC-<div>" -> {doc, etag, version, failed?}
+let _refBusy = false;
+const LINK_DEFAULTS = { 'product>keyResult':'contribute','product>stageGate':'contribute','product>task':'contribute','product>initiative':'direct',
+                        'model>keyResult':'contribute','model>stageGate':'contribute','model>task':'contribute','model>initiative':'direct' };
+function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType+'>'+childType] || 'contribute'; }
+function productById(pid){ return (portfolio.products||[]).find(p=>p.id===pid)||null; }
+function modelById(mid){ return (portfolio.models||[]).find(m=>m.id===mid)||null; }
+function productName(pid){ const p=productById(pid); return p?(p.name||p.id):pid; }
+function modelName(mid){ const m=modelById(mid); return m?(m.name||m.id):mid; }
+function divOfProduct(pid){ const p=productById(pid); return p?p.divisionId:null; }
+function divOfModel(mid){ const m=modelById(mid); return m?divOfProduct(m.productId):null; }
+function targetsInScope(){ return portfolio ? RD.classifiedTargets(portfolio, portfolio.composition||[], divisionId) : {products:[],models:[]}; }
+function specDivsInScope(){ const t=targetsInScope(), s=new Set();
+  t.products.forEach(p=>{ const d=divOfProduct(p); if(d) s.add(d); });
+  t.models.forEach(m=>{ const d=divOfModel(m); if(d) s.add(d); });
+  return [...s]; }
+function allRefKpis(){ let out=[]; for(const id in refDocs){ const rd=refDocs[id]; if(rd&&rd.doc&&rd.doc.kpis) out=out.concat(rd.doc.kpis); } return out; }
+function linkTargetKpis(){ return RD.targetKpisInScope(targetsInScope(), allRefKpis()); }
+let _targetIds=new Set();
+function refreshTargetIds(){ _targetIds=new Set(linkTargetKpis().map(k=>k.id)); }
+function isTargetKpi(k){ return k && _targetIds.has(k.id); }
+function parentLevelOf(k){ return k.hostType==="product" ? "product" : (modelById(k.objectiveId) ? "model" : k.hostType); }
+async function fetchSpecDoc(div){
+  if(!div || !tok()) return null; const id="SPEC-"+div;
+  try{ const s=await apiGet(id); const d=s?s.doc:{}; d.kpis=d.kpis||[]; RD.migrateKpiLinks(d.kpis);
+    refDocs[id]={doc:d, etag:s?s.etag:"0", version:s?s.version:0}; return refDocs[id]; }
+  catch(e){ refDocs[id]={doc:{kpis:[]}, etag:"0", version:0, failed:true}; return refDocs[id]; }  // stop the render loop; poll retries
+}
+async function ensureSpecDocs(){        // fire-and-forget from renderAll; only re-renders when something new arrives
+  if(_refBusy || !tok()) return;
+  const need = specDivsInScope().filter(d=>!refDocs["SPEC-"+d]);
+  if(!need.length){ refreshTargetIds(); return; }
+  _refBusy=true; let got=false;
+  try{ for(const d of need){ const r=await fetchSpecDoc(d); if(r && !r.failed) got=true; } }
+  finally{ _refBusy=false; refreshTargetIds(); if(got) renderAll(); }
+}
+// resolution pool: this division's KPIs + the portfolio's initiative-level definers + in-scope product/model targets
+function allKpisPool(){
+  let pool = (portfolio && portfolio.kpis && portfolio.kpis.length) ? exec.kpis.concat(portfolio.kpis) : exec.kpis.slice();
+  const tk = linkTargetKpis(); const have=new Set(pool.map(k=>k.id));
+  for(let i=0;i<tk.length;i++) if(!have.has(tk[i].id)){ have.add(tk[i].id); pool.push(tk[i]); }
+  return pool;
+}
 
 /* ---------------- messaging ---------------- */
 function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
@@ -1345,6 +1431,11 @@ async function pollOnce(){
     if(ev.version!==execVersion){ const ex=await apiGet(execId());
       if(ex){ adoptExec(ex); renderAll();
         setMsg("Updated from another editor.", "info"); } }
+    // refresh in-scope product/model spec docs (link targets)
+    let refChanged=false;
+    for(const id in refDocs){ try{ const cur=refDocs[id]; const v=await apiVersion(id);
+      if(cur.failed || v.version!==cur.version){ const r=await fetchSpecDoc(id.slice("SPEC-".length)); if(r) refChanged=true; } }catch(e){} }
+    if(refChanged){ refreshTargetIds(); renderAll(); }
   }catch(e){}
 }
 
@@ -1358,6 +1449,7 @@ async function switchDivision(newDiv){
   document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));   // close any open modal
   divisionId=newDiv; localStorage.setItem("rd_division",divisionId);
   selectedObj=null; addingFor=null; editingSub=null; armedDel=null; armedDelRisk=null; draftRisk=null; editingRiskId=null;
+  refDocs={}; _targetIds=new Set();   // in-scope products/models differ per division
   if(!tok()){ fillObjSelect(); renderAll(); return; }
   try{
     const ex=await apiGet(execId());
@@ -1512,7 +1604,7 @@ function renderAll(){
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
   renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal();
-  if(divisionId) persist();   // autosave: dirty-checked + debounced, so no-op on loads/polls and no work when nothing changed
+  if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
@@ -1946,6 +2038,10 @@ function krName(id){ const r=exec.keyResults.find(x=>x.id===id); return r?(r.sta
 function gateName(id){ const g=exec.stageGates.find(x=>x.id===id); return g?(g.name||g.id):id; }
 function taskName(id){ const t=exec.tasks.find(x=>x.id===id); return t?(t.name||t.id):id; }
 function hostLabel(k){
+  if(!k) return "";
+  if(k.hostType==="product") return "product: "+esc(productName(k.hostId));
+  if(k.hostType==="model")   return "model: "+esc(modelName(k.hostId));
+  if(k.hostType==="keyResult" && modelById(k.objectiveId)) return "model: "+esc(modelName(k.objectiveId))+" · "+esc(k.name||k.statement||k.id);
   if(k.hostType==="initiative") return "init: "+esc(initName(k.hostId));
   if(k.hostType==="keyResult")  return "KR: "+esc(krName(k.hostId));
   if(k.hostType==="stageGate")  return "gate: "+esc(gateName(k.hostId));
@@ -1953,7 +2049,7 @@ function hostLabel(k){
 }
 function groupOf(k){ return k.groupId||k.id; }
 function groupMemberCount(g){ return exec.kpis.filter(k=>groupOf(k)===g).length; }
-function isMemberKpi(k){ return !!k.groupId && !k.isDefiner; }
+function isMemberKpi(k){ return (!!k.groupId && !k.isDefiner) || (k.linkParent!=null); }
 function isDefinerWithLinks(k){ return !!k.groupId && k.isDefiner && groupMemberCount(k.groupId)>1; }
 function groupIdsInUse(){ return exec.kpis.map(k=>k.groupId).filter(Boolean); }
 function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
@@ -1963,20 +2059,30 @@ function linkCandidates(hostType, hostId){
   const initId = O ? initiativeIdOf(O) : null;
   const here = LEVEL[hostType];
   const pool = allKpisPool();
-  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
+  // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
+  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
   const seen=new Set(), out=[];
   pool.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId);
+    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || isTargetKpi(k);
     if(!inScope) return;
-    const g=groupOf(k);
-    if(seen.has(g) || occupied.has(g)) return;
-    seen.add(g); out.push(RD.definerOf(k, pool));
+    const def = RD.definerOf(k, pool);
+    if(seen.has(def.id) || occupied.has(def.id)) return;
+    seen.add(def.id); out.push(def);
   });
   return out;
 }
-function makeLinkMember(hostType, hostId, definerId){
+function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
+  if(isTargetKpi(def)){   // product/model target → report up via linkParent + linkType (specification firewalls the value)
+    const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
+    const objScope = hostType==="initiative" ? null : selectedObj;
+    const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
+    if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:0,
+                     name:null, direction:null, unit:null, target:null, order:0 });
+    addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
+  }
   const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in the portfolio doc (read-only here)
   let g = def.groupId;
   if(!g){
@@ -1995,15 +2101,25 @@ function unlinkKpi(id){
   m.name = RD.kpiName(m, pool); m.direction = RD.kpiDirection(m, pool); m.unit = RD.kpiUnit(m, pool);
   if(m.target==null) m.target = RD.effTarget(m, pool);
   m.groupId = null; m.isDefiner = true;
+  if(m.linkParent!=null){ m.linkParent = null; delete m.linkType; delete m.linkPriority; }   // detach an explicit product/model link
   renderAll(); setMsg("Unlinked","ok");
 }
 function renderLinkEditor(hostType, hostId){
   const cands = linkCandidates(hostType, hostId);
-  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, or one at the initiative level, first.</p></div>
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, one at the initiative level, or one on a product/model this objective is classified to.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
-  return `<div class="ed"><label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, allKpisPool())||d.id)} · ${hostLabel(d)}</option>`).join("")+
-    `</select></label></div><div class="row-actions" style="margin:0 0 8px">
+  const pool = allKpisPool();
+  const opts = cands.map(d=>{ const t=isTargetKpi(d); return `<option value="${d.id}" data-target="${t?1:0}" data-ptype="${t?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; }).join("");
+  const first = cands[0], firstTarget = isTargetKpi(first);
+  const firstRel = firstTarget ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
+  const relOpts = ['contribute','direct','specification'].map(t=>`<option value="${t}"${t===firstRel?" selected":""}>${t}</option>`).join("");
+  return `<div class="ed">
+    <label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
+      <select data-linkdef>${opts}</select></label>
+    <label data-relwrap style="grid-column:1/-1;display:${firstTarget?'block':'none'}">Relationship to the product / model target
+      <select data-linkrel>${relOpts}</select></label>
+    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstTarget?'block':'none'}">contribute rolls this reading up into the target · direct mirrors it · specification measures against it without rolling up</p>
+    </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
@@ -2188,7 +2304,13 @@ function wireExec(host){
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
-  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
+  host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{
+    const opt=sel.options[sel.selectedIndex], isT=!!(opt&&opt.dataset.target==="1");
+    const rw=host.querySelector("[data-relwrap]"), rh=host.querySelector("[data-relhint]"), rel=host.querySelector("[data-linkrel]");
+    if(rw) rw.style.display=isT?"block":"none"; if(rh) rh.style.display=isT?"block":"none";
+    if(isT && rel && opt.dataset.ptype){ const sb=host.querySelector("[data-savelink]"); const ht=sb?sb.dataset.savelink.split(":")[0]:null; if(ht) rel.value=defaultLinkType(opt.dataset.ptype, ht); }
+  });
+  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
