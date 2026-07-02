@@ -793,6 +793,44 @@
     };
   }
 
+  // ---- cross-doc linkage scope (execution → product/model KPIs) -----------
+  // The product/model KPI targets a division's execution can report against: the products/models its objectives
+  // are classified to (own or inherited from their initiative), the models under any classified product, and
+  // every sub-product reachable by composition (transitive). Pure over the portfolio + the composition edges.
+  // Returns { products:[ids], models:[ids] } (deduped; order not significant).
+  function classifiedTargets(portfolio, composition, divisionId) {
+    var models = (portfolio && portfolio.models) || [];
+    var objs = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o.divisionId === divisionId; });
+    var prod = {}, mod = {};
+    objs.forEach(function (o) {
+      var c = effClass(o, portfolio);
+      if (c.kind === 'model') mod[c.modelId] = 1;
+      else if (c.kind === 'product') prod[c.productId] = 1;
+    });
+    for (var i = 0; i < models.length; i++) if (prod[models[i].productId]) mod[models[i].id] = 1;   // a classified product → its models are seeds
+    Object.keys(mod).forEach(function (mid) {                                                        // + sub-products, transitively
+      var d = descendantModels(mid, composition); for (var j = 0; j < d.length; j++) mod[d[j]] = 1;
+    });
+    for (var k = 0; k < models.length; k++) if (mod[models[k].id] && models[k].productId) prod[models[k].productId] = 1;   // product-level targets of every in-scope model
+    return { products: Object.keys(prod), models: Object.keys(mod) };
+  }
+  // The linkable DEFINER kpis for a set of in-scope targets, over a pool of spec-doc kpis: each in-scope model's
+  // headline specs (keyResult-hosted definers) + each in-scope product's product-level definer kpis.
+  function targetKpisInScope(targets, kpis) {
+    var pset = {}, out = [], seen = {};
+    (targets.products || []).forEach(function (p) { pset[p] = 1; });
+    kpis = kpis || [];
+    (targets.models || []).forEach(function (m) {
+      var mk = importableModelKpis(m, kpis);
+      for (var i = 0; i < mk.length; i++) if (!seen[mk[i].id]) { seen[mk[i].id] = 1; out.push(mk[i]); }
+    });
+    for (var j = 0; j < kpis.length; j++) {
+      var k = kpis[j];
+      if (k.hostType === 'product' && pset[k.hostId] && linkOf(k, kpis).parent == null && !seen[k.id]) { seen[k.id] = 1; out.push(k); }
+    }
+    return out;
+  }
+
   // ---- FMEA / risk register (pure) -----------------------------------------
   // A problem is a modes → effects → causes tree; RPN = severity × occurrence ×
   // detection (each 1–10). "Unresolved" RPN skips resolved nodes and is zeroed
@@ -844,7 +882,7 @@
   function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
   function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
   function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
-  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', modes: [blankMode()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
   // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
   function migrateProblem(r) {
     r = r || {};
@@ -854,6 +892,7 @@
       objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
       gateId: r.gateId || null,
       status: r.status || 'open',
+      knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
       modes: (r.modes || []).map(function (m) { m = m || {};
         return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
           effects: (m.effects || []).map(function (e) { e = e || {};
@@ -921,6 +960,8 @@
     sliceScore: sliceScore,
     cascade: cascade,
     classifyGate: classifyGate,
+    classifiedTargets: classifiedTargets,
+    targetKpisInScope: targetKpisInScope,
     // FMEA / risk register
     calcRpn: calcRpn,
     rpnBand: rpnBand,
