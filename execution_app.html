@@ -155,6 +155,12 @@
   .fmea-modes-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px;border-top:1px solid var(--line);padding-top:12px}
   .fmea-modes-list{display:flex;flex-direction:column;gap:10px}
   .fmea-empty{color:var(--muted);font-size:12px;padding:8px 0}
+  .fm-known{display:flex;align-items:center;gap:6px;margin:0 0 6px}
+  .fm-known input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 9px;font-size:12px;box-sizing:border-box}
+  .fmea-knowns-view{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .fmea-knowns-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  .fmea-knowns-view ul{margin:4px 0 0;padding-left:18px}
+  .fmea-knowns-view li{font-size:12px;color:var(--ink);line-height:1.5}
   .fm-mode{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;background:var(--panel2)}
   .fm-effect{border:1px solid var(--line);border-radius:7px;padding:9px 10px;background:var(--panel);margin:8px 0 0}
   .fm-cause{border:1px solid var(--line);border-radius:6px;padding:8px 9px;background:var(--panel2);margin:7px 0 0}
@@ -1116,7 +1122,7 @@
   function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
   function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
   function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
-  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', modes: [blankMode()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
   // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
   function migrateProblem(r) {
     r = r || {};
@@ -1126,6 +1132,7 @@
       objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
       gateId: r.gateId || null,
       status: r.status || 'open',
+      knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
       modes: (r.modes || []).map(function (m) { m = m || {};
         return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
           effects: (m.effects || []).map(function (e) { e = e || {};
@@ -2160,6 +2167,8 @@ function fmeaModalShell(){
   return `<div class="fmea-modal-inner">
     <label class="fmea-lbl">Problem</label>
     <textarea id="f-problem" class="fmea-ta" placeholder="Describe the problem / risk to analyze"></textarea>
+    <div class="fmea-modes-head" style="border-top:none;padding-top:0;margin-top:0"><span class="fmea-lbl" style="margin:0">Knowns</span><button class="ghost mini" onclick="addDraftKnown()">+ Add known</button></div>
+    <div id="fmea-knowns-section" class="fmea-modes-list" style="margin-bottom:14px"></div>
     <label class="fmea-lbl">Gate association (optional)</label>
     <select id="f-gate" class="fmea-gate-sel"></select>
     <div class="fmea-modes-head"><span class="fmea-lbl" style="margin:0">Failure modes</span><button class="ghost mini" onclick="addDraftMode()">+ Add failure mode</button></div>
@@ -2172,7 +2181,7 @@ function openFmeaModal(){
   document.getElementById('fmeaTitle').textContent='Add problem';
   document.getElementById('fmeaBody').innerHTML=fmeaModalShell();
   document.getElementById('f-problem').value=''; document.getElementById('fmea-save-btn').textContent='Save problem';
-  populateGateSelect(''); renderFmeaModes();
+  populateGateSelect(''); renderDraftKnowns(); renderFmeaModes();
   document.getElementById('fmeaOverlay').classList.add('open');
   setTimeout(()=>{ const el=document.getElementById('f-problem'); if(el) el.focus(); },40);
 }
@@ -2182,7 +2191,7 @@ function openEditFmeaModal(rid){
   document.getElementById('fmeaTitle').textContent='Edit problem';
   document.getElementById('fmeaBody').innerHTML=fmeaModalShell();
   document.getElementById('f-problem').value=draftRisk.problem||''; document.getElementById('fmea-save-btn').textContent='Save changes';
-  populateGateSelect(draftRisk.gateId||''); renderFmeaModes();
+  populateGateSelect(draftRisk.gateId||''); renderDraftKnowns(); renderFmeaModes();
   document.getElementById('fmeaOverlay').classList.add('open');
   setTimeout(()=>{ const el=document.getElementById('f-problem'); if(el) el.focus(); },40);
 }
@@ -2235,6 +2244,13 @@ function updateCauseRpn(mi,ei,ci){
   const rpn=RD.calcRpn(s,o,d), el=document.getElementById('rpn-'+mi+'-'+ei+'-'+ci);
   if(el){ el.textContent=rpn; el.className='rpn-badge '+rpnCls(rpn); }
 }
+function renderDraftKnowns(){
+  const c=document.getElementById('fmea-knowns-section'); if(!c) return;
+  if(!draftRisk.knowns || !draftRisk.knowns.length){ c.innerHTML='<div class="fmea-empty">None yet — add established facts about this problem.</div>'; return; }
+  c.innerHTML=draftRisk.knowns.map((k,ki)=>`<div class="fm-known"><input type="text" placeholder="A known fact about this problem" value="${esc(k.text)}" oninput="draftRisk.knowns[${ki}].text=this.value"><button class="del-x" onclick="delDraftKnown(${ki})" title="Remove">×</button></div>`).join('');
+}
+function addDraftKnown(){ if(!draftRisk.knowns) draftRisk.knowns=[]; draftRisk.knowns.push({kid:RD.fmeaId('k'), text:''}); renderDraftKnowns(); setTimeout(()=>{ const all=document.querySelectorAll('#fmea-knowns-section input'); const last=all[all.length-1]; if(last) last.focus(); },30); }
+function delDraftKnown(ki){ draftRisk.knowns.splice(ki,1); renderDraftKnowns(); }
 function addDraftMode(){ draftRisk.modes.push({mid:RD.fmeaId('m'), mode:'', status:'open', effects:[]}); renderFmeaModes(); }
 function delDraftMode(mi){ draftRisk.modes.splice(mi,1); renderFmeaModes(); }
 function addDraftEffect(mi){ draftRisk.modes[mi].effects.push({eid:RD.fmeaId('e'), effect:'', status:'open', causes:[]}); renderFmeaModes(); }
@@ -2298,11 +2314,13 @@ function renderRisks(){
       return tr+`</tr>`;
     }).join('');
     const table=(r.modes||[]).length?`<div class="fmea-tbl-wrap"><table class="fmea-tbl"><thead><tr><th>Failure mode</th><th>Effect</th><th>Cause</th><th style="text-align:center">S·O·D</th><th style="text-align:center">RPN</th><th>Status</th><th></th></tr></thead><tbody>${tbody}</tbody></table></div>`:'';
+    const knownList=(r.knowns||[]).filter(k=>k.text&&k.text.trim());
+    const knownsHtml=knownList.length?`<div class="fmea-knowns-view"><span class="fmea-knowns-lbl">Knowns</span><ul>${knownList.map(k=>`<li>${esc(k.text)}</li>`).join('')}</ul></div>`:'';
     return `<div class="fmea-card${probResolved?' problem-resolved':''}">
       <div class="fmea-prob-row">
         <div class="fmea-prob-text" onclick="openEditFmeaModal('${rid}')" title="Edit problem">${gTag}${esc(r.problem)||'(unnamed problem)'}</div>
         <div class="fmea-prob-right">${seg(r.status||'open',`setProblemStatus('${rid}','%V%')`,['open','mitigating','resolved'])}${topRpn?`<span class="rpn-badge ${rpnCls(topRpn)}">RPN ${topRpn}</span>`:''}<button class="del-x ${armedDelRisk===rid?'armed':''}" onclick="delProblem('${rid}')" title="Remove problem">${armedDelRisk===rid?'confirm':'×'}</button></div>
-      </div>${table}</div>`;
+      </div>${knownsHtml}${table}</div>`;
   }).join('');
   const acts=`<button class="ghost mini" onclick="openFmeaModal()">+ Add problem</button>`;
   host.innerHTML=`<div class="panel">${panelHead("RISK","FMEA — Risk register",problems.length,acts)}<div class="item-list${listOpen("RISK")}">${inner}</div></div>`;
