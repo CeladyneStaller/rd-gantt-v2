@@ -247,6 +247,7 @@
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
   <div class="spacer"></div>
   <select class="obj" id="divSelect"><option>loading…</option></select>
+  <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
   <select class="obj" id="objSelect" style="margin-left:6px"><option>loading…</option></select>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
@@ -1254,6 +1255,7 @@ let exec = blankExec();          // this division's doc (read-write)
 let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
+let selectedQuarter = "";   // "" = all quarters; else an objective quarter string to filter by
 let pollTimer = null;
 
 function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[] }; }
@@ -1368,11 +1370,23 @@ function fillDivSelect(){ const s=document.getElementById("divSelect");
   s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
   if(divisionId) s.value=divisionId;
   s.onchange=()=>switchDivision(s.value); }
+function fillQtrSelect(){
+  const s=document.getElementById("qtrSelect"); if(!s) return;
+  const qs=[...new Set(myObjectives().map(o=>o.quarter).filter(Boolean))];
+  qs.sort((a,b)=>{ const pa=parseQuarter(a), pb=parseQuarter(b); if(pa&&pb) return pa.start-pb.start; return String(a).localeCompare(String(b)); });
+  if(selectedQuarter && qs.indexOf(selectedQuarter)<0) selectedQuarter="";   // stale (e.g. after a division switch) → All
+  s.innerHTML=`<option value="">All quarters</option>`+qs.map(q=>`<option value="${esc(q)}">${esc(q)}</option>`).join("");
+  s.value=selectedQuarter;
+  s.onchange=()=>{ selectedQuarter=s.value; fillObjSelect(); renderAll(); };
+}
 function fillObjSelect(){
-  const s=document.getElementById("objSelect"); const objs=myObjectives();
+  fillQtrSelect();
+  const s=document.getElementById("objSelect");
+  const objs=myObjectives().filter(o=>!selectedQuarter || (o.quarter||"")===selectedQuarter);
   s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
-                            : `<option value="">no objectives for this division</option>`;
+                            : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
+  else selectedObj=null;
   s.onchange=()=>{ selectedObj=s.value; renderAll(); };
 }
 
@@ -1491,7 +1505,10 @@ function renderAll(){
   if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
   if(divisionId) renderInitPanel(); else document.getElementById("initPanel").innerHTML="";
   const objs = myObjectives();
-  if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
+  if(!objs.length || !selectedObj){
+    const emptyMsg = (objs.length && selectedQuarter) ? `No objectives in ${esc(selectedQuarter)} for this division — pick another quarter above.` : "No objectives assigned to this division yet (create them in the Planning app).";
+    document.getElementById("objHeadWrap").innerHTML=`<p class="hint">${emptyMsg}</p>`;
+    ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
   renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal();
