@@ -168,7 +168,11 @@
   .gchart{position:relative;font-size:12px}
   .grow{display:flex;align-items:center;height:30px}
   .grow:hover{background:rgba(255,255,255,0.02)}
-  .glabel{width:240px;flex:none;display:flex;align-items:center;overflow:hidden;white-space:nowrap;padding-right:8px}
+  .glabel{width:240px;flex:none;display:flex;align-items:center;overflow:hidden;white-space:nowrap;padding-right:8px;position:relative}
+  .gacts{display:none;position:absolute;right:2px;top:0;bottom:0;align-items:center;gap:3px;padding-left:18px;background:linear-gradient(90deg,transparent,var(--bg) 18px)}
+  .grow:hover .gacts{display:flex}
+  .gact{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 6px;font-size:10.5px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .gact:hover{color:var(--ink);border-color:var(--accent)}
   .gtri{cursor:pointer;color:var(--muted);font-size:10px;width:14px;flex:none;user-select:none;text-align:center;opacity:.7}
   .gtri:hover{color:var(--ink);opacity:1}
   .gspacer{width:14px;flex:none}
@@ -1718,7 +1722,7 @@ function msDelete(id, initId){
   const i=portfolio.milestones.findIndex(m=>m.id===id); if(i<0){ refreshMilestones(initId); return; }
   portfolio.milestones.splice(i,1);
   portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); });   // clean dangling refs
-  refreshMilestones(initId); renderOverview();
+  refreshMilestones(initId); renderOverview(); renderGantt();
   persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
     portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
 }
@@ -1849,6 +1853,14 @@ function openTreeAdd(childEntity, parentId){
   else if(childEntity==="milestone") prefill = { initiativeId:parentId };
   else if(childEntity==="model") prefill = { productId:parentId };
   openEditor(null, childEntity, prefill);
+}
+function ganttActs(entity, id){
+  const ADD = { division:[["initiative","+init"]], initiative:[["objective","+obj"],["milestone","+ms"]] }[entity] || [];
+  const editable = entity==="division"||entity==="initiative"||entity==="objective"||entity==="milestone";
+  if(!editable && !ADD.length) return "";   // stage-gates (exec-owned) get no actions
+  const addBtns = ADD.map(a=>`<button class="gact" title="Add ${a[0]} here" data-gadd="${a[0]}:${id}">${a[1]}</button>`).join("");
+  const edit = editable ? `<button class="gact" title="Edit this ${entity}" data-gedit="${entity}:${id}">✎</button>` : "";
+  return `<span class="gacts">${edit}${addBtns}</span>`;
 }
 function hasArchChildren(entity,id){
   const P=portfolio;
@@ -2136,7 +2148,7 @@ function saveRecord(){
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
   const ret = (ent==="milestone" && msReturn) ? msReturn : null;
-  closeEditor(); renderPortfolio(); renderOverview();
+  closeEditor(); renderPortfolio(); renderOverview(); renderGantt();
   if(ret) openEditor(ret, "initiative");
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
@@ -2191,7 +2203,7 @@ function renderTable(){
     const ent = activeEntity;
     const _di=SEL[ent]().findIndex(x=>x.id===id); if(_di<0){ armedDelete=null; renderTable(); return; }   // already gone — never splice(-1)
     SEL[ent]().splice(_di,1);
-    armedDelete=null; renderPortfolio(); renderOverview();
+    armedDelete=null; renderPortfolio(); renderOverview(); renderGantt();
     persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
   });
 }
@@ -2318,7 +2330,7 @@ function renderGantt(){
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}">${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
-    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}</div><div class="gtrack">`;
+    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id));
       html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
@@ -2346,6 +2358,8 @@ function renderGantt(){
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-gedit]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.gedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
+  host.querySelectorAll("[data-gadd]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.gadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
 }
 
 /* ---------------- SLICES tab ---------------- */
