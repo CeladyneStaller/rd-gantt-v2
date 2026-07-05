@@ -28,6 +28,21 @@
   .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
   .ov-ctl{display:flex;align-items:center;gap:9px}
   .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+  .fbf select{font-family:var(--sans);text-transform:none;letter-spacing:0}
+  .fb-sep{width:1px;align-self:stretch;background:var(--line);margin:2px 0}
+  .fb-lbl{align-self:center;font-size:10.5px;color:var(--faint,#5f7488);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;margin-right:2px}
+  .fb-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:2px 6px 2px 9px;border-radius:6px}
+  .fchip .fx{cursor:pointer;color:var(--muted)} .fchip .fx:hover{color:var(--bad)}
+  .fchip.clear{cursor:pointer;border-style:dashed;color:var(--muted);padding:2px 9px}
+  .fchip.clear:hover{color:var(--ink)}
+  .pfgrp{margin:0 0 6px}
+  .pfgrp-head{display:flex;align-items:center;gap:9px;padding:7px 8px;font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line);margin-bottom:2px}
+  tr.grouphead td{background:var(--panel2);font-weight:600;font-size:12px;color:var(--ink)}
+  .ggroupbar{position:absolute;top:11px;height:12px;border:1px dashed var(--accent2);border-radius:3px;opacity:.8}
   main{padding:18px;max-width:1200px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -231,6 +246,7 @@
     <div id="ovBody"></div>
   </section>
   <section class="tabsec" id="tab-portfolio">
+    <div id="pfFilterBar" class="filterbar"></div>
     <div id="pfViewToggle" class="pf-viewtoggle"></div>
     <div id="pfTree"></div>
     <div class="entity-tabs" id="entityTabs"></div>
@@ -265,6 +281,7 @@
     </div>
   </section>
   <section class="tabsec" id="tab-gantt">
+    <div id="ganttFilterBar" class="filterbar"></div>
     <div class="legend">
       <span><i class="swatch" style="background:#2c4a63"></i> baseline</span>
       <span><i class="swatch" style="background:var(--accent)"></i> projected</span>
@@ -1498,8 +1515,11 @@ let activeEntity = "division";
 let editingId = null;
 let pfView = "tree";
 let lens = "division";   // Overview: by division vs by product/model
+let pfGroupBy = "hierarchy";                       // Structure/Gantt grouping dimension
+const pfFilters = { division:"", product:"", quarter:"", status:"" };
 
 function renderPortfolio(){
+  const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
   const tg = document.getElementById("pfViewToggle");
   tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Tree</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
   tg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(pfView!==b.dataset.pfview){ pfView=b.dataset.pfview; closeEditor(); renderPortfolio(); } });
@@ -1901,12 +1921,13 @@ function objectiveExecHtml(objId){
 }
 function treeChildrenHtml(entity,id){
   const P=portfolio; let h="";
+  const filt = treeCtx==="portfolio" && pfAnyFilter();   // prune only the Structure tree, never the lineage modal
   if(entity==="division"){
-    P.initiatives.filter(i=>i.divisionId===id).forEach(i=> h+=nodeHtml("initiative",i));
-    P.products.filter(p=>p.divisionId===id).forEach(p=> h+=nodeHtml("product",p));
+    P.initiatives.filter(i=>i.divisionId===id && (!filt||initHasMatch(i))).forEach(i=> h+=nodeHtml("initiative",i));
+    P.products.filter(p=>p.divisionId===id && (!filt||productShows(p))).forEach(p=> h+=nodeHtml("product",p));
   } else if(entity==="initiative"){
     P.milestones.filter(m=>m.initiativeId===id).forEach(m=> h+=leafRow("milestone",m));
-    P.objectives.filter(o=>o.initiativeId===id).forEach(o=> h+=nodeHtml("objective",o));
+    P.objectives.filter(o=>o.initiativeId===id && (!filt||objMatches(o))).forEach(o=> h+=nodeHtml("objective",o));
   } else if(entity==="product"){
     P.models.filter(m=>m.productId===id).forEach(m=> h+=modelLeaf(m));
   } else if(entity==="objective"){
@@ -1919,11 +1940,71 @@ function wireTreeLinks(root){
   root.querySelectorAll("[data-tedit]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
   root.querySelectorAll("[data-tadd]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
 }
+/* ---------------- filter & group (Structure + Gantt) ---------------- */
+function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
+function pfWorkFilter(){ const f=pfFilters; return !!(f.quarter||f.status); }
+function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=byId("model",c.modelId); return m?m.productId:null; } return null; }
+function objMatches(o){ const f=pfFilters;
+  if(f.division && o.divisionId!==f.division) return false;
+  if(f.product && effProductOf(o)!==f.product) return false;
+  if(f.quarter && (o.quarter||"")!==f.quarter) return false;
+  if(f.status && nodeBand("objective",o.id)!==f.status) return false;
+  return true; }
+function pfQuartersList(){ const s=new Set(); portfolio.objectives.forEach(o=>{ if(o.quarter) s.add(o.quarter); }); return Array.from(s).sort(); }
+function pfGroupKey(o){ if(pfGroupBy==="division") return o.divisionId; if(pfGroupBy==="product") return effProductOf(o)||"—"; if(pfGroupBy==="quarter") return o.quarter||"—"; if(pfGroupBy==="owner") return o.owner||"—"; return ""; }
+function pfGroupLabel(k){ if(pfGroupBy==="division") return nameOf("division",byId("division",k))||k; if(pfGroupBy==="product") return k==="—"?"— unclassified —":(productName(k)||k); return (k==="—"||k==="")?"— none —":k; }
+function pfGroupOrder(groups){ let order=Object.keys(groups); if(pfGroupBy==="division") order=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]); else if(pfGroupBy==="product") order=portfolio.products.map(p=>p.id).concat(["—"]).filter(k=>groups[k]); else order.sort(); return order; }
+function filterBarHtml(showGroup){
+  const f=pfFilters;
+  const sel=(label,key,opts,cur)=>`<label class="fbf">${label}<select data-fb="${key}"><option value="">All</option>${opts.map(o=>`<option value="${esc(o[0])}" ${o[0]===cur?'selected':''}>${esc(o[1])}</option>`).join("")}</select></label>`;
+  const grp = showGroup ? `<label class="fbf">Group by<select data-fb="groupBy">${[["hierarchy","Hierarchy"],["division","Division"],["product","Product"],["quarter","Quarter"],["owner","Owner"]].map(o=>`<option value="${o[0]}" ${o[0]===pfGroupBy?'selected':''}>${o[1]}</option>`).join("")}</select></label><span class="fb-sep"></span>` : `<span class="fb-lbl">Filter</span>`;
+  const chips = pfActiveChips();
+  return `<div class="fb-row">${grp}`+
+    sel("Division","division",portfolio.divisions.map(d=>[d.id,d.name]),f.division)+
+    sel("Product","product",portfolio.products.map(p=>[p.id,p.name]),f.product)+
+    sel("Quarter","quarter",pfQuartersList().map(q=>[q,q]),f.quarter)+
+    sel("Status","status",[["on-track","On track"],["at-risk","At risk"],["off-track","Off track"],["no-band","No data"]],f.status)+
+    `</div>`+(chips?`<div class="fb-chips">${chips}</div>`:"");
+}
+function pfActiveChips(){
+  const f=pfFilters, out=[];
+  if(f.division) out.push(["division","Division: "+(nameOf("division",byId("division",f.division))||f.division)]);
+  if(f.product) out.push(["product","Product: "+(productName(f.product)||f.product)]);
+  if(f.quarter) out.push(["quarter","Quarter: "+f.quarter]);
+  if(f.status) out.push(["status","Status: "+f.status.replace("-"," ")]);
+  if(!out.length) return "";
+  return out.map(c=>`<span class="fchip">${esc(c[1])}<span class="fx" data-fclr="${c[0]}">✕</span></span>`).join("")+`<button class="fchip clear" data-fclr="__all">clear all</button>`;
+}
+function wireFilterBar(host){
+  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); });
+}
+function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
+function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
+function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id && initHasMatch(i)) || portfolio.products.some(p=>p.divisionId===d.id && productShows(p)); }
+function groupedTreeHtml(){
+  const objs = portfolio.objectives.filter(objMatches);
+  if(!objs.length) return '<p class="hint">No objectives match the current filters.</p>';
+  const em=pfMap(), groups={};
+  objs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
+  let h=`<div class="tree">`;
+  pfGroupOrder(groups).forEach(k=>{
+    const items=groups[k].slice();
+    const vs=items.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
+    h+=`<div class="pfgrp"><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(pfGroupLabel(k))} <span class="tsub">${items.length} obj</span></div>`;
+    items.forEach(o=>{ const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
+      h+=`<div class="tleaf" style="padding-left:14px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`; });
+    h+=`</div>`;
+  });
+  return h+`</div>`;
+}
 function renderPortfolioTree(){
   treeCtx = "portfolio";
   const host=document.getElementById("pfTree");
-  const divs=portfolio.divisions;
-  if(!divs.length){ host.innerHTML='<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
+  if(pfGroupBy!=="hierarchy"){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); return; }
+  const filt=pfAnyFilter();
+  const divs = filt ? portfolio.divisions.filter(divShows) : portfolio.divisions;
+  if(!divs.length){ host.innerHTML = filt ? '<p class="hint">No items match the current filters.</p>' : '<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
   let h=`<div class="tree">`;
   divs.forEach(d=> h+=nodeHtml("division",d));
   h+=`</div>`;
@@ -2082,17 +2163,22 @@ function allocFor(entity, data){
 
 let armedDelete = null;
 function renderTable(){
-  const cols = SCHEMAS[activeEntity].map(s=>s[0]).filter(k=>k!=="desc");
-  const list = SEL[activeEntity]();
-  let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
-  for(const r of list){
-    html += `<tr class="erow" data-editrow="${r.id}" title="click to edit"><td class="mono"><a class="idlink" data-lineage="${activeEntity}:${r.id}">${r.id}</a></td>`+
+  const ent = activeEntity;
+  const cols = SCHEMAS[ent].map(s=>s[0]).filter(k=>k!=="desc");
+  const isObj = ent==="objective";
+  let list = SEL[ent]();
+  if(isObj && pfAnyFilter()) list = list.filter(objMatches);
+  const rowHtml = r => `<tr class="erow" data-editrow="${r.id}" title="click to edit"><td class="mono"><a class="idlink" data-lineage="${ent}:${r.id}">${r.id}</a></td>`+
       cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
-      `<td class="row-actions">
-        <button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
-  }
-  html += `</tbody></table>`;
-  if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
+      `<td class="row-actions"><button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
+  let body="";
+  if(isObj && pfGroupBy!=="hierarchy"){
+    const groups={}; list.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
+    pfGroupOrder(groups).forEach(k=>{ body+=`<tr class="grouphead"><td colspan="${cols.length+2}">${esc(pfGroupLabel(k))} <span class="pill">${groups[k].length}</span></td></tr>`+groups[k].map(rowHtml).join(""); });
+  } else body = list.map(rowHtml).join("");
+  let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>${body}</tbody></table>`;
+  if(!list.length) html = (isObj&&pfAnyFilter()) ? `<p class="hint">No objectives match the current filters.</p>` : `<p class="hint">No ${ent}s yet.</p>`;
+  else if(!isObj && (pfAnyFilter()||pfGroupBy!=="hierarchy")) html = `<p class="hint" style="margin:0 0 10px">Filters &amp; grouping act on objectives and the tree — showing all ${ent}s.</p>`+html;
   document.getElementById("entityTable").innerHTML = html;
   document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
   document.querySelectorAll("#entityTable [data-editrow]").forEach(tr=>tr.onclick=()=>{ armedDelete=null; openEditor(tr.dataset.editrow); });
@@ -2120,6 +2206,7 @@ function cellVal(col,v){
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
 function renderGantt(){
+  const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
@@ -2160,8 +2247,10 @@ function renderGantt(){
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
+    if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
     const g=geom(entity,r); if(!visible(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
+    if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   const roots=[]; P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
