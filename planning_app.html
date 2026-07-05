@@ -25,6 +25,9 @@
   .toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
   .toggle button{background:var(--panel);border:none;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:12px}
   .toggle button.active{background:var(--accent);color:#08121a;font-weight:600}
+  .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
+  .ov-ctl{display:flex;align-items:center;gap:9px}
+  .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
   main{padding:18px;max-width:1200px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -196,23 +199,32 @@
 <header>
   <h1><span class="dot">◆</span> R&amp;D Planning</h1>
   <nav id="nav">
-    <button data-tab="company" class="active">Company</button>
-    <button data-tab="portfolio">Portfolio</button>
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="portfolio">Structure</button>
     <button data-tab="gantt">Gantt</button>
-    <button data-tab="slices">Product / Model</button>
     <button data-tab="settings">Settings</button>
   </nav>
   <div class="spacer"></div>
-  <div class="toggle" id="modeToggle" title="Quarterly columns vs single overall score">
-    <button data-mode="overall" class="active">Overall</button>
-    <button data-mode="quarterly">Quarterly</button>
-  </div>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
 </header>
 <main>
   <div class="msg" id="msg"></div>
 
-  <section class="tabsec active" id="tab-company"></section>
+  <section class="tabsec active" id="tab-overview">
+    <div class="ov-controls">
+      <div class="ov-ctl"><span class="ov-lab">View</span>
+        <div class="toggle" id="lensToggle">
+          <button data-lens="division" class="active">By division</button>
+          <button data-lens="product">By product / model</button>
+        </div></div>
+      <div class="ov-ctl"><span class="ov-lab">Period</span>
+        <div class="toggle" id="modeToggle" title="Single overall score vs per-quarter columns">
+          <button data-mode="overall" class="active">Overall</button>
+          <button data-mode="quarterly">Quarterly</button>
+        </div></div>
+    </div>
+    <div id="ovBody"></div>
+  </section>
   <section class="tabsec" id="tab-portfolio">
     <div id="pfViewToggle" class="pf-viewtoggle"></div>
     <div id="pfTree"></div>
@@ -256,7 +268,6 @@
     </div>
     <div id="ganttWrap"></div>
   </section>
-  <section class="tabsec" id="tab-slices"></section>
   <section class="tabsec settings" id="tab-settings">
     <h3>Broker</h3>
     <p class="hint">Default broker is baked in. Only the token is needed; it is stored in this browser only.
@@ -1365,10 +1376,10 @@ async function persistPortfolio(reapply, okMsg){
         if(reapply) reapply();                          // re-apply this change onto their version
         const res2 = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
         etags["portfolio"]=res2.etag; knownVersions["portfolio"]=res2.version;
-        renderPortfolio(); renderCompany();
+        renderPortfolio(); renderOverview();
         setMsg((okMsg||"Saved.")+" (merged with a concurrent change)", "ok");
       }catch(e2){
-        renderPortfolio(); renderCompany();
+        renderPortfolio(); renderOverview();
         setMsg("Auto-save hit a conflict and couldn't merge ("+(e2.status||e2)+") — reloaded; re-apply and use Save.", "err");
       }
     } else {
@@ -1401,8 +1412,7 @@ function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
 function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.replace("-"," ")}</span>`; }
 
 /* ---------------- COMPANY tab ---------------- */
-function renderCompany(){
-  const root = document.getElementById("tab-company");
+function companyHtml(){
   const em = pfMap();
   const comp = RD.rollupCompany(portfolio, em);
   let hero = `<div class="company-hero">
@@ -1426,8 +1436,8 @@ function renderCompany(){
     }
   }
   cards += `</div>`;
-  if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Portfolio tab to begin.</p>`;
-  root.innerHTML = hero + cards;
+  if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>`;
+  return hero + cards;
 }
 function divCard(d, cells, counts, worst){
   const scoreBlocks = cells.map(([lbl,v])=>`
@@ -1482,10 +1492,11 @@ const SCHEMAS = {
 let activeEntity = "division";
 let editingId = null;
 let pfView = "tree";
+let lens = "division";   // Overview: by division vs by product/model
 
 function renderPortfolio(){
   const tg = document.getElementById("pfViewToggle");
-  tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Architecture</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
+  tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Tree</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
   tg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(pfView!==b.dataset.pfview){ pfView=b.dataset.pfview; closeEditor(); renderPortfolio(); } });
   const tree = pfView==="tree";
   document.getElementById("pfTree").style.display = tree?"":"none";
@@ -1643,7 +1654,7 @@ function wireInitTargets(initId){
 }
 function removeTarget(initId,kpiId){
   portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId);
-  refreshInitTargets(initId); renderCompany();
+  refreshInitTargets(initId); renderOverview();
   persistPortfolio(()=>{ portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId); }, "Target removed.");
 }
 
@@ -1722,7 +1733,7 @@ function saveKpiEditor(){
     reapply=()=>{ portfolio.kpis=portfolio.kpis||[]; if(!portfolio.kpis.some(x=>x.id===id)) portfolio.kpis.push(rec); };
   }
   closeKpiEditor();
-  refreshInitTargets(initId); renderCompany();
+  refreshInitTargets(initId); renderOverview();
   persistPortfolio(reapply, "Target saved.");
 }
 
@@ -1964,7 +1975,7 @@ function saveRecord(){
     list.push(rec);
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
-  closeEditor(); renderPortfolio(); renderCompany();
+  closeEditor(); renderPortfolio(); renderOverview();
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
 function validateAndWarn(entity, rec){
@@ -2013,7 +2024,7 @@ function renderTable(){
     const ent = activeEntity;
     const _di=SEL[ent]().findIndex(x=>x.id===id); if(_di<0){ armedDelete=null; renderTable(); return; }   // already gone — never splice(-1)
     SEL[ent]().splice(_di,1);
-    armedDelete=null; renderPortfolio(); renderCompany();
+    armedDelete=null; renderPortfolio(); renderOverview();
     persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
   });
 }
@@ -2146,10 +2157,9 @@ function renderGantt(){
 }
 
 /* ---------------- SLICES tab ---------------- */
-function renderSlices(){
-  const root = document.getElementById("tab-slices");
+function slicesHtml(){
   const em = pfMap();
-  if(!portfolio.products.length){ root.innerHTML='<p class="hint">No products defined yet. Add products and models in the Portfolio tab to see sliced scores.</p>'; return; }
+  if(!portfolio.products.length){ return '<p class="hint">No products defined yet. Add products and models in the Structure tab to see sliced scores.</p>'; }
   const qs = mode==="quarterly" ? quartersAll() : [null];
   let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
   for(const p of portfolio.products){
@@ -2165,12 +2175,14 @@ function renderSlices(){
   }
   html += `</tbody></table>
     <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models). Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
-  root.innerHTML = html;
+  return html;
 }
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
 
 /* ---------------- render dispatch ---------------- */
-function renderAll(){ renderCompany(); renderPortfolio(); renderGantt(); renderSlices(); renderBrokerStatus(); }
+function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderBrokerStatus(); }
+function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
+  el.innerHTML = (lens==="division") ? companyHtml() : slicesHtml(); }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
   el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
 
@@ -2182,9 +2194,13 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
   document.getElementById("tab-"+b.dataset.tab).classList.add("active");
 });
+document.querySelectorAll("#lensToggle button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#lensToggle button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); lens=b.dataset.lens; renderOverview();
+});
 document.querySelectorAll("#modeToggle button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#modeToggle button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active"); mode=b.dataset.mode; renderCompany(); renderSlices();
+  b.classList.add("active"); mode=b.dataset.mode; renderOverview();
 });
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
