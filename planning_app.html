@@ -43,6 +43,8 @@
   .pfgrp-head{display:flex;align-items:center;gap:9px;padding:7px 8px;font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line);margin-bottom:2px}
   tr.grouphead td{background:var(--panel2);font-weight:600;font-size:12px;color:var(--ink)}
   .ggroupbar{position:absolute;top:11px;height:12px;border:1px dashed var(--accent2);border-radius:3px;opacity:.8}
+  .grow.ggrouprow{background:var(--panel2)}
+  .grow.ggrouprow .gname.group{font-weight:600;font-size:12.5px}
   main{padding:18px;max-width:1200px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -2206,7 +2208,7 @@ function cellVal(col,v){
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
 function renderGantt(){
-  const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
+  const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
@@ -2253,8 +2255,23 @@ function renderGantt(){
     if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
-  const roots=[]; P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
-  if(!roots.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No scheduled, dated items to chart.</p>'; return; }
+  const grpMode = (pfGroupBy==="product"||pfGroupBy==="quarter"||pfGroupBy==="owner");
+  let roots=[];
+  if(grpMode){
+    const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
+    const groups={}; gobjs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
+    pfGroupOrder(groups).forEach(k=>{
+      const kids = groups[k].map(o=>build("objective",o,1)).filter(Boolean);   // objective bars (+ their gates) under a group header
+      if(!kids.length) return;
+      const dss=kids.map(n=>n.g.ds).filter(v=>v!=null), des=kids.map(n=>{ const gg=n.g; return gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); }).filter(v=>v!=null);
+      const vs=groups[k].map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
+      roots.push({ synthetic:true, label:pfGroupLabel(k), band:gband, depth:0, key:"grp:"+k, kids,
+        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
+    });
+  } else {
+    P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
+  }
+  if(!roots.length){ document.getElementById("ganttWrap").innerHTML=`<p class="hint">${pfAnyFilter()?'No matching items to chart.':'No scheduled, dated items to chart.'}</p>`; return; }
   // ---- domain over the full tree (+ today) ----
   let lo=Infinity, hi=-Infinity;
   (function scan(n){ const g=n.g;
@@ -2286,8 +2303,15 @@ function renderGantt(){
   ticks.forEach(t=>{ html+=`<span class="gaxislab" style="left:${Math.max(0,x(t.day))+3}px;bottom:3px">${t.label}</span>`; });
   html+=`</div></div>`;
   rows.forEach(n=>{
-    const g=n.g, name=esc(nameOf(n.entity,n.rec)), hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
+    const g=n.g, hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
     const tri = hasKids ? `<span class="gtri" data-gtoggle="${n.key}">${collapsed?'▸':'▾'}</span>` : `<span class="gspacer"></span>`;
+    if(n.synthetic){
+      html+=`<div class="grow ggrouprow"><div class="glabel" style="padding-left:6px">${tri}<span class="gdot" style="background:${bandColor(n.band)}"></span><span class="gname group">${esc(n.label)}</span></div><div class="gtrack">`;
+      if(g.ds!=null&&g.de!=null) html+=`<div class="ggroupbar" style="left:${x(g.ds)}px;width:${Math.max(2,x(g.de)-x(g.ds))}px"></div>`;
+      html+=`</div></div>`;
+      return;
+    }
+    const name=esc(nameOf(n.entity,n.rec));
     const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
