@@ -138,6 +138,11 @@
   .texlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex:none;margin-right:9px;opacity:.75}
   .tname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tname:hover{color:var(--accent);text-decoration:underline}
+  .tacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
+  details.tnode > summary:hover .tacts, .tleaf:hover .tacts{display:inline-flex}
+  .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .tact:hover{color:var(--ink);border-color:var(--accent)}
+  .mdia{color:var(--accent2);font-size:11px;text-align:center}
   .tname.muted{color:var(--muted)}
   .tname.muted:hover{color:var(--accent)}
   .tstatic{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1505,7 +1510,9 @@ function renderPortfolio(){
   document.getElementById("entityTable").style.display = tree?"none":"";
   if(tree){ renderPortfolioTree(); return; }
   const tabs = document.getElementById("entityTabs");
-  tabs.innerHTML = Object.keys(SCHEMAS).map(k=>
+  const ENT_TABS = Object.keys(SCHEMAS).filter(k=>k!=="milestone");   // milestones live under their initiative — change 5
+  if(ENT_TABS.indexOf(activeEntity)<0) activeEntity = "objective";
+  tabs.innerHTML = ENT_TABS.map(k=>
     `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
   tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; closeEditor(); renderPortfolio(); });
   const tb = document.getElementById("pfToolbar");
@@ -1513,9 +1520,10 @@ function renderPortfolio(){
   document.getElementById("addEntityBtn").onclick = ()=>openEditor(null);
   renderTable();
 }
-function openEditor(id){
+function openEditor(id, entityOverride, prefill){
+  if(entityOverride) activeEntity = entityOverride;
   editingId = id || null;
-  const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : {};
+  const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : (prefill || {});
   document.getElementById("pfModalTitle").textContent = (editingId?"Edit ":"Add ")+cap(activeEntity);
   hideEditorErr();
   let html = `<div class="ed">`;
@@ -1539,12 +1547,12 @@ function openEditor(id){
   html += `</div><div class="row-actions">
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
     <button class="ghost" id="cancelEdit">Cancel</button></div>`;
-  if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; html += initTargetsHtml(editingId); }
+  if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; pfMsArmed=null; html += initTargetsHtml(editingId); html += milestonesHtml(editingId); }
   if((activeEntity==='initiative'||activeEntity==='objective') && editingId){ const rec=SEL[activeEntity]().find(x=>x.id===editingId); if(rec) html += classificationKpisHtml(rec); }
   document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
-  document.getElementById("cancelEdit").onclick = closeEditor;
-  if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); }
+  document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
+  if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
   // product & model are hierarchical (a model belongs to a product): picking a product scopes the model list,
   // picking a model fills in its product. Both stay populated; save stores the most-specific (model implies product).
   const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
@@ -1561,7 +1569,7 @@ function openEditor(id){
   const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
 function closeEditor(){
-  editingId = null;
+  editingId = null; msReturn = null;
   const m = document.getElementById("pfModal"); if(m) m.hidden = true;
   const b = document.getElementById("pfModalBody"); if(b) b.innerHTML = "";
   hideEditorErr();
@@ -1572,6 +1580,8 @@ function hideEditorErr(){ const e=document.getElementById("pfModalErr"); if(e){ 
 /* ---------------- initiative targets (portfolio-defined KPIs) ---------------- */
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Std dev"],["cv","CV %"],["range","Range"],["max","Max"],["min","Min"]];
 let pfTgtArmed=null;                          // kpiId armed for removal
+let pfMsArmed=null;                           // milestone id armed for removal in the initiative editor
+let msReturn=null;                            // initiative id to reopen after editing one of its milestones
 let pfKpiInit=null, pfKpiEditId=null, pfKpiDraft=null;   // KPI sub-editor state
 
 function targetSummary(k){
@@ -1642,6 +1652,53 @@ function refreshInitTargets(initId){
   const tmp=document.createElement("div"); tmp.innerHTML=initTargetsHtml(initId);
   host.replaceWith(tmp.firstElementChild);
   wireInitTargets(initId);
+}
+/* ---------------- initiative milestones (nested under the initiative — change 5) ---------------- */
+function milestonesHtml(initId){
+  const list=portfolio.milestones.filter(m=>m.initiativeId===initId).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  let h=`<div class="pftargets" id="pfMsSection"><div class="pft-head"><span>Milestones</span>`+
+    `<button class="ghost" id="pfAddMs">+ Add milestone</button></div>`;
+  if(!list.length){
+    h+=`<p class="hint" style="margin:8px 0 0">No milestones yet. Add one here or from the tree; they show as ◆ markers on the Gantt.</p>`;
+  } else {
+    h+=`<div class="pft-list">`;
+    list.forEach(m=>{
+      const armed=pfMsArmed===m.id;
+      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia">◆</span>`+
+        `<span class="pft-name">${esc(m.name||m.id)}</span>`+
+        `<span class="pft-sum mono">${m.plannedDate!=null?dayToIso(m.plannedDate):'no date'}</span>`+
+        `<span class="pft-cur"></span>`+
+        `<span class="pft-acts"><button class="ghost" data-msedit="${m.id}">edit</button>`+
+        `<button class="ghost danger ${armed?'armed':''}" data-msdel="${m.id}">${armed?'confirm':'remove'}</button></span>`+
+      `</div>`;
+    });
+    h+=`</div>`;
+  }
+  return h+`</div>`;
+}
+function refreshMilestones(initId){
+  const host=document.getElementById("pfMsSection"); if(!host) return;
+  const tmp=document.createElement("div"); tmp.innerHTML=milestonesHtml(initId);
+  host.replaceWith(tmp.firstElementChild);
+  wireMilestones(initId);
+}
+function wireMilestones(initId){
+  const add=document.getElementById("pfAddMs");
+  if(add) add.onclick=()=>{ msReturn=initId; openTreeAdd("milestone", initId); };
+  document.querySelectorAll("#pfModalBody [data-msedit]").forEach(b=>b.onclick=()=>{ msReturn=initId; openEditor(b.dataset.msedit, "milestone"); });
+  document.querySelectorAll("#pfModalBody [data-msdel]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.msdel;
+    if(pfMsArmed!==id){ pfMsArmed=id; refreshMilestones(initId); return; }
+    pfMsArmed=null; msDelete(id, initId);
+  });
+}
+function msDelete(id, initId){
+  const i=portfolio.milestones.findIndex(m=>m.id===id); if(i<0){ refreshMilestones(initId); return; }
+  portfolio.milestones.splice(i,1);
+  portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); });   // clean dangling refs
+  refreshMilestones(initId); renderOverview();
+  persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
+    portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
 }
 function wireInitTargets(initId){
   const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(initId,null);
@@ -1754,6 +1811,23 @@ function subCount(entity,r){
 }
 
 /* ---- recursive architecture tree (shared by Portfolio tab + modal) ---- */
+let treeCtx = "portfolio";   // "portfolio" → editable row actions; "lineage" → read-only
+function treeActs(entity, id){
+  if(treeCtx!=="portfolio") return "";
+  const ADD = { division:[["initiative","+ init"],["product","+ product"]],
+                initiative:[["objective","+ obj"],["milestone","+ milestone"]],
+                product:[["model","+ model"]] }[entity] || [];
+  const addBtns = ADD.map(a=>`<button class="tact" title="Add ${a[0]} here" data-tadd="${a[0]}:${id}">${a[1]}</button>`).join("");
+  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}</span>`;
+}
+function openTreeAdd(childEntity, parentId){
+  let prefill = {};
+  if(childEntity==="initiative"||childEntity==="product") prefill = { divisionId:parentId };
+  else if(childEntity==="objective"){ const i=byId("initiative",parentId); prefill = { initiativeId:parentId, divisionId: i?i.divisionId:"" }; }
+  else if(childEntity==="milestone") prefill = { initiativeId:parentId };
+  else if(childEntity==="model") prefill = { productId:parentId };
+  openEditor(null, childEntity, prefill);
+}
 function hasArchChildren(entity,id){
   const P=portfolio;
   if(entity==="division") return P.initiatives.some(i=>i.divisionId===id)||P.products.some(p=>p.divisionId===id);
@@ -1775,8 +1849,8 @@ const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"fon
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
 function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
-function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
-function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}</div>`; }
+function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}${treeActs(entity,r.id)}`; }
+function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}${treeActs(entity,r.id)}</div>`; }
 // read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
 function specMap(){ return specDocs; }
 function divOfModel(modelId){ const m=byId("model",modelId); if(!m) return null; const p=byId("product",m.productId); return p?p.divisionId:null; }
@@ -1810,7 +1884,7 @@ function modelLeaf(m){
   if(nKids) bits.push(nKids+" sub-product"+(nKids>1?"s":""));
   if(nPar) bits.push("used in "+nPar);
   const sub=bits.length?`<span class="tsub">${bits.join(" · ")}</span>`:"";
-  return `<div class="tleaf">${dot}${rowName("model",m)}${sub}</div>`;
+  return `<div class="tleaf">${dot}${rowName("model",m)}${sub}${treeActs("model",m.id)}</div>`;
 }
 function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${esc(tag)}</span><span class="tstatic">${esc(label)}</span></div>`; }
 function nodeHtml(entity,r){
@@ -1842,8 +1916,11 @@ function treeChildrenHtml(entity,id){
 }
 function wireTreeLinks(root){
   root.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  root.querySelectorAll("[data-tedit]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
+  root.querySelectorAll("[data-tadd]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
 }
 function renderPortfolioTree(){
+  treeCtx = "portfolio";
   const host=document.getElementById("pfTree");
   const divs=portfolio.divisions;
   if(!divs.length){ host.innerHTML='<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
@@ -1911,7 +1988,7 @@ function renderLineageModal(){
   if(lnStack.length) h+=`<button class="lnback" data-lnback="1">← back</button>`;
   upChain(entity,id).forEach(a=>{ h+=`<a data-lineage="${a.entity}:${a.id}">${esc(a.label)}</a><span class="sep">›</span>`; });
   h+=`<span style="color:var(--ink)">${esc(nameOf(entity,rec))}</span></div>`;
-  const sub=treeChildrenHtml(entity,id);
+  treeCtx="lineage"; const sub=treeChildrenHtml(entity,id); treeCtx="portfolio";
   h+= sub ? `<div class="tree">${sub}</div>` : `<p class="lnempty">No architecture beneath this node.</p>`;
   relatedGroups(entity,id).forEach(g=>{
     h+=`<div class="lngroup"><h4>${esc(g.title)}</h4>`;
@@ -1975,7 +2052,9 @@ function saveRecord(){
     list.push(rec);
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
+  const ret = (ent==="milestone" && msReturn) ? msReturn : null;
   closeEditor(); renderPortfolio(); renderOverview();
+  if(ret) openEditor(ret, "initiative");
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
 function validateAndWarn(entity, rec){
