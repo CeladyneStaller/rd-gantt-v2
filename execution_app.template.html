@@ -48,6 +48,18 @@
   #delBody .del-lead{font-size:15px;margin:2px 0 6px}
   .del-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
   .del-actions .ghost{padding:7px 12px;font-size:13px}
+  #msrBody{padding:2px 18px 4px} #msrActions{padding:0 18px 16px;margin-top:12px}
+  .msr-hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:14px 0 2px}
+  .msr-num{color:var(--accent2);font-weight:600}
+  .msr-meta{color:var(--muted);font-size:12px}
+  .msr-dates{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0 2px;font-size:13px;color:var(--muted)}
+  .msr-dates b{color:var(--ink)}
+  .msr-sec-lbl{margin:18px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .msr-tbl select{font-size:12px;padding:2px 4px}
+  .msr-finding{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+  .msr-fn{font-family:var(--mono);color:var(--muted);font-size:12px;flex:none;width:22px}
+  [data-msr][contenteditable="true"]{background:var(--panel2);border-radius:4px;padding:2px 6px;min-width:44px;outline:none}
+  [data-msr][contenteditable="true"]:focus{box-shadow:0 0 0 1px var(--accent)}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -333,6 +345,17 @@
       <div id="delActions" class="del-actions"></div>
     </div>
   </div>
+  <div id="msReportModal" class="modal-overlay" hidden style="z-index:85">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="msrTitle" style="width:min(820px,95vw)">
+      <div class="modal-head"><span id="msrTitle">Milestone report</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button class="ghost" id="msrLock">Lock</button>
+          <button class="modal-x" id="msrClose" aria-label="Close">&#10005;</button>
+        </span></div>
+      <div id="msrBody"></div>
+      <div id="msrActions" class="del-actions"></div>
+    </div>
+  </div>
 </main>
 
 <script>/*__CORE__*/</script>
@@ -600,7 +623,7 @@ function openEditor(id, entityOverride, prefill){
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
   if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
-  if(activeEntity==='milestone' && editingId){ wireInitTargets(editingId, "milestone"); }
+  if(activeEntity==='milestone' && editingId){ wireInitTargets(editingId, "milestone"); const rb=document.getElementById("msOpenReport"); if(rb) rb.onclick=()=>openMilestoneReport(editingId); }
   // product & model are hierarchical (a model belongs to a product): picking a product scopes the model list,
   // picking a model fills in its product. Both stay populated; save stores the most-specific (model implies product).
   const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
@@ -712,7 +735,7 @@ function msStatusHtml(id){
   else if(s!=null) left=bandHtml(s);
   else left=`<span class="hint">no reading yet — set a completed date, or link a Key Result / stage-gate to a milestone KPI in the execution app</span>`;
   const sc=(s!=null)?`<span style="margin-left:auto;font-family:var(--mono);font-weight:600;color:${scoreColor(s)}">${Math.round(s)}</span>`:"";
-  return `<div class="pftargets"><div class="pft-head"><span>Milestone status</span></div>`+
+  return `<div class="pftargets"><div class="pft-head"><span>Milestone status</span><button class="ghost" id="msOpenReport">📄 Report</button></div>`+
     `<div class="pft-row" style="align-items:center;gap:6px">${left}${sc}</div></div>`;
 }
 /* ---------------- initiative milestones (nested under the initiative — change 5) ---------------- */
@@ -1393,11 +1416,11 @@ function renderMilestones(){
   if(!rows.length){ el.innerHTML=`<p class="hint">${portfolio.milestones.length?"No milestones match the current filters.":"No milestones yet — add one from an initiative in the Structure tab."}</p>`; return; }
   const groups={}; rows.forEach(ms=>{ const init=byId("initiative",ms.initiativeId); const div=init?init.divisionId:"—"; (groups[div]=groups[div]||[]).push(ms); });
   const divOrder=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]).concat(groups["—"]?["—"]:[]);
-  let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th></tr></thead><tbody>`;
+  let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th><th></th></tr></thead><tbody>`;
   divOrder.forEach(div=>{
     const list=groups[div].slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
     const dname = div==="—" ? "— no division —" : (nameOf("division",byId("division",div))||div);
-    h+=`<tr class="grouphead"><td colspan="9">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
+    h+=`<tr class="grouphead"><td colspan="10">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
     list.forEach(ms=>{
       const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
       const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
@@ -1415,12 +1438,92 @@ function renderMilestones(){
         `<td style="white-space:nowrap">${stCell}</td>`+
         `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
         `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
+        `<td style="text-align:center"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button></td>`+
       `</tr>`;
     });
   });
   h+=`</tbody></table>`;
   el.innerHTML=h;
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
+  el.querySelectorAll("[data-msreport]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openMilestoneReport(b.dataset.msreport); });
+}
+/* ---------------- milestone report modal (phase 3) ---------------- */
+let msrCurrent=null, msrDraft=null;
+function msKpiResult(score){ if(score==null) return "N/A"; if(score>=100) return "Met"; if(score>=70) return "Partial"; return "Missed"; }
+function resultBandCls(r){ return r==="Met"?"on-track":r==="Partial"?"at-risk":r==="Missed"?"off-track":"no-band"; }
+function openMilestoneReport(msId){
+  const ms=byId("milestone",msId); if(!ms) return;
+  msrCurrent=msId;
+  const rep=ms.milestoneReport||{};
+  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})), findings:(rep.findings&&rep.findings.length?rep.findings.slice():["","","",""]), locked:!!rep.locked };
+  renderMsReport();
+  document.getElementById("msReportModal").hidden=false;
+}
+function renderMsReport(){
+  const ms=byId("milestone",msrCurrent); if(!ms) return;
+  const em=pfMap(), pool=poolOf(em), locked=msrDraft.locked, ce=locked?"":'contenteditable="true"';
+  const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+  const planned=ms.plannedDate, actual=ms.completedDate;
+  const variance=(planned!=null&&actual!=null)?(actual-planned):null;
+  const varTxt=variance==null?"—":(variance>0?`+${variance} days late`:variance<0?`${-variance} days early`:"on time");
+  const varCls=variance==null?"no-band":(variance>0?"off-track":"on-track");
+  const dirSym=d=>(d==="down"||d==="decrease")?"≤":d==="maintain"?"~":"≥";
+  const kpis=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id);
+  let kpiRows;
+  if(kpis.length){
+    kpiRows=kpis.map(k=>{
+      const s=RD.kpiScoreResolved(k,pool,em), val=RD.effValue(k,pool,em), tgt=RD.effTarget(k,pool,em), unit=RD.kpiUnit(k,pool)||k.unit||"";
+      const ov=msrDraft.kpiOverrides[k.id]||{};
+      const measured=(ov.measured!=null&&ov.measured!=="")?ov.measured:(val==null?"—":`${fmtNum(val)}${unit?" "+unit:""}`);
+      const result=ov.result||msKpiResult(s), bnd=RD.band(s);
+      const tgtTxt=tgt==null?"—":`${dirSym(k.direction)} ${fmtNum(typeof tgt==="object"?tgt.hi:tgt)}${unit?" "+unit:""}`;
+      const resCell=locked?`<span class="band ${resultBandCls(result)}">${result}</span>`
+        :`<select data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
+      return `<tr><td>${esc(RD.kpiName(k,pool)||k.id)}</td>`+
+        `<td class="mono">${esc(tgtTxt)}</td>`+
+        `<td class="mono" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</td>`+
+        `<td>${resCell}</td>`+
+        `<td><span class="band ${bnd}">${bnd.replace("-"," ")}</span></td>`+
+        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td></tr>`;
+    }).join("");
+  } else kpiRows=`<tr><td colspan="6"><span class="hint">No KPIs on this milestone — add them in the editor's Targets section.</span></td></tr>`;
+  const findingsHtml=msrDraft.findings.map((f,i)=>`<div class="msr-finding"><span class="msr-fn">${String(i+1).padStart(2,"0")}</span><div ${ce} data-msr="finding" data-idx="${i}">${esc(f||"")}</div></div>`).join("");
+  document.getElementById("msrBody").innerHTML=
+    `<div class="msr-hd"><div><span class="msr-num mono">${esc(milestoneNumber(ms))}</span> <b>${esc(ms.name||ms.id)}</b></div>`+
+    `<div class="msr-meta">${init?esc(init.name||init.id):""}${prodId?" · "+esc(productName(prodId)):""}</div></div>`+
+    `<div class="msr-dates"><span>Planned <b>${planned!=null?dayToIso(planned):"—"}</b></span>`+
+    `<span>Actual <b>${actual!=null?dayToIso(actual):"—"}</b></span>`+
+    `<span>Variance <span class="band ${varCls}">${varTxt}</span></span></div>`+
+    `<div class="msr-sec-lbl">KPI results</div>`+
+    `<table class="msr-tbl"><thead><tr><th>KPI</th><th>Target</th><th>Measured</th><th>Result</th><th>Band</th><th style="text-align:right">Score</th></tr></thead><tbody>${kpiRows}</tbody></table>`+
+    `<div class="msr-sec-lbl">Findings &amp; learnings</div>${findingsHtml}`;
+  document.getElementById("msrActions").innerHTML=locked
+    ?`<span class="hint" style="margin-right:auto">🔒 Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
+    :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`;
+  document.getElementById("msrLock").textContent=locked?"🔒 Unlock":"Lock";
+  wireMsReport();
+}
+function collectMsReport(){
+  const body=document.getElementById("msrBody"); if(!body||!msrDraft) return;
+  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid, v=(el.textContent||"").trim(); (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=(v==="—"?"":v); });
+  body.querySelectorAll('[data-msr="result"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).result=el.value; });
+  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.findings[i]=(el.textContent||"").trim(); });
+}
+function persistMsReport(msg){
+  const ms=byId("milestone",msrCurrent); if(!ms) return;
+  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings, locked:msrDraft.locked, savedAt:Date.now() };
+  const id=ms.id, snap=JSON.parse(JSON.stringify(ms.milestoneReport));
+  renderMilestones();
+  persistPortfolio(()=>{ const m=byId("milestone",id); if(m) m.milestoneReport=snap; }, msg||"Report saved.");
+}
+function saveMilestoneReport(){ collectMsReport(); persistMsReport("Report saved."); closeMsReport(); }
+function toggleMsLock(){ collectMsReport(); msrDraft.locked=!msrDraft.locked; persistMsReport(msrDraft.locked?"Report locked.":"Report unlocked."); renderMsReport(); }
+function closeMsReport(){ document.getElementById("msReportModal").hidden=true; msrCurrent=null; msrDraft=null; }
+function wireMsReport(){
+  document.getElementById("msrClose").onclick=closeMsReport;
+  const c2=document.getElementById("msrCancel2"); if(c2) c2.onclick=closeMsReport;
+  const sv=document.getElementById("msrSave"); if(sv) sv.onclick=saveMilestoneReport;
+  document.getElementById("msrLock").onclick=toggleMsLock;
 }
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
