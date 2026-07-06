@@ -25,6 +25,46 @@
   .toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
   .toggle button{background:var(--panel);border:none;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:12px}
   .toggle button.active{background:var(--accent);color:#08121a;font-weight:600}
+  .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
+  .ov-ctl{display:flex;align-items:center;gap:9px}
+  .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  body.readonly .erow{cursor:default}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid #5a4420;background:#241b09;padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
+  .ovoverall{margin-top:10px;display:flex;align-items:baseline;gap:8px}
+  .ovq{margin-top:9px;display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+  .ovq-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .ovq-cell{font-size:14px}
+  .struct-section{margin-bottom:26px}
+  .struct-head{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px}
+  .struct-head h3{margin:0}
+  .s-parent > td{border-top:1px solid var(--line)}
+  .s-child > td{color:var(--muted);border-top:none}
+  .s-child .idlink{opacity:.72}
+  .s-indent{padding-left:24px !important}
+  #structTables .row-actions{white-space:nowrap;text-align:right;width:1%}
+  #structTables .row-actions button{margin-left:4px;padding:1px 7px}
+  #delBody .del-lead{font-size:15px;margin:2px 0 6px}
+  .del-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+  .del-actions .ghost{padding:7px 12px;font-size:13px}
+  .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+  .fbf select{font-family:var(--sans);text-transform:none;letter-spacing:0}
+  .fb-sep{width:1px;align-self:stretch;background:var(--line);margin:2px 0}
+  .fb-lbl{align-self:center;font-size:10.5px;color:var(--faint,#5f7488);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;margin-right:2px}
+  .fb-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:2px 6px 2px 9px;border-radius:6px}
+  .fchip .fx{cursor:pointer;color:var(--muted)} .fchip .fx:hover{color:var(--bad)}
+  .fchip.clear{cursor:pointer;border-style:dashed;color:var(--muted);padding:2px 9px}
+  .fchip.clear:hover{color:var(--ink)}
+  .pfgrp{margin:0 0 6px}
+  .pfgrp-head{display:flex;align-items:center;gap:9px;padding:7px 8px;font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line);margin-bottom:2px}
+  tr.grouphead td{background:var(--panel2);font-weight:600;font-size:12px;color:var(--ink)}
+  .ggroupbar{position:absolute;top:11px;height:12px;border:1px dashed var(--accent2);border-radius:3px;opacity:.8}
+  .grow.ggrouprow{background:var(--panel2)}
+  .grow.ggrouprow .gname.group{font-weight:600;font-size:12.5px}
   main{padding:18px;max-width:1200px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -135,6 +175,11 @@
   .texlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex:none;margin-right:9px;opacity:.75}
   .tname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tname:hover{color:var(--accent);text-decoration:underline}
+  .tacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
+  details.tnode > summary:hover .tacts, .tleaf:hover .tacts{display:inline-flex}
+  .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .tact:hover{color:var(--ink);border-color:var(--accent)}
+  .mdia{color:var(--accent2);font-size:11px;text-align:center}
   .tname.muted{color:var(--muted)}
   .tname.muted:hover{color:var(--accent)}
   .tstatic{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -143,7 +188,11 @@
   .gchart{position:relative;font-size:12px}
   .grow{display:flex;align-items:center;height:30px}
   .grow:hover{background:rgba(255,255,255,0.02)}
-  .glabel{width:240px;flex:none;display:flex;align-items:center;overflow:hidden;white-space:nowrap;padding-right:8px}
+  .glabel{width:240px;flex:none;display:flex;align-items:center;overflow:hidden;white-space:nowrap;padding-right:8px;position:relative}
+  .gacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
+  .grow:hover .gacts{display:inline-flex}
+  .gact{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 6px;font-size:10.5px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .gact:hover{color:var(--ink);border-color:var(--accent)}
   .gtri{cursor:pointer;color:var(--muted);font-size:10px;width:14px;flex:none;user-select:none;text-align:center;opacity:.7}
   .gtri:hover{color:var(--ink);opacity:1}
   .gspacer{width:14px;flex:none}
@@ -196,58 +245,34 @@
 <header>
   <h1><span class="dot">◆</span> R&amp;D Planning</h1>
   <nav id="nav">
-    <button data-tab="company" class="active">Company</button>
-    <button data-tab="portfolio">Portfolio</button>
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="portfolio">Structure</button>
     <button data-tab="gantt">Gantt</button>
-    <button data-tab="slices">Product / Model</button>
     <button data-tab="settings">Settings</button>
   </nav>
   <div class="spacer"></div>
-  <div class="toggle" id="modeToggle" title="Quarterly columns vs single overall score">
-    <button data-mode="overall" class="active">Overall</button>
-    <button data-mode="quarterly">Quarterly</button>
-  </div>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
 </header>
 <main>
   <div class="msg" id="msg"></div>
 
-  <section class="tabsec active" id="tab-company"></section>
+  <section class="tabsec active" id="tab-overview">
+    <div class="ov-controls">
+      <div class="ov-ctl"><span class="ov-lab">View</span>
+        <div class="toggle" id="lensToggle">
+          <button data-lens="division" class="active">By division</button>
+          <button data-lens="product">By product / model</button>
+        </div></div>
+    </div>
+    <div id="ovBody"></div>
+  </section>
   <section class="tabsec" id="tab-portfolio">
-    <div id="pfViewToggle" class="pf-viewtoggle"></div>
-    <div id="pfTree"></div>
-    <div class="entity-tabs" id="entityTabs"></div>
-    <div id="pfToolbar"></div>
-    <div id="entityTable"></div>
-    <div id="pfModal" class="modal-overlay" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfModalTitle">
-        <div class="modal-head"><span id="pfModalTitle">Add</span>
-          <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
-        <div id="pfModalErr" class="modal-err" hidden></div>
-        <div id="pfModalBody"></div>
-      </div>
-    </div>
-    <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfKpiTitle" style="width:min(560px,94vw)">
-        <div class="modal-head"><span id="pfKpiTitle">Target</span>
-          <button class="modal-x" id="pfKpiClose" aria-label="Close">&#10005;</button></div>
-        <div id="pfKpiBody"></div>
-      </div>
-    </div>
-    <div id="lnModal" class="modal-overlay" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
-        <div class="modal-head">
-          <span id="lnTitle">Lineage</span>
-          <span style="display:flex;gap:8px;align-items:center">
-            <button class="lnback" id="lnEdit">Edit this</button>
-            <button class="modal-x" id="lnClose" aria-label="Close">&#10005;</button>
-          </span>
-        </div>
-        <div id="lnBody"></div>
-      </div>
-    </div>
+    <div id="pfFilterBar" class="filterbar"></div>
+    <div id="structTables"></div>
   </section>
   <section class="tabsec" id="tab-gantt">
+    <div id="ganttFilterBar" class="filterbar"></div>
     <div class="legend">
       <span><i class="swatch" style="background:#2c4a63"></i> baseline</span>
       <span><i class="swatch" style="background:var(--accent)"></i> projected</span>
@@ -256,7 +281,6 @@
     </div>
     <div id="ganttWrap"></div>
   </section>
-  <section class="tabsec" id="tab-slices"></section>
   <section class="tabsec settings" id="tab-settings">
     <h3>Broker</h3>
     <p class="hint">Default broker is baked in. Only the token is needed; it is stored in this browser only.
@@ -266,6 +290,41 @@
     <button class="act" id="tokenSave">Save token</button>
     <p class="hint" id="brokerStatus"></p>
   </section>
+  <div id="pfModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfModalTitle">
+      <div class="modal-head"><span id="pfModalTitle">Add</span>
+        <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
+      <div id="pfModalErr" class="modal-err" hidden></div>
+      <div id="pfModalBody"></div>
+    </div>
+  </div>
+  <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfKpiTitle" style="width:min(560px,94vw)">
+      <div class="modal-head"><span id="pfKpiTitle">Target</span>
+        <button class="modal-x" id="pfKpiClose" aria-label="Close">&#10005;</button></div>
+      <div id="pfKpiBody"></div>
+    </div>
+  </div>
+  <div id="lnModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
+      <div class="modal-head">
+        <span id="lnTitle">Lineage</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button class="lnback" id="lnEdit">Edit this</button>
+          <button class="modal-x" id="lnClose" aria-label="Close">&#10005;</button>
+        </span>
+      </div>
+      <div id="lnBody"></div>
+    </div>
+  </div>
+  <div id="delModal" class="modal-overlay" hidden style="z-index:90">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="delTitle" style="width:min(460px,94vw)">
+      <div class="modal-head"><span id="delTitle">Delete</span>
+        <button class="modal-x" id="delClose" aria-label="Close">&#10005;</button></div>
+      <div id="delBody"></div>
+      <div id="delActions" class="del-actions"></div>
+    </div>
+  </div>
 </main>
 
 <script>/*__CORE__*/</script>
@@ -275,12 +334,16 @@ const RD = window.RDCore;
 
 /* ---------------- broker ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){
-  const u = new URL(location.href);
-  const t = u.searchParams.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token");
-    history.replaceState({}, "", u.toString()); }
+function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
+const URLP = (function(){
+  const u = new URL(location.href), p = u.searchParams;
+  const t = p.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
+  const rq = p.get("quarter");
+  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
 })();
+const RO = URLP.readonly;
+if (RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r = await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
@@ -301,11 +364,10 @@ let execDocs = {};               // EXEC-<div> docId -> doc
 let specDocs = {};               // SPEC-<div> docId -> doc (read-only, from Product Designer)
 let etags = {};                  // docId -> etag (for If-Match)
 let knownVersions = {};          // docId -> version (ignore own echo)
-let mode = "overall";            // overall | quarterly
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
-  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[] }; }
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
@@ -363,6 +425,7 @@ async function saveAll(){
 // onto a freshly reloaded portfolio if a concurrent save bumped the etag (412),
 // so an auto-saved add/edit/delete is never silently lost to a race.
 async function persistPortfolio(reapply, okMsg){
+  if(RO) return;   // read-only: never write
   if(!tok()){ setMsg("Saved locally — add a broker token in Settings to sync.", "info"); return; }
   try{
     const res = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
@@ -376,10 +439,10 @@ async function persistPortfolio(reapply, okMsg){
         if(reapply) reapply();                          // re-apply this change onto their version
         const res2 = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
         etags["portfolio"]=res2.etag; knownVersions["portfolio"]=res2.version;
-        renderPortfolio(); renderCompany();
+        renderPortfolio(); renderOverview();
         setMsg((okMsg||"Saved.")+" (merged with a concurrent change)", "ok");
       }catch(e2){
-        renderPortfolio(); renderCompany();
+        renderPortfolio(); renderOverview();
         setMsg("Auto-save hit a conflict and couldn't merge ("+(e2.status||e2)+") — reloaded; re-apply and use Save.", "err");
       }
     } else {
@@ -412,8 +475,7 @@ function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
 function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.replace("-"," ")}</span>`; }
 
 /* ---------------- COMPANY tab ---------------- */
-function renderCompany(){
-  const root = document.getElementById("tab-company");
+function companyHtml(){
   const em = pfMap();
   const comp = RD.rollupCompany(portfolio, em);
   let hero = `<div class="company-hero">
@@ -426,29 +488,23 @@ function renderCompany(){
   for(const d of portfolio.divisions){
     const counts = statusCounts("division", d.id, em);
     const worst = worstSlip(d.id, casc);
-    if(mode==="overall"){
-      const sc = RD.rollupDivision(d.id, portfolio, em);
-      cards += divCard(d, [["overall", sc]], counts, worst);
-    } else {
-      const qs = RD.boundsOf("division", d.id, portfolio);
-      const cells = qs.length ? qs.map(q=>[q, RD.score("division",d.id,portfolio,em,q)])
-                              : [["—", null]];
-      cards += divCard(d, cells, counts, worst);
-    }
+    const overall = RD.rollupDivision(d.id, portfolio, em);
+    const qCells = RD.boundsOf("division", d.id, portfolio).map(q=>[q, RD.score("division",d.id,portfolio,em,q)]);
+    cards += divCard(d, overall, qCells, counts, worst);
   }
   cards += `</div>`;
-  if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Portfolio tab to begin.</p>`;
-  root.innerHTML = hero + cards;
+  if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>`;
+  return hero + cards;
 }
-function divCard(d, cells, counts, worst){
-  const scoreBlocks = cells.map(([lbl,v])=>`
-    <div style="display:inline-block;margin-right:14px">
-      <div class="score" style="font-size:24px;color:${scoreColor(v)}">${fmtScore(v)}</div>
-      <div class="pill">${lbl}</div></div>`).join("");
+function divCard(d, overall, qCells, counts, worst){
+  const q = qCells.length
+    ? `<div class="ovq"><span class="ovq-lbl">per quarter</span>${qCells.map(c=>`<span class="ovq-cell"><b style="color:${scoreColor(c[1])}">${fmtScore(c[1])}</b> <span class="pill">${esc(c[0])}</span></span>`).join("")}</div>`
+    : `<div class="ovq"><span class="hint">no quarters set on its objectives</span></div>`;
   const slipTxt = worst==null ? `<span>no schedule data</span>`
     : `worst initiative slip <b class="${worst<=0?'zero':''}">${worst<=0?'0':'+'+worst}d</b>`;
   return `<div class="card"><h3>${esc(d.name)}</h3><div class="sub">${d.id}</div>
-    <div style="margin-top:10px">${scoreBlocks}</div>
+    <div class="ovoverall"><span class="score" style="font-size:26px;color:${scoreColor(overall)}">${fmtScore(overall)}</span> <span class="pill">overall</span></div>
+    ${q}
     <div class="counts">
       <span><i class="pip" style="background:var(--ok)"></i>${counts["on-track"]}</span>
       <span><i class="pip" style="background:var(--warn)"></i>${counts["at-risk"]}</span>
@@ -493,29 +549,19 @@ const SCHEMAS = {
 let activeEntity = "division";
 let editingId = null;
 let pfView = "tree";
+let lens = "division";   // Overview: by division vs by product/model
+let pfGroupBy = "hierarchy";                       // Structure/Gantt grouping dimension
+const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"" };   // seeded from URL params (seed-on-load)
 
 function renderPortfolio(){
-  const tg = document.getElementById("pfViewToggle");
-  tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Architecture</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
-  tg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(pfView!==b.dataset.pfview){ pfView=b.dataset.pfview; closeEditor(); renderPortfolio(); } });
-  const tree = pfView==="tree";
-  document.getElementById("pfTree").style.display = tree?"":"none";
-  document.getElementById("entityTabs").style.display = tree?"none":"";
-  document.getElementById("pfToolbar").style.display = tree?"none":"";
-  document.getElementById("entityTable").style.display = tree?"none":"";
-  if(tree){ renderPortfolioTree(); return; }
-  const tabs = document.getElementById("entityTabs");
-  tabs.innerHTML = Object.keys(SCHEMAS).map(k=>
-    `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
-  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; closeEditor(); renderPortfolio(); });
-  const tb = document.getElementById("pfToolbar");
-  tb.innerHTML = `<div class="pf-toolbar"><button class="act" id="addEntityBtn">+ New ${activeEntity}</button></div>`;
-  document.getElementById("addEntityBtn").onclick = ()=>openEditor(null);
-  renderTable();
+  const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
+  renderStructTables();
 }
-function openEditor(id){
+function openEditor(id, entityOverride, prefill){
+  if(RO) return;   // read-only: no editing
+  if(entityOverride) activeEntity = entityOverride;
   editingId = id || null;
-  const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : {};
+  const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : (prefill || {});
   document.getElementById("pfModalTitle").textContent = (editingId?"Edit ":"Add ")+cap(activeEntity);
   hideEditorErr();
   let html = `<div class="ed">`;
@@ -539,16 +585,29 @@ function openEditor(id){
   html += `</div><div class="row-actions">
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
     <button class="ghost" id="cancelEdit">Cancel</button></div>`;
-  if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; html += initTargetsHtml(editingId); }
+  if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; pfMsArmed=null; html += initTargetsHtml(editingId); html += milestonesHtml(editingId); }
+  if((activeEntity==='initiative'||activeEntity==='objective') && editingId){ const rec=SEL[activeEntity]().find(x=>x.id===editingId); if(rec) html += classificationKpisHtml(rec); }
   document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
-  document.getElementById("cancelEdit").onclick = closeEditor;
-  if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); }
+  document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
+  if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
+  // product & model are hierarchical (a model belongs to a product): picking a product scopes the model list,
+  // picking a model fills in its product. Both stay populated; save stores the most-specific (model implies product).
+  const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
+  if(_ps && _ms){
+    const rebuildModels=(sel)=>{ _ms.innerHTML='<option value="">— none —</option>'+
+      (_ps.value ? portfolio.models.filter(m=>m.productId===_ps.value) : portfolio.models)
+        .map(m=>`<option value="${m.id}" ${sel===m.id?'selected':''}>${esc(m.name||m.id)}</option>`).join(""); };
+    if(_ms.value && !_ps.value){ const m=portfolio.models.find(x=>x.id===_ms.value); if(m) _ps.value=m.productId; }   // model set but product blank → show its product
+    rebuildModels(_ms.value);
+    _ps.addEventListener("change",()=>{ const keep=_ms.value && portfolio.models.some(m=>m.id===_ms.value && m.productId===_ps.value); rebuildModels(keep?_ms.value:""); });
+    _ms.addEventListener("change",()=>{ if(_ms.value){ const m=portfolio.models.find(x=>x.id===_ms.value); if(m && m.productId){ _ps.value=m.productId; rebuildModels(_ms.value); } } });
+  }
   document.getElementById("pfModal").hidden = false;
   const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
 function closeEditor(){
-  editingId = null;
+  editingId = null; msReturn = null;
   const m = document.getElementById("pfModal"); if(m) m.hidden = true;
   const b = document.getElementById("pfModalBody"); if(b) b.innerHTML = "";
   hideEditorErr();
@@ -559,6 +618,8 @@ function hideEditorErr(){ const e=document.getElementById("pfModalErr"); if(e){ 
 /* ---------------- initiative targets (portfolio-defined KPIs) ---------------- */
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Std dev"],["cv","CV %"],["range","Range"],["max","Max"],["min","Min"]];
 let pfTgtArmed=null;                          // kpiId armed for removal
+let pfMsArmed=null;                           // milestone id armed for removal in the initiative editor
+let msReturn=null;                            // initiative id to reopen after editing one of its milestones
 let pfKpiInit=null, pfKpiEditId=null, pfKpiDraft=null;   // KPI sub-editor state
 
 function targetSummary(k){
@@ -573,6 +634,29 @@ function targetSummary(k){
     return `${st} of ${n} ${dir} ${tgt}${unit}`;
   }
   return `${dir} ${tgt}${unit}`;
+}
+// read-only: the product/model headline KPIs a node is classified to, with their target + current (spanning
+// designer members and execution links). Shown under the initiative/objective editor.
+function classificationKpisHtml(node){
+  const ck = classificationKpis(node);
+  if(ck.kind==="agnostic") return "";   // nothing classified → nothing to surface
+  let body;
+  if(!ck.loaded){ body = `<p class="hint" style="margin:8px 0 0">Spec doc for this ${ck.kind} isn't loaded${!tok()?" — add a broker token in Settings":""}.</p>`; }
+  else if(!ck.kpis.length){ body = `<p class="hint" style="margin:8px 0 0">No headline KPIs on this ${ck.kind} yet — add them in the Product Designer.</p>`; }
+  else {
+    const pool=fullPool(), em=fullEm();
+    body = `<div class="pft-list">`+ck.kpis.map(k=>{
+      const cv=RD.effValue(k,pool,em), s=RD.kpiScoreResolved(k,pool,em), bnd=RD.band(s);
+      const cur=(cv==null)?`<span class="muted">no read</span>`:`${esc(fmtNum(cv))}${RD.kpiUnit(k,pool)?(" "+esc(RD.kpiUnit(k,pool))):""}`;
+      return `<div class="pft-row"><span class="tdot" style="background:${bandColor(bnd)}" title="${bnd}"></span>`+
+        `<span class="pft-name">${esc(RD.kpiName(k,pool)||k.id)}</span>`+
+        `<span class="pft-sum">${esc(targetSummary(k))}</span>`+
+        `<span class="pft-cur">${cur}</span>`+
+        `<span style="font-family:var(--mono);font-weight:600;text-align:right;color:${scoreColor(s)}">${s==null?'—':Math.round(s)}</span></div>`;
+    }).join("")+`</div>`;
+  }
+  return `<div class="pftargets"><div class="pft-head"><span>${ck.kind==="product"?"Product":"Model"} specifications — ${esc(ck.label)}</span>`+
+    `<span class="hint" style="font-weight:400">read-only · from Product Designer</span></div>${body}</div>`;
 }
 function initTargetsHtml(initId){
   const list=(portfolio.kpis||[]).filter(k=>k.hostType==="initiative" && k.hostId===initId);
@@ -607,6 +691,53 @@ function refreshInitTargets(initId){
   host.replaceWith(tmp.firstElementChild);
   wireInitTargets(initId);
 }
+/* ---------------- initiative milestones (nested under the initiative — change 5) ---------------- */
+function milestonesHtml(initId){
+  const list=portfolio.milestones.filter(m=>m.initiativeId===initId).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  let h=`<div class="pftargets" id="pfMsSection"><div class="pft-head"><span>Milestones</span>`+
+    `<button class="ghost" id="pfAddMs">+ Add milestone</button></div>`;
+  if(!list.length){
+    h+=`<p class="hint" style="margin:8px 0 0">No milestones yet. Add one here or from the tree; they show as ◆ markers on the Gantt.</p>`;
+  } else {
+    h+=`<div class="pft-list">`;
+    list.forEach(m=>{
+      const armed=pfMsArmed===m.id;
+      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia">◆</span>`+
+        `<span class="pft-name">${esc(m.name||m.id)}</span>`+
+        `<span class="pft-sum mono">${m.plannedDate!=null?dayToIso(m.plannedDate):'no date'}</span>`+
+        `<span class="pft-cur"></span>`+
+        `<span class="pft-acts"><button class="ghost" data-msedit="${m.id}">edit</button>`+
+        `<button class="ghost danger ${armed?'armed':''}" data-msdel="${m.id}">${armed?'confirm':'remove'}</button></span>`+
+      `</div>`;
+    });
+    h+=`</div>`;
+  }
+  return h+`</div>`;
+}
+function refreshMilestones(initId){
+  const host=document.getElementById("pfMsSection"); if(!host) return;
+  const tmp=document.createElement("div"); tmp.innerHTML=milestonesHtml(initId);
+  host.replaceWith(tmp.firstElementChild);
+  wireMilestones(initId);
+}
+function wireMilestones(initId){
+  const add=document.getElementById("pfAddMs");
+  if(add) add.onclick=()=>{ msReturn=initId; openTreeAdd("milestone", initId); };
+  document.querySelectorAll("#pfModalBody [data-msedit]").forEach(b=>b.onclick=()=>{ msReturn=initId; openEditor(b.dataset.msedit, "milestone"); });
+  document.querySelectorAll("#pfModalBody [data-msdel]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.msdel;
+    if(pfMsArmed!==id){ pfMsArmed=id; refreshMilestones(initId); return; }
+    pfMsArmed=null; msDelete(id, initId);
+  });
+}
+function msDelete(id, initId){
+  const i=portfolio.milestones.findIndex(m=>m.id===id); if(i<0){ refreshMilestones(initId); return; }
+  portfolio.milestones.splice(i,1);
+  portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); });   // clean dangling refs
+  refreshMilestones(initId); renderOverview(); renderGantt();
+  persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
+    portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
+}
 function wireInitTargets(initId){
   const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(initId,null);
   document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(initId,b.dataset.tedit));
@@ -618,7 +749,7 @@ function wireInitTargets(initId){
 }
 function removeTarget(initId,kpiId){
   portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId);
-  refreshInitTargets(initId); renderCompany();
+  refreshInitTargets(initId); renderOverview();
   persistPortfolio(()=>{ portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId); }, "Target removed.");
 }
 
@@ -697,7 +828,7 @@ function saveKpiEditor(){
     reapply=()=>{ portfolio.kpis=portfolio.kpis||[]; if(!portfolio.kpis.some(x=>x.id===id)) portfolio.kpis.push(rec); };
   }
   closeKpiEditor();
-  refreshInitTargets(initId); renderCompany();
+  refreshInitTargets(initId); renderOverview();
   persistPortfolio(reapply, "Target saved.");
 }
 
@@ -718,6 +849,32 @@ function subCount(entity,r){
 }
 
 /* ---- recursive architecture tree (shared by Portfolio tab + modal) ---- */
+let treeCtx = "portfolio";   // "portfolio" → editable row actions; "lineage" → read-only
+function treeActs(entity, id){
+  if(RO || treeCtx!=="portfolio") return "";
+  const ADD = { division:[["initiative","+ init"],["product","+ product"]],
+                initiative:[["objective","+ obj"],["milestone","+ milestone"]],
+                product:[["model","+ model"]] }[entity] || [];
+  const addBtns = ADD.map(a=>`<button class="tact" title="Add ${a[0]} here" data-tadd="${a[0]}:${id}">${a[1]}</button>`).join("");
+  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}</span>`;
+}
+function openTreeAdd(childEntity, parentId){
+  let prefill = {};
+  if(childEntity==="initiative"||childEntity==="product") prefill = { divisionId:parentId };
+  else if(childEntity==="objective"){ const i=byId("initiative",parentId); prefill = { initiativeId:parentId, divisionId: i?i.divisionId:"" }; }
+  else if(childEntity==="milestone") prefill = { initiativeId:parentId };
+  else if(childEntity==="model") prefill = { productId:parentId };
+  openEditor(null, childEntity, prefill);
+}
+function ganttActs(entity, id){
+  if(RO) return "";
+  const ADD = { division:[["initiative","+init"]], initiative:[["objective","+obj"],["milestone","+ms"]] }[entity] || [];
+  const editable = entity==="division"||entity==="initiative"||entity==="objective"||entity==="milestone";
+  if(!editable && !ADD.length) return "";   // stage-gates (exec-owned) get no actions
+  const addBtns = ADD.map(a=>`<button class="gact" title="Add ${a[0]} here" data-gadd="${a[0]}:${id}">${a[1]}</button>`).join("");
+  const edit = editable ? `<button class="gact" title="Edit this ${entity}" data-gedit="${entity}:${id}">✎</button>` : "";
+  return `<span class="gacts">${edit}${addBtns}</span>`;
+}
 function hasArchChildren(entity,id){
   const P=portfolio;
   if(entity==="division") return P.initiatives.some(i=>i.divisionId===id)||P.products.some(p=>p.divisionId===id);
@@ -739,11 +896,28 @@ const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"fon
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
 function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
-function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}`; }
-function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}</div>`; }
+function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}${treeActs(entity,r.id)}`; }
+function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}${treeActs(entity,r.id)}</div>`; }
 // read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
 function specMap(){ return specDocs; }
 function divOfModel(modelId){ const m=byId("model",modelId); if(!m) return null; const p=byId("product",m.productId); return p?p.divisionId:null; }
+function divOfProduct(pid){ const p=byId("product",pid); return p?p.divisionId:null; }
+function productName(pid){ return nameOf("product", byId("product",pid)); }
+function modelName(mid){ return nameOf("model", byId("model",mid)); }
+function allSpecKpis(){ let out=[]; for(const id in specDocs){ const ks=specDocs[id]&&specDocs[id].kpis; if(ks) out=out.concat(ks); } return out; }
+// resolution pool + em that span the spec AND exec docs, so a product/model KPI's current reflects both its
+// designer-side members and the execution KR/gate/task KPIs linked up to it.
+function fullEm(){ return RD.withPortfolio(portfolio, Object.assign({}, execMap(), specMap())); }
+function fullPool(){ return poolOf(fullEm()); }
+// the product/model headline KPIs a node is classified to (own or inherited from its initiative)
+function classificationKpis(node){
+  const c = RD.effClass(node, portfolio);
+  if(c.kind==="agnostic") return { kind:"agnostic", kpis:[] };
+  const targets = c.kind==="product" ? {products:[c.productId],models:[]} : {products:[],models:[c.modelId]};
+  const div = c.kind==="product" ? divOfProduct(c.productId) : divOfModel(c.modelId);
+  return { kind:c.kind, label:(c.kind==="product"?productName(c.productId):modelName(c.modelId)),
+           div, loaded:!!specDocs["SPEC-"+div], kpis:RD.targetKpisInScope(targets, allSpecKpis()) };
+}
 function specMetaOf(modelId){ const sd=specDocs["SPEC-"+divOfModel(modelId)]; return (sd&&sd.modelSpec&&sd.modelSpec[modelId])||{}; }
 function modelConformance(modelId){ return RD.objectiveScore(modelId, specMap()); }
 function productConformance(productId){ const ms=portfolio.models.filter(m=>m.productId===productId);
@@ -751,9 +925,13 @@ function productConformance(productId){ const ms=portfolio.models.filter(m=>m.pr
 function modelLeaf(m){
   const sc=modelConformance(m.id), b=RD.band(sc), meta=specMetaOf(m.id);
   const dot=`<span class="tdot" style="background:${bandColor(b)}" title="spec conformance · ${b}"></span>`;
+  const comp=portfolio.composition||[];
+  const nKids=RD.compositionChildren(m.id, comp).length, nPar=RD.compositionParents(m.id, comp).length;
   const bits=[]; if(meta.maturity) bits.push(esc(meta.maturity)); if(sc!=null) bits.push(Math.round(sc)+" conf");
+  if(nKids) bits.push(nKids+" sub-product"+(nKids>1?"s":""));
+  if(nPar) bits.push("used in "+nPar);
   const sub=bits.length?`<span class="tsub">${bits.join(" · ")}</span>`:"";
-  return `<div class="tleaf">${dot}${rowName("model",m)}${sub}</div>`;
+  return `<div class="tleaf">${dot}${rowName("model",m)}${sub}${treeActs("model",m.id)}</div>`;
 }
 function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${esc(tag)}</span><span class="tstatic">${esc(label)}</span></div>`; }
 function nodeHtml(entity,r){
@@ -770,12 +948,13 @@ function objectiveExecHtml(objId){
 }
 function treeChildrenHtml(entity,id){
   const P=portfolio; let h="";
+  const filt = treeCtx==="portfolio" && pfAnyFilter();   // prune only the Structure tree, never the lineage modal
   if(entity==="division"){
-    P.initiatives.filter(i=>i.divisionId===id).forEach(i=> h+=nodeHtml("initiative",i));
-    P.products.filter(p=>p.divisionId===id).forEach(p=> h+=nodeHtml("product",p));
+    P.initiatives.filter(i=>i.divisionId===id && (!filt||initHasMatch(i))).forEach(i=> h+=nodeHtml("initiative",i));
+    P.products.filter(p=>p.divisionId===id && (!filt||productShows(p))).forEach(p=> h+=nodeHtml("product",p));
   } else if(entity==="initiative"){
     P.milestones.filter(m=>m.initiativeId===id).forEach(m=> h+=leafRow("milestone",m));
-    P.objectives.filter(o=>o.initiativeId===id).forEach(o=> h+=nodeHtml("objective",o));
+    P.objectives.filter(o=>o.initiativeId===id && (!filt||objMatches(o))).forEach(o=> h+=nodeHtml("objective",o));
   } else if(entity==="product"){
     P.models.filter(m=>m.productId===id).forEach(m=> h+=modelLeaf(m));
   } else if(entity==="objective"){
@@ -785,11 +964,74 @@ function treeChildrenHtml(entity,id){
 }
 function wireTreeLinks(root){
   root.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  root.querySelectorAll("[data-tedit]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
+  root.querySelectorAll("[data-tadd]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
+}
+/* ---------------- filter & group (Structure + Gantt) ---------------- */
+function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
+function pfWorkFilter(){ const f=pfFilters; return !!(f.quarter||f.status); }
+function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=byId("model",c.modelId); return m?m.productId:null; } return null; }
+function objMatches(o){ const f=pfFilters;
+  if(f.division && o.divisionId!==f.division) return false;
+  if(f.product && effProductOf(o)!==f.product) return false;
+  if(f.quarter && (o.quarter||"")!==f.quarter) return false;
+  if(f.status && nodeBand("objective",o.id)!==f.status) return false;
+  return true; }
+function pfQuartersList(){ const s=new Set(); portfolio.objectives.forEach(o=>{ if(o.quarter) s.add(o.quarter); }); return Array.from(s).sort(); }
+function pfGroupKey(o){ if(pfGroupBy==="division") return o.divisionId; if(pfGroupBy==="product") return effProductOf(o)||"—"; if(pfGroupBy==="quarter") return o.quarter||"—"; if(pfGroupBy==="owner") return o.owner||"—"; return ""; }
+function pfGroupLabel(k){ if(pfGroupBy==="division") return nameOf("division",byId("division",k))||k; if(pfGroupBy==="product") return k==="—"?"— unclassified —":(productName(k)||k); return (k==="—"||k==="")?"— none —":k; }
+function pfGroupOrder(groups){ let order=Object.keys(groups); if(pfGroupBy==="division") order=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]); else if(pfGroupBy==="product") order=portfolio.products.map(p=>p.id).concat(["—"]).filter(k=>groups[k]); else order.sort(); return order; }
+function filterBarHtml(showGroup){
+  const f=pfFilters;
+  const sel=(label,key,opts,cur)=>`<label class="fbf">${label}<select data-fb="${key}"><option value="">All</option>${opts.map(o=>`<option value="${esc(o[0])}" ${o[0]===cur?'selected':''}>${esc(o[1])}</option>`).join("")}</select></label>`;
+  const grp = showGroup ? `<label class="fbf">Group by<select data-fb="groupBy">${[["hierarchy","Hierarchy"],["division","Division"],["product","Product"],["quarter","Quarter"],["owner","Owner"]].map(o=>`<option value="${o[0]}" ${o[0]===pfGroupBy?'selected':''}>${o[1]}</option>`).join("")}</select></label><span class="fb-sep"></span>` : `<span class="fb-lbl">Filter</span>`;
+  const chips = pfActiveChips();
+  return `<div class="fb-row">${grp}`+
+    sel("Division","division",portfolio.divisions.map(d=>[d.id,d.name]),f.division)+
+    sel("Product","product",portfolio.products.map(p=>[p.id,p.name]),f.product)+
+    sel("Quarter","quarter",pfQuartersList().map(q=>[q,q]),f.quarter)+
+    sel("Status","status",[["on-track","On track"],["at-risk","At risk"],["off-track","Off track"],["no-band","No data"]],f.status)+
+    `</div>`+(chips?`<div class="fb-chips">${chips}</div>`:"");
+}
+function pfActiveChips(){
+  const f=pfFilters, out=[];
+  if(f.division) out.push(["division","Division: "+(nameOf("division",byId("division",f.division))||f.division)]);
+  if(f.product) out.push(["product","Product: "+(productName(f.product)||f.product)]);
+  if(f.quarter) out.push(["quarter","Quarter: "+f.quarter]);
+  if(f.status) out.push(["status","Status: "+f.status.replace("-"," ")]);
+  if(!out.length) return "";
+  return out.map(c=>`<span class="fchip">${esc(c[1])}<span class="fx" data-fclr="${c[0]}">✕</span></span>`).join("")+`<button class="fchip clear" data-fclr="__all">clear all</button>`;
+}
+function wireFilterBar(host){
+  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); });
+}
+function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
+function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
+function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id && initHasMatch(i)) || portfolio.products.some(p=>p.divisionId===d.id && productShows(p)); }
+function groupedTreeHtml(){
+  const objs = portfolio.objectives.filter(objMatches);
+  if(!objs.length) return '<p class="hint">No objectives match the current filters.</p>';
+  const em=pfMap(), groups={};
+  objs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
+  let h=`<div class="tree">`;
+  pfGroupOrder(groups).forEach(k=>{
+    const items=groups[k].slice();
+    const vs=items.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
+    h+=`<div class="pfgrp"><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(pfGroupLabel(k))} <span class="tsub">${items.length} obj</span></div>`;
+    items.forEach(o=>{ const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
+      h+=`<div class="tleaf" style="padding-left:14px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`; });
+    h+=`</div>`;
+  });
+  return h+`</div>`;
 }
 function renderPortfolioTree(){
+  treeCtx = "portfolio";
   const host=document.getElementById("pfTree");
-  const divs=portfolio.divisions;
-  if(!divs.length){ host.innerHTML='<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
+  if(pfGroupBy!=="hierarchy"){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); return; }
+  const filt=pfAnyFilter();
+  const divs = filt ? portfolio.divisions.filter(divShows) : portfolio.divisions;
+  if(!divs.length){ host.innerHTML = filt ? '<p class="hint">No items match the current filters.</p>' : '<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
   let h=`<div class="tree">`;
   divs.forEach(d=> h+=nodeHtml("division",d));
   h+=`</div>`;
@@ -807,21 +1049,41 @@ function upChain(entity,id){
   else if(entity==="objective"){ const o=byId("objective",id); if(o){ if(o.divisionId) crumb("division",o.divisionId); if(o.initiativeId) crumb("initiative",o.initiativeId); } }
   return up;
 }
+// a composition neighbour rendered as a lineage cross-link (Product · model, division as sub)
+function compItem(modelId){
+  const m=byId("model",modelId); if(!m) return null;
+  const p=byId("product",m.productId), dv=p?byId("division",p.divisionId):null;
+  return { entity:"model", id:modelId, name:(p?nameOf("product",p)+" · ":"")+nameOf("model",m), tag:TAG.model, sub:dv?nameOf("division",dv):"" };
+}
 function relatedGroups(entity,id){
   const P=portfolio, item=(e,r)=>({entity:e,id:r.id,name:nameOf(e,r),tag:TAG[e],sub:subCount(e,r)}), out=[];
+  const classOf = rec => { const c=[];
+    if(rec&&rec.productId){ const p=byId("product",rec.productId); if(p) c.push(item("product",p)); }
+    if(rec&&rec.modelId){ const m=byId("model",rec.modelId); if(m) c.push(item("model",m)); }
+    return c; };
   if(entity==="objective"){
-    const o=byId("objective",id), cls=[];
-    if(o&&o.productId){ const p=byId("product",o.productId); if(p) cls.push(item("product",p)); }
-    if(o&&o.modelId){ const m=byId("model",o.modelId); if(m) cls.push(item("model",m)); }
-    if(cls.length) out.push({title:"Classification", items:cls});
+    const o=byId("objective",id);
+    const cls=classOf(o); if(cls.length) out.push({title:"Classification", items:cls});
     const mils=((o&&o.milestoneIds)||[]).map(mid=>byId("milestone",mid)).filter(Boolean);
     if(mils.length) out.push({title:"Linked milestones", items:mils.map(m=>item("milestone",m))});
+  } else if(entity==="initiative"){
+    const cls=classOf(byId("initiative",id)); if(cls.length) out.push({title:"Classification", items:cls});
   } else if(entity==="milestone"){
     const objs=P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(id)>=0);
     if(objs.length) out.push({title:"Objectives linking this", items:objs.map(o=>item("objective",o))});
   } else if(entity==="product"||entity==="model"){
-    const objs=P.objectives.filter(o=>(entity==="product"?o.productId:o.modelId)===id);
+    const key = entity==="product"?"productId":"modelId";
+    const inits=P.initiatives.filter(i=>i[key]===id);
+    if(inits.length) out.push({title:"Initiatives classified here", items:inits.map(i=>item("initiative",i))});
+    const objs=P.objectives.filter(o=>o[key]===id);
     if(objs.length) out.push({title:"Objectives classified here", items:objs.map(o=>item("objective",o))});
+    if(entity==="model"){   // composition (read-only reflection of what the Product Designer authored)
+      const comp=P.composition||[];
+      const kids=RD.compositionChildren(id, comp).map(compItem).filter(Boolean);
+      if(kids.length) out.push({title:"Composed of", items:kids});
+      const par=RD.compositionParents(id, comp).map(compItem).filter(Boolean);
+      if(par.length) out.push({title:"Used in", items:par});
+    }
   }
   return out;
 }
@@ -834,7 +1096,7 @@ function renderLineageModal(){
   if(lnStack.length) h+=`<button class="lnback" data-lnback="1">← back</button>`;
   upChain(entity,id).forEach(a=>{ h+=`<a data-lineage="${a.entity}:${a.id}">${esc(a.label)}</a><span class="sep">›</span>`; });
   h+=`<span style="color:var(--ink)">${esc(nameOf(entity,rec))}</span></div>`;
-  const sub=treeChildrenHtml(entity,id);
+  treeCtx="lineage"; const sub=treeChildrenHtml(entity,id); treeCtx="portfolio";
   h+= sub ? `<div class="tree">${sub}</div>` : `<p class="lnempty">No architecture beneath this node.</p>`;
   relatedGroups(entity,id).forEach(g=>{
     h+=`<div class="lngroup"><h4>${esc(g.title)}</h4>`;
@@ -861,32 +1123,47 @@ function readEditor(){
     else if(el.type==="number"){ out[k]= el.value===""?0:Number(el.value); }
     else out[k] = el.value==="" ? null : el.value;
   });
-  // classification: at most one of productId/modelId — model wins, clear the other
-  if(out.modelId){ out.productId=null; }
+  // a model is the finer grain and implies its product, so a model-level classification stores modelId only
+  // (the product is derived from it). product-level classifications (no model) keep productId. keeps the XOR invariant.
+  if(out.modelId) out.productId = null;
   return out;
+}
+// an objective's product/model must stay consistent with its initiative. If a move makes it incompatible,
+// drop the objective's own product/model (it then inherits the initiative) rather than blocking the move.
+// Only clears when clearing actually resolves the conflict — otherwise let validateAndWarn report the real error.
+function reconcileObjClass(rec){
+  if(rec.productId==null && rec.modelId==null) return false;      // agnostic — always valid
+  if(RD.validateClassification(rec, portfolio).ok) return false;  // already consistent
+  const test = Object.assign({}, rec, {productId:null, modelId:null});
+  if(RD.validateClassification(test, portfolio).ok){ rec.productId=null; rec.modelId=null; return true; }
+  return false;
 }
 function saveRecord(){
   const data = readEditor();
   const ent = activeEntity;
   const list = SEL[ent]();
   hideEditorErr();
-  let reapply;
+  let reapply, cleared=false;
   if(editingId){
     const id = editingId;
     const rec = list.find(x=>x.id===id);
     const merged = Object.assign({}, rec, data);
+    if(ent==="objective" && reconcileObjClass(merged)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, merged)) return;   // validate before mutating
     Object.assign(rec, data);
     reapply = ()=>{ const r=SEL[ent]().find(x=>x.id===id); if(r) Object.assign(r, data); else SEL[ent]().push(Object.assign({id}, data)); };
   } else {
     const id = allocFor(ent, data);
     const rec = Object.assign({id}, data);
+    if(ent==="objective" && reconcileObjClass(rec)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, rec)) return;
     list.push(rec);
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
-  closeEditor(); renderPortfolio(); renderCompany();
-  persistPortfolio(reapply, cap(ent)+" saved.");
+  const ret = (ent==="milestone" && msReturn) ? msReturn : null;
+  closeEditor(); renderPortfolio(); renderOverview(); renderGantt();
+  if(ret) openEditor(ret, "initiative");
+  persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
 function validateAndWarn(entity, rec){
   if(entity==="objective" || entity==="initiative"){
@@ -912,42 +1189,150 @@ function allocFor(entity, data){
 }
 
 let armedDelete = null;
-function renderTable(){
-  const cols = SCHEMAS[activeEntity].map(s=>s[0]).filter(k=>k!=="desc");
-  const list = SEL[activeEntity]();
-  let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
-  for(const r of list){
-    html += `<tr class="erow" data-editrow="${r.id}" title="click to edit"><td class="mono"><a class="idlink" data-lineage="${activeEntity}:${r.id}">${r.id}</a></td>`+
-      cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
-      `<td class="row-actions">
-        <button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
-  }
-  html += `</tbody></table>`;
-  if(!list.length) html = `<p class="hint">No ${activeEntity}s yet.</p>`;
-  document.getElementById("entityTable").innerHTML = html;
-  document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
-  document.querySelectorAll("#entityTable [data-editrow]").forEach(tr=>tr.onclick=()=>{ armedDelete=null; openEditor(tr.dataset.editrow); });
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=(e)=>{
-    e.stopPropagation();
-    const id=b.dataset.del;
-    if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
-    const ent = activeEntity;
-    SEL[ent]().splice(SEL[ent]().findIndex(x=>x.id===id),1);
-    armedDelete=null; renderPortfolio(); renderCompany();
-    persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
-  });
+/* ---------------- Structure tab: 3 tables (Divisions · Products→Models · Initiatives→Objectives+Milestones) ---------------- */
+const ordOf = x => (x && x.order!=null ? x.order : 1e9);
+const byOrder = arr => arr.slice().sort((a,b)=>ordOf(a)-ordOf(b));
+function structRefName(entity,id){ const r=byId(entity,id); return r ? esc(nameOf(entity,r)) : '<span class="pill">—</span>'; }
+function structDivShows(d){ return !pfFilters.division || d.id===pfFilters.division; }
+function structProdShows(p){ if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
+function structObjsOf(i){ let os=SEL.objective().filter(o=>o.initiativeId===i.id); if(pfAnyFilter()) os=os.filter(objMatches); return byOrder(os); }
+function structInitShows(i){ if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
+function structAdd(child, parentId){
+  let prefill={};
+  if(child==="model") prefill={productId:parentId};
+  else if(child==="objective"){ const i=byId("initiative",parentId); prefill={initiativeId:parentId, divisionId:i?i.divisionId:""}; }
+  else if(child==="milestone") prefill={initiativeId:parentId};
+  openEditor(null, child, prefill);
 }
+function cascadeSet(ent, id){   // owned descendants that a cascade delete would also remove
+  const out=[];
+  if(ent==="product"){
+    SEL.model().filter(m=>m.productId===id).forEach(m=>out.push({ent:"model",id:m.id}));
+  } else if(ent==="initiative"){
+    SEL.objective().filter(o=>o.initiativeId===id).forEach(o=>out.push({ent:"objective",id:o.id}));
+    SEL.milestone().filter(m=>m.initiativeId===id).forEach(m=>out.push({ent:"milestone",id:m.id}));
+  } else if(ent==="division"){
+    SEL.product().filter(p=>p.divisionId===id).forEach(p=>{ out.push({ent:"product",id:p.id});
+      SEL.model().filter(m=>m.productId===p.id).forEach(m=>out.push({ent:"model",id:m.id})); });
+    const inits=SEL.initiative().filter(i=>i.divisionId===id);
+    inits.forEach(i=>{ out.push({ent:"initiative",id:i.id});
+      SEL.objective().filter(o=>o.initiativeId===i.id).forEach(o=>out.push({ent:"objective",id:o.id}));
+      SEL.milestone().filter(m=>m.initiativeId===i.id).forEach(m=>out.push({ent:"milestone",id:m.id})); });
+    SEL.objective().filter(o=>o.divisionId===id && !inits.some(i=>i.id===o.initiativeId)).forEach(o=>out.push({ent:"objective",id:o.id}));
+  }
+  const seen=new Set(); return out.filter(x=>{ const k=x.ent+":"+x.id; if(seen.has(k))return false; seen.add(k); return true; });
+}
+function applyStructDelete(targets){   // targets: [{ent,id}] — splice each, then strip dangling milestone refs
+  targets.forEach(x=>{ const arr=SEL[x.ent](); const idx=arr.findIndex(r=>r.id===x.id); if(idx>=0) arr.splice(idx,1); });
+  const delMs=targets.filter(x=>x.ent==="milestone").map(x=>x.id);
+  if(delMs.length) portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(mid=>delMs.indexOf(mid)<0); });
+}
+function structDelete(ent, id){
+  if(RO) return;
+  const rec=byId(ent,id); if(!rec) return;
+  const kids=cascadeSet(ent,id);
+  const modal=document.getElementById("delModal");
+  document.getElementById("delTitle").textContent="Delete "+ent;
+  const name=esc(nameOf(ent,rec));
+  const body=document.getElementById("delBody"), acts=document.getElementById("delActions");
+  if(!kids.length){
+    body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This can't be undone.</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete</button>`;
+  } else {
+    const counts={}; kids.forEach(k=>counts[k.ent]=(counts[k.ent]||0)+1);
+    const summary=["product","model","initiative","objective","milestone"].filter(k=>counts[k]).map(k=>`${counts[k]} ${counts[k]>1?k+"s":k}`).join(", ");
+    body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This ${ent} contains ${summary}. Delete those too, or keep them?</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button>`+
+      `<button class="ghost" data-delgo="self" title="Keep the nested item(s); they'll lose their ${ent} link">Delete ${ent} only</button>`+
+      `<button class="act danger armed" data-delgo="cascade">Delete ${ent} + ${kids.length} item${kids.length>1?"s":""}</button>`;
+  }
+  const close=()=>{ modal.hidden=true; };
+  acts.querySelector("[data-delcancel]").onclick=close;
+  document.getElementById("delClose").onclick=close;
+  modal.onclick=(e)=>{ if(e.target===modal) close(); };
+  acts.querySelectorAll("[data-delgo]").forEach(b=>b.onclick=()=>{
+    const targets=(b.dataset.delgo==="cascade")?kids.concat([{ent,id}]):[{ent,id}];
+    const n=targets.length-1;
+    close();
+    applyStructDelete(targets);
+    renderPortfolio(); renderOverview(); renderGantt();
+    persistPortfolio(()=>applyStructDelete(targets), cap(ent)+(n>0?" and "+n+" item"+(n>1?"s":"")+" deleted.":" deleted."));
+  });
+  modal.hidden=false;
+}
+function renderStructTables(){
+  const host=document.getElementById("structTables"); if(!host) return;
+  const idCell=(ent,id)=>`<td class="mono"><a class="idlink" data-lineage="${ent}:${id}">${id}</a></td>`;
+  const acts=(ent,id,adds)=>{
+    if(RO) return `<td class="row-actions"></td>`;
+    const edit=`<button class="ghost" data-sedit="${ent}:${id}" title="Edit ${ent}">✎</button>`;
+    const add=(adds||[]).map(a=>`<button class="ghost" data-sadd="${a[0]}:${id}" title="Add ${a[0]}">${a[1]}</button>`).join("");
+    const del=`<button class="ghost danger" data-sdel="${ent}:${id}" title="Delete ${ent}">✕</button>`;
+    return `<td class="row-actions">${edit}${add}${del}</td>`;
+  };
+  const newBtn=ent=>RO?"":`<button class="act" data-addnew="${ent}">+ New ${ent}</button>`;
+  let html="";
+  // 1) Divisions (flat)
+  const divs=byOrder(SEL.division().filter(structDivShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Divisions</h3>${newBtn("division")}</div>`;
+  html+= divs.length
+    ? `<table><thead><tr><th>id</th><th>Name</th><th>Order</th><th></th></tr></thead><tbody>`+
+        divs.map(d=>`<tr class="s-parent">`+idCell("division",d.id)+`<td><b>${esc(d.name)}</b></td><td class="mono">${d.order??"—"}</td>`+acts("division",d.id)+`</tr>`).join("")+`</tbody></table>`
+    : `<p class="hint">No divisions${pfFilters.division?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  // 2) Products → Models
+  const prods=byOrder(SEL.product().filter(structProdShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Products</h3>${newBtn("product")}</div>`;
+  if(prods.length){
+    html+=`<table><thead><tr><th>id</th><th>Name</th><th>Division</th><th></th></tr></thead><tbody>`;
+    prods.forEach(p=>{
+      html+=`<tr class="s-parent">`+idCell("product",p.id)+`<td><b>${esc(p.name)}</b></td><td>${structRefName("division",p.divisionId)}</td>`+acts("product",p.id,[["model","+ model"]])+`</tr>`;
+      byOrder(SEL.model().filter(m=>m.productId===p.id)).forEach(m=>{
+        html+=`<tr class="s-child">`+idCell("model",m.id)+`<td class="s-indent">↳ ${esc(m.name)}</td><td class="mono">${m.order??"—"}</td>`+acts("model",m.id)+`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  } else html+=`<p class="hint">No products${pfAnyFilter()?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  // 3) Initiatives → Objectives + Milestones
+  const inits=byOrder(SEL.initiative().filter(structInitShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Initiatives</h3>${newBtn("initiative")}</div>`;
+  if(inits.length){
+    html+=`<table><thead><tr><th>id</th><th>Name / statement</th><th>Division · quarter</th><th></th></tr></thead><tbody>`;
+    inits.forEach(i=>{
+      html+=`<tr class="s-parent">`+idCell("initiative",i.id)+`<td><b>${esc(i.name)}</b></td><td>${structRefName("division",i.divisionId)}</td>`+acts("initiative",i.id,[["objective","+ obj"],["milestone","+ ms"]])+`</tr>`;
+      structObjsOf(i).forEach(o=>{
+        const b=nodeBand("objective",o.id);
+        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
+      });
+      byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
+        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  } else html+=`<p class="hint">No initiatives${pfAnyFilter()?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  host.innerHTML=html;
+  host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
+  host.querySelectorAll("[data-sedit]").forEach(b=>b.onclick=()=>{ armedDelete=null; const s=b.dataset.sedit,i=s.indexOf(":"); openEditor(s.slice(i+1), s.slice(0,i)); });
+  host.querySelectorAll("[data-sadd]").forEach(b=>b.onclick=()=>{ armedDelete=null; const s=b.dataset.sadd,i=s.indexOf(":"); structAdd(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); structDelete(s.slice(0,i), s.slice(i+1)); });
+}
+const REF_COL={productId:"product",modelId:"model",divisionId:"division",initiativeId:"initiative"};
 function cellVal(col,v){
   if(v==null||v==="") return '<span class="pill">—</span>';
   if(DATE_FIELDS.has(col)) return `<span class="mono">${dayToIso(v)}</span>`;
   if(Array.isArray(v)) return `<span class="mono">${v.join(", ")||"—"}</span>`;
-  if(col==="productId"||col==="modelId"||col.endsWith("Id")) return `<span class="mono">${esc(String(v))}</span>`;
+  if(REF_COL[col]){ const r=byId(REF_COL[col], v); return r ? esc(nameOf(REF_COL[col], r)) : `<span class="mono" title="unresolved reference">${esc(String(v))}</span>`; }
+  if(col.endsWith("Id")) return `<span class="mono">${esc(String(v))}</span>`;
   return esc(String(v));
 }
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
 function renderGantt(){
+  const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
@@ -988,12 +1373,29 @@ function renderGantt(){
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
+    if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
     const g=geom(entity,r); if(!visible(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
+    if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
-  const roots=[]; P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
-  if(!roots.length){ document.getElementById("ganttWrap").innerHTML='<p class="hint">No scheduled, dated items to chart.</p>'; return; }
+  const grpMode = (pfGroupBy==="product"||pfGroupBy==="quarter"||pfGroupBy==="owner");
+  let roots=[];
+  if(grpMode){
+    const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
+    const groups={}; gobjs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
+    pfGroupOrder(groups).forEach(k=>{
+      const kids = groups[k].map(o=>build("objective",o,1)).filter(Boolean);   // objective bars (+ their gates) under a group header
+      if(!kids.length) return;
+      const dss=kids.map(n=>n.g.ds).filter(v=>v!=null), des=kids.map(n=>{ const gg=n.g; return gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); }).filter(v=>v!=null);
+      const vs=groups[k].map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
+      roots.push({ synthetic:true, label:pfGroupLabel(k), band:gband, depth:0, key:"grp:"+k, kids,
+        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
+    });
+  } else {
+    P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
+  }
+  if(!roots.length){ document.getElementById("ganttWrap").innerHTML=`<p class="hint">${pfAnyFilter()?'No matching items to chart.':'No scheduled, dated items to chart.'}</p>`; return; }
   // ---- domain over the full tree (+ today) ----
   let lo=Infinity, hi=-Infinity;
   (function scan(n){ const g=n.g;
@@ -1025,15 +1427,22 @@ function renderGantt(){
   ticks.forEach(t=>{ html+=`<span class="gaxislab" style="left:${Math.max(0,x(t.day))+3}px;bottom:3px">${t.label}</span>`; });
   html+=`</div></div>`;
   rows.forEach(n=>{
-    const g=n.g, name=esc(nameOf(n.entity,n.rec)), hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
+    const g=n.g, hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
     const tri = hasKids ? `<span class="gtri" data-gtoggle="${n.key}">${collapsed?'▸':'▾'}</span>` : `<span class="gspacer"></span>`;
+    if(n.synthetic){
+      html+=`<div class="grow ggrouprow"><div class="glabel" style="padding-left:6px">${tri}<span class="gdot" style="background:${bandColor(n.band)}"></span><span class="gname group">${esc(n.label)}</span></div><div class="gtrack">`;
+      if(g.ds!=null&&g.de!=null) html+=`<div class="ggroupbar" style="left:${x(g.ds)}px;width:${Math.max(2,x(g.de)-x(g.ds))}px"></div>`;
+      html+=`</div></div>`;
+      return;
+    }
+    const name=esc(nameOf(n.entity,n.rec));
     const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}">${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
-    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}</div><div class="gtrack">`;
+    html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id));
       html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
@@ -1061,34 +1470,39 @@ function renderGantt(){
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-gedit]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.gedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
+  host.querySelectorAll("[data-gadd]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.gadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
 }
 
 /* ---------------- SLICES tab ---------------- */
-function renderSlices(){
-  const root = document.getElementById("tab-slices");
+function slicesHtml(){
   const em = pfMap();
-  if(!portfolio.products.length){ root.innerHTML='<p class="hint">No products defined yet. Add products and models in the Portfolio tab to see sliced scores.</p>'; return; }
-  const qs = mode==="quarterly" ? quartersAll() : [null];
-  let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
+  if(!portfolio.products.length){ return '<p class="hint">No products defined yet. Add products and models in the Structure tab to see sliced scores.</p>'; }
+  const qs = quartersAll();
+  let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th><th>Overall</th>${qs.map(q=>`<th>${esc(q)}</th>`).join("")}</tr></thead><tbody>`;
   for(const p of portfolio.products){
     html += `<tr><td><b>${esc(p.name)}</b> <span class="pill">${p.id}</span></td>`+
       scoreCell(productConformance(p.id))+
+      scoreCell(RD.sliceScore("product",p.id,portfolio,em,null))+
       qs.map(q=>scoreCell(RD.sliceScore("product",p.id,portfolio,em,q))).join("")+`</tr>`;
     portfolio.models.filter(m=>m.productId===p.id).forEach(m=>{
       const meta=specMetaOf(m.id), mat=meta.maturity?` <span class="pill">${esc(meta.maturity)}</span>`:"";
       html += `<tr><td style="padding-left:26px">↳ ${esc(m.name)} <span class="pill">${m.id}</span>${mat}</td>`+
         scoreCell(modelConformance(m.id))+
+        scoreCell(RD.sliceScore("model",m.id,portfolio,em,null))+
         qs.map(q=>scoreCell(RD.sliceScore("model",m.id,portfolio,em,q))).join("")+`</tr>`;
     });
   }
   html += `</tbody></table>
-    <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models). Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
-  root.innerHTML = html;
+    <p class="hint"><b>Overall</b> aggregates every objective under an item across all its quarters; the per-quarter columns are populated only for the quarters an item actually has objectives in. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models).</p>`;
+  return html;
 }
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
 
 /* ---------------- render dispatch ---------------- */
-function renderAll(){ renderCompany(); renderPortfolio(); renderGantt(); renderSlices(); renderBrokerStatus(); }
+function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderBrokerStatus(); }
+function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
+  el.innerHTML = (lens==="division") ? companyHtml() : slicesHtml(); }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
   el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
 
@@ -1100,10 +1514,11 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
   document.getElementById("tab-"+b.dataset.tab).classList.add("active");
 });
-document.querySelectorAll("#modeToggle button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("#modeToggle button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active"); mode=b.dataset.mode; renderCompany(); renderSlices();
+document.querySelectorAll("#lensToggle button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#lensToggle button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); lens=b.dataset.lens; renderOverview();
 });
+
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };

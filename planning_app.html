@@ -36,6 +36,18 @@
   .ovq{margin-top:9px;display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
   .ovq-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
   .ovq-cell{font-size:14px}
+  .struct-section{margin-bottom:26px}
+  .struct-head{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px}
+  .struct-head h3{margin:0}
+  .s-parent > td{border-top:1px solid var(--line)}
+  .s-child > td{color:var(--muted);border-top:none}
+  .s-child .idlink{opacity:.72}
+  .s-indent{padding-left:24px !important}
+  #structTables .row-actions{white-space:nowrap;text-align:right;width:1%}
+  #structTables .row-actions button{margin-left:4px;padding:1px 7px}
+  #delBody .del-lead{font-size:15px;margin:2px 0 6px}
+  .del-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+  .del-actions .ghost{padding:7px 12px;font-size:13px}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -257,11 +269,7 @@
   </section>
   <section class="tabsec" id="tab-portfolio">
     <div id="pfFilterBar" class="filterbar"></div>
-    <div id="pfViewToggle" class="pf-viewtoggle"></div>
-    <div id="pfTree"></div>
-    <div class="entity-tabs" id="entityTabs"></div>
-    <div id="pfToolbar"></div>
-    <div id="entityTable"></div>
+    <div id="structTables"></div>
   </section>
   <section class="tabsec" id="tab-gantt">
     <div id="ganttFilterBar" class="filterbar"></div>
@@ -307,6 +315,14 @@
         </span>
       </div>
       <div id="lnBody"></div>
+    </div>
+  </div>
+  <div id="delModal" class="modal-overlay" hidden style="z-index:90">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="delTitle" style="width:min(460px,94vw)">
+      <div class="modal-head"><span id="delTitle">Delete</span>
+        <button class="modal-x" id="delClose" aria-label="Close">&#10005;</button></div>
+      <div id="delBody"></div>
+      <div id="delActions" class="del-actions"></div>
     </div>
   </div>
 </main>
@@ -1528,25 +1544,7 @@ const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.q
 
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
-  const tg = document.getElementById("pfViewToggle");
-  tg.innerHTML = `<button class="${pfView==='tree'?'active':''}" data-pfview="tree">Tree</button><button class="${pfView==='tables'?'active':''}" data-pfview="tables">Tables</button>`;
-  tg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(pfView!==b.dataset.pfview){ pfView=b.dataset.pfview; closeEditor(); renderPortfolio(); } });
-  const tree = pfView==="tree";
-  document.getElementById("pfTree").style.display = tree?"":"none";
-  document.getElementById("entityTabs").style.display = tree?"none":"";
-  document.getElementById("pfToolbar").style.display = tree?"none":"";
-  document.getElementById("entityTable").style.display = tree?"none":"";
-  if(tree){ renderPortfolioTree(); return; }
-  const tabs = document.getElementById("entityTabs");
-  const ENT_TABS = Object.keys(SCHEMAS).filter(k=>k!=="milestone");   // milestones live under their initiative — change 5
-  if(ENT_TABS.indexOf(activeEntity)<0) activeEntity = "objective";
-  tabs.innerHTML = ENT_TABS.map(k=>
-    `<button data-ent="${k}" class="${k===activeEntity?'active':''}">${cap(k)}s (${SEL[k]().length})</button>`).join("");
-  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{ activeEntity=b.dataset.ent; closeEditor(); renderPortfolio(); });
-  const tb = document.getElementById("pfToolbar");
-  tb.innerHTML = `<div class="pf-toolbar"><button class="act" id="addEntityBtn">+ New ${activeEntity}</button></div>`;
-  document.getElementById("addEntityBtn").onclick = ()=>openEditor(null);
-  renderTable();
+  renderStructTables();
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
@@ -2180,37 +2178,135 @@ function allocFor(entity, data){
 }
 
 let armedDelete = null;
-function renderTable(){
-  const ent = activeEntity;
-  const cols = SCHEMAS[ent].map(s=>s[0]).filter(k=>k!=="desc");
-  const isObj = ent==="objective";
-  let list = SEL[ent]();
-  if(isObj && pfAnyFilter()) list = list.filter(objMatches);
-  const rowHtml = r => `<tr class="erow" data-editrow="${r.id}" title="click to edit"><td class="mono"><a class="idlink" data-lineage="${ent}:${r.id}">${r.id}</a></td>`+
-      cols.map(c=>`<td>${cellVal(c,r[c])}</td>`).join("")+
-      `<td class="row-actions"><button class="ghost danger ${armedDelete===r.id?'armed':''}" data-del="${r.id}">${armedDelete===r.id?'confirm':'delete'}</button></td></tr>`;
-  let body="";
-  if(isObj && pfGroupBy!=="hierarchy"){
-    const groups={}; list.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
-    pfGroupOrder(groups).forEach(k=>{ body+=`<tr class="grouphead"><td colspan="${cols.length+2}">${esc(pfGroupLabel(k))} <span class="pill">${groups[k].length}</span></td></tr>`+groups[k].map(rowHtml).join(""); });
-  } else body = list.map(rowHtml).join("");
-  let html = `<table><thead><tr><th>id</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>${body}</tbody></table>`;
-  if(!list.length) html = (isObj&&pfAnyFilter()) ? `<p class="hint">No objectives match the current filters.</p>` : `<p class="hint">No ${ent}s yet.</p>`;
-  else if(!isObj && (pfAnyFilter()||pfGroupBy!=="hierarchy")) html = `<p class="hint" style="margin:0 0 10px">Filters &amp; grouping act on objectives and the tree — showing all ${ent}s.</p>`+html;
-  document.getElementById("entityTable").innerHTML = html;
-  document.querySelectorAll("#entityTable [data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
-  document.querySelectorAll("#entityTable [data-editrow]").forEach(tr=>tr.onclick=()=>{ armedDelete=null; openEditor(tr.dataset.editrow); });
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=(e)=>{
-    e.stopPropagation();
-    if(RO) return;
-    const id=b.dataset.del;
-    if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
-    const ent = activeEntity;
-    const _di=SEL[ent]().findIndex(x=>x.id===id); if(_di<0){ armedDelete=null; renderTable(); return; }   // already gone — never splice(-1)
-    SEL[ent]().splice(_di,1);
-    armedDelete=null; renderPortfolio(); renderOverview(); renderGantt();
-    persistPortfolio(()=>{ const i=SEL[ent]().findIndex(x=>x.id===id); if(i>=0) SEL[ent]().splice(i,1); }, cap(ent)+" deleted.");
+/* ---------------- Structure tab: 3 tables (Divisions · Products→Models · Initiatives→Objectives+Milestones) ---------------- */
+const ordOf = x => (x && x.order!=null ? x.order : 1e9);
+const byOrder = arr => arr.slice().sort((a,b)=>ordOf(a)-ordOf(b));
+function structRefName(entity,id){ const r=byId(entity,id); return r ? esc(nameOf(entity,r)) : '<span class="pill">—</span>'; }
+function structDivShows(d){ return !pfFilters.division || d.id===pfFilters.division; }
+function structProdShows(p){ if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
+function structObjsOf(i){ let os=SEL.objective().filter(o=>o.initiativeId===i.id); if(pfAnyFilter()) os=os.filter(objMatches); return byOrder(os); }
+function structInitShows(i){ if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
+function structAdd(child, parentId){
+  let prefill={};
+  if(child==="model") prefill={productId:parentId};
+  else if(child==="objective"){ const i=byId("initiative",parentId); prefill={initiativeId:parentId, divisionId:i?i.divisionId:""}; }
+  else if(child==="milestone") prefill={initiativeId:parentId};
+  openEditor(null, child, prefill);
+}
+function cascadeSet(ent, id){   // owned descendants that a cascade delete would also remove
+  const out=[];
+  if(ent==="product"){
+    SEL.model().filter(m=>m.productId===id).forEach(m=>out.push({ent:"model",id:m.id}));
+  } else if(ent==="initiative"){
+    SEL.objective().filter(o=>o.initiativeId===id).forEach(o=>out.push({ent:"objective",id:o.id}));
+    SEL.milestone().filter(m=>m.initiativeId===id).forEach(m=>out.push({ent:"milestone",id:m.id}));
+  } else if(ent==="division"){
+    SEL.product().filter(p=>p.divisionId===id).forEach(p=>{ out.push({ent:"product",id:p.id});
+      SEL.model().filter(m=>m.productId===p.id).forEach(m=>out.push({ent:"model",id:m.id})); });
+    const inits=SEL.initiative().filter(i=>i.divisionId===id);
+    inits.forEach(i=>{ out.push({ent:"initiative",id:i.id});
+      SEL.objective().filter(o=>o.initiativeId===i.id).forEach(o=>out.push({ent:"objective",id:o.id}));
+      SEL.milestone().filter(m=>m.initiativeId===i.id).forEach(m=>out.push({ent:"milestone",id:m.id})); });
+    SEL.objective().filter(o=>o.divisionId===id && !inits.some(i=>i.id===o.initiativeId)).forEach(o=>out.push({ent:"objective",id:o.id}));
+  }
+  const seen=new Set(); return out.filter(x=>{ const k=x.ent+":"+x.id; if(seen.has(k))return false; seen.add(k); return true; });
+}
+function applyStructDelete(targets){   // targets: [{ent,id}] — splice each, then strip dangling milestone refs
+  targets.forEach(x=>{ const arr=SEL[x.ent](); const idx=arr.findIndex(r=>r.id===x.id); if(idx>=0) arr.splice(idx,1); });
+  const delMs=targets.filter(x=>x.ent==="milestone").map(x=>x.id);
+  if(delMs.length) portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(mid=>delMs.indexOf(mid)<0); });
+}
+function structDelete(ent, id){
+  if(RO) return;
+  const rec=byId(ent,id); if(!rec) return;
+  const kids=cascadeSet(ent,id);
+  const modal=document.getElementById("delModal");
+  document.getElementById("delTitle").textContent="Delete "+ent;
+  const name=esc(nameOf(ent,rec));
+  const body=document.getElementById("delBody"), acts=document.getElementById("delActions");
+  if(!kids.length){
+    body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This can't be undone.</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete</button>`;
+  } else {
+    const counts={}; kids.forEach(k=>counts[k.ent]=(counts[k.ent]||0)+1);
+    const summary=["product","model","initiative","objective","milestone"].filter(k=>counts[k]).map(k=>`${counts[k]} ${counts[k]>1?k+"s":k}`).join(", ");
+    body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This ${ent} contains ${summary}. Delete those too, or keep them?</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button>`+
+      `<button class="ghost" data-delgo="self" title="Keep the nested item(s); they'll lose their ${ent} link">Delete ${ent} only</button>`+
+      `<button class="act danger armed" data-delgo="cascade">Delete ${ent} + ${kids.length} item${kids.length>1?"s":""}</button>`;
+  }
+  const close=()=>{ modal.hidden=true; };
+  acts.querySelector("[data-delcancel]").onclick=close;
+  document.getElementById("delClose").onclick=close;
+  modal.onclick=(e)=>{ if(e.target===modal) close(); };
+  acts.querySelectorAll("[data-delgo]").forEach(b=>b.onclick=()=>{
+    const targets=(b.dataset.delgo==="cascade")?kids.concat([{ent,id}]):[{ent,id}];
+    const n=targets.length-1;
+    close();
+    applyStructDelete(targets);
+    renderPortfolio(); renderOverview(); renderGantt();
+    persistPortfolio(()=>applyStructDelete(targets), cap(ent)+(n>0?" and "+n+" item"+(n>1?"s":"")+" deleted.":" deleted."));
   });
+  modal.hidden=false;
+}
+function renderStructTables(){
+  const host=document.getElementById("structTables"); if(!host) return;
+  const idCell=(ent,id)=>`<td class="mono"><a class="idlink" data-lineage="${ent}:${id}">${id}</a></td>`;
+  const acts=(ent,id,adds)=>{
+    if(RO) return `<td class="row-actions"></td>`;
+    const edit=`<button class="ghost" data-sedit="${ent}:${id}" title="Edit ${ent}">✎</button>`;
+    const add=(adds||[]).map(a=>`<button class="ghost" data-sadd="${a[0]}:${id}" title="Add ${a[0]}">${a[1]}</button>`).join("");
+    const del=`<button class="ghost danger" data-sdel="${ent}:${id}" title="Delete ${ent}">✕</button>`;
+    return `<td class="row-actions">${edit}${add}${del}</td>`;
+  };
+  const newBtn=ent=>RO?"":`<button class="act" data-addnew="${ent}">+ New ${ent}</button>`;
+  let html="";
+  // 1) Divisions (flat)
+  const divs=byOrder(SEL.division().filter(structDivShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Divisions</h3>${newBtn("division")}</div>`;
+  html+= divs.length
+    ? `<table><thead><tr><th>id</th><th>Name</th><th>Order</th><th></th></tr></thead><tbody>`+
+        divs.map(d=>`<tr class="s-parent">`+idCell("division",d.id)+`<td><b>${esc(d.name)}</b></td><td class="mono">${d.order??"—"}</td>`+acts("division",d.id)+`</tr>`).join("")+`</tbody></table>`
+    : `<p class="hint">No divisions${pfFilters.division?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  // 2) Products → Models
+  const prods=byOrder(SEL.product().filter(structProdShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Products</h3>${newBtn("product")}</div>`;
+  if(prods.length){
+    html+=`<table><thead><tr><th>id</th><th>Name</th><th>Division</th><th></th></tr></thead><tbody>`;
+    prods.forEach(p=>{
+      html+=`<tr class="s-parent">`+idCell("product",p.id)+`<td><b>${esc(p.name)}</b></td><td>${structRefName("division",p.divisionId)}</td>`+acts("product",p.id,[["model","+ model"]])+`</tr>`;
+      byOrder(SEL.model().filter(m=>m.productId===p.id)).forEach(m=>{
+        html+=`<tr class="s-child">`+idCell("model",m.id)+`<td class="s-indent">↳ ${esc(m.name)}</td><td class="mono">${m.order??"—"}</td>`+acts("model",m.id)+`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  } else html+=`<p class="hint">No products${pfAnyFilter()?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  // 3) Initiatives → Objectives + Milestones
+  const inits=byOrder(SEL.initiative().filter(structInitShows));
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Initiatives</h3>${newBtn("initiative")}</div>`;
+  if(inits.length){
+    html+=`<table><thead><tr><th>id</th><th>Name / statement</th><th>Division · quarter</th><th></th></tr></thead><tbody>`;
+    inits.forEach(i=>{
+      html+=`<tr class="s-parent">`+idCell("initiative",i.id)+`<td><b>${esc(i.name)}</b></td><td>${structRefName("division",i.divisionId)}</td>`+acts("initiative",i.id,[["objective","+ obj"],["milestone","+ ms"]])+`</tr>`;
+      structObjsOf(i).forEach(o=>{
+        const b=nodeBand("objective",o.id);
+        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
+      });
+      byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
+        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  } else html+=`<p class="hint">No initiatives${pfAnyFilter()?" match the filter":" yet"}.</p>`;
+  html+=`</div>`;
+  host.innerHTML=html;
+  host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
+  host.querySelectorAll("[data-sedit]").forEach(b=>b.onclick=()=>{ armedDelete=null; const s=b.dataset.sedit,i=s.indexOf(":"); openEditor(s.slice(i+1), s.slice(0,i)); });
+  host.querySelectorAll("[data-sadd]").forEach(b=>b.onclick=()=>{ armedDelete=null; const s=b.dataset.sadd,i=s.indexOf(":"); structAdd(s.slice(0,i), s.slice(i+1)); });
+  host.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); structDelete(s.slice(0,i), s.slice(i+1)); });
 }
 const REF_COL={productId:"product",modelId:"model",divisionId:"division",initiativeId:"initiative"};
 function cellVal(col,v){
