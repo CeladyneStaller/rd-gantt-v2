@@ -262,33 +262,6 @@
     <div class="entity-tabs" id="entityTabs"></div>
     <div id="pfToolbar"></div>
     <div id="entityTable"></div>
-    <div id="pfModal" class="modal-overlay" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfModalTitle">
-        <div class="modal-head"><span id="pfModalTitle">Add</span>
-          <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
-        <div id="pfModalErr" class="modal-err" hidden></div>
-        <div id="pfModalBody"></div>
-      </div>
-    </div>
-    <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfKpiTitle" style="width:min(560px,94vw)">
-        <div class="modal-head"><span id="pfKpiTitle">Target</span>
-          <button class="modal-x" id="pfKpiClose" aria-label="Close">&#10005;</button></div>
-        <div id="pfKpiBody"></div>
-      </div>
-    </div>
-    <div id="lnModal" class="modal-overlay" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
-        <div class="modal-head">
-          <span id="lnTitle">Lineage</span>
-          <span style="display:flex;gap:8px;align-items:center">
-            <button class="lnback" id="lnEdit">Edit this</button>
-            <button class="modal-x" id="lnClose" aria-label="Close">&#10005;</button>
-          </span>
-        </div>
-        <div id="lnBody"></div>
-      </div>
-    </div>
   </section>
   <section class="tabsec" id="tab-gantt">
     <div id="ganttFilterBar" class="filterbar"></div>
@@ -309,6 +282,33 @@
     <button class="act" id="tokenSave">Save token</button>
     <p class="hint" id="brokerStatus"></p>
   </section>
+  <div id="pfModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfModalTitle">
+      <div class="modal-head"><span id="pfModalTitle">Add</span>
+        <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
+      <div id="pfModalErr" class="modal-err" hidden></div>
+      <div id="pfModalBody"></div>
+    </div>
+  </div>
+  <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pfKpiTitle" style="width:min(560px,94vw)">
+      <div class="modal-head"><span id="pfKpiTitle">Target</span>
+        <button class="modal-x" id="pfKpiClose" aria-label="Close">&#10005;</button></div>
+      <div id="pfKpiBody"></div>
+    </div>
+  </div>
+  <div id="lnModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lnTitle">
+      <div class="modal-head">
+        <span id="lnTitle">Lineage</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button class="lnback" id="lnEdit">Edit this</button>
+          <button class="modal-x" id="lnClose" aria-label="Close">&#10005;</button>
+        </span>
+      </div>
+      <div id="lnBody"></div>
+    </div>
+  </div>
 </main>
 
 <script>
