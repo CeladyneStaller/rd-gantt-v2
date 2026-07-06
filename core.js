@@ -88,7 +88,7 @@
   // NOT drive resolution. Resolution follows explicit typed parent links (see the
   // typed-link block below). Legacy groupId/isDefiner data is normalized on the
   // fly (linkOf) and scores identically.
-  var KPI_LEVEL = { product: 5, component: 4, initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
+  var KPI_LEVEL = { product: 5, component: 4, initiative: 3, milestone: 3, keyResult: 2, stageGate: 1, task: 0 };
   var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
 
   function progressLinear(value, target, direction) {
@@ -420,6 +420,16 @@
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
+  // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
+  // gating/readiness signal, NOT folded into the OKR score — same stance as stageGateScore).
+  function milestoneScore(msId, execDocs) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs); }
+  // milestoneAchieved -> manual completion mark (ms.completedDate) OR KPI score at 100.
+  // A milestone with no scorable KPIs is achieved only by the manual mark.
+  function milestoneAchieved(ms, execDocs) {
+    if (ms && ms.completedDate) return true;
+    var s = milestoneScore(ms && ms.id, execDocs);
+    return s != null && s >= 100;
+  }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -941,6 +951,8 @@
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
     hostScore: hostScore,
+    milestoneScore: milestoneScore,
+    milestoneAchieved: milestoneAchieved,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,

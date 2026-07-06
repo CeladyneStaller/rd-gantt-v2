@@ -586,11 +586,13 @@ function openEditor(id, entityOverride, prefill){
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
     <button class="ghost" id="cancelEdit">Cancel</button></div>`;
   if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; pfMsArmed=null; html += initTargetsHtml(editingId); html += milestonesHtml(editingId); }
+  if(activeEntity==='milestone' && editingId){ pfTgtArmed=null; html += initTargetsHtml(editingId, "milestone"); }
   if((activeEntity==='initiative'||activeEntity==='objective') && editingId){ const rec=SEL[activeEntity]().find(x=>x.id===editingId); if(rec) html += classificationKpisHtml(rec); }
   document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
   if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
+  if(activeEntity==='milestone' && editingId){ wireInitTargets(editingId, "milestone"); }
   // product & model are hierarchical (a model belongs to a product): picking a product scopes the model list,
   // picking a model fills in its product. Both stay populated; save stores the most-specific (model implies product).
   const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
@@ -620,7 +622,7 @@ const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Std dev"],
 let pfTgtArmed=null;                          // kpiId armed for removal
 let pfMsArmed=null;                           // milestone id armed for removal in the initiative editor
 let msReturn=null;                            // initiative id to reopen after editing one of its milestones
-let pfKpiInit=null, pfKpiEditId=null, pfKpiDraft=null;   // KPI sub-editor state
+let pfKpiInit=null, pfKpiEditId=null, pfKpiDraft=null, pfKpiHostType="initiative";   // KPI sub-editor state
 
 function targetSummary(k){
   const tt=k.targetType||"demonstration";
@@ -658,13 +660,14 @@ function classificationKpisHtml(node){
   return `<div class="pftargets"><div class="pft-head"><span>${ck.kind==="product"?"Product":"Model"} specifications — ${esc(ck.label)}</span>`+
     `<span class="hint" style="font-weight:400">read-only · from Product Designer</span></div>${body}</div>`;
 }
-function initTargetsHtml(initId){
-  const list=(portfolio.kpis||[]).filter(k=>k.hostType==="initiative" && k.hostId===initId);
+function initTargetsHtml(hostId, hostType){
+  hostType=hostType||"initiative";
+  const list=(portfolio.kpis||[]).filter(k=>k.hostType===hostType && k.hostId===hostId);
   const pm=pfMap(), pool=poolOf(pm);
-  let h=`<div class="pftargets"><div class="pft-head"><span>Targets — initiative KPIs</span>`+
+  let h=`<div class="pftargets"><div class="pft-head"><span>Targets — ${hostType} KPIs</span>`+
     `<button class="ghost" id="pfAddTarget">+ Add target</button></div>`;
   if(!list.length){
-    h+=`<p class="hint" style="margin:8px 0 0">No targets yet. Define an initiative-level KPI here; link Key Results, stage-gates, or tasks to it from the execution app to feed its value.</p>`;
+    h+=`<p class="hint" style="margin:8px 0 0">No targets yet. Define a KPI at this ${hostType} here; link Key Results, stage-gates, or tasks to it from the execution app to feed its value.</p>`;
   } else {
     h+=`<div class="pft-list">`;
     list.forEach(k=>{
@@ -684,12 +687,13 @@ function initTargetsHtml(initId){
   }
   return h+`</div>`;
 }
-function refreshInitTargets(initId){
+function refreshInitTargets(hostId, hostType){
+  hostType=hostType||"initiative";
   const host=document.querySelector("#pfModalBody .pftargets");
   if(!host) return;
-  const tmp=document.createElement("div"); tmp.innerHTML=initTargetsHtml(initId);
+  const tmp=document.createElement("div"); tmp.innerHTML=initTargetsHtml(hostId, hostType);
   host.replaceWith(tmp.firstElementChild);
-  wireInitTargets(initId);
+  wireInitTargets(hostId, hostType);
 }
 /* ---------------- initiative milestones (nested under the initiative — change 5) ---------------- */
 function milestonesHtml(initId){
@@ -738,18 +742,19 @@ function msDelete(id, initId){
   persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
     portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
 }
-function wireInitTargets(initId){
-  const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(initId,null);
-  document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(initId,b.dataset.tedit));
+function wireInitTargets(hostId, hostType){
+  hostType=hostType||"initiative";
+  const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(hostId,null,hostType);
+  document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(hostId,b.dataset.tedit,hostType));
   document.querySelectorAll("#pfModalBody [data-tdel]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.tdel;
-    if(pfTgtArmed!==id){ pfTgtArmed=id; refreshInitTargets(initId); return; }
-    pfTgtArmed=null; removeTarget(initId,id);
+    if(pfTgtArmed!==id){ pfTgtArmed=id; refreshInitTargets(hostId,hostType); return; }
+    pfTgtArmed=null; removeTarget(hostId,id,hostType);
   });
 }
-function removeTarget(initId,kpiId){
+function removeTarget(hostId,kpiId,hostType){
   portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId);
-  refreshInitTargets(initId); renderOverview();
+  refreshInitTargets(hostId, hostType); renderOverview();
   persistPortfolio(()=>{ portfolio.kpis=(portfolio.kpis||[]).filter(k=>k.id!==kpiId); }, "Target removed.");
 }
 
@@ -780,8 +785,8 @@ function pfKpiFormHtml(d){
      `<button class="ghost" id="pfKpiCancel">Cancel</button></div>`;
   return h;
 }
-function openKpiEditor(initId,kpiId){
-  pfKpiInit=initId; pfKpiEditId=kpiId||null;
+function openKpiEditor(hostId,kpiId,hostType){
+  pfKpiInit=hostId; pfKpiEditId=kpiId||null; pfKpiHostType=hostType||"initiative";
   const ex=kpiId?(portfolio.kpis||[]).find(k=>k.id===kpiId):null;
   pfKpiDraft=ex?Object.assign({},ex):{targetType:"demonstration",direction:"up"};
   document.getElementById("pfKpiTitle").textContent=kpiId?"Edit target":"Add target";
@@ -806,7 +811,7 @@ function closeKpiEditor(){ pfKpiInit=null; pfKpiEditId=null; pfKpiDraft=null; co
 function saveKpiEditor(){
   const d=pfKpiDraft, initId=pfKpiInit;
   const tt=d.targetType||"demonstration";
-  const rec={ hostType:"initiative", hostId:initId, objectiveId:null, isDefiner:true, groupId:null,
+  const rec={ hostType:pfKpiHostType, hostId:initId, objectiveId:null, isDefiner:true, groupId:null,
     name:(d.name||"").trim(), targetType:tt };
   if(tt!=="binary"){
     rec.direction=(d.direction==="down")?"down":"up";
@@ -828,7 +833,7 @@ function saveKpiEditor(){
     reapply=()=>{ portfolio.kpis=portfolio.kpis||[]; if(!portfolio.kpis.some(x=>x.id===id)) portfolio.kpis.push(rec); };
   }
   closeKpiEditor();
-  refreshInitTargets(initId); renderOverview();
+  refreshInitTargets(initId, pfKpiHostType); renderOverview();
   persistPortfolio(reapply, "Target saved.");
 }
 
