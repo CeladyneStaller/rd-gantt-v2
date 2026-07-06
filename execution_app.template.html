@@ -19,6 +19,9 @@
   header h1 .dot{color:var(--accent)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
+  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid #5a4420;background:#241b09;padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -81,7 +84,7 @@
   .chain-toggle input{width:auto;padding:0;margin:0}
   /* dashboard layout (tracker QT pattern, dark theme) */
   .obj-title{font-size:14px;color:var(--ink);margin:14px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 18px}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 18px}
   .mc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
   .mc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:8px}
   .mc-val{font-size:23px;font-weight:600;line-height:1;color:var(--ink)}
@@ -114,6 +117,67 @@
   .statepill.overdue{background:#3a1414;color:var(--bad)}
   .statepill.pending{background:#1c2733;color:var(--none)}
   /* modal */
+  /* FMEA / risk register */
+  .rpn-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+  .rpn-low{background:#12351f;color:#5fce87;border:1px solid #1f5a34}
+  .rpn-med{background:#3a2c0e;color:#e0b24d;border:1px solid #6b5117}
+  .rpn-high{background:#3d1717;color:#f07a7a;border:1px solid #6b2020}
+  .rpn-dim{color:var(--muted);font-size:10px}
+  .fmea-card{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2);margin:0 0 10px}
+  .fmea-card.problem-resolved .fmea-prob-text{text-decoration:line-through;color:var(--muted)}
+  .fmea-card.problem-resolved .fmea-tbl-wrap{opacity:.5}
+  .fmea-prob-row{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .fmea-prob-text{flex:1;font-size:13px;font-weight:500;line-height:1.4;cursor:pointer;color:var(--ink)}
+  .fmea-prob-text:hover{color:var(--accent)}
+  .fmea-prob-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .gate-tag{font-family:var(--mono);font-size:10px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--accent);margin-right:5px}
+  .fmea-tbl-wrap{overflow-x:auto}
+  .fmea-tbl{width:100%;border-collapse:collapse;font-size:11px}
+  .fmea-tbl th{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .fmea-tbl td{padding:7px 8px;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.4;color:var(--ink)}
+  .fmea-tbl tr:last-child td{border-bottom:none}
+  .fmea-tbl tr.mode-sep td{border-top:2px solid var(--line)}
+  .fmea-tbl tr.row-resolved{opacity:.5}
+  .c-mode{font-weight:500;min-width:120px}.c-eff{min-width:110px}.c-cause{color:var(--muted)}
+  .c-mit{color:var(--muted);font-size:10px;margin-top:3px;padding-left:8px;border-left:2px solid var(--line)}
+  .c-sod{text-align:center;font-family:var(--mono);color:var(--muted);white-space:nowrap}
+  .c-rpn{text-align:center}.c-del{text-align:center}.c-empty{color:var(--muted)}
+  .c-stack{display:flex;flex-direction:column;gap:5px}
+  .del-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0 3px}
+  .del-x:hover{color:var(--bad)}.del-x.armed{color:var(--bad);font-size:10px;font-weight:600}
+  .lv-seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .lv-btn{background:var(--panel);border:none;border-right:1px solid var(--line);color:var(--muted);padding:2px 7px;font-size:10px;cursor:pointer}
+  .lv-btn:last-child{border-right:none}
+  .lv-btn.lv-open{background:#3d1717;color:#f07a7a}
+  .lv-btn.lv-mitigating{background:#3a2c0e;color:#e0b24d}
+  .lv-btn.lv-resolved{background:#12351f;color:#5fce87}
+  .fmea-modal-inner{padding:16px 18px}
+  .fmea-lbl{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 5px;font-weight:600}
+  .fmea-ta{width:100%;min-height:52px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:8px 10px;font-family:var(--sans);font-size:13px;box-sizing:border-box;margin:0 0 12px;resize:vertical}
+  .fmea-gate-sel{width:100%;margin:0 0 14px}
+  .fmea-modes-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px;border-top:1px solid var(--line);padding-top:12px}
+  .fmea-modes-list{display:flex;flex-direction:column;gap:10px}
+  .fmea-empty{color:var(--muted);font-size:12px;padding:8px 0}
+  .fm-known{display:flex;align-items:center;gap:6px;margin:0 0 6px}
+  .fm-known input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 9px;font-size:12px;box-sizing:border-box}
+  .fmea-knowns-view{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .fmea-knowns-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  .fmea-knowns-view ul{margin:4px 0 0;padding-left:18px}
+  .fmea-knowns-view li{font-size:12px;color:var(--ink);line-height:1.5}
+  .fm-mode{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;background:var(--panel2)}
+  .fm-effect{border:1px solid var(--line);border-radius:7px;padding:9px 10px;background:var(--panel);margin:8px 0 0}
+  .fm-cause{border:1px solid var(--line);border-radius:6px;padding:8px 9px;background:var(--panel2);margin:7px 0 0}
+  .fm-mode-head,.fm-effect-head,.fm-cause-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+  .fm-num{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .fm-mode textarea,.fm-effect textarea,.fm-cause textarea{width:100%;min-height:38px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 8px;font-family:var(--sans);font-size:12px;box-sizing:border-box;resize:vertical}
+  .fm-sub-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px}
+  .sod-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin:7px 0}
+  .sod-f{display:flex;flex-direction:column;gap:3px}
+  .sod-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .sod-f select{font-size:11px}
+  .sod-rpn{display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:flex-end}
+  .fm-mit{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 8px;font-size:12px;box-sizing:border-box;margin-top:4px}
+  .fmea-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
   .overlay.open{display:flex}
   .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
@@ -184,9 +248,12 @@
 <body>
 <header>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
-  <span class="div-pill" id="divPill">—</span>
   <div class="spacer"></div>
-  <select class="obj" id="objSelect"><option>loading…</option></select>
+  <select class="obj" id="divSelect"><option>loading…</option></select>
+  <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
+  <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
+  <select class="obj" id="objSelect" style="margin-left:6px"><option>loading…</option></select>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
 </header>
@@ -194,813 +261,47 @@
   <div class="msg" id="msg"></div>
 
   <div id="settingsPanel" style="display:none" class="settings">
-    <h3>Broker &amp; division</h3>
+    <h3>Broker</h3>
     <p class="hint">Broker is baked in; token lives in this browser only. The division is taken from
-      <code>?division=DIV-FC</code> (or pick below). An SSO embed can pass <code>?token=…</code>; it strips itself.</p>
+      <code>?division=DIV-FC</code> or the selector at the top. An SSO embed can pass <code>?token=…</code>; it strips itself.</p>
     <label>Broker token <input class="mono" id="tokenInput" type="password" style="width:100%" placeholder="paste token"/></label>
-    <label>Division <select id="divSelect"></select></label>
     <button class="act" id="tokenSave">Save</button>
   </div>
 
   <div id="objHeadWrap"></div>
   <div id="subKR" class="sub"></div>
   <div id="subSG" class="sub"></div>
+  <div id="subRISK" class="sub"></div>
   <div id="subTASK" class="sub"></div>
   <div id="initPanel" class="sub"></div>
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
 <div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
 <div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
+<div id="fmeaOverlay" class="overlay" style="z-index:140"><div class="modal" style="max-width:840px"><div class="modal-head"><span class="modal-title" id="fmeaTitle"></span><button class="modal-x" id="fmeaX" title="Close">×</button></div><div id="fmeaBody"></div></div></div>
 
-<script>
-/* ============================================================================
-   Unified R&D Suite — Shared Core (frozen spec v1.3)
-   Pure logic only. No DOM, no network. Runs headless in Node and injects into
-   the browser shells via build.py (between the CORE markers).
-
-   Conventions (spec v1.3)
-   -----------------------
-   - Dates are integer day-counts (days since an arbitrary epoch). Shells convert
-     ISO <-> day-count; the core only does max / +lag arithmetic.
-   - percentComplete is an integer 0..100.
-   - A KPI is the measurement atom, hosted by exactly one Key Result or one
-     stage-gate (kpi.hostType / kpi.hostId). A value enters ONLY via kpiUpdates
-     (in an exec doc), keyed by kpiId; a KPI's current value = the latest update
-     by timestamp.
-   - Scoring rolls up: KPI score -> Key Result score (mean of its KPIs) ->
-     Objective score (mean of its Key Results). Stage-gate KPIs are gating only
-     and never feed the objective OKR score (spec v1.3 §A, decision #1).
-   - Unscored: a KPI with a null target or no read yet is excluded from its KR's
-     mean (g1). A KR with no scorable KPIs is unscored; an objective with no
-     scorable KRs has no band, not zero. No synthesized KRs (decision #3).
-   - For direction 'range', score is 100 inside [lo,hi] and falls off linearly to
-     0 at one full band-width outside the band.
-   ============================================================================ */
-
-(function (root) {
-  'use strict';
-
-  // ---- small helpers --------------------------------------------------------
-  function mean(arr) {
-    if (!arr.length) return null;
-    var s = 0;
-    for (var i = 0; i < arr.length; i++) s += arr[i];
-    return s / arr.length;
-  }
-  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-
-  // ---- IDs ------------------------------------------------------------------
-  // Type-prefixed, parent-scoped, monotonic counter. The counter is an
-  // ALLOCATION number, never a position: reordering existing ids never changes
-  // the next id. Display order lives in the separate `order` field.
-  var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
-    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG'
-  };
-  // Structural levels pad to 2 digits; leaf metrics use plain integers.
-  var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
-
-  function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
-    var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
-    if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
-    return parentStem;
-  }
-
-  // allocId(type, parentId, existingIds, opts?)
-  //   division:  opts.code required (parentId may be null)
-  //   objective: opts.quarter required, parentId = division id
-  //   others:    parentId = immediate logical parent (initiative / objective / host)
-  function allocId(type, parentId, existingIds, opts) {
-    opts = opts || {};
-    var prefix = ID_PREFIX[type];
-    if (!prefix) throw new Error('allocId: unknown type ' + type);
-    var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
-      var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
-      return did;
-    }
-    var base = prefix + '-' + stem + '-';
-    var max = 0;
-    for (var i = 0; i < existingIds.length; i++) {
-      var id = existingIds[i];
-      if (id.indexOf(base) === 0) {
-        var n = parseInt(id.slice(base.length), 10);
-        if (!isNaN(n) && n > max) max = n;
-      }
-    }
-    var next = max + 1;
-    var pad = ID_PAD[type] || 0;
-    var num = pad ? String(next).padStart(pad, '0') : String(next);
-    return base + num;
-  }
-
-  // ---- KPI link groups, level resolution & scoring (v1.3.1) ----------------
-  // A KPI is the measurement atom, hosted at a level: initiative > keyResult >
-  // stageGate > task(=execution). KPIs may share a free-standing groupId to form
-  // a LINK GROUP; exactly one member carries isDefiner and owns the IDENTITY
-  // (name/direction/unit). Resolution is asymmetric (decision v1.3.1):
-  //   - TARGET cascades DOWN: a member's effective target = its own if set, else
-  //     the nearest HIGHER level's (self overrides ancestor). Within-objective
-  //     levels resolve against the same objective; the initiative level is
-  //     objective-agnostic (one definition spanning every linked objective).
-  //   - VALUE cascades UP: a member's effective value = its own latest reading if
-  //     present, else the nearest LOWER level's. A higher-level reading never
-  //     leaks downward; a higher level's own reading overrides a lower one for
-  //     that higher level (positional override).
-  // A KPI with no groupId is a standalone singleton (its own definer) -> the
-  // resolution collapses to its own target/value, identical to v1.3.
-  var KPI_LEVEL = { initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
-  var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
-
-  function progressLinear(value, target, direction) {
-    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
-    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
-    return 0;
-  }
-  function progressRange(value, lo, hi) {
-    if (value >= lo && value <= hi) return 100;
-    var width = (hi - lo) || 1;
-    var d = value < lo ? (lo - value) : (value - hi);
-    return 100 * Math.max(0, 1 - d / width);
-  }
-
-  // ---- statistics (for statistical KPI targets) ----------------------------
-  function statSum(xs){ var s=0; for(var i=0;i<xs.length;i++) s+=xs[i]; return s; }
-  function statAverage(xs){ return xs.length ? statSum(xs)/xs.length : null; }
-  function statMedian(xs){ if(!xs.length) return null; var a=xs.slice().sort(function(p,q){return p-q;}); var m=Math.floor(a.length/2); return a.length%2 ? a[m] : (a[m-1]+a[m])/2; }
-  function statMax(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]>m) m=xs[i]; return m; }
-  function statMin(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]<m) m=xs[i]; return m; }
-  function statStdDev(xs){ if(xs.length<2) return xs.length?0:null; var mu=statAverage(xs),s=0; for(var i=0;i<xs.length;i++){ var d=xs[i]-mu; s+=d*d; } return Math.sqrt(s/(xs.length-1)); }
-  function statCV(xs){ var mu=statAverage(xs); if(mu==null||mu===0) return null; var sd=statStdDev(xs); return sd==null?null:(sd/Math.abs(mu))*100; }
-  function statRange(xs){ if(!xs.length) return null; return statMax(xs)-statMin(xs); }
-  function computeStat(name, xs){
-    switch(name){
-      case 'average': return statAverage(xs);
-      case 'median':  return statMedian(xs);
-      case 'stddev':  return statStdDev(xs);
-      case 'cv':      return statCV(xs);
-      case 'range':   return statRange(xs);
-      case 'max':     return statMax(xs);
-      case 'min':     return statMin(xs);
-    }
-    return statAverage(xs);
-  }
-  // all readings posted to a kpi id, newest first
-  function readingsFor(kpiId, execDocs){
-    var out=[];
-    for(var div in execDocs){ if(!execDocs.hasOwnProperty(div)) continue;
-      var ups=execDocs[div].kpiUpdates||[];
-      for(var i=0;i<ups.length;i++) if(ups[i].kpiId===kpiId) out.push(ups[i]);
-    }
-    out.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
-    return out;
-  }
-  // resolved value for a member id honoring the definer's targetType:
-  // 'statistical' aggregates the latest readCount readings; else the newest reading.
-  function resolvedReadingValue(kpiId, defn, execDocs){
-    var ups=readingsFor(kpiId, execDocs);
-    if(!ups.length) return null;
-    if(defn && defn.targetType==='statistical'){
-      var n=parseInt(defn.readCount,10);
-      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
-      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
-      if(!xs.length) return null;
-      return computeStat(defn.statistic||'average', xs);
-    }
-    return ups[0].value;
-  }
-
-  // latest reading posted to a specific KPI id (the host where it was entered)
-  function kpiCurrentValue(kpiId, execDocs) {
-    var latest = null;
-    for (var div in execDocs) {
-      if (!execDocs.hasOwnProperty(div)) continue;
-      var ups = execDocs[div].kpiUpdates || [];
-      for (var i = 0; i < ups.length; i++) {
-        if (ups[i].kpiId === kpiId) {
-          if (!latest || ups[i].timestamp > latest.timestamp) latest = ups[i];
-        }
-      }
-    }
-    return latest ? latest.value : null;
-  }
-
-  function allKpis(execDocs) {
-    var out = [];
-    for (var div in execDocs) {
-      if (!execDocs.hasOwnProperty(div)) continue;
-      var ks = execDocs[div].kpis || [];
-      for (var i = 0; i < ks.length; i++) out.push(ks[i]);
-    }
-    return out;
-  }
-  function effGroup(kpi) { return kpi.groupId || kpi.id; }
-  function groupMembers(kpi, kpis) {
-    var g = effGroup(kpi), out = [];
-    for (var i = 0; i < kpis.length; i++) if (effGroup(kpis[i]) === g) out.push(kpis[i]);
-    return out;
-  }
-  // the definer owns identity; a lone member is its own definer
-  function definerOf(kpi, kpis) {
-    var members = groupMembers(kpi, kpis);
-    for (var i = 0; i < members.length; i++) if (members[i].isDefiner) return members[i];
-    return members[0] || kpi;
-  }
-  function kpiDirection(kpi, kpis) { return definerOf(kpi, kpis).direction; }
-  function kpiUnit(kpi, kpis) { return definerOf(kpi, kpis).unit; }
-  function kpiName(kpi, kpis) { return definerOf(kpi, kpis).name; }
-
-  // the group member sitting at a given level (within objectiveId for the
-  // within-objective levels; objective-agnostic at the initiative level)
-  function memberAtLevel(members, level, objectiveId) {
-    for (var i = 0; i < members.length; i++) {
-      var m = members[i];
-      if (KPI_LEVEL[m.hostType] !== level) continue;
-      if (level === KPI_LEVEL.initiative) return m;
-      // objectiveId null => the scored KPI is initiative-agnostic; descend into any objective's member
-      if (objectiveId == null || m.objectiveId === objectiveId) return m;
-    }
-    return null;
-  }
-
-  // effective TARGET: self, then nearest higher level (cascades down)
-  function effTarget(kpi, kpis) {
-    var members = groupMembers(kpi, kpis);
-    var lvl = KPI_LEVEL[kpi.hostType];
-    for (var L = lvl; L <= KPI_LEVEL.initiative; L++) {
-      var m = memberAtLevel(members, L, kpi.objectiveId);
-      if (m && m.target != null) return m.target;
-    }
-    return null;
-  }
-  // effective VALUE: self, then nearest lower level (cascades up)
-  function effValue(kpi, kpis, execDocs) {
-    var members = groupMembers(kpi, kpis);
-    var defn = definerOf(kpi, kpis);
-    var lvl = KPI_LEVEL[kpi.hostType];
-    for (var L = lvl; L >= 0; L--) {
-      var m = memberAtLevel(members, L, kpi.objectiveId);
-      if (m) {
-        var v = resolvedReadingValue(m.id, defn, execDocs);
-        if (v != null) return v;
-      }
-    }
-    return null;
-  }
-
-  // kpiScore(kpi, currentValue) -> 0..100 or null. Pure formula against the
-  // kpi's own direction/target (used for standalone KPIs and unit tests).
-  function kpiScore(kpi, currentValue) {
-    if (kpi.targetType === 'binary') {
-      if (currentValue == null) return null;
-      return currentValue >= 1 ? 100 : 0;
-    }
-    if (kpi.target == null) return null;
-    if (currentValue == null) return null;
-    var raw;
-    if (kpi.direction === 'range') {
-      raw = progressRange(currentValue, kpi.target.lo, kpi.target.hi);
-    } else {
-      raw = progressLinear(currentValue, kpi.target, kpi.direction);
-    }
-    return clamp(raw, 0, 100);
-  }
-
-  // group/level-aware score: resolved target (down) vs resolved value (up),
-  // direction from the definer.
-  function kpiScoreResolved(kpi, kpis, execDocs) {
-    var defn = definerOf(kpi, kpis);
-    if (defn.targetType === 'binary') {
-      var bv = effValue(kpi, kpis, execDocs);
-      if (bv == null) return null;
-      return bv >= 1 ? 100 : 0;
-    }
-    var target = effTarget(kpi, kpis);
-    if (target == null) return null;
-    var value = effValue(kpi, kpis, execDocs);
-    if (value == null) return null;
-    var dir = kpiDirection(kpi, kpis);
-    var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
-                                : progressLinear(value, target, dir);
-    return clamp(raw, 0, 100);
-  }
-
-  // all KPIs hosted by (hostType, hostId), scanned across exec docs
-  function kpisFor(hostType, hostId, execDocs) {
-    var out = [];
-    for (var div in execDocs) {
-      if (!execDocs.hasOwnProperty(div)) continue;
-      var ks = execDocs[div].kpis || [];
-      for (var i = 0; i < ks.length; i++) {
-        if (ks[i].hostType === hostType && ks[i].hostId === hostId) out.push(ks[i]);
-      }
-    }
-    return out;
-  }
-
-  function meanScorable(kpis, execDocs) {
-    var all = allKpis(execDocs);
-    var scores = [];
-    for (var i = 0; i < kpis.length; i++) {
-      var s = kpiScoreResolved(kpis[i], all, execDocs);
-      if (s != null) scores.push(s);
-    }
-    return mean(scores);
-  }
-
-  // find a KR object across exec docs
-  function findKr(krId, execDocs) {
-    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
-      var krs = execDocs[div].keyResults || [];
-      for (var i = 0; i < krs.length; i++) if (krs[i].id === krId) return krs[i];
-    }
-    return null;
-  }
-  // score one embedded KPI (sub-KR tracker) from its stored `current`
-  function scoreEmbeddedKpi(k) {
-    var tt = k.targetType || k.type || 'demonstration';
-    if (tt === 'binary') {
-      if (k.current == null) return null;
-      return Number(k.current) >= 1 ? 100 : 0;
-    }
-    if (k.current == null) return null;
-    var cur = Number(k.current); if (isNaN(cur)) return null;
-    if (k.target == null || k.target === '') return null;
-    var tgt = Number(k.target); if (isNaN(tgt)) return null;
-    var dir = (k.direction === 'down' || k.direction === 'decrease') ? 'down' : 'up';
-    return clamp(progressLinear(cur, tgt, dir), 0, 100);
-  }
-  function meanEmbedded(kpis) {
-    var scores = [];
-    for (var i = 0; i < (kpis || []).length; i++) { var s = scoreEmbeddedKpi(kpis[i]); if (s != null) scores.push(s); }
-    return mean(scores);
-  }
-  // weighted mean of sub-KR scores (percentage -> progress, kpi -> embedded KPI mean)
-  function subKrScore(subKrs) {
-    var totalW = 0, sum = 0, any = false;
-    for (var i = 0; i < (subKrs || []).length; i++) {
-      var skr = subKrs[i], pct;
-      if ((skr.trackingType || 'percentage') === 'kpi') pct = meanEmbedded(skr.kpis || []);
-      else pct = (skr.progress == null) ? null : clamp(Number(skr.progress), 0, 100);
-      if (pct == null) continue;
-      var w = Number(skr.weight) || 1;
-      totalW += w; sum += w * pct; any = true;
-    }
-    return (any && totalW > 0) ? sum / totalW : null;
-  }
-  // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
-  // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
-  function keyResultScore(krId, execDocs) {
-    var kr = findKr(krId, execDocs);
-    var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
-    if (tt === 'percentage') {
-      if (!kr || kr.progress == null) return null;
-      return clamp(Number(kr.progress), 0, 100);
-    }
-    if (tt === 'subkr') return subKrScore(kr.subKrs || []);
-    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
-  }
-  // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
-  function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
-
-  // ---- objective & tier scores ---------------------------------------------
-  function krsForObjective(objId, execDocs) {
-    var out = [];
-    for (var div in execDocs) {
-      if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
-      var krs = execDocs[div].keyResults || [];
-      for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
-    }
-    return out;
-  }
-
-  // objectiveScore -> mean of scorable Key Result scores; null when none are
-  // scorable (an objective with no Key Result is unscored -> no band, decision #3).
-  function objectiveScore(objId, execDocs) {
-    var krs = krsForObjective(objId, execDocs);
-    var scores = [];
-    for (var i = 0; i < krs.length; i++) {
-      var s = keyResultScore(krs[i].id, execDocs);
-      if (s != null) scores.push(s);
-    }
-    return mean(scores); // null if empty
-  }
-
-  function objectivesInScope(entityType, entityId, portfolio) {
-    var objs = portfolio.objectives || [];
-    switch (entityType) {
-      case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
-      case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
-      case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
-      case 'company':    return objs.slice();
-      default: return [];
-    }
-  }
-
-  // score(entityType, entityId, portfolio, execDocs, quarter?)
-  //   quarter omitted -> OVERALL (grand mean of the entity's objectives)
-  //   quarter given   -> QUARTERLY (objectives stamped that quarter)
-  // Returns 0..100 or null (no scorable objectives in the bound -> no band).
-  function score(entityType, entityId, portfolio, execDocs, quarter) {
-    var objs = objectivesInScope(entityType, entityId, portfolio);
-    if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
-    var scores = [];
-    for (var i = 0; i < objs.length; i++) {
-      var s = objectiveScore(objs[i].id, execDocs);
-      if (s != null) scores.push(s);
-    }
-    return mean(scores);
-  }
-
-  // boundsOf -> sorted distinct quarters in scope. length 1 => caller collapses
-  // quarterly and overall into a single number.
-  function boundsOf(entityType, entityId, portfolio) {
-    var objs = objectivesInScope(entityType, entityId, portfolio);
-    var seen = {}, out = [];
-    for (var i = 0; i < objs.length; i++) {
-      var q = objs[i].quarter;
-      if (q && !seen[q]) { seen[q] = 1; out.push(q); }
-    }
-    out.sort();
-    return out;
-  }
-
-  function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
-  function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
-  function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
-  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
-
-  // Combine the portfolio doc into a docs map for cross-document KPI resolution.
-  // Portfolio KPIs join the resolution pool (their targets/identity cascade down
-  // to linked exec members; values cascade up from exec readings). The reserved
-  // key is skipped by structural iteration, so KRs/gates/objectives never double.
-  function withPortfolio(portfolio, execDocs) {
-    var m = {}; m[PORTFOLIO_KEY] = portfolio || {};
-    for (var k in execDocs) { if (execDocs.hasOwnProperty(k)) m[k] = execDocs[k]; }
-    return m;
-  }
-
-  function band(s) {
-    if (s == null) return 'no-band';
-    if (s >= 90) return 'on-track';
-    if (s >= 70) return 'at-risk';
-    return 'off-track';
-  }
-
-  // ---- product / model classification (§5) ---------------------------------
-  function ownClass(node) {
-    if (node.modelId) return { kind: 'model', modelId: node.modelId };
-    if (node.productId) return { kind: 'product', productId: node.productId };
-    return { kind: 'agnostic' };
-  }
-  function parentProductOf(modelId, portfolio) {
-    var ms = portfolio.models || [];
-    for (var i = 0; i < ms.length; i++) if (ms[i].id === modelId) return ms[i].productId;
-    return null;
-  }
-  function initiativeOf(obj, portfolio) {
-    var inits = portfolio.initiatives || [];
-    for (var i = 0; i < inits.length; i++) if (inits[i].id === obj.initiativeId) return inits[i];
-    return null;
-  }
-  function effClass(obj, portfolio) {
-    var c = ownClass(obj);
-    if (c.kind === 'agnostic') {
-      var init = initiativeOf(obj, portfolio);
-      if (init) c = ownClass(init);
-    }
-    return c;
-  }
-  function effProduct(obj, portfolio) {
-    var c = effClass(obj, portfolio);
-    if (c.kind === 'model') return parentProductOf(c.modelId, portfolio);
-    if (c.kind === 'product') return c.productId;
-    return null;
-  }
-  function effModel(obj, portfolio) {
-    var c = effClass(obj, portfolio);
-    return c.kind === 'model' ? c.modelId : null;
-  }
-
-  // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
-  // Enforces the node invariant (at most one of productId/modelId) and the
-  // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
-  function validateClassification(obj, portfolio) {
-    if (obj.productId && obj.modelId) return { ok: false, reason: 'objective sets both productId and modelId' };
-    var init = initiativeOf(obj, portfolio);
-    if (!init) return { ok: false, reason: 'objective has no initiative' };
-    if (init.productId && init.modelId) return { ok: false, reason: 'initiative sets both productId and modelId' };
-
-    var io = ownClass(init);
-    var oo = ownClass(obj);
-    if (oo.kind === 'agnostic') return { ok: true };           // inherits; always valid
-    if (io.kind === 'agnostic') return { ok: true };           // anything allowed below agnostic
-
-    if (io.kind === 'product') {
-      if (oo.kind === 'product') {
-        return oo.productId === io.productId
-          ? { ok: true }
-          : { ok: false, reason: 'objective pins a different product than its initiative' };
-      }
-      // oo is model -> must be under the initiative's product
-      return parentProductOf(oo.modelId, portfolio) === io.productId
-        ? { ok: true }
-        : { ok: false, reason: 'objective model belongs to a different product than its initiative' };
-    }
-
-    if (io.kind === 'model') {
-      // initiative is at the finest grain: objective must match exactly (no broaden)
-      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
-      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
-    }
-    return { ok: true };
-  }
-
-  // sliceScore(axis, id, portfolio, execDocs, quarter?) -> 0..100 or null
-  function sliceScore(axis, id, portfolio, execDocs, quarter) {
-    var objs = (portfolio.objectives || []).filter(function (o) {
-      var match = axis === 'product' ? (effProduct(o, portfolio) === id)
-                                     : (effModel(o, portfolio) === id);
-      if (!match) return false;
-      if (quarter != null && o.quarter !== quarter) return false;
-      return true;
-    });
-    var scores = [];
-    for (var i = 0; i < objs.length; i++) {
-      var s = objectiveScore(objs[i].id, execDocs);
-      if (s != null) scores.push(s);
-    }
-    return mean(scores);
-  }
-
-  // ---- stage-gate state classifier (pure; baseline-aware) ------------------
-  // passed-late compares the actual finish to the COMMITTED reference
-  // (baselineDate if set, else plannedDate); overdue is about the current plan.
-  function classifyGate(g, today) {
-    if (!g) return 'pending';
-    var ref = (g.baselineDate != null) ? g.baselineDate : g.plannedDate;
-    if (g.actualDate != null) {
-      return (ref != null && g.actualDate > ref) ? 'passed-late' : 'passed';
-    }
-    if (g.plannedDate != null && g.plannedDate < today) return 'overdue';
-    return 'pending';
-  }
-
-  // ---- schedule cascade (§6) -----------------------------------------------
-  // cascade(portfolio, execDocs, today) ->
-  //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
-  //     longTermSlip, gateEffective, gateSlipped, cycles }
-  function cascade(portfolio, execDocs, today) {
-    var objs = portfolio.objectives || [];
-    var inits = portfolio.initiatives || [];
-    var miles = portfolio.milestones || [];
-    var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
-    var cycles = [];
-
-    function execFor(divId) { return execDocs[divId] || {}; }
-    function childrenOf(obj) {
-      var ex = execFor(obj.divisionId);
-      var sgs = (ex.stageGates || []).filter(function (s) { return s.objectiveId === obj.id; });
-      var tasks = (ex.tasks || []).filter(function (t) { return t.objectiveId === obj.id; });
-      return { sgs: sgs, tasks: tasks };
-    }
-
-    function pfTask(t) {
-      if (t.actualEnd != null) return t.actualEnd;
-      var started = (t.actualStart != null) || (t.percentComplete && t.percentComplete > 0);
-      if (started) {
-        var frac = clamp((t.percentComplete || 0) / 100, 0, 1);
-        return Math.max(t.plannedEnd, today + Math.ceil((1 - frac) * (t.plannedEnd - t.plannedStart)));
-      }
-      return t.plannedEnd; // not started
-    }
-    // A stage-gate is a checkpoint: done -> actualDate; otherwise it cannot have
-    // finished before now, so it projects to max(plannedDate, today).
-    function pfGate(s) {
-      if (s.actualDate != null) return s.actualDate;
-      return Math.max(s.plannedDate, today);
-    }
-
-    // Stage 1a: gather children once; index every gate globally
-    var childCache = {}, gateById = {}, gateObjOf = {};
-    objs.forEach(function (o) {
-      var c = childrenOf(o);
-      childCache[o.id] = c;
-      c.sgs.forEach(function (s) { gateById[s.id] = s; gateObjOf[s.id] = o; });
-    });
-
-    // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
-    // Edges and the chain flag may live on the portfolio (cross-division) OR in an
-    // execDoc (per-division, authored in the execution app). Both are merged here.
-    // With none of them, a gate has no preds and gateEff == pfGate.
-    var gatePreds = {};
-    Object.keys(gateById).forEach(function (gid) { gatePreds[gid] = []; });
-    function addGateEdge(e) { if (e && gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 }); }
-    (portfolio.stageGateEdges || []).forEach(addGateEdge);
-    for (var dk in execDocs) {
-      if (!execDocs.hasOwnProperty(dk) || dk === PORTFOLIO_KEY) continue;
-      (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
-    }
-    objs.forEach(function (o) {
-      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
-      if (!o.chainGatesByDate && !exChain) return;
-      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
-        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-      for (var i = 1; i < seq.length; i++) {
-        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
-      }
-    });
-
-    // Stage 1b: gate->gate forward pass, seeded from pfGate (cycle-guarded, lagged).
-    // A locked gate is exempt from INHERITED push (committed date holds), but it
-    // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
-    // read as on-time: the seed still floors at today via pfGate.
-    var gateEff = {}, gateStack = {};
-    function computeGateEff(gid) {
-      if (gateEff[gid] != null) return gateEff[gid];
-      var g = gateById[gid];
-      if (!g) return 0;
-      var seed = pfGate(g);
-      if (g.locked) { gateEff[gid] = seed; return seed; }
-      if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
-      gateStack[gid] = true;
-      var res = seed, preds = gatePreds[gid];
-      for (var i = 0; i < preds.length; i++) {
-        if (gateStack[preds[i].from]) { cycles.push('GATE:' + preds[i].from); continue; }
-        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag);
-      }
-      gateStack[gid] = false;
-      gateEff[gid] = res;
-      return res;
-    }
-    Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
-
-    // baseline-aware slip per gate: slipped iff committed and now forecast past it.
-    var gateSlipped = {};
-    Object.keys(gateById).forEach(function (gid) {
-      var g = gateById[gid];
-      gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
-    });
-
-    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
-    var intrinsic = {};
-    objs.forEach(function (o) {
-      var c = childCache[o.id], vals = [];
-      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
-      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
-      intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
-    });
-
-    // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
-    var objPreds = {}; objs.forEach(function (o) { objPreds[o.id] = []; });
-    (portfolio.objectiveEdges || []).forEach(function (e) {
-      if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
-    });
-    var projEnd = {}, objStack = {};
-    function computeProjEnd(id) {
-      if (projEnd[id] != null) return projEnd[id];
-      var o = objById[id];
-      if (!o) return 0;
-      if (objStack[id]) { cycles.push('OBJ:' + id); return intrinsic[id]; } // break cycle
-      objStack[id] = true;
-      var cs = o.plannedStart;
-      var preds = objPreds[id];
-      for (var i = 0; i < preds.length; i++) {
-        if (objStack[preds[i].from]) { cycles.push('OBJ:' + preds[i].from); continue; }
-        cs = Math.max(cs, computeProjEnd(preds[i].from) + preds[i].lag);
-      }
-      var dur = o.plannedEnd - o.plannedStart;
-      var res = Math.max(intrinsic[id], cs + dur);
-      objStack[id] = false;
-      projEnd[id] = res;
-      return res;
-    }
-    objs.forEach(function (o) { computeProjEnd(o.id); });
-
-    // Stage 3: vertical lift into milestones
-    var effective = {};
-    miles.forEach(function (m) { effective[m.id] = m.plannedDate; });
-    objs.forEach(function (o) {
-      (o.milestoneIds || []).forEach(function (mid) {
-        if (effective[mid] != null) effective[mid] = Math.max(effective[mid], projEnd[o.id]);
-      });
-    });
-
-    // Stage 4: lateral MS->MS forward pass (topological, cycle-guarded)
-    var msById = {}; miles.forEach(function (m) { msById[m.id] = m; });
-    var msPreds = {}; miles.forEach(function (m) { msPreds[m.id] = []; });
-    (portfolio.milestoneEdges || []).forEach(function (e) {
-      if (msPreds[e.toMs]) msPreds[e.toMs].push({ from: e.fromMs, lag: e.lagDays || 0 });
-    });
-    var msDone = {}, msStack = {};
-    function liftMilestone(id) {
-      if (msDone[id]) return effective[id];
-      if (!msById[id]) return effective[id] || 0;
-      if (msStack[id]) { cycles.push('MS:' + id); return effective[id]; }
-      msStack[id] = true;
-      var preds = msPreds[id];
-      for (var i = 0; i < preds.length; i++) {
-        if (msStack[preds[i].from]) { cycles.push('MS:' + preds[i].from); continue; }
-        effective[id] = Math.max(effective[id], liftMilestone(preds[i].from) + preds[i].lag);
-      }
-      msStack[id] = false;
-      msDone[id] = true;
-      return effective[id];
-    }
-    miles.forEach(function (m) { liftMilestone(m.id); });
-
-    // Stage 5: initiative projected end + headline slip
-    var initProjEnd = {}, slip = {};
-    inits.forEach(function (I) {
-      var vals = [I.plannedEnd];
-      miles.forEach(function (m) { if (m.initiativeId === I.id) vals.push(effective[m.id]); });
-      objs.forEach(function (o) {
-        if (o.initiativeId === I.id && (!o.milestoneIds || o.milestoneIds.length === 0)) {
-          vals.push(projEnd[o.id]);
-        }
-      });
-      var pe = Math.max.apply(null, vals);
-      initProjEnd[I.id] = pe;
-      slip[I.id] = pe - I.plannedEnd;
-    });
-
-    return {
-      objectiveProjectedEnd: projEnd,
-      milestoneEffective: effective,
-      initiativeProjectedEnd: initProjEnd,
-      longTermSlip: slip,
-      gateEffective: gateEff,
-      gateSlipped: gateSlipped,
-      cycles: cycles
-    };
-  }
-
-  // ---- exports --------------------------------------------------------------
-  var API = {
-    allocId: allocId,
-    kpiScore: kpiScore,
-    kpiScoreResolved: kpiScoreResolved,
-    kpiCurrentValue: kpiCurrentValue,
-    kpisFor: kpisFor,
-    groupMembers: groupMembers,
-    definerOf: definerOf,
-    kpiDirection: kpiDirection,
-    kpiUnit: kpiUnit,
-    kpiName: kpiName,
-    effTarget: effTarget,
-    effValue: effValue,
-    computeStat: computeStat,
-    scoreEmbeddedKpi: scoreEmbeddedKpi,
-    subKrScore: subKrScore,
-    keyResultScore: keyResultScore,
-    stageGateScore: stageGateScore,
-    krsForObjective: krsForObjective,
-    objectiveScore: objectiveScore,
-    score: score,
-    boundsOf: boundsOf,
-    band: band,
-    rollupObjective: rollupObjective,
-    rollupInitiative: rollupInitiative,
-    rollupDivision: rollupDivision,
-    rollupCompany: rollupCompany,
-    withPortfolio: withPortfolio,
-    PORTFOLIO_KEY: PORTFOLIO_KEY,
-    ownClass: ownClass,
-    effClass: effClass,
-    effProduct: effProduct,
-    effModel: effModel,
-    validateClassification: validateClassification,
-    sliceScore: sliceScore,
-    cascade: cascade,
-    classifyGate: classifyGate,
-    // exposed for tests / shells
-    _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
-  };
-
-  if (typeof module !== 'undefined' && module.exports) module.exports = API;
-  else root.RDCore = API;
-
-})(typeof window !== 'undefined' ? window : this);
-
-</script>
+<script>/*__CORE__*/</script>
 <script>
 "use strict";
 const RD = window.RDCore;
 
 /* ---------------- broker (identical contract to planning app) ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){
-  const u = new URL(location.href);
-  const t = u.searchParams.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({}, "", u.toString()); }
+function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
+const URLP = (function(){
+  const u = new URL(location.href), p = u.searchParams;
+  const t = p.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
+  const rq = p.get("quarter");
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
 })();
+const RO = URLP.readonly;
+if (RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
 async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
-async function apiPut(id,doc,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+async function apiPut(id,doc,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})}); if(!r.ok) throw r; return r.json(); }
 
 /* ---------------- date <-> day-count ---------------- */
@@ -1015,15 +316,64 @@ let exec = blankExec();          // this division's doc (read-write)
 let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
+let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "" = all quarters
+let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[] }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
 function emForCore(){ const m={}; if(divisionId) m[divisionId]=exec; return RD.withPortfolio(portfolio, m); }
-// resolution pool: this division's KPIs + the portfolio's initiative-level definers
-function allKpisPool(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? exec.kpis.concat(portfolio.kpis) : exec.kpis; }
+
+/* ---- cross-doc product/model KPI targets (link execution up to product specs) ----
+   The products/models this division's objectives are classified to (+ sub-products) live in SPEC-<div>
+   bins. We fetch those, expose their headline KPIs as link targets, and add them to the resolution pool
+   so a KR/gate/task KPI can report up against them via linkParent + linkType. */
+let refDocs = {};            // "SPEC-<div>" -> {doc, etag, version, failed?}
+let _refBusy = false;
+const LINK_DEFAULTS = { 'product>keyResult':'contribute','product>stageGate':'contribute','product>task':'contribute','product>initiative':'direct',
+                        'model>keyResult':'contribute','model>stageGate':'contribute','model>task':'contribute','model>initiative':'direct' };
+function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType+'>'+childType] || 'contribute'; }
+function productById(pid){ return (portfolio.products||[]).find(p=>p.id===pid)||null; }
+function modelById(mid){ return (portfolio.models||[]).find(m=>m.id===mid)||null; }
+function productName(pid){ const p=productById(pid); return p?(p.name||p.id):pid; }
+function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=(portfolio.models||[]).find(x=>x.id===c.modelId); return m?m.productId:null; } return null; }
+function modelName(mid){ const m=modelById(mid); return m?(m.name||m.id):mid; }
+function divOfProduct(pid){ const p=productById(pid); return p?p.divisionId:null; }
+function divOfModel(mid){ const m=modelById(mid); return m?divOfProduct(m.productId):null; }
+function targetsInScope(){ return portfolio ? RD.classifiedTargets(portfolio, portfolio.composition||[], divisionId) : {products:[],models:[]}; }
+function specDivsInScope(){ const t=targetsInScope(), s=new Set();
+  t.products.forEach(p=>{ const d=divOfProduct(p); if(d) s.add(d); });
+  t.models.forEach(m=>{ const d=divOfModel(m); if(d) s.add(d); });
+  return [...s]; }
+function allRefKpis(){ let out=[]; for(const id in refDocs){ const rd=refDocs[id]; if(rd&&rd.doc&&rd.doc.kpis) out=out.concat(rd.doc.kpis); } return out; }
+function linkTargetKpis(){ return RD.targetKpisInScope(targetsInScope(), allRefKpis()); }
+let _targetIds=new Set();
+function refreshTargetIds(){ _targetIds=new Set(linkTargetKpis().map(k=>k.id)); }
+function isTargetKpi(k){ return k && _targetIds.has(k.id); }
+function parentLevelOf(k){ return k.hostType==="product" ? "product" : (modelById(k.objectiveId) ? "model" : k.hostType); }
+async function fetchSpecDoc(div){
+  if(!div || !tok()) return null; const id="SPEC-"+div;
+  try{ const s=await apiGet(id); const d=s?s.doc:{}; d.kpis=d.kpis||[]; RD.migrateKpiLinks(d.kpis);
+    refDocs[id]={doc:d, etag:s?s.etag:"0", version:s?s.version:0}; return refDocs[id]; }
+  catch(e){ refDocs[id]={doc:{kpis:[]}, etag:"0", version:0, failed:true}; return refDocs[id]; }  // stop the render loop; poll retries
+}
+async function ensureSpecDocs(){        // fire-and-forget from renderAll; only re-renders when something new arrives
+  if(_refBusy || !tok()) return;
+  const need = specDivsInScope().filter(d=>!refDocs["SPEC-"+d]);
+  if(!need.length){ refreshTargetIds(); return; }
+  _refBusy=true; let got=false;
+  try{ for(const d of need){ const r=await fetchSpecDoc(d); if(r && !r.failed) got=true; } }
+  finally{ _refBusy=false; refreshTargetIds(); if(got) renderAll(); }
+}
+// resolution pool: this division's KPIs + the portfolio's initiative-level definers + in-scope product/model targets
+function allKpisPool(){
+  let pool = (portfolio && portfolio.kpis && portfolio.kpis.length) ? exec.kpis.concat(portfolio.kpis) : exec.kpis.slice();
+  const tk = linkTargetKpis(); const have=new Set(pool.map(k=>k.id));
+  for(let i=0;i<tk.length;i++) if(!have.has(tk[i].id)){ have.add(tk[i].id); pool.push(tk[i]); }
+  return pool;
+}
 
 /* ---------------- messaging ---------------- */
 function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t; el.className="msg show "+(k||"info");
@@ -1036,63 +386,132 @@ function resolveDivision(){
 }
 
 /* ---------------- load / save ---------------- */
+// single adopt path: whole-doc replace + risks shape-normalize, so no load site can drift
+function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
 async function loadAll(){
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
   try{
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio doc on the broker yet — create it from the Planning app first.", "err"); return; }
     portfolio = p.doc; portfolioVersion = p.version;
-    fillDivSelect();
     if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
     if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
-    document.getElementById("divPill").textContent = divName(divisionId)+" · "+divisionId;
+    fillDivSelect();   // populate + select the resolved division (header selector)
     const ex = await apiGet(execId());
-    exec = ex ? Object.assign(blankExec(), ex.doc) : blankExec();
-    execEtag = ex ? ex.etag : "0"; execVersion = ex ? ex.version : 0;
+    if(ex){ adoptExec(ex); } else { exec = blankExec(); execEtag = "0"; execVersion = 0; markSaved(); }
     fillObjSelect();
     setMsg("Loaded "+divName(divisionId)+".", "ok");
     startPoll();
   }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
   renderAll();
 }
-async function saveExec(){
-  if(!tok()){ setMsg("Add a broker token first.", "err"); return; }
+/* ---- autosave (same protocol as the product designer; per-division EXEC bin) ----
+   Renders/mutations call persist(), which only SCHEDULES a write, and only when the doc
+   actually changed. The write is debounced with a hard max-wait cap, serialized so writes
+   never overlap (no self-inflicted 412), and bin-guarded so a write that resolves after a
+   division switch can't clobber the new bin's etag. Flushed on switch / poll / tab-hide / unload. */
+let _savedDoc=null;
+function markSaved(){ try{ _savedDoc=JSON.stringify(exec); }catch(e){ _savedDoc=null; } }   // call after load/adopt/save
+function docDirty(){ let s; try{ s=JSON.stringify(exec); }catch(e){ return false; } return s!==_savedDoc; }
+const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
+let _saveT=null, _saveMaxT=null;
+function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
+function persist(){
+  if(RO) return;                                           // read-only: never write
+  if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
+  if(_saveT) clearTimeout(_saveT);
+  _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
+  if(!_saveMaxT) _saveMaxT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_MAXWAIT_MS);
+}
+function flushPersist(){ _clearSaveTimers(); return persistNow(); }
+let _saveChain=Promise.resolve();
+function persistNow(){ _saveChain=_saveChain.then(_doPersist).catch(function(){}); return _saveChain; }
+async function _doPersist(){
+  if(!docDirty()) return;                                  // already saved (coalesced with a prior write)
+  const snap=JSON.stringify(exec);
+  if(!tok()){ _savedDoc=snap; return; }                    // no token → scratch; nothing to persist
+  const targetId=execId();                                 // remember which bin this write is for
   try{
-    const res = await apiPut(execId(), exec, execEtag);
-    execEtag = res.etag; execVersion = res.version;   // record own version -> next poll ignores echo
-    setMsg("Saved.", "ok");
+    const res=await apiPut(targetId, exec, execEtag);
+    if(execId()===targetId){ execEtag=res.etag; execVersion=res.version; _savedDoc=snap; setMsg("Saved.","ok"); }
+    // else: division changed while this write was in flight — it landed, but leave the current bin's etag alone
   }catch(e){
-    if(e.status===412){ setMsg("Another editor saved first — reloading, then re-apply.", "err");
-      const ex=await apiGet(execId()); if(ex){ exec=Object.assign(blankExec(),ex.doc); execEtag=ex.etag; execVersion=ex.version; renderAll(); } }
-    else setMsg("Save failed ("+(e.status||e)+").", "err");
+    if(execId()!==targetId) return;                        // stale write for a bin we're no longer viewing
+    if(e.status===412){
+      try{ const ex=await apiGet(targetId); if(ex && execId()===targetId){ adoptExec(ex); fillObjSelect(); renderAll(); setMsg("Another editor saved first — reloaded; re-apply your change.","err"); } }
+      catch(e2){ if(execId()===targetId) setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
+    } else setMsg("Save failed ("+(e.status||e)+").","err");
   }
 }
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
 function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
 async function pollOnce(){
   try{
+    await flushPersist();                                   // push any pending local edit before comparing versions
     const pv = await apiVersion("portfolio");
     if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; fillObjSelect(); } }
     const ev = await apiVersion(execId());
     if(ev.version!==execVersion){ const ex=await apiGet(execId());
-      if(ex){ exec=Object.assign(blankExec(),ex.doc); execEtag=ex.etag; execVersion=ex.version; renderAll();
+      if(ex){ adoptExec(ex); renderAll();
         setMsg("Updated from another editor.", "info"); } }
+    // refresh in-scope product/model spec docs (link targets)
+    let refChanged=false;
+    for(const id in refDocs){ try{ const cur=refDocs[id]; const v=await apiVersion(id);
+      if(cur.failed || v.version!==cur.version){ const r=await fetchSpecDoc(id.slice("SPEC-".length)); if(r) refChanged=true; } }catch(e){} }
+    if(refChanged){ refreshTargetIds(); renderAll(); }
   }catch(e){}
 }
 
 /* ---------------- lookups ---------------- */
 function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); return d?d.name:id; }
 function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId && o.layer!=="roadmap"); }
+async function switchDivision(newDiv){
+  if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
+  stopPoll();
+  await flushPersist();                                                       // save the current division fully before repointing the bin
+  document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));   // close any open modal
+  divisionId=newDiv; localStorage.setItem("rd_division",divisionId);
+  selectedObj=null; addingFor=null; editingSub=null; armedDel=null; armedDelRisk=null; draftRisk=null; editingRiskId=null;
+  refDocs={}; _targetIds=new Set();   // in-scope products/models differ per division
+  if(!tok()){ fillObjSelect(); renderAll(); return; }
+  try{
+    const ex=await apiGet(execId());
+    if(ex){ adoptExec(ex); } else { exec=blankExec(); execEtag="0"; execVersion=0; markSaved(); }
+    fillObjSelect(); renderAll(); setMsg("Switched to "+divName(divisionId)+".","ok");
+  }catch(e){ setMsg("Load failed for "+divName(divisionId)+" ("+(e.status||e)+"). Check token in ⚙.","err"); }
+  startPoll();
+}
 function fillDivSelect(){ const s=document.getElementById("divSelect");
   s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
   if(divisionId) s.value=divisionId;
-  s.onchange=()=>{ divisionId=s.value; localStorage.setItem("rd_division",divisionId); selectedObj=null; loadAll(); }; }
+  s.onchange=()=>switchDivision(s.value); }
+function fillQtrSelect(){
+  const s=document.getElementById("qtrSelect"); if(!s) return;
+  const qs=[...new Set(myObjectives().map(o=>o.quarter).filter(Boolean))];
+  qs.sort((a,b)=>{ const pa=parseQuarter(a), pb=parseQuarter(b); if(pa&&pb) return pa.start-pb.start; return String(a).localeCompare(String(b)); });
+  if(selectedQuarter && qs.indexOf(selectedQuarter)<0) selectedQuarter="";   // stale (e.g. after a division switch) → All
+  s.innerHTML=`<option value="">All quarters</option>`+qs.map(q=>`<option value="${esc(q)}">${esc(q)}</option>`).join("");
+  s.value=selectedQuarter;
+  s.onchange=()=>{ selectedQuarter=s.value; fillObjSelect(); renderAll(); };
+}
+function fillProductSelect(){
+  const s=document.getElementById("prodSelect"); if(!s) return;
+  const seen={}, prods=[];
+  myObjectives().forEach(o=>{ const p=effProductOf(o); if(p && !seen[p]){ seen[p]=1; prods.push(p); } });
+  if(selectedProduct && prods.indexOf(selectedProduct)<0) selectedProduct="";   // stale after a division switch
+  s.innerHTML=`<option value="">All products</option>`+prods.map(p=>`<option value="${esc(p)}">${esc(productName(p))}</option>`).join("");
+  s.value=selectedProduct;
+  s.onchange=()=>{ selectedProduct=s.value; fillObjSelect(); renderAll(); };
+}
 function fillObjSelect(){
-  const s=document.getElementById("objSelect"); const objs=myObjectives();
+  fillQtrSelect(); fillProductSelect();
+  const s=document.getElementById("objSelect");
+  const objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
   s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
-                            : `<option value="">no objectives for this division</option>`;
+                            : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
+  else selectedObj=null;
   s.onchange=()=>{ selectedObj=s.value; renderAll(); };
 }
 
@@ -1156,7 +575,7 @@ function readSubEditor(scope){
   delete out.targetLo; delete out.targetHi;
   return out;
 }
-function saveSub(){
+function saveSub(thenLink){
   const a = addingFor, e = editingSub;
   const type = a ? a.type : (e && e.type);
   if(!type) return;
@@ -1164,6 +583,7 @@ function saveSub(){
   if(!scope) return;
   const data = readSubEditor(scope);
   const arr = SUB[type].arr();
+  let newId=null;
   if(e){
     const rec = arr.find(x=>x.id===e.id);
     if(type==="kpi" && isMemberKpi(rec)){ rec.target = (data.target===undefined ? null : data.target); } // override only
@@ -1172,36 +592,40 @@ function saveSub(){
     const initHost = (type==="kpi" && a.hostType==="initiative");
     const objScope = initHost ? null : selectedObj;
     const parent = initHost ? a.hostId : selectedObj;
-    const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id));
+    const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id)); newId=id;
     const base = { id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     arr.push(Object.assign(base, data));
   }
-  addingFor=null; editingSub=null; restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved (Save to persist).", "ok");
+  addingFor=null; editingSub=null;
+  if(thenLink===true && newId && type==="stageGate"){ addingFor={type:"link", hostType:"stageGate", hostId:newId}; renderAll(); return; }   // save, then link the new gate directly
+  restoreReturn(); renderAll(); setMsg(SUB[type].label+" saved", "ok");
 }
+function spliceById(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0){ arr.splice(i,1); return true; } return false; }   // never splice(-1) on a stale/missing id
 function delSub(type, id){
   if(type==="kpi"){ const k=exec.kpis.find(x=>x.id===id);
     if(k && isDefinerWithLinks(k)){ setMsg("This KPI defines a linked metric — unlink its members first.","err"); return; } }
   if(armedDel!==id){ armedDel=id; renderAll(); return; }
   armedDel=null;
   if(type==="keyResult" || type==="stageGate"){
+    if(SUB[type].arr().findIndex(x=>x.id===id)<0){ renderAll(); return; }   // already gone
     const kids = exec.kpis.filter(k=>k.hostType===type && k.hostId===id).map(k=>k.id);
     exec.kpis = exec.kpis.filter(k=>!(k.hostType===type && k.hostId===id));
     exec.kpiUpdates = exec.kpiUpdates.filter(u=>kids.indexOf(u.kpiId)===-1);
-    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+    spliceById(SUB[type].arr(), id);
   } else if(type==="kpi"){
-    exec.kpis.splice(exec.kpis.findIndex(x=>x.id===id),1);
+    if(!spliceById(exec.kpis, id)){ renderAll(); return; }
     exec.kpiUpdates = exec.kpiUpdates.filter(u=>u.kpiId!==id);
   } else {
-    const arr=SUB[type].arr(); arr.splice(arr.findIndex(x=>x.id===id),1);
+    spliceById(SUB[type].arr(), id);
   }
-  renderAll(); setMsg("Deleted (Save to persist).","ok");
+  renderAll(); setMsg("Deleted","ok");
 }
 function postRead(host, kpiId){
   const inp = host.querySelector(`[data-read="${kpiId}"]`);
   if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
-  renderAll(); setMsg("Reading posted (Save to persist).","ok");
+  renderAll(); setMsg("Reading posted","ok");
 }
 
 /* ---------------- render: objective header + sub-tables ---------------- */
@@ -1209,10 +633,14 @@ function renderAll(){
   if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
   if(divisionId) renderInitPanel(); else document.getElementById("initPanel").innerHTML="";
   const objs = myObjectives();
-  if(!objs.length || !selectedObj){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">No objectives assigned to this division yet (create them in the Planning app).</p>'; ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
+  if(!objs.length || !selectedObj){
+    const emptyMsg = (objs.length && selectedQuarter) ? `No objectives in ${esc(selectedQuarter)} for this division — pick another quarter above.` : "No objectives assigned to this division yet (create them in the Planning app).";
+    document.getElementById("objHeadWrap").innerHTML=`<p class="hint">${emptyMsg}</p>`;
+    ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
-  renderKRs(); renderGates(); renderTasks(); renderModal();
+  renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal();
+  if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
 function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
@@ -1241,12 +669,16 @@ function objMetricStrip(o){
   const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d slip`:"on plan");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
+  const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
+  const riskColor = roll.openHigh>0?"var(--bad)":roll.openMed>0?"var(--warn)":roll.total?"var(--ok)":"var(--muted)";
+  const riskSub = roll.total?`${roll.total} problem${roll.total===1?"":"s"} · worst RPN ${roll.worst}`:"No FMEA items";
   return `<div class="metrics">
     <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
     <div class="mc"><div class="mc-label">Tasks</div><div class="mc-val">${tAvg==null?"—":tAvg+"%"}</div><div class="mc-sub">${tasks.length} task${tasks.length===1?"":"s"}</div></div>
+    <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
 
@@ -1304,6 +736,7 @@ function closeModal(){
 }
 function wireModalBody(body){
   wireExec(body);
+  const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
   const seg = body.querySelector("[data-seg]");
   if(seg){
     const statusInp = body.querySelector('[data-f="status"]');
@@ -1371,9 +804,10 @@ function gateModalBody(g){
       ${kpiTable("stageGate", g.id, selectedObj)}
       <span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
   } else {
-    h+=`<p class="hint" style="margin:14px 0 0">Add the gate first, then reopen it to set its targets and predecessors.</p>`;
+    h+=`<p class="hint" style="margin:14px 0 0">Add the gate, or Link it straight to a product / model / initiative metric. You can reopen it later to add more targets and predecessors.</p>`;
   }
-  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
+  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return h;
 }
 
@@ -1441,7 +875,7 @@ function krModalBody(){
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
-    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link…</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
 function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
@@ -1457,10 +891,11 @@ function wireKrModal(){
   const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
   body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
   body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
-  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=saveKrModal;
+  const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=()=>saveKrModal(false);
+  const lk=body.querySelector("[data-krlink]"); if(lk) lk.onclick=()=>saveKrModal(true);
   const cx=body.querySelector("[data-krcancel]"); if(cx) cx.onclick=subCancel;
 }
-function saveKrModal(){
+function saveKrModal(thenLink){
   const body=document.getElementById("modalBody");
   body.querySelectorAll("[data-f]").forEach(el=>{ draftKr[el.dataset.f]=el.value; });
   const d=draftKr;
@@ -1487,7 +922,8 @@ function saveKrModal(){
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
-  renderAll(); setMsg("Key result saved (Save to persist).","ok");
+  if(thenLink===true){ addingFor={type:"link", hostType:"keyResult", hostId:kr.id}; renderAll(); return; }   // save, then link the new KR directly
+  renderAll(); setMsg("Key result saved","ok");
 }
 /* sub-KR sub-modal */
 function openSubKrModal(idx){
@@ -1629,27 +1065,33 @@ function saveTgtModal(){
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg("Gate target saved (Save to persist).","ok");
+  closeTgtModal(); renderAll(); setMsg("Gate target saved","ok");
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
-const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
+const LEVEL = { initiative:3, milestone:3, keyResult:2, stageGate:1, task:0 };
 function objById(id){ return (portfolio.objectives||[]).find(o=>o.id===id); }
 function initiativeIdOf(objId){ const o=objById(objId); return o?o.initiativeId:null; }
 function divInitiatives(){ return (portfolio.initiatives||[]).filter(i=>i.divisionId===divisionId); }
 function initName(id){ const i=(portfolio.initiatives||[]).find(x=>x.id===id); return i?(i.name||i.id):id; }
+function msName(id){ const m=(portfolio.milestones||[]).find(x=>x.id===id); return m?(m.name||m.id):id; }
 function krName(id){ const r=exec.keyResults.find(x=>x.id===id); return r?(r.statement||r.id):id; }
 function gateName(id){ const g=exec.stageGates.find(x=>x.id===id); return g?(g.name||g.id):id; }
 function taskName(id){ const t=exec.tasks.find(x=>x.id===id); return t?(t.name||t.id):id; }
 function hostLabel(k){
+  if(!k) return "";
+  if(k.hostType==="product") return "product: "+esc(productName(k.hostId));
+  if(k.hostType==="model")   return "model: "+esc(modelName(k.hostId));
+  if(k.hostType==="keyResult" && modelById(k.objectiveId)) return "model: "+esc(modelName(k.objectiveId))+" · "+esc(k.name||k.statement||k.id);
   if(k.hostType==="initiative") return "init: "+esc(initName(k.hostId));
+  if(k.hostType==="milestone")  return "milestone: "+esc(msName(k.hostId));
   if(k.hostType==="keyResult")  return "KR: "+esc(krName(k.hostId));
   if(k.hostType==="stageGate")  return "gate: "+esc(gateName(k.hostId));
   return "task: "+esc(taskName(k.hostId));
 }
 function groupOf(k){ return k.groupId||k.id; }
 function groupMemberCount(g){ return exec.kpis.filter(k=>groupOf(k)===g).length; }
-function isMemberKpi(k){ return !!k.groupId && !k.isDefiner; }
+function isMemberKpi(k){ return (!!k.groupId && !k.isDefiner) || (k.linkParent!=null); }
 function isDefinerWithLinks(k){ return !!k.groupId && k.isDefiner && groupMemberCount(k.groupId)>1; }
 function groupIdsInUse(){ return exec.kpis.map(k=>k.groupId).filter(Boolean); }
 function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='object')?`${t.lo}–${t.hi}`:t; return v+(unit?` ${esc(unit)}`:''); }
@@ -1657,33 +1099,42 @@ function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='obje
 function linkCandidates(hostType, hostId){
   const O = hostType==="initiative" ? null : selectedObj;
   const initId = O ? initiativeIdOf(O) : null;
+  const msIds = new Set((portfolio.milestones||[]).filter(m=>m.initiativeId===initId).map(m=>m.id));
   const here = LEVEL[hostType];
   const pool = allKpisPool();
-  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(groupOf));
+  // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
+  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
   const seen=new Set(), out=[];
   pool.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId);
+    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || (k.hostType==="milestone" && msIds.has(k.hostId)) || isTargetKpi(k);
     if(!inScope) return;
-    const g=groupOf(k);
-    if(seen.has(g) || occupied.has(g)) return;
-    seen.add(g); out.push(RD.definerOf(k, pool));
+    const def = RD.definerOf(k, pool);
+    if(seen.has(def.id) || occupied.has(def.id)) return;
+    seen.add(def.id); out.push(def);
   });
   return out;
 }
-function makeLinkMember(hostType, hostId, definerId){
+function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
-  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in the portfolio doc (read-only here)
-  let g = def.groupId;
-  if(!g){
-    if(portfolioDef){ g = def.id; }                  // use its effGroup; never mutate the portfolio from exec
-    else { g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in a portfolio/spec doc (read-only here)
+  if(isTargetKpi(def) || portfolioDef){   // product/model/initiative/milestone definer → link up via linkParent (a group link can't attach to a read-only definer)
+    const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
+    const objScope = hostType==="initiative" ? null : selectedObj;
+    const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
+    if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:0,
+                     name:null, direction:null, unit:null, target:null, order:0 });
+    addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
   }
+  // exec-local definer: group link (safe to stamp a groupId on a doc we own)
+  let g = def.groupId;
+  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
   exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
                    name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked (Save to persist).","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
@@ -1691,15 +1142,26 @@ function unlinkKpi(id){
   m.name = RD.kpiName(m, pool); m.direction = RD.kpiDirection(m, pool); m.unit = RD.kpiUnit(m, pool);
   if(m.target==null) m.target = RD.effTarget(m, pool);
   m.groupId = null; m.isDefiner = true;
-  renderAll(); setMsg("Unlinked (Save to persist).","ok");
+  if(m.linkParent!=null){ m.linkParent = null; delete m.linkType; delete m.linkPriority; }   // detach an explicit product/model link
+  renderAll(); setMsg("Unlinked","ok");
 }
 function renderLinkEditor(hostType, hostId){
   const cands = linkCandidates(hostType, hostId);
-  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, or one at the initiative level, first.</p></div>
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, one at the initiative or milestone level, or one on a product/model this objective is classified to.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
-  return `<div class="ed"><label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
-    <select data-linkdef>`+cands.map(d=>`<option value="${d.id}">${esc(RD.kpiName(d, allKpisPool())||d.id)} · ${hostLabel(d)}</option>`).join("")+
-    `</select></label></div><div class="row-actions" style="margin:0 0 8px">
+  const pool = allKpisPool();
+  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent → relationship applies
+  const opts = cands.map(d=>{ const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; }).join("");
+  const first = cands[0], firstShow = showRel(first);
+  const firstRel = firstShow ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
+  const relOpts = ['contribute','direct','specification'].map(t=>`<option value="${t}"${t===firstRel?" selected":""}>${t}</option>`).join("");
+  return `<div class="ed">
+    <label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
+      <select data-linkdef>${opts}</select></label>
+    <label data-relwrap style="grid-column:1/-1;display:${firstShow?'block':'none'}">Relationship to the target metric
+      <select data-linkrel>${relOpts}</select></label>
+    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstShow?'block':'none'}">contribute rolls this reading up into the target · direct mirrors it · specification measures against it without rolling up</p>
+    </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
@@ -1884,26 +1346,210 @@ function wireExec(host){
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
-  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); if(sel) makeLinkMember(ht,hid,sel.value); });
+  host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{
+    const opt=sel.options[sel.selectedIndex], isT=!!(opt&&opt.dataset.showrel==="1");
+    const rw=host.querySelector("[data-relwrap]"), rh=host.querySelector("[data-relhint]"), rel=host.querySelector("[data-linkrel]");
+    if(rw) rw.style.display=isT?"block":"none"; if(rh) rh.style.display=isT?"block":"none";
+    if(isT && rel && opt.dataset.ptype){ const sb=host.querySelector("[data-savelink]"); const ht=sb?sb.dataset.savelink.split(":")[0]:null; if(ht) rel.value=defaultLinkType(opt.dataset.ptype, ht); }
+  });
+  host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
-  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; setMsg("Gate updated (Save to persist).","ok"); });
-  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective (Save to persist).","ok"); });
-  host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+" (Save to persist).","ok"); });
-  host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released (Save to persist).","ok"); });
-  host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added (Save to persist).","ok"); });
-  host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed (Save to persist).","ok"); });
-  host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); setMsg("Task updated (Save to persist).","ok"); });
-  host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; setMsg("Task updated (Save to persist).","ok"); });
+  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; persist(); setMsg("Gate updated","ok"); });
+  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective","ok"); });
+  host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+"","ok"); });
+  host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released","ok"); });
+  host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added","ok"); });
+  host.querySelectorAll("[data-edgefrom]").forEach(b=>b.onclick=()=>{ const from=b.dataset.edgefrom, to=b.dataset.edgeto; exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>!(e.fromGate===from&&e.toGate===to)); renderAll(); setMsg("Predecessor removed","ok"); });
+  host.querySelectorAll("[data-pct]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.pct); r.percentComplete=Number(el.value); persist(); setMsg("Task updated","ok"); });
+  host.querySelectorAll("[data-actend]").forEach(el=>el.onchange=()=>{ const r=exec.tasks.find(x=>x.id===el.dataset.actend); r.actualEnd=isoToDay(el.value)||null; persist(); setMsg("Task updated","ok"); });
+  host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
+}
+
+/* ================= FMEA / risk register (per objective) =================
+   Everything below addresses exec.risks by id (rid/mid/eid/cid) — never by the
+   filtered display index — and follows the app's explicit-save discipline:
+   mutate exec + renderAll + "Save to persist", never an auto-write. */
+let draftRisk = null, editingRiskId = null, armedDelRisk = null;
+
+function execGatePassed(gateId){ if(!gateId) return false; const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return false; const s=RD.classifyGate(g, todayDay()); return s==="passed"||s==="passed-late"; }
+function objGatesOrdered(){ return exec.stageGates.filter(r=>r.objectiveId===selectedObj); }
+function gateNumFor(gateId){ const gs=objGatesOrdered(); for(let i=0;i<gs.length;i++) if(gs[i].id===gateId) return i+1; return null; }
+const rpnCls = r => 'rpn-'+RD.rpnBand(r);
+function sodOptions(field, selected){ return RD.FMEA_SCALES[field].map((lbl,i)=>{ const v=i+1; return `<option value="${v}"${v===Number(selected)?' selected':''}>${v} — ${esc(lbl)}</option>`; }).join(''); }
+function populateGateSelect(selectedGid){ const sel=document.getElementById('f-gate'); sel.innerHTML='<option value="">— No gate association —</option>'+objGatesOrdered().map((g,n)=>`<option value="${esc(g.id)}"${g.id===selectedGid?' selected':''}>G${n+1} — ${esc(g.name||g.id)}</option>`).join(''); }
+
+/* ---- add/edit modal (draft is a self-contained copy → index addressing is safe here) ---- */
+function fmeaModalShell(){
+  return `<div class="fmea-modal-inner">
+    <label class="fmea-lbl">Problem</label>
+    <textarea id="f-problem" class="fmea-ta" placeholder="Describe the problem / risk to analyze"></textarea>
+    <div class="fmea-modes-head" style="border-top:none;padding-top:0;margin-top:0"><span class="fmea-lbl" style="margin:0">Knowns</span><button class="ghost mini" onclick="addDraftKnown()">+ Add known</button></div>
+    <div id="fmea-knowns-section" class="fmea-modes-list" style="margin-bottom:14px"></div>
+    <label class="fmea-lbl">Gate association (optional)</label>
+    <select id="f-gate" class="fmea-gate-sel"></select>
+    <div class="fmea-modes-head"><span class="fmea-lbl" style="margin:0">Failure modes</span><button class="ghost mini" onclick="addDraftMode()">+ Add failure mode</button></div>
+    <div id="fmea-modes-section" class="fmea-modes-list"></div>
+    <div class="fmea-modal-actions"><button class="ghost" onclick="closeFmeaModal()">Cancel</button><button class="act" id="fmea-save-btn" onclick="saveFmea()">Save problem</button></div>
+  </div>`;
+}
+function openFmeaModal(){
+  editingRiskId=null; draftRisk=RD.blankProblem(selectedObj); draftRisk.modes=[];
+  document.getElementById('fmeaTitle').textContent='Add problem';
+  document.getElementById('fmeaBody').innerHTML=fmeaModalShell();
+  document.getElementById('f-problem').value=''; document.getElementById('fmea-save-btn').textContent='Save problem';
+  populateGateSelect(''); renderDraftKnowns(); renderFmeaModes();
+  document.getElementById('fmeaOverlay').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('f-problem'); if(el) el.focus(); },40);
+}
+function openEditFmeaModal(rid){
+  const p=exec.risks.find(x=>x.rid===rid); if(!p) return;
+  editingRiskId=rid; draftRisk=JSON.parse(JSON.stringify(p));
+  document.getElementById('fmeaTitle').textContent='Edit problem';
+  document.getElementById('fmeaBody').innerHTML=fmeaModalShell();
+  document.getElementById('f-problem').value=draftRisk.problem||''; document.getElementById('fmea-save-btn').textContent='Save changes';
+  populateGateSelect(draftRisk.gateId||''); renderDraftKnowns(); renderFmeaModes();
+  document.getElementById('fmeaOverlay').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('f-problem'); if(el) el.focus(); },40);
+}
+function closeFmeaModal(){ document.getElementById('fmeaOverlay').classList.remove('open'); document.getElementById('fmeaBody').innerHTML=''; draftRisk=null; editingRiskId=null; }
+function renderFmeaModes(){
+  const container=document.getElementById('fmea-modes-section'); if(!container) return;
+  if(!draftRisk.modes.length){ container.innerHTML='<div class="fmea-empty">No failure modes yet. Click “+ Add failure mode” to begin.</div>'; return; }
+  container.innerHTML=draftRisk.modes.map((mode,mi)=>{
+    let effectsHtml;
+    if(mode.effects && mode.effects.length){
+      effectsHtml=mode.effects.map((e,ei)=>{
+        let causesHtml;
+        if(e.causes && e.causes.length){
+          causesHtml=e.causes.map((c,ci)=>{
+            const rpn=RD.calcRpn(c.severity,c.occurrence,c.detection);
+            return `<div class="fm-cause">
+              <div class="fm-cause-head"><span class="fm-num">Cause ${ci+1}</span><button class="del-x" onclick="delDraftCause(${mi},${ei},${ci})" title="Remove">×</button></div>
+              <textarea placeholder="Why might this failure occur?" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].cause=this.value">${esc(c.cause)}</textarea>
+              <div class="sod-grid">
+                <div class="sod-f"><span class="sod-l">Severity</span><select id="c-sev-${mi}-${ei}-${ci}" onchange="updateCauseRpn(${mi},${ei},${ci})">${sodOptions('severity',c.severity)}</select></div>
+                <div class="sod-f"><span class="sod-l">Occurrence</span><select id="c-occ-${mi}-${ei}-${ci}" onchange="updateCauseRpn(${mi},${ei},${ci})">${sodOptions('occurrence',c.occurrence)}</select></div>
+                <div class="sod-f"><span class="sod-l">Detection</span><select id="c-det-${mi}-${ei}-${ci}" onchange="updateCauseRpn(${mi},${ei},${ci})">${sodOptions('detection',c.detection)}</select></div>
+                <div class="sod-rpn"><span class="sod-l">RPN</span><span id="rpn-${mi}-${ei}-${ci}" class="rpn-badge ${rpnCls(rpn)}">${rpn}</span></div>
+              </div>
+              <input type="text" class="fm-mit" placeholder="Mitigation / action" value="${esc(c.mitigation)}" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].mitigation=this.value">
+            </div>`;
+          }).join('');
+        } else causesHtml='<div class="fmea-empty">No causes yet.</div>';
+        return `<div class="fm-effect">
+          <div class="fm-effect-head"><span class="fm-num">Effect ${ei+1}</span><button class="del-x" onclick="delDraftEffect(${mi},${ei})" title="Remove">×</button></div>
+          <textarea placeholder="What happens if this failure mode occurs?" oninput="draftRisk.modes[${mi}].effects[${ei}].effect=this.value">${esc(e.effect)}</textarea>
+          <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Causes</span><button class="ghost mini" onclick="addDraftCause(${mi},${ei})">+ Add cause</button></div>
+          <div class="fm-causes">${causesHtml}</div>
+        </div>`;
+      }).join('');
+    } else effectsHtml='<div class="fmea-empty">No effects yet.</div>';
+    return `<div class="fm-mode">
+      <div class="fm-mode-head"><span class="fm-num">Failure mode ${mi+1}</span><button class="del-x" onclick="delDraftMode(${mi})" title="Remove">×</button></div>
+      <textarea placeholder="What could go wrong?" oninput="draftRisk.modes[${mi}].mode=this.value">${esc(mode.mode)}</textarea>
+      <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Effects</span><button class="ghost mini" onclick="addDraftEffect(${mi})">+ Add effect</button></div>
+      <div class="fm-effects">${effectsHtml}</div>
+    </div>`;
+  }).join('');
+}
+function updateCauseRpn(mi,ei,ci){
+  const s=parseInt(document.getElementById('c-sev-'+mi+'-'+ei+'-'+ci).value,10);
+  const o=parseInt(document.getElementById('c-occ-'+mi+'-'+ei+'-'+ci).value,10);
+  const d=parseInt(document.getElementById('c-det-'+mi+'-'+ei+'-'+ci).value,10);
+  const c=draftRisk.modes[mi].effects[ei].causes[ci]; c.severity=s; c.occurrence=o; c.detection=d;
+  const rpn=RD.calcRpn(s,o,d), el=document.getElementById('rpn-'+mi+'-'+ei+'-'+ci);
+  if(el){ el.textContent=rpn; el.className='rpn-badge '+rpnCls(rpn); }
+}
+function renderDraftKnowns(){
+  const c=document.getElementById('fmea-knowns-section'); if(!c) return;
+  if(!draftRisk.knowns || !draftRisk.knowns.length){ c.innerHTML='<div class="fmea-empty">None yet — add established facts about this problem.</div>'; return; }
+  c.innerHTML=draftRisk.knowns.map((k,ki)=>`<div class="fm-known"><input type="text" placeholder="A known fact about this problem" value="${esc(k.text)}" oninput="draftRisk.knowns[${ki}].text=this.value"><button class="del-x" onclick="delDraftKnown(${ki})" title="Remove">×</button></div>`).join('');
+}
+function addDraftKnown(){ if(!draftRisk.knowns) draftRisk.knowns=[]; draftRisk.knowns.push({kid:RD.fmeaId('k'), text:''}); renderDraftKnowns(); setTimeout(()=>{ const all=document.querySelectorAll('#fmea-knowns-section input'); const last=all[all.length-1]; if(last) last.focus(); },30); }
+function delDraftKnown(ki){ draftRisk.knowns.splice(ki,1); renderDraftKnowns(); }
+function addDraftMode(){ draftRisk.modes.push({mid:RD.fmeaId('m'), mode:'', status:'open', effects:[]}); renderFmeaModes(); }
+function delDraftMode(mi){ draftRisk.modes.splice(mi,1); renderFmeaModes(); }
+function addDraftEffect(mi){ draftRisk.modes[mi].effects.push({eid:RD.fmeaId('e'), effect:'', status:'open', causes:[]}); renderFmeaModes(); }
+function delDraftEffect(mi,ei){ draftRisk.modes[mi].effects.splice(ei,1); renderFmeaModes(); }
+function addDraftCause(mi,ei){ draftRisk.modes[mi].effects[ei].causes.push(RD.blankCause()); renderFmeaModes(); }
+function delDraftCause(mi,ei,ci){ draftRisk.modes[mi].effects[ei].causes.splice(ci,1); renderFmeaModes(); }
+function saveFmea(){
+  const problem=document.getElementById('f-problem').value.trim(); if(!problem){ document.getElementById('f-problem').focus(); return; }
+  draftRisk.problem=problem; draftRisk.gateId=document.getElementById('f-gate').value||null;
+  draftRisk.objectiveId=selectedObj;   // scope tag pinned explicitly — never inferred from a filtered index
+  if(editingRiskId!==null){ const i=exec.risks.findIndex(x=>x.rid===editingRiskId); if(i>=0) exec.risks[i]=draftRisk; else exec.risks.push(draftRisk); }
+  else exec.risks.push(draftRisk);
+  closeFmeaModal(); renderAll(); setMsg("Problem saved","ok");
+}
+
+/* ---- register card mutations (by id — safe under the per-objective filter) ---- */
+function findProblem(rid){ return exec.risks.find(x=>x.rid===rid); }
+function setProblemStatus(rid,status){ const p=findProblem(rid); if(!p) return; p.status=status; renderAll(); setMsg("Problem "+status+"","ok"); }
+function setModeStatus(rid,mid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; m.status=status; renderAll(); setMsg("Failure mode "+status+"","ok"); }
+function setEffectStatus(rid,mid,eid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.status=status; renderAll(); setMsg("Effect "+status+"","ok"); }
+function setCauseStatus(rid,mid,eid,cid,status){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; const c=(e.causes||[]).find(x=>x.cid===cid); if(!c) return; c.status=status; renderAll(); setMsg("Cause "+status+"","ok"); }
+function delCause(rid,mid,eid,cid){ const p=findProblem(rid); if(!p) return; const m=(p.modes||[]).find(x=>x.mid===mid); if(!m) return; const e=(m.effects||[]).find(x=>x.eid===eid); if(!e) return; e.causes=(e.causes||[]).filter(x=>x.cid!==cid); if(!e.causes.length) m.effects=m.effects.filter(x=>x.eid!==eid); if(!m.effects.length) p.modes=p.modes.filter(x=>x.mid!==mid); renderAll(); setMsg("Cause removed","ok"); }
+function delProblem(rid){ if(armedDelRisk!==rid){ armedDelRisk=rid; renderAll(); return; } armedDelRisk=null; const i=exec.risks.findIndex(x=>x.rid===rid); if(i<0){ renderAll(); return; } exec.risks.splice(i,1); renderAll(); setMsg("Problem removed","ok"); }
+
+/* ---- register render (per objective; rowspans for the mode/effect/cause tree) ---- */
+function renderRisks(){
+  const host=document.getElementById("subRISK");
+  const problems=RD.fmeaProblemsFor(exec, selectedObj);
+  const seg=(cur,fnTpl,vals)=>`<div class="lv-seg">`+vals.map(v=>`<button class="lv-btn ${cur===v?'lv-'+v:''}" onclick="${fnTpl.replace('%V%',v)}">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')+`</div>`;
+  let inner="";
+  if(!problems.length) inner='<p class="hint">No problems added. Use “+ Add problem” to start an FMEA for this objective.</p>';
+  const sorted=problems.map(p=>({p, u:RD.worstUnresolvedRpn(p, execGatePassed(p.gateId))})).sort((a,b)=>b.u-a.u);
+  inner += sorted.map(entry=>{
+    const r=entry.p, rid=r.rid, probResolved=r.status==='resolved';
+    const topRpn = entry.u>0 ? entry.u : (probResolved?0:RD.worstRpn(r));
+    const gNum=r.gateId?gateNumFor(r.gateId):null, gTag=gNum?`<span class="gate-tag" title="linked to gate G${gNum}">G${gNum}</span>`:'';
+    const rows=[];
+    (r.modes||[]).forEach(mode=>{
+      const modeResolved=mode.status==='resolved';
+      let modeRs=0; if(!mode.effects||!mode.effects.length) modeRs=1; else mode.effects.forEach(e=>{ modeRs+=Math.max(1,(e.causes||[]).length); });
+      let modeUsed=false;
+      if(!mode.effects||!mode.effects.length){ rows.push({mid:mode.mid,eid:null,cid:null,modeText:mode.mode,modeRs:1,effText:'',effRs:1,cause:null,newMode:true,modeResolved,effectResolved:false,modeStatus:mode.status||'open',effStatus:null}); return; }
+      mode.effects.forEach(e=>{
+        const effectResolved=e.status==='resolved', effRs=Math.max(1,(e.causes||[]).length);
+        if(!e.causes||!e.causes.length){ rows.push({mid:mode.mid,eid:e.eid,cid:null,modeText:!modeUsed?mode.mode:'',modeRs:!modeUsed?modeRs:0,effText:e.effect,effRs:1,cause:null,newMode:!modeUsed,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open'}); modeUsed=true; return; }
+        e.causes.forEach((c,ci)=>{ const showMode=!modeUsed&&ci===0; rows.push({mid:mode.mid,eid:e.eid,cid:c.cid,modeText:showMode?mode.mode:'',modeRs:showMode?modeRs:0,effText:ci===0?e.effect:'',effRs:ci===0?effRs:0,cause:c,newMode:showMode,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open'}); if(ci===0) modeUsed=true; });
+      });
+    });
+    const tbody=rows.map((row,idx)=>{
+      const cls=[]; if(row.newMode&&idx>0) cls.push('mode-sep'); if(row.modeResolved||row.effectResolved) cls.push('row-resolved');
+      let tr=`<tr${cls.length?` class="${cls.join(' ')}"`:''}>`;
+      if(row.modeRs>0) tr+=`<td class="c-mode" rowspan="${row.modeRs}"><div class="c-stack"><span>${esc(row.modeText)}</span>${seg(row.modeStatus,`setModeStatus('${rid}','${row.mid}','%V%')`,['open','mitigating','resolved'])}</div></td>`;
+      if(row.effRs>0){ const eSeg=row.eid?seg(row.effStatus,`setEffectStatus('${rid}','${row.mid}','${row.eid}','%V%')`,['open','mitigating','resolved']):''; tr+=`<td class="c-eff" rowspan="${row.effRs}"><div class="c-stack"><span>${esc(row.effText)}</span>${eSeg}</div></td>`; }
+      if(row.cause){ const c=row.cause, rpn=RD.calcRpn(c.severity,c.occurrence,c.detection), hidden=row.modeResolved||row.effectResolved;
+        tr+=`<td class="c-cause">${esc(c.cause)}${c.mitigation?`<div class="c-mit">${esc(c.mitigation)}</div>`:''}</td>`;
+        tr+=`<td class="c-sod">${c.severity}·${c.occurrence}·${c.detection}</td>`;
+        tr+=`<td class="c-rpn">${hidden?'<span class="rpn-dim">—</span>':`<span class="rpn-badge ${rpnCls(rpn)}">${rpn}</span>`}</td>`;
+        tr+=`<td>${seg(c.status||'open',`setCauseStatus('${rid}','${row.mid}','${row.eid}','${c.cid}','%V%')`,['open','mitigating','resolved'])}</td>`;
+        tr+=`<td class="c-del"><button class="del-x" onclick="delCause('${rid}','${row.mid}','${row.eid}','${c.cid}')" title="Remove">×</button></td>`;
+      } else tr+=`<td colspan="4" class="c-empty"></td>`;
+      return tr+`</tr>`;
+    }).join('');
+    const table=(r.modes||[]).length?`<div class="fmea-tbl-wrap"><table class="fmea-tbl"><thead><tr><th>Failure mode</th><th>Effect</th><th>Cause</th><th style="text-align:center">S·O·D</th><th style="text-align:center">RPN</th><th>Status</th><th></th></tr></thead><tbody>${tbody}</tbody></table></div>`:'';
+    const knownList=(r.knowns||[]).filter(k=>k.text&&k.text.trim());
+    const knownsHtml=knownList.length?`<div class="fmea-knowns-view"><span class="fmea-knowns-lbl">Knowns</span><ul>${knownList.map(k=>`<li>${esc(k.text)}</li>`).join('')}</ul></div>`:'';
+    return `<div class="fmea-card${probResolved?' problem-resolved':''}">
+      <div class="fmea-prob-row">
+        <div class="fmea-prob-text" onclick="openEditFmeaModal('${rid}')" title="Edit problem">${gTag}${esc(r.problem)||'(unnamed problem)'}</div>
+        <div class="fmea-prob-right">${seg(r.status||'open',`setProblemStatus('${rid}','%V%')`,['open','mitigating','resolved'])}${topRpn?`<span class="rpn-badge ${rpnCls(topRpn)}">RPN ${topRpn}</span>`:''}<button class="del-x ${armedDelRisk===rid?'armed':''}" onclick="delProblem('${rid}')" title="Remove problem">${armedDelRisk===rid?'confirm':'×'}</button></div>
+      </div>${knownsHtml}${table}</div>`;
+  }).join('');
+  const acts=`<button class="ghost mini" onclick="openFmeaModal()">+ Add problem</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("RISK","FMEA — Risk register",problems.length,acts)}<div class="item-list${listOpen("RISK")}">${inner}</div></div>`;
   host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
 }
 
 /* ---------------- wiring ---------------- */
-document.getElementById("saveBtn").onclick = saveExec;
+document.getElementById("saveBtn").onclick = flushPersist;   // autosave handles it; this forces an immediate write
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
 document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
@@ -1911,8 +1557,11 @@ document.getElementById("subkrX").onclick = closeSubKrModal;
 document.getElementById("subkrOverlay").onclick = (e)=>{ if(e.target.id==="subkrOverlay") closeSubKrModal(); };
 document.getElementById("kpiTgtX").onclick = closeTgtModal;
 document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiTgtOverlay") closeTgtModal(); };
+document.getElementById("fmeaX").onclick = closeFmeaModal;
+document.getElementById("fmeaOverlay").onclick = (e)=>{ if(e.target.id==="fmeaOverlay") closeFmeaModal(); };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
-window.addEventListener("beforeunload", stopPoll);
+window.addEventListener("beforeunload", ()=>{ flushPersist(); stopPoll(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* boot */

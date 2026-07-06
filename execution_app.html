@@ -371,7 +371,7 @@
   // NOT drive resolution. Resolution follows explicit typed parent links (see the
   // typed-link block below). Legacy groupId/isDefiner data is normalized on the
   // fly (linkOf) and scores identically.
-  var KPI_LEVEL = { product: 5, component: 4, initiative: 3, keyResult: 2, stageGate: 1, task: 0 };
+  var KPI_LEVEL = { product: 5, component: 4, initiative: 3, milestone: 3, keyResult: 2, stageGate: 1, task: 0 };
   var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
 
   function progressLinear(value, target, direction) {
@@ -703,6 +703,16 @@
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
+  // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
+  // gating/readiness signal, NOT folded into the OKR score — same stance as stageGateScore).
+  function milestoneScore(msId, execDocs) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs); }
+  // milestoneAchieved -> manual completion mark (ms.completedDate) OR KPI score at 100.
+  // A milestone with no scorable KPIs is achieved only by the manual mark.
+  function milestoneAchieved(ms, execDocs) {
+    if (ms && ms.completedDate) return true;
+    var s = milestoneScore(ms && ms.id, execDocs);
+    return s != null && s >= 100;
+  }
 
   // ---- objective & tier scores ---------------------------------------------
   function krsForObjective(objId, execDocs) {
@@ -1224,6 +1234,8 @@
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
     hostScore: hostScore,
+    milestoneScore: milestoneScore,
+    milestoneAchieved: milestoneAchieved,
     krsForObjective: krsForObjective,
     objectiveScore: objectiveScore,
     score: score,
@@ -2058,11 +2070,12 @@ function saveTgtModal(){
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
-const LEVEL = { initiative:3, keyResult:2, stageGate:1, task:0 };
+const LEVEL = { initiative:3, milestone:3, keyResult:2, stageGate:1, task:0 };
 function objById(id){ return (portfolio.objectives||[]).find(o=>o.id===id); }
 function initiativeIdOf(objId){ const o=objById(objId); return o?o.initiativeId:null; }
 function divInitiatives(){ return (portfolio.initiatives||[]).filter(i=>i.divisionId===divisionId); }
 function initName(id){ const i=(portfolio.initiatives||[]).find(x=>x.id===id); return i?(i.name||i.id):id; }
+function msName(id){ const m=(portfolio.milestones||[]).find(x=>x.id===id); return m?(m.name||m.id):id; }
 function krName(id){ const r=exec.keyResults.find(x=>x.id===id); return r?(r.statement||r.id):id; }
 function gateName(id){ const g=exec.stageGates.find(x=>x.id===id); return g?(g.name||g.id):id; }
 function taskName(id){ const t=exec.tasks.find(x=>x.id===id); return t?(t.name||t.id):id; }
@@ -2072,6 +2085,7 @@ function hostLabel(k){
   if(k.hostType==="model")   return "model: "+esc(modelName(k.hostId));
   if(k.hostType==="keyResult" && modelById(k.objectiveId)) return "model: "+esc(modelName(k.objectiveId))+" · "+esc(k.name||k.statement||k.id);
   if(k.hostType==="initiative") return "init: "+esc(initName(k.hostId));
+  if(k.hostType==="milestone")  return "milestone: "+esc(msName(k.hostId));
   if(k.hostType==="keyResult")  return "KR: "+esc(krName(k.hostId));
   if(k.hostType==="stageGate")  return "gate: "+esc(gateName(k.hostId));
   return "task: "+esc(taskName(k.hostId));
@@ -2086,13 +2100,14 @@ function fmtTarget(t, unit){ if(t==null) return '—'; const v=(typeof t==='obje
 function linkCandidates(hostType, hostId){
   const O = hostType==="initiative" ? null : selectedObj;
   const initId = O ? initiativeIdOf(O) : null;
+  const msIds = new Set((portfolio.milestones||[]).filter(m=>m.initiativeId===initId).map(m=>m.id));
   const here = LEVEL[hostType];
   const pool = allKpisPool();
   // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
   const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
   const seen=new Set(), out=[];
   pool.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || isTargetKpi(k);
+    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || (k.hostType==="milestone" && msIds.has(k.hostId)) || isTargetKpi(k);
     if(!inScope) return;
     const def = RD.definerOf(k, pool);
     if(seen.has(def.id) || occupied.has(def.id)) return;
@@ -2103,7 +2118,8 @@ function linkCandidates(hostType, hostId){
 function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
-  if(isTargetKpi(def)){   // product/model target → report up via linkParent + linkType (specification firewalls the value)
+  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in a portfolio/spec doc (read-only here)
+  if(isTargetKpi(def) || portfolioDef){   // product/model/initiative/milestone definer → link up via linkParent (a group link can't attach to a read-only definer)
     const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
     const objScope = hostType==="initiative" ? null : selectedObj;
     const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
@@ -2112,12 +2128,9 @@ function makeLinkMember(hostType, hostId, definerId, linkType){
                      name:null, direction:null, unit:null, target:null, order:0 });
     addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
   }
-  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in the portfolio doc (read-only here)
+  // exec-local definer: group link (safe to stamp a groupId on a doc we own)
   let g = def.groupId;
-  if(!g){
-    if(portfolioDef){ g = def.id; }                  // use its effGroup; never mutate the portfolio from exec
-    else { g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
-  }
+  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
   exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
@@ -2135,19 +2148,20 @@ function unlinkKpi(id){
 }
 function renderLinkEditor(hostType, hostId){
   const cands = linkCandidates(hostType, hostId);
-  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, one at the initiative level, or one on a product/model this objective is classified to.</p></div>
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, one at the initiative or milestone level, or one on a product/model this objective is classified to.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const pool = allKpisPool();
-  const opts = cands.map(d=>{ const t=isTargetKpi(d); return `<option value="${d.id}" data-target="${t?1:0}" data-ptype="${t?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; }).join("");
-  const first = cands[0], firstTarget = isTargetKpi(first);
-  const firstRel = firstTarget ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
+  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent → relationship applies
+  const opts = cands.map(d=>{ const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; }).join("");
+  const first = cands[0], firstShow = showRel(first);
+  const firstRel = firstShow ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
   const relOpts = ['contribute','direct','specification'].map(t=>`<option value="${t}"${t===firstRel?" selected":""}>${t}</option>`).join("");
   return `<div class="ed">
     <label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
       <select data-linkdef>${opts}</select></label>
-    <label data-relwrap style="grid-column:1/-1;display:${firstTarget?'block':'none'}">Relationship to the product / model target
+    <label data-relwrap style="grid-column:1/-1;display:${firstShow?'block':'none'}">Relationship to the target metric
       <select data-linkrel>${relOpts}</select></label>
-    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstTarget?'block':'none'}">contribute rolls this reading up into the target · direct mirrors it · specification measures against it without rolling up</p>
+    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstShow?'block':'none'}">contribute rolls this reading up into the target · direct mirrors it · specification measures against it without rolling up</p>
     </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
@@ -2334,7 +2348,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{
-    const opt=sel.options[sel.selectedIndex], isT=!!(opt&&opt.dataset.target==="1");
+    const opt=sel.options[sel.selectedIndex], isT=!!(opt&&opt.dataset.showrel==="1");
     const rw=host.querySelector("[data-relwrap]"), rh=host.querySelector("[data-relhint]"), rel=host.querySelector("[data-linkrel]");
     if(rw) rw.style.display=isT?"block":"none"; if(rh) rh.style.display=isT?"block":"none";
     if(isT && rel && opt.dataset.ptype){ const sb=host.querySelector("[data-savelink]"); const ht=sb?sb.dataset.savelink.split(":")[0]:null; if(ht) rel.value=defaultLinkType(opt.dataset.ptype, ht); }
