@@ -196,6 +196,19 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   eq(C.wouldCreateCycle('Kin','Kin',[initDef]), true, 'self-link is still rejected as a cycle');
 })();
 
+/* ---- milestone KPIs: readings on linked KRs roll UP to the milestone score (1c) --- */
+(function () {
+  var msDef={ id:'Kmd', hostType:'milestone', hostId:'MS1', isDefiner:true, groupId:null, direction:'up', target:100, name:'Peak current' };
+  var kr={ id:'Kkr', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:null };
+  var exec={ 'D':{ keyResults:[{id:'KR1',objectiveId:'O1'}], kpis:[msDef,kr], kpiUpdates:[{kpiId:'Kkr',value:80,timestamp:1}] } };
+  approx(C.effValue(msDef, exec['D'].kpis, exec), 80, '1c: a linked KR reading rolls UP to the milestone definer value');
+  approx(C.milestoneScore('MS1', exec), 80, 'milestoneScore reflects the rolled-up KR reading (80/100 up)');
+  eq(C.milestoneAchieved({id:'MS1'}, exec), false, 'milestone not achieved at 80%');
+  exec['D'].kpiUpdates=[{kpiId:'Kkr',value:100,timestamp:1}];
+  approx(C.milestoneScore('MS1', exec), 100, 'milestoneScore hits 100 when the KR reading meets the target');
+  eq(C.milestoneAchieved({id:'MS1'}, exec), true, 'milestone achieved when the rolled-up KPI reaches 100');
+})();
+
 /* ---- KPI link groups: initiative-level definition + lower override ------ */
 (function () {
   var exec = { 'D': {
