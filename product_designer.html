@@ -19,6 +19,9 @@
   header h1 .dot{color:var(--accent)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
+  body.readonly [data-addkpi], body.readonly [data-addkr], body.readonly [data-addlink], body.readonly [data-addsg], body.readonly [data-addsub], body.readonly [data-addsubkr], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editmodel], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid #5a4420;background:#241b09;padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -214,6 +217,7 @@
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px"><option>loading…</option></select>
   <select class="obj" id="modelSelect" style="margin-left:6px"><option>loading…</option></select>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:8px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
 </header>
@@ -1042,6 +1046,120 @@
     };
   }
 
+  // ---- cross-doc linkage scope (execution → product/model KPIs) -----------
+  // The product/model KPI targets a division's execution can report against: the products/models its objectives
+  // are classified to (own or inherited from their initiative), the models under any classified product, and
+  // every sub-product reachable by composition (transitive). Pure over the portfolio + the composition edges.
+  // Returns { products:[ids], models:[ids] } (deduped; order not significant).
+  function classifiedTargets(portfolio, composition, divisionId) {
+    var models = (portfolio && portfolio.models) || [];
+    var objs = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o.divisionId === divisionId; });
+    var prod = {}, mod = {};
+    objs.forEach(function (o) {
+      var c = effClass(o, portfolio);
+      if (c.kind === 'model') mod[c.modelId] = 1;
+      else if (c.kind === 'product') prod[c.productId] = 1;
+    });
+    for (var i = 0; i < models.length; i++) if (prod[models[i].productId]) mod[models[i].id] = 1;   // a classified product → its models are seeds
+    Object.keys(mod).forEach(function (mid) {                                                        // + sub-products, transitively
+      var d = descendantModels(mid, composition); for (var j = 0; j < d.length; j++) mod[d[j]] = 1;
+    });
+    for (var k = 0; k < models.length; k++) if (mod[models[k].id] && models[k].productId) prod[models[k].productId] = 1;   // product-level targets of every in-scope model
+    return { products: Object.keys(prod), models: Object.keys(mod) };
+  }
+  // The linkable DEFINER kpis for a set of in-scope targets, over a pool of spec-doc kpis: each in-scope model's
+  // headline specs (keyResult-hosted definers) + each in-scope product's product-level definer kpis.
+  function targetKpisInScope(targets, kpis) {
+    var pset = {}, out = [], seen = {};
+    (targets.products || []).forEach(function (p) { pset[p] = 1; });
+    kpis = kpis || [];
+    (targets.models || []).forEach(function (m) {
+      var mk = importableModelKpis(m, kpis);
+      for (var i = 0; i < mk.length; i++) if (!seen[mk[i].id]) { seen[mk[i].id] = 1; out.push(mk[i]); }
+    });
+    for (var j = 0; j < kpis.length; j++) {
+      var k = kpis[j];
+      if (k.hostType === 'product' && pset[k.hostId] && linkOf(k, kpis).parent == null && !seen[k.id]) { seen[k.id] = 1; out.push(k); }
+    }
+    return out;
+  }
+
+  // ---- FMEA / risk register (pure) -----------------------------------------
+  // A problem is a modes → effects → causes tree; RPN = severity × occurrence ×
+  // detection (each 1–10). "Unresolved" RPN skips resolved nodes and is zeroed
+  // once the problem is resolved or its linked stage-gate has passed. Scoped to
+  // an objective via objectiveId; optional gateId links to a stage-gate.
+  var FMEA_SCALES = {
+    severity:   ['None','Very minor','Minor','Low','Moderate','Significant','High','Very high','Hazardous','Critical'],
+    occurrence: ['Unlikely','Remote','Very low','Low','Moderate','Medium-high','High','Very high','Very high+','Almost certain'],
+    detection:  ['Almost certain','Very high','High','Moderately high','Moderate','Low','Very low','Remote','Very remote','Undetectable']
+  };
+  function calcRpn(s, o, d) { return (parseInt(s, 10) || 1) * (parseInt(o, 10) || 1) * (parseInt(d, 10) || 1); }
+  function rpnBand(r) { return r >= 200 ? 'high' : r >= 100 ? 'med' : 'low'; }
+  function fmeaScaleLabel(kind, v) { var a = FMEA_SCALES[kind]; if (!a) return ''; return a[(parseInt(v, 10) || 1) - 1] || ''; }
+  function worstRpn(prob) {
+    var max = 0, modes = (prob && prob.modes) || [];
+    for (var i = 0; i < modes.length; i++) { var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function worstUnresolvedRpn(prob, gatePassed) {
+    if (gatePassed) return 0;
+    if (!prob || prob.status === 'resolved') return 0;
+    var max = 0, modes = prob.modes || [];
+    for (var i = 0; i < modes.length; i++) { if (modes[i].status === 'resolved') continue; var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { if (effs[j].status === 'resolved') continue; var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { if (cs[k].status === 'resolved') continue;
+          var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function fmeaProblemsFor(exec, objectiveId) {
+    var out = [], risks = (exec && exec.risks) || [];
+    for (var i = 0; i < risks.length; i++) if (risks[i].objectiveId === objectiveId) out.push(risks[i]);
+    return out;
+  }
+  // rollup over a set of problems. gatePassed is a fn(gateId)->bool (defaults to none passed).
+  function fmeaRollup(problems, gatePassed) {
+    var gp = gatePassed || function () { return false; };
+    var out = { total: problems.length, openHigh: 0, openMed: 0, openLow: 0, clear: 0, worst: 0 };
+    for (var i = 0; i < problems.length; i++) {
+      var u = worstUnresolvedRpn(problems[i], gp(problems[i].gateId));
+      if (u > out.worst) out.worst = u;
+      if (u >= 200) out.openHigh++; else if (u >= 100) out.openMed++; else if (u > 0) out.openLow++; else out.clear++;
+    }
+    return out;
+  }
+  var _fmeaSeq = 0;
+  function fmeaId(prefix) { _fmeaSeq++; return (prefix || 'x') + '_' + Date.now().toString(36) + '_' + _fmeaSeq.toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
+  function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
+  function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
+  // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
+  function migrateProblem(r) {
+    r = r || {};
+    return {
+      rid: r.rid || r.id || fmeaId('r'),
+      problem: r.problem || '',
+      objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
+      gateId: r.gateId || null,
+      status: r.status || 'open',
+      knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
+      modes: (r.modes || []).map(function (m) { m = m || {};
+        return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
+          effects: (m.effects || []).map(function (e) { e = e || {};
+            return { eid: e.eid || fmeaId('e'), effect: e.effect || '', status: e.status || 'open',
+              causes: (e.causes || []).map(function (c) { c = c || {};
+                return { cid: c.cid || fmeaId('c'), cause: c.cause || '',
+                  severity: c.severity || 1, occurrence: c.occurrence || 1, detection: c.detection || 1,
+                  mitigation: c.mitigation || '', status: c.status || 'open' };
+              }) };
+          }) };
+      })
+    };
+  }
+
   // ---- exports --------------------------------------------------------------
   var API = {
     allocId: allocId,
@@ -1095,6 +1213,23 @@
     sliceScore: sliceScore,
     cascade: cascade,
     classifyGate: classifyGate,
+    classifiedTargets: classifiedTargets,
+    targetKpisInScope: targetKpisInScope,
+    // FMEA / risk register
+    calcRpn: calcRpn,
+    rpnBand: rpnBand,
+    fmeaScaleLabel: fmeaScaleLabel,
+    FMEA_SCALES: FMEA_SCALES,
+    worstRpn: worstRpn,
+    worstUnresolvedRpn: worstUnresolvedRpn,
+    fmeaProblemsFor: fmeaProblemsFor,
+    fmeaRollup: fmeaRollup,
+    fmeaId: fmeaId,
+    blankProblem: blankProblem,
+    blankMode: blankMode,
+    blankEffect: blankEffect,
+    blankCause: blankCause,
+    migrateProblem: migrateProblem,
     // exposed for tests / shells
     _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
   };
@@ -1134,18 +1269,21 @@ const DOCID   = "DOC";
 
 /* ---------------- broker (shared with planning / execution) ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){ const u=new URL(location.href); const t=u.searchParams.get("token");
-  if(t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({},"",u.toString()); } })();
+const URLP = (function(){ const u=new URL(location.href), p=u.searchParams;
+  const t=p.get("token"); if(t){ localStorage.setItem("rd_broker_token",t); p.delete("token"); history.replaceState({},"",u.toString()); }
+  return { readonly: p.has("readonly"), product: p.get("product")||"" }; })();   // quarter N/A (product-spec tool, no time axis)
+const RO = URLP.readonly;
+if(RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t=tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
 async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
-async function apiPut(id,d,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+async function apiPut(id,d,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc:d})}); if(!r.ok) throw r; return r.json(); }
 
 let doc = blankDoc();
 let selectedModel = null;
-let selectedProduct = null;
+let selectedProduct = URLP.product || null;   // seeded from ?product= (seed-on-load); fill logic keeps it if valid
 let portfolio = null;                 // read-only: division resolution + products/models registry
 let divisionId = null;
 let specEtag = "0", specVersion = 0, portfolioVersion = 0, portfolioEtag = "0", pollTimer = null;
@@ -1210,6 +1348,7 @@ const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
 let _saveT=null, _saveMaxT=null;
 function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
 function persist(){
+  if(RO) return;                                           // read-only: never write
   if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
   if(_saveT) clearTimeout(_saveT);
   _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
@@ -1419,7 +1558,6 @@ function fillModelSelect(){
     ps.innerHTML = prods.length ? prods.map(p=>`<option value="${p.id}">${esc(p.name||p.id)}</option>`).join("")
                                 : `<option value="">no products</option>`;
     if(prods.length){ if(!selectedProduct || !prods.find(p=>p.id===selectedProduct)) selectedProduct=prods[0].id; ps.value=selectedProduct; }
-    else selectedProduct=null;
     ps.onchange=()=>{ selectedProduct=ps.value; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; fillModelSelect(); renderAll(); };
   }
   const s=document.getElementById("modelSelect"), ms=allModels();
@@ -2272,7 +2410,7 @@ function ownerSpecTarget(kr, rd){
 }
 function renderComponentOwners(){
   const host=document.getElementById("initPanel");
-  const comp=portfolio.composition||[];
+  const comp=(portfolio&&portfolio.composition)||[];
   const parents = selectedModel ? RD.compositionParents(selectedModel, comp) : [];
   const pid = selectedModel?productIdOf(selectedModel):null;
   if(!parents.length){

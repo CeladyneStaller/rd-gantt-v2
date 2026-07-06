@@ -28,6 +28,14 @@
   .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
   .ov-ctl{display:flex;align-items:center;gap:9px}
   .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  body.readonly .erow{cursor:default}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid #5a4420;background:#241b09;padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
+  .ovoverall{margin-top:10px;display:flex;align-items:baseline;gap:8px}
+  .ovq{margin-top:9px;display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+  .ovq-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .ovq-cell{font-size:14px}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -231,6 +239,7 @@
     <button data-tab="settings">Settings</button>
   </nav>
   <div class="spacer"></div>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
 </header>
 <main>
@@ -242,11 +251,6 @@
         <div class="toggle" id="lensToggle">
           <button data-lens="division" class="active">By division</button>
           <button data-lens="product">By product / model</button>
-        </div></div>
-      <div class="ov-ctl"><span class="ov-lab">Period</span>
-        <div class="toggle" id="modeToggle" title="Single overall score vs per-quarter columns">
-          <button data-mode="overall" class="active">Overall</button>
-          <button data-mode="quarterly">Quarterly</button>
         </div></div>
     </div>
     <div id="ovBody"></div>
@@ -1303,12 +1307,16 @@ const RD = window.RDCore;
 
 /* ---------------- broker ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){
-  const u = new URL(location.href);
-  const t = u.searchParams.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token");
-    history.replaceState({}, "", u.toString()); }
+function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
+const URLP = (function(){
+  const u = new URL(location.href), p = u.searchParams;
+  const t = p.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
+  const rq = p.get("quarter");
+  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
 })();
+const RO = URLP.readonly;
+if (RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r = await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
@@ -1329,7 +1337,6 @@ let execDocs = {};               // EXEC-<div> docId -> doc
 let specDocs = {};               // SPEC-<div> docId -> doc (read-only, from Product Designer)
 let etags = {};                  // docId -> etag (for If-Match)
 let knownVersions = {};          // docId -> version (ignore own echo)
-let mode = "overall";            // overall | quarterly
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
@@ -1391,6 +1398,7 @@ async function saveAll(){
 // onto a freshly reloaded portfolio if a concurrent save bumped the etag (412),
 // so an auto-saved add/edit/delete is never silently lost to a race.
 async function persistPortfolio(reapply, okMsg){
+  if(RO) return;   // read-only: never write
   if(!tok()){ setMsg("Saved locally — add a broker token in Settings to sync.", "info"); return; }
   try{
     const res = await apiPut("portfolio", portfolio, etags["portfolio"]||"0");
@@ -1453,29 +1461,23 @@ function companyHtml(){
   for(const d of portfolio.divisions){
     const counts = statusCounts("division", d.id, em);
     const worst = worstSlip(d.id, casc);
-    if(mode==="overall"){
-      const sc = RD.rollupDivision(d.id, portfolio, em);
-      cards += divCard(d, [["overall", sc]], counts, worst);
-    } else {
-      const qs = RD.boundsOf("division", d.id, portfolio);
-      const cells = qs.length ? qs.map(q=>[q, RD.score("division",d.id,portfolio,em,q)])
-                              : [["—", null]];
-      cards += divCard(d, cells, counts, worst);
-    }
+    const overall = RD.rollupDivision(d.id, portfolio, em);
+    const qCells = RD.boundsOf("division", d.id, portfolio).map(q=>[q, RD.score("division",d.id,portfolio,em,q)]);
+    cards += divCard(d, overall, qCells, counts, worst);
   }
   cards += `</div>`;
   if(!portfolio.divisions.length) cards = `<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>`;
   return hero + cards;
 }
-function divCard(d, cells, counts, worst){
-  const scoreBlocks = cells.map(([lbl,v])=>`
-    <div style="display:inline-block;margin-right:14px">
-      <div class="score" style="font-size:24px;color:${scoreColor(v)}">${fmtScore(v)}</div>
-      <div class="pill">${lbl}</div></div>`).join("");
+function divCard(d, overall, qCells, counts, worst){
+  const q = qCells.length
+    ? `<div class="ovq"><span class="ovq-lbl">per quarter</span>${qCells.map(c=>`<span class="ovq-cell"><b style="color:${scoreColor(c[1])}">${fmtScore(c[1])}</b> <span class="pill">${esc(c[0])}</span></span>`).join("")}</div>`
+    : `<div class="ovq"><span class="hint">no quarters set on its objectives</span></div>`;
   const slipTxt = worst==null ? `<span>no schedule data</span>`
     : `worst initiative slip <b class="${worst<=0?'zero':''}">${worst<=0?'0':'+'+worst}d</b>`;
   return `<div class="card"><h3>${esc(d.name)}</h3><div class="sub">${d.id}</div>
-    <div style="margin-top:10px">${scoreBlocks}</div>
+    <div class="ovoverall"><span class="score" style="font-size:26px;color:${scoreColor(overall)}">${fmtScore(overall)}</span> <span class="pill">overall</span></div>
+    ${q}
     <div class="counts">
       <span><i class="pip" style="background:var(--ok)"></i>${counts["on-track"]}</span>
       <span><i class="pip" style="background:var(--warn)"></i>${counts["at-risk"]}</span>
@@ -1522,7 +1524,7 @@ let editingId = null;
 let pfView = "tree";
 let lens = "division";   // Overview: by division vs by product/model
 let pfGroupBy = "hierarchy";                       // Structure/Gantt grouping dimension
-const pfFilters = { division:"", product:"", quarter:"", status:"" };
+const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"" };   // seeded from URL params (seed-on-load)
 
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
@@ -1547,6 +1549,7 @@ function renderPortfolio(){
   renderTable();
 }
 function openEditor(id, entityOverride, prefill){
+  if(RO) return;   // read-only: no editing
   if(entityOverride) activeEntity = entityOverride;
   editingId = id || null;
   const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : (prefill || {});
@@ -1839,7 +1842,7 @@ function subCount(entity,r){
 /* ---- recursive architecture tree (shared by Portfolio tab + modal) ---- */
 let treeCtx = "portfolio";   // "portfolio" → editable row actions; "lineage" → read-only
 function treeActs(entity, id){
-  if(treeCtx!=="portfolio") return "";
+  if(RO || treeCtx!=="portfolio") return "";
   const ADD = { division:[["initiative","+ init"],["product","+ product"]],
                 initiative:[["objective","+ obj"],["milestone","+ milestone"]],
                 product:[["model","+ model"]] }[entity] || [];
@@ -1855,6 +1858,7 @@ function openTreeAdd(childEntity, parentId){
   openEditor(null, childEntity, prefill);
 }
 function ganttActs(entity, id){
+  if(RO) return "";
   const ADD = { division:[["initiative","+init"]], initiative:[["objective","+obj"],["milestone","+ms"]] }[entity] || [];
   const editable = entity==="division"||entity==="initiative"||entity==="objective"||entity==="milestone";
   if(!editable && !ADD.length) return "";   // stage-gates (exec-owned) get no actions
@@ -2198,6 +2202,7 @@ function renderTable(){
   document.querySelectorAll("#entityTable [data-editrow]").forEach(tr=>tr.onclick=()=>{ armedDelete=null; openEditor(tr.dataset.editrow); });
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=(e)=>{
     e.stopPropagation();
+    if(RO) return;
     const id=b.dataset.del;
     if(armedDelete!==id){ armedDelete=id; renderTable(); return; }
     const ent = activeEntity;
@@ -2366,21 +2371,23 @@ function renderGantt(){
 function slicesHtml(){
   const em = pfMap();
   if(!portfolio.products.length){ return '<p class="hint">No products defined yet. Add products and models in the Structure tab to see sliced scores.</p>'; }
-  const qs = mode==="quarterly" ? quartersAll() : [null];
-  let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th>${qs.map(q=>`<th>${q||'overall'}</th>`).join("")}</tr></thead><tbody>`;
+  const qs = quartersAll();
+  let html = `<table><thead><tr><th>Product / Model</th><th>Spec conf.</th><th>Overall</th>${qs.map(q=>`<th>${esc(q)}</th>`).join("")}</tr></thead><tbody>`;
   for(const p of portfolio.products){
     html += `<tr><td><b>${esc(p.name)}</b> <span class="pill">${p.id}</span></td>`+
       scoreCell(productConformance(p.id))+
+      scoreCell(RD.sliceScore("product",p.id,portfolio,em,null))+
       qs.map(q=>scoreCell(RD.sliceScore("product",p.id,portfolio,em,q))).join("")+`</tr>`;
     portfolio.models.filter(m=>m.productId===p.id).forEach(m=>{
       const meta=specMetaOf(m.id), mat=meta.maturity?` <span class="pill">${esc(meta.maturity)}</span>`:"";
       html += `<tr><td style="padding-left:26px">↳ ${esc(m.name)} <span class="pill">${m.id}</span>${mat}</td>`+
         scoreCell(modelConformance(m.id))+
+        scoreCell(RD.sliceScore("model",m.id,portfolio,em,null))+
         qs.map(q=>scoreCell(RD.sliceScore("model",m.id,portfolio,em,q))).join("")+`</tr>`;
     });
   }
   html += `</tbody></table>
-    <p class="hint">A product score aggregates every objective under it across all its models; each model is a sub-aggregate. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models). Toggle <b>Quarterly</b> in the header for per-quarter columns.</p>`;
+    <p class="hint"><b>Overall</b> aggregates every objective under an item across all its quarters; the per-quarter columns are populated only for the quarters an item actually has objectives in. <b>Spec conf.</b> is the model's specification conformance from the Product Designer (a product's is the mean of its models).</p>`;
   return html;
 }
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
@@ -2404,10 +2411,7 @@ document.querySelectorAll("#lensToggle button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#lensToggle button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active"); lens=b.dataset.lens; renderOverview();
 });
-document.querySelectorAll("#modeToggle button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("#modeToggle button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active"); mode=b.dataset.mode; renderOverview();
-});
+
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };

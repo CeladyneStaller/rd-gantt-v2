@@ -19,6 +19,9 @@
   header h1 .dot{color:var(--accent)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
+  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid #5a4420;background:#241b09;padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
@@ -248,7 +251,9 @@
   <div class="spacer"></div>
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
+  <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
   <select class="obj" id="objSelect" style="margin-left:6px"><option>loading…</option></select>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
 </header>
@@ -1271,16 +1276,21 @@ const RD = window.RDCore;
 
 /* ---------------- broker (identical contract to planning app) ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){
-  const u = new URL(location.href);
-  const t = u.searchParams.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({}, "", u.toString()); }
+function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
+const URLP = (function(){
+  const u = new URL(location.href), p = u.searchParams;
+  const t = p.get("token");
+  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
+  const rq = p.get("quarter");
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
 })();
+const RO = URLP.readonly;
+if (RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
 async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
-async function apiPut(id,doc,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+async function apiPut(id,doc,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})}); if(!r.ok) throw r; return r.json(); }
 
 /* ---------------- date <-> day-count ---------------- */
@@ -1295,7 +1305,8 @@ let exec = blankExec();          // this division's doc (read-write)
 let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
-let selectedQuarter = "";   // "" = all quarters; else an objective quarter string to filter by
+let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "" = all quarters
+let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
 let pollTimer = null;
 
 function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[] }; }
@@ -1316,6 +1327,7 @@ function defaultLinkType(parentType, childType){ return LINK_DEFAULTS[parentType
 function productById(pid){ return (portfolio.products||[]).find(p=>p.id===pid)||null; }
 function modelById(mid){ return (portfolio.models||[]).find(m=>m.id===mid)||null; }
 function productName(pid){ const p=productById(pid); return p?(p.name||p.id):pid; }
+function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=(portfolio.models||[]).find(x=>x.id===c.modelId); return m?m.productId:null; } return null; }
 function modelName(mid){ const m=modelById(mid); return m?(m.name||m.id):mid; }
 function divOfProduct(pid){ const p=productById(pid); return p?p.divisionId:null; }
 function divOfModel(mid){ const m=modelById(mid); return m?divOfProduct(m.productId):null; }
@@ -1395,6 +1407,7 @@ const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
 let _saveT=null, _saveMaxT=null;
 function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
 function persist(){
+  if(RO) return;                                           // read-only: never write
   if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
   if(_saveT) clearTimeout(_saveT);
   _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
@@ -1471,10 +1484,19 @@ function fillQtrSelect(){
   s.value=selectedQuarter;
   s.onchange=()=>{ selectedQuarter=s.value; fillObjSelect(); renderAll(); };
 }
+function fillProductSelect(){
+  const s=document.getElementById("prodSelect"); if(!s) return;
+  const seen={}, prods=[];
+  myObjectives().forEach(o=>{ const p=effProductOf(o); if(p && !seen[p]){ seen[p]=1; prods.push(p); } });
+  if(selectedProduct && prods.indexOf(selectedProduct)<0) selectedProduct="";   // stale after a division switch
+  s.innerHTML=`<option value="">All products</option>`+prods.map(p=>`<option value="${esc(p)}">${esc(productName(p))}</option>`).join("");
+  s.value=selectedProduct;
+  s.onchange=()=>{ selectedProduct=s.value; fillObjSelect(); renderAll(); };
+}
 function fillObjSelect(){
-  fillQtrSelect();
+  fillQtrSelect(); fillProductSelect();
   const s=document.getElementById("objSelect");
-  const objs=myObjectives().filter(o=>!selectedQuarter || (o.quarter||"")===selectedQuarter);
+  const objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
   s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
