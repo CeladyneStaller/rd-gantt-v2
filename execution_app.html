@@ -90,6 +90,8 @@
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .ms-row{cursor:pointer} .ms-row:hover>td{background:var(--panel2)}
+  #msBody table{margin-top:4px}
   td.mono,.mono{font-family:var(--mono);font-size:12px}
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
@@ -249,6 +251,7 @@
     <button data-tab="overview" class="active">Overview</button>
     <button data-tab="portfolio">Structure</button>
     <button data-tab="gantt">Gantt</button>
+    <button data-tab="milestones">Milestones</button>
     <button data-tab="settings">Settings</button>
   </nav>
   <div class="spacer"></div>
@@ -281,6 +284,10 @@
       <span>◆ milestone (planned → effective)</span>
     </div>
     <div id="ganttWrap"></div>
+  </section>
+  <section class="tabsec" id="tab-milestones">
+    <div id="msFilterBar" class="filterbar"></div>
+    <div id="msBody"></div>
   </section>
   <section class="tabsec settings" id="tab-settings">
     <h3>Broker</h3>
@@ -2024,8 +2031,8 @@ function pfActiveChips(){
   return out.map(c=>`<span class="fchip">${esc(c[1])}<span class="fx" data-fclr="${c[0]}">✕</span></span>`).join("")+`<button class="fchip clear" data-fclr="__all">clear all</button>`;
 }
 function wireFilterBar(host){
-  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); });
-  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); });
+  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
 function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
 function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
@@ -2352,6 +2359,70 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+/* ---------------- Milestones tab (summary table — phase 2) ---------------- */
+// product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
+function prodAbbrev(prodId){ const p=byId("product",prodId); if(!p) return "MS";
+  if(p.code) return p.code;
+  const nm=(p.name||"").trim(); if(!nm) return "MS";
+  if(!/\s/.test(nm) && nm.length<=10) return nm;   // already a compact code (e.g. FCS-100) → use as-is
+  const words=nm.split(/\s+/).filter(Boolean);
+  const trailingNum=nm.match(/(\d+)\s*$/); let base=words[0];
+  if(base.length<=3 && words.length>1) base=words[0]+words[1].charAt(0).toUpperCase()+words[1].slice(1);
+  if(base.length>6) base=base.slice(0,6);
+  if(trailingNum && base.indexOf(trailingNum[1])<0) base+=trailingNum[1];
+  return base; }
+// per-product number: <PRODABBR>-NN, ranked by planned date across every initiative of that product
+function milestoneNumber(ms){ const init=byId("initiative",ms.initiativeId); const prodId=init?init.productId:null;
+  const sibs=portfolio.milestones.filter(m=>{ const mi=byId("initiative",m.initiativeId); return mi && (mi.productId||null)===(prodId||null); })
+    .sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+  const idx=sibs.findIndex(m=>m.id===ms.id);
+  return `${prodAbbrev(prodId)}-${String((idx>=0?idx:0)+1).padStart(2,"0")}`; }
+// a milestone's calendar quarter, derived from its planned date (milestones carry no quarter field)
+function msQuarter(ms){ if(ms.plannedDate==null) return ""; const iso=dayToIso(ms.plannedDate); const p=String(iso).split("-"); if(p.length<2) return ""; return p[0]+"Q"+(Math.floor((Number(p[1])-1)/3)+1); }
+function msMatches(ms){ const f=pfFilters; const init=byId("initiative",ms.initiativeId);
+  const div=init?init.divisionId:null, prod=init?(init.productId||null):null;
+  if(f.division && div!==f.division) return false;
+  if(f.product && prod!==f.product) return false;
+  if(f.quarter && msQuarter(ms)!==f.quarter) return false;
+  if(f.status && nodeBand("milestone",ms.id)!==f.status) return false;
+  return true; }
+function renderMilestones(){
+  const el=document.getElementById("msBody"); if(!el) return;
+  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
+  const em=pfMap(), casc=RD.cascade(portfolio, em, todayDay());
+  const rows=portfolio.milestones.filter(msMatches);
+  if(!rows.length){ el.innerHTML=`<p class="hint">${portfolio.milestones.length?"No milestones match the current filters.":"No milestones yet — add one from an initiative in the Structure tab."}</p>`; return; }
+  const groups={}; rows.forEach(ms=>{ const init=byId("initiative",ms.initiativeId); const div=init?init.divisionId:"—"; (groups[div]=groups[div]||[]).push(ms); });
+  const divOrder=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]).concat(groups["—"]?["—"]:[]);
+  let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th></tr></thead><tbody>`;
+  divOrder.forEach(div=>{
+    const list=groups[div].slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+    const dname = div==="—" ? "— no division —" : (nameOf("division",byId("division",div))||div);
+    h+=`<tr class="grouphead"><td colspan="9">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
+    list.forEach(ms=>{
+      const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+      const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
+      const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
+      const nk=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id).length;
+      const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
+      const stCell = done ? `<span class="band on-track">achieved</span>` : `<span class="band ${bnd}">${bnd.replace("-"," ")}</span>`;
+      h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
+        `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
+        `<td><b>${esc(ms.name||ms.id)}</b></td>`+
+        `<td>${init?esc(init.name||init.id):"—"}</td>`+
+        `<td>${prodId?esc(productName(prodId)):"—"}</td>`+
+        `<td class="mono">${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"}</td>`+
+        `<td class="mono">${effTxt}</td>`+
+        `<td style="white-space:nowrap">${stCell}</td>`+
+        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
+        `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
+      `</tr>`;
+    });
+  });
+  h+=`</tbody></table>`;
+  el.innerHTML=h;
+  el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
+}
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
@@ -2522,7 +2593,7 @@ function slicesHtml(){
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
 
 /* ---------------- render dispatch ---------------- */
-function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderBrokerStatus(); }
+function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderMilestones(); renderBrokerStatus(); }
 function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
   el.innerHTML = (lens==="division") ? companyHtml() : slicesHtml(); }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
