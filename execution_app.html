@@ -60,6 +60,20 @@
   .msr-fn{font-family:var(--mono);color:var(--muted);font-size:12px;flex:none;width:22px}
   [data-msr][contenteditable="true"]{background:var(--panel2);border-radius:4px;padding:2px 6px;min-width:44px;outline:none}
   [data-msr][contenteditable="true"]:focus{box-shadow:0 0 0 1px var(--accent)}
+  .ap-wrap{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+  .ap-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .ap-head span:first-child{font-weight:600;font-size:14px;color:var(--ink)}
+  .ap-grp{margin-bottom:10px}
+  .ap-grp-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin:8px 0 3px}
+  .ap-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
+  .ap-row:hover{background:var(--panel2)}
+  .ap-main{flex:1;min-width:0}
+  .ap-name{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ap-num{color:var(--accent2);font-size:12px}
+  .ap-sub{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:1px}
+  .ap-score{font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
+  .ap-mini{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px}
+  .ap-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-left:4px}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -2697,8 +2711,63 @@ function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weig
 
 /* ---------------- render dispatch ---------------- */
 function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderMilestones(); renderBrokerStatus(); }
+/* ---------------- Overview "active" section (phase 4) ---------------- */
+function isActiveObjective(o, em){
+  const sc=RD.rollupObjective(o.id,portfolio,em); if(sc!=null && sc>=100) return false;   // complete → drops off
+  if((o.quarter||"")===currentQuarter()) return true;
+  const t=todayDay();
+  return (o.plannedStart!=null && o.plannedEnd!=null && o.plannedStart<=t && t<=o.plannedEnd);
+}
+function isActiveMilestone(ms, em){ if(RD.milestoneAchieved(ms,em)) return false; return msQuarter(ms)===currentQuarter(); }
+function activeKrDots(o, em){
+  const doc=execDocs["EXEC-"+o.divisionId];
+  const krs=((doc&&doc.keyResults)||[]).filter(k=>k.objectiveId===o.id);
+  const gates=((doc&&doc.stageGates)||[]).filter(g=>g.objectiveId===o.id);
+  const dot=b=>`<span class="ap-mini" style="background:${bandColor(b)}"></span>`;
+  let s="";
+  if(krs.length) s+=`<span class="ap-lbl">KR</span>${krs.map(k=>dot(RD.band(RD.keyResultScore(k.id,em)))).join("")}`;
+  if(gates.length) s+=`<span class="ap-lbl">gate</span>${gates.map(g=>dot(RD.band(RD.stageGateScore(g.id,em)))).join("")}`;
+  if(!krs.length && !gates.length) s=`<span>no KRs or gates yet</span>`;
+  return s;
+}
+function activePanelHtml(){
+  const em=pfMap(), cq=currentQuarter(), byDiv=(lens==="division");
+  const objs=portfolio.objectives.filter(o=>isActiveObjective(o,em));
+  const mss=portfolio.milestones.filter(ms=>isActiveMilestone(ms,em));
+  const total=objs.length+mss.length;
+  let h=`<div class="ap-wrap" id="apWrap"><div class="ap-head"><span>Active</span><span class="tsub">${total} item${total===1?"":"s"} · ${esc(cq)}</span></div>`;
+  if(!total) return h+`<p class="hint">Nothing active — no in-window objectives or current-quarter milestones that aren't already complete.</p></div>`;
+  const groupObj=o=>byDiv?(o.divisionId||"—"):(effProductOf(o)||"—");
+  const groupMs=ms=>{ const i=byId("initiative",ms.initiativeId); return byDiv?((i&&i.divisionId)||"—"):((i&&i.productId)||"—"); };
+  const groups={};
+  objs.forEach(o=>{ const k=groupObj(o); (groups[k]=groups[k]||{obj:[],ms:[]}).obj.push(o); });
+  mss.forEach(ms=>{ const k=groupMs(ms); (groups[k]=groups[k]||{obj:[],ms:[]}).ms.push(ms); });
+  const base=byDiv?portfolio.divisions.map(d=>d.id):portfolio.products.map(p=>p.id);
+  const order=base.filter(k=>groups[k]).concat(Object.keys(groups).filter(k=>base.indexOf(k)<0));
+  order.forEach(k=>{ const g=groups[k]; if(!g) return;
+    const label=byDiv?(nameOf("division",byId("division",k))||k):(k==="—"?"— unclassified —":(productName(k)||k));
+    h+=`<div class="ap-grp"><div class="ap-grp-lbl">${esc(label)}</div>`;
+    g.obj.forEach(o=>{ const b=nodeBand("objective",o.id), sc=RD.rollupObjective(o.id,portfolio,em);
+      const dates=[o.quarter,(o.plannedStart!=null&&o.plannedEnd!=null)?`${dayToIso(o.plannedStart)} – ${dayToIso(o.plannedEnd)}`:null].filter(Boolean).join(" · ");
+      h+=`<div class="ap-row" data-lineage="objective:${o.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
+        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>`+
+        `<div class="ap-sub">${dates?`<span>${esc(dates)}</span>`:""}${activeKrDots(o,em)}</div></div>`+
+        `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
+    });
+    g.ms.forEach(ms=>{ const b=nodeBand("milestone",ms.id), sc=RD.milestoneScore(ms.id,em);
+      const nk=(portfolio.kpis||[]).filter(x=>x.hostType==="milestone"&&x.hostId===ms.id).length;
+      h+=`<div class="ap-row" data-lineage="milestone:${ms.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
+        `<div class="ap-main"><div class="ap-name">◆ <span class="ap-num mono">${esc(milestoneNumber(ms))}</span> ${esc(ms.name||ms.id)}</div>`+
+        `<div class="ap-sub"><span>${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"} · ${nk} KPI${nk===1?"":"s"}</span></div></div>`+
+        `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
+    });
+    h+=`</div>`;
+  });
+  return h+`</div>`;
+}
 function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
-  el.innerHTML = (lens==="division") ? companyHtml() : slicesHtml(); }
+  el.innerHTML = ((lens==="division") ? companyHtml() : slicesHtml()) + activePanelHtml();
+  const ap=el.querySelector("#apWrap"); if(ap) wireTreeLinks(ap); }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
   el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
 
