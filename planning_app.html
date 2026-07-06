@@ -48,6 +48,32 @@
   #delBody .del-lead{font-size:15px;margin:2px 0 6px}
   .del-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
   .del-actions .ghost{padding:7px 12px;font-size:13px}
+  #msrBody{padding:2px 18px 4px} #msrActions{padding:0 18px 16px;margin-top:12px}
+  .msr-hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:14px 0 2px}
+  .msr-num{color:var(--accent2);font-weight:600}
+  .msr-meta{color:var(--muted);font-size:12px}
+  .msr-dates{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0 2px;font-size:13px;color:var(--muted)}
+  .msr-dates b{color:var(--ink)}
+  .msr-sec-lbl{margin:18px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .msr-tbl select{font-size:12px;padding:2px 4px}
+  .msr-finding{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+  .msr-fn{font-family:var(--mono);color:var(--muted);font-size:12px;flex:none;width:22px}
+  [data-msr][contenteditable="true"]{background:var(--panel2);border-radius:4px;padding:2px 6px;min-width:44px;outline:none}
+  [data-msr][contenteditable="true"]:focus{box-shadow:0 0 0 1px var(--accent)}
+  .ap-wrap{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+  .ap-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .ap-head span:first-child{font-weight:600;font-size:14px;color:var(--ink)}
+  .ap-grp{margin-bottom:10px}
+  .ap-grp-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin:8px 0 3px}
+  .ap-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
+  .ap-row:hover{background:var(--panel2)}
+  .ap-main{flex:1;min-width:0}
+  .ap-name{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ap-num{color:var(--accent2);font-size:12px}
+  .ap-sub{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:1px}
+  .ap-score{font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
+  .ap-mini{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px}
+  .ap-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-left:4px}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -90,6 +116,8 @@
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .ms-row{cursor:pointer} .ms-row:hover>td{background:var(--panel2)}
+  #msBody table{margin-top:4px}
   td.mono,.mono{font-family:var(--mono);font-size:12px}
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
@@ -220,6 +248,7 @@
   .gdia.overdue{background:var(--bad);border:1.5px solid var(--bad)}
   .gdia.pending{background:transparent;border:1.5px solid #6f8aa3}
   .gdia.ghost{background:transparent;border:1.5px dashed #5a728c;opacity:.55}
+  .gdia.done{background:var(--ok);border-color:var(--ok)}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:#5a728c;opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
   .glegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
@@ -248,6 +277,7 @@
     <button data-tab="overview" class="active">Overview</button>
     <button data-tab="portfolio">Structure</button>
     <button data-tab="gantt">Gantt</button>
+    <button data-tab="milestones">Milestones</button>
     <button data-tab="settings">Settings</button>
   </nav>
   <div class="spacer"></div>
@@ -280,6 +310,10 @@
       <span>◆ milestone (planned → effective)</span>
     </div>
     <div id="ganttWrap"></div>
+  </section>
+  <section class="tabsec" id="tab-milestones">
+    <div id="msFilterBar" class="filterbar"></div>
+    <div id="msBody"></div>
   </section>
   <section class="tabsec settings" id="tab-settings">
     <h3>Broker</h3>
@@ -323,6 +357,17 @@
         <button class="modal-x" id="delClose" aria-label="Close">&#10005;</button></div>
       <div id="delBody"></div>
       <div id="delActions" class="del-actions"></div>
+    </div>
+  </div>
+  <div id="msReportModal" class="modal-overlay" hidden style="z-index:85">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="msrTitle" style="width:min(820px,95vw)">
+      <div class="modal-head"><span id="msrTitle">Milestone report</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button class="ghost" id="msrLock">Lock</button>
+          <button class="modal-x" id="msrClose" aria-label="Close">&#10005;</button>
+        </span></div>
+      <div id="msrBody"></div>
+      <div id="msrActions" class="del-actions"></div>
     </div>
   </div>
 </main>
@@ -1540,7 +1585,7 @@ const SCHEMAS = {
                ["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
   milestone:  [["name","Name","text"],["initiativeId","Initiative","ref:initiative"],
-               ["plannedDate","Planned date","date"],["order","Order","number"]],
+               ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],["order","Order","number"]],
   objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
                ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter (e.g. 2026Q3)","text"],
                ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
@@ -1587,13 +1632,13 @@ function openEditor(id, entityOverride, prefill){
     <button class="act" id="saveRec">${editingId?'Update':'Add'} ${activeEntity}</button>
     <button class="ghost" id="cancelEdit">Cancel</button></div>`;
   if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; pfMsArmed=null; html += initTargetsHtml(editingId); html += milestonesHtml(editingId); }
-  if(activeEntity==='milestone' && editingId){ pfTgtArmed=null; html += initTargetsHtml(editingId, "milestone"); }
+  if(activeEntity==='milestone' && editingId){ pfTgtArmed=null; html += msStatusHtml(editingId); html += initTargetsHtml(editingId, "milestone"); }
   if((activeEntity==='initiative'||activeEntity==='objective') && editingId){ const rec=SEL[activeEntity]().find(x=>x.id===editingId); if(rec) html += classificationKpisHtml(rec); }
   document.getElementById("pfModalBody").innerHTML = html;
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
   if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
-  if(activeEntity==='milestone' && editingId){ wireInitTargets(editingId, "milestone"); }
+  if(activeEntity==='milestone' && editingId){ wireInitTargets(editingId, "milestone"); const rb=document.getElementById("msOpenReport"); if(rb) rb.onclick=()=>openMilestoneReport(editingId); }
   // product & model are hierarchical (a model belongs to a product): picking a product scopes the model list,
   // picking a model fills in its product. Both stay populated; save stores the most-specific (model implies product).
   const _ps=document.querySelector('#pfModalBody [data-f="productId"]'), _ms=document.querySelector('#pfModalBody [data-f="modelId"]');
@@ -1665,7 +1710,7 @@ function initTargetsHtml(hostId, hostType){
   hostType=hostType||"initiative";
   const list=(portfolio.kpis||[]).filter(k=>k.hostType===hostType && k.hostId===hostId);
   const pm=pfMap(), pool=poolOf(pm);
-  let h=`<div class="pftargets"><div class="pft-head"><span>Targets — ${hostType} KPIs</span>`+
+  let h=`<div class="pftargets" data-targets><div class="pft-head"><span>Targets — ${hostType} KPIs</span>`+
     `<button class="ghost" id="pfAddTarget">+ Add target</button></div>`;
   if(!list.length){
     h+=`<p class="hint" style="margin:8px 0 0">No targets yet. Define a KPI at this ${hostType} here; link Key Results, stage-gates, or tasks to it from the execution app to feed its value.</p>`;
@@ -1690,11 +1735,23 @@ function initTargetsHtml(hostId, hostType){
 }
 function refreshInitTargets(hostId, hostType){
   hostType=hostType||"initiative";
-  const host=document.querySelector("#pfModalBody .pftargets");
+  const host=document.querySelector("#pfModalBody [data-targets]");
   if(!host) return;
   const tmp=document.createElement("div"); tmp.innerHTML=initTargetsHtml(hostId, hostType);
   host.replaceWith(tmp.firstElementChild);
   wireInitTargets(hostId, hostType);
+}
+/* ---------------- milestone status summary (KPI roll-up + achievement — 1c) ---------------- */
+function msStatusHtml(id){
+  const em=pfMap(); const ms=(portfolio.milestones||[]).find(m=>m.id===id); if(!ms) return "";
+  const s=RD.milestoneScore(id,em), ach=RD.milestoneAchieved(ms,em);
+  let left;
+  if(ach) left=`<span class="band on-track">achieved</span>`+(ms.completedDate!=null?`<span class="hint" style="margin-left:8px">marked complete ${dayToIso(ms.completedDate)}</span>`:`<span class="hint" style="margin-left:8px">KPI target met</span>`);
+  else if(s!=null) left=bandHtml(s);
+  else left=`<span class="hint">no reading yet — set a completed date, or link a Key Result / stage-gate to a milestone KPI in the execution app</span>`;
+  const sc=(s!=null)?`<span style="margin-left:auto;font-family:var(--mono);font-weight:600;color:${scoreColor(s)}">${Math.round(s)}</span>`:"";
+  return `<div class="pftargets"><div class="pft-head"><span>Milestone status</span><button class="ghost" id="msOpenReport">📄 Report</button></div>`+
+    `<div class="pft-row" style="align-items:center;gap:6px">${left}${sc}</div></div>`;
 }
 /* ---------------- initiative milestones (nested under the initiative — change 5) ---------------- */
 function milestonesHtml(initId){
@@ -1892,12 +1949,14 @@ function hasArchChildren(entity,id){
 }
 /* ---- health band → colour (shared by tree + gantt) ---- */
 function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
-function nodeBand(entity,id){ const em=pfMap(); let s=null;
+function nodeBand(entity,id,em){ em=em||pfMap();
+  if(entity==="milestone"){ const ms=(portfolio.milestones||[]).find(m=>m.id===id); if(ms && RD.milestoneAchieved(ms,em)) return "on-track"; return RD.band(RD.milestoneScore(id,em)); }
+  let s=null;
   if(entity==="division") s=RD.rollupDivision(id,portfolio,em);
   else if(entity==="initiative") s=RD.rollupInitiative(id,portfolio,em);
   else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
   return RD.band(s); }
-const STATUS_ENTITIES={division:1,initiative:1,objective:1};
+const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1};
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
@@ -2009,8 +2068,8 @@ function pfActiveChips(){
   return out.map(c=>`<span class="fchip">${esc(c[1])}<span class="fx" data-fclr="${c[0]}">✕</span></span>`).join("")+`<button class="fchip clear" data-fclr="__all">clear all</button>`;
 }
 function wireFilterBar(host){
-  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); });
-  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); });
+  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
 function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
 function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
@@ -2337,6 +2396,150 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+/* ---------------- Milestones tab (summary table — phase 2) ---------------- */
+// product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
+function prodAbbrev(prodId){ const p=byId("product",prodId); if(!p) return "MS";
+  if(p.code) return p.code;
+  const nm=(p.name||"").trim(); if(!nm) return "MS";
+  if(!/\s/.test(nm) && nm.length<=10) return nm;   // already a compact code (e.g. FCS-100) → use as-is
+  const words=nm.split(/\s+/).filter(Boolean);
+  const trailingNum=nm.match(/(\d+)\s*$/); let base=words[0];
+  if(base.length<=3 && words.length>1) base=words[0]+words[1].charAt(0).toUpperCase()+words[1].slice(1);
+  if(base.length>6) base=base.slice(0,6);
+  if(trailingNum && base.indexOf(trailingNum[1])<0) base+=trailingNum[1];
+  return base; }
+// per-product number: <PRODABBR>-NN, ranked by planned date across every initiative of that product
+function milestoneNumber(ms){ const init=byId("initiative",ms.initiativeId); const prodId=init?init.productId:null;
+  const sibs=portfolio.milestones.filter(m=>{ const mi=byId("initiative",m.initiativeId); return mi && (mi.productId||null)===(prodId||null); })
+    .sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+  const idx=sibs.findIndex(m=>m.id===ms.id);
+  return `${prodAbbrev(prodId)}-${String((idx>=0?idx:0)+1).padStart(2,"0")}`; }
+// a milestone's calendar quarter, derived from its planned date (milestones carry no quarter field)
+function msQuarter(ms){ if(ms.plannedDate==null) return ""; const iso=dayToIso(ms.plannedDate); const p=String(iso).split("-"); if(p.length<2) return ""; return p[0]+"Q"+(Math.floor((Number(p[1])-1)/3)+1); }
+function msMatches(ms){ const f=pfFilters; const init=byId("initiative",ms.initiativeId);
+  const div=init?init.divisionId:null, prod=init?(init.productId||null):null;
+  if(f.division && div!==f.division) return false;
+  if(f.product && prod!==f.product) return false;
+  if(f.quarter && msQuarter(ms)!==f.quarter) return false;
+  if(f.status && nodeBand("milestone",ms.id)!==f.status) return false;
+  return true; }
+function renderMilestones(){
+  const el=document.getElementById("msBody"); if(!el) return;
+  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
+  const em=pfMap(), casc=RD.cascade(portfolio, em, todayDay());
+  const rows=portfolio.milestones.filter(msMatches);
+  if(!rows.length){ el.innerHTML=`<p class="hint">${portfolio.milestones.length?"No milestones match the current filters.":"No milestones yet — add one from an initiative in the Structure tab."}</p>`; return; }
+  const groups={}; rows.forEach(ms=>{ const init=byId("initiative",ms.initiativeId); const div=init?init.divisionId:"—"; (groups[div]=groups[div]||[]).push(ms); });
+  const divOrder=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]).concat(groups["—"]?["—"]:[]);
+  let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th><th></th></tr></thead><tbody>`;
+  divOrder.forEach(div=>{
+    const list=groups[div].slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+    const dname = div==="—" ? "— no division —" : (nameOf("division",byId("division",div))||div);
+    h+=`<tr class="grouphead"><td colspan="10">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
+    list.forEach(ms=>{
+      const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+      const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
+      const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
+      const nk=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id).length;
+      const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
+      const stCell = done ? `<span class="band on-track">achieved</span>` : `<span class="band ${bnd}">${bnd.replace("-"," ")}</span>`;
+      h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
+        `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
+        `<td><b>${esc(ms.name||ms.id)}</b></td>`+
+        `<td>${init?esc(init.name||init.id):"—"}</td>`+
+        `<td>${prodId?esc(productName(prodId)):"—"}</td>`+
+        `<td class="mono">${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"}</td>`+
+        `<td class="mono">${effTxt}</td>`+
+        `<td style="white-space:nowrap">${stCell}</td>`+
+        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
+        `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
+        `<td style="text-align:center"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button></td>`+
+      `</tr>`;
+    });
+  });
+  h+=`</tbody></table>`;
+  el.innerHTML=h;
+  el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
+  el.querySelectorAll("[data-msreport]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openMilestoneReport(b.dataset.msreport); });
+}
+/* ---------------- milestone report modal (phase 3) ---------------- */
+let msrCurrent=null, msrDraft=null;
+function msKpiResult(score){ if(score==null) return "N/A"; if(score>=100) return "Met"; if(score>=70) return "Partial"; return "Missed"; }
+function resultBandCls(r){ return r==="Met"?"on-track":r==="Partial"?"at-risk":r==="Missed"?"off-track":"no-band"; }
+function openMilestoneReport(msId){
+  const ms=byId("milestone",msId); if(!ms) return;
+  msrCurrent=msId;
+  const rep=ms.milestoneReport||{};
+  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})), findings:(rep.findings&&rep.findings.length?rep.findings.slice():["","","",""]), locked:!!rep.locked };
+  renderMsReport();
+  document.getElementById("msReportModal").hidden=false;
+}
+function renderMsReport(){
+  const ms=byId("milestone",msrCurrent); if(!ms) return;
+  const em=pfMap(), pool=poolOf(em), locked=msrDraft.locked, ce=locked?"":'contenteditable="true"';
+  const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+  const planned=ms.plannedDate, actual=ms.completedDate;
+  const variance=(planned!=null&&actual!=null)?(actual-planned):null;
+  const varTxt=variance==null?"—":(variance>0?`+${variance} days late`:variance<0?`${-variance} days early`:"on time");
+  const varCls=variance==null?"no-band":(variance>0?"off-track":"on-track");
+  const dirSym=d=>(d==="down"||d==="decrease")?"≤":d==="maintain"?"~":"≥";
+  const kpis=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id);
+  let kpiRows;
+  if(kpis.length){
+    kpiRows=kpis.map(k=>{
+      const s=RD.kpiScoreResolved(k,pool,em), val=RD.effValue(k,pool,em), tgt=RD.effTarget(k,pool,em), unit=RD.kpiUnit(k,pool)||k.unit||"";
+      const ov=msrDraft.kpiOverrides[k.id]||{};
+      const measured=(ov.measured!=null&&ov.measured!=="")?ov.measured:(val==null?"—":`${fmtNum(val)}${unit?" "+unit:""}`);
+      const result=ov.result||msKpiResult(s), bnd=RD.band(s);
+      const tgtTxt=tgt==null?"—":`${dirSym(k.direction)} ${fmtNum(typeof tgt==="object"?tgt.hi:tgt)}${unit?" "+unit:""}`;
+      const resCell=locked?`<span class="band ${resultBandCls(result)}">${result}</span>`
+        :`<select data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
+      return `<tr><td>${esc(RD.kpiName(k,pool)||k.id)}</td>`+
+        `<td class="mono">${esc(tgtTxt)}</td>`+
+        `<td class="mono" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</td>`+
+        `<td>${resCell}</td>`+
+        `<td><span class="band ${bnd}">${bnd.replace("-"," ")}</span></td>`+
+        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td></tr>`;
+    }).join("");
+  } else kpiRows=`<tr><td colspan="6"><span class="hint">No KPIs on this milestone — add them in the editor's Targets section.</span></td></tr>`;
+  const findingsHtml=msrDraft.findings.map((f,i)=>`<div class="msr-finding"><span class="msr-fn">${String(i+1).padStart(2,"0")}</span><div ${ce} data-msr="finding" data-idx="${i}">${esc(f||"")}</div></div>`).join("");
+  document.getElementById("msrBody").innerHTML=
+    `<div class="msr-hd"><div><span class="msr-num mono">${esc(milestoneNumber(ms))}</span> <b>${esc(ms.name||ms.id)}</b></div>`+
+    `<div class="msr-meta">${init?esc(init.name||init.id):""}${prodId?" · "+esc(productName(prodId)):""}</div></div>`+
+    `<div class="msr-dates"><span>Planned <b>${planned!=null?dayToIso(planned):"—"}</b></span>`+
+    `<span>Actual <b>${actual!=null?dayToIso(actual):"—"}</b></span>`+
+    `<span>Variance <span class="band ${varCls}">${varTxt}</span></span></div>`+
+    `<div class="msr-sec-lbl">KPI results</div>`+
+    `<table class="msr-tbl"><thead><tr><th>KPI</th><th>Target</th><th>Measured</th><th>Result</th><th>Band</th><th style="text-align:right">Score</th></tr></thead><tbody>${kpiRows}</tbody></table>`+
+    `<div class="msr-sec-lbl">Findings &amp; learnings</div>${findingsHtml}`;
+  document.getElementById("msrActions").innerHTML=locked
+    ?`<span class="hint" style="margin-right:auto">🔒 Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
+    :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`;
+  document.getElementById("msrLock").textContent=locked?"🔒 Unlock":"Lock";
+  wireMsReport();
+}
+function collectMsReport(){
+  const body=document.getElementById("msrBody"); if(!body||!msrDraft) return;
+  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid, v=(el.textContent||"").trim(); (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=(v==="—"?"":v); });
+  body.querySelectorAll('[data-msr="result"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).result=el.value; });
+  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.findings[i]=(el.textContent||"").trim(); });
+}
+function persistMsReport(msg){
+  const ms=byId("milestone",msrCurrent); if(!ms) return;
+  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings, locked:msrDraft.locked, savedAt:Date.now() };
+  const id=ms.id, snap=JSON.parse(JSON.stringify(ms.milestoneReport));
+  renderMilestones();
+  persistPortfolio(()=>{ const m=byId("milestone",id); if(m) m.milestoneReport=snap; }, msg||"Report saved.");
+}
+function saveMilestoneReport(){ collectMsReport(); persistMsReport("Report saved."); closeMsReport(); }
+function toggleMsLock(){ collectMsReport(); msrDraft.locked=!msrDraft.locked; persistMsReport(msrDraft.locked?"Report locked.":"Report unlocked."); renderMsReport(); }
+function closeMsReport(){ document.getElementById("msReportModal").hidden=true; msrCurrent=null; msrDraft=null; }
+function wireMsReport(){
+  document.getElementById("msrClose").onclick=closeMsReport;
+  const c2=document.getElementById("msrCancel2"); if(c2) c2.onclick=closeMsReport;
+  const sv=document.getElementById("msrSave"); if(sv) sv.onclick=saveMilestoneReport;
+  document.getElementById("msrLock").onclick=toggleMsLock;
+}
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
@@ -2442,7 +2645,7 @@ function renderGantt(){
       return;
     }
     const name=esc(nameOf(n.entity,n.rec));
-    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
+    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}">${name}</span>`;
@@ -2450,7 +2653,7 @@ function renderGantt(){
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     if(g.kind==="bar"){
-      const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id));
+      const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
     } else if(g.gate){
@@ -2466,8 +2669,9 @@ function renderGantt(){
       }
       html+=`<div class="gdia ${st}" style="left:${ex}px" title="${st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
-      html+=`<div class="gdia planned" style="left:${x(g.planned)}px" title="planned"></div>`;
-      if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
+      const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
+      html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
+      if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff${dn}" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
     }
     html+=`</div></div>`;
   });
@@ -2506,9 +2710,64 @@ function slicesHtml(){
 function scoreCell(v){ return `<td><span style="color:${scoreColor(v)};font-weight:600">${fmtScore(v)}</span> ${v==null?'':bandHtml(v)}</td>`; }
 
 /* ---------------- render dispatch ---------------- */
-function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderBrokerStatus(); }
+function renderAll(){ renderOverview(); renderPortfolio(); renderGantt(); renderMilestones(); renderBrokerStatus(); }
+/* ---------------- Overview "active" section (phase 4) ---------------- */
+function isActiveObjective(o, em){
+  const sc=RD.rollupObjective(o.id,portfolio,em); if(sc!=null && sc>=100) return false;   // complete → drops off
+  if((o.quarter||"")===currentQuarter()) return true;
+  const t=todayDay();
+  return (o.plannedStart!=null && o.plannedEnd!=null && o.plannedStart<=t && t<=o.plannedEnd);
+}
+function isActiveMilestone(ms, em){ if(RD.milestoneAchieved(ms,em)) return false; return msQuarter(ms)===currentQuarter(); }
+function activeKrDots(o, em){
+  const doc=execDocs["EXEC-"+o.divisionId];
+  const krs=((doc&&doc.keyResults)||[]).filter(k=>k.objectiveId===o.id);
+  const gates=((doc&&doc.stageGates)||[]).filter(g=>g.objectiveId===o.id);
+  const dot=b=>`<span class="ap-mini" style="background:${bandColor(b)}"></span>`;
+  let s="";
+  if(krs.length) s+=`<span class="ap-lbl">KR</span>${krs.map(k=>dot(RD.band(RD.keyResultScore(k.id,em)))).join("")}`;
+  if(gates.length) s+=`<span class="ap-lbl">gate</span>${gates.map(g=>dot(RD.band(RD.stageGateScore(g.id,em)))).join("")}`;
+  if(!krs.length && !gates.length) s=`<span>no KRs or gates yet</span>`;
+  return s;
+}
+function activePanelHtml(){
+  const em=pfMap(), cq=currentQuarter(), byDiv=(lens==="division");
+  const objs=portfolio.objectives.filter(o=>isActiveObjective(o,em));
+  const mss=portfolio.milestones.filter(ms=>isActiveMilestone(ms,em));
+  const total=objs.length+mss.length;
+  let h=`<div class="ap-wrap" id="apWrap"><div class="ap-head"><span>Active</span><span class="tsub">${total} item${total===1?"":"s"} · ${esc(cq)}</span></div>`;
+  if(!total) return h+`<p class="hint">Nothing active — no in-window objectives or current-quarter milestones that aren't already complete.</p></div>`;
+  const groupObj=o=>byDiv?(o.divisionId||"—"):(effProductOf(o)||"—");
+  const groupMs=ms=>{ const i=byId("initiative",ms.initiativeId); return byDiv?((i&&i.divisionId)||"—"):((i&&i.productId)||"—"); };
+  const groups={};
+  objs.forEach(o=>{ const k=groupObj(o); (groups[k]=groups[k]||{obj:[],ms:[]}).obj.push(o); });
+  mss.forEach(ms=>{ const k=groupMs(ms); (groups[k]=groups[k]||{obj:[],ms:[]}).ms.push(ms); });
+  const base=byDiv?portfolio.divisions.map(d=>d.id):portfolio.products.map(p=>p.id);
+  const order=base.filter(k=>groups[k]).concat(Object.keys(groups).filter(k=>base.indexOf(k)<0));
+  order.forEach(k=>{ const g=groups[k]; if(!g) return;
+    const label=byDiv?(nameOf("division",byId("division",k))||k):(k==="—"?"— unclassified —":(productName(k)||k));
+    h+=`<div class="ap-grp"><div class="ap-grp-lbl">${esc(label)}</div>`;
+    g.obj.forEach(o=>{ const b=nodeBand("objective",o.id), sc=RD.rollupObjective(o.id,portfolio,em);
+      const dates=[o.quarter,(o.plannedStart!=null&&o.plannedEnd!=null)?`${dayToIso(o.plannedStart)} – ${dayToIso(o.plannedEnd)}`:null].filter(Boolean).join(" · ");
+      h+=`<div class="ap-row" data-lineage="objective:${o.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
+        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>`+
+        `<div class="ap-sub">${dates?`<span>${esc(dates)}</span>`:""}${activeKrDots(o,em)}</div></div>`+
+        `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
+    });
+    g.ms.forEach(ms=>{ const b=nodeBand("milestone",ms.id), sc=RD.milestoneScore(ms.id,em);
+      const nk=(portfolio.kpis||[]).filter(x=>x.hostType==="milestone"&&x.hostId===ms.id).length;
+      h+=`<div class="ap-row" data-lineage="milestone:${ms.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
+        `<div class="ap-main"><div class="ap-name">◆ <span class="ap-num mono">${esc(milestoneNumber(ms))}</span> ${esc(ms.name||ms.id)}</div>`+
+        `<div class="ap-sub"><span>${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"} · ${nk} KPI${nk===1?"":"s"}</span></div></div>`+
+        `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
+    });
+    h+=`</div>`;
+  });
+  return h+`</div>`;
+}
 function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
-  el.innerHTML = (lens==="division") ? companyHtml() : slicesHtml(); }
+  el.innerHTML = ((lens==="division") ? companyHtml() : slicesHtml()) + activePanelHtml();
+  const ap=el.querySelector("#apWrap"); if(ap) wireTreeLinks(ap); }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
   el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
 
