@@ -714,17 +714,30 @@ let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 /* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
-var __etbSaveTimer=null, __etbSuppressSave=false;
-function etbFlushSave(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } try{ if(window.ETB && ETB.saveActive) return ETB.saveActive(); }catch(e){} return Promise.resolve(false); }
-window.__etbOnChange = function(){
-  try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}
+var __etbSaveTimer=null, __etbMaxTimer=null, __etbSuppressSave=false, __etbSaveChain=Promise.resolve();
+var ETB_SAVE_DEBOUNCE_MS=700, ETB_SAVE_MAXWAIT_MS=2500;   // mirror the app's persist() timings
+function __etbClearSaveTimers(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } if(__etbMaxTimer){ clearTimeout(__etbMaxTimer); __etbMaxTimer=null; } }
+// serialize writes so a debounced save and a flush can never overlap (no self-inflicted 412);
+// each ETB.saveActive is already a read-modify-write against its per-division doc's etag.
+function __etbRunSave(){ __etbClearSaveTimers(); __etbSaveChain=__etbSaveChain.then(function(){ try{ if(window.ETB && ETB.saveActive) return ETB.saveActive(); }catch(e){} return false; }).catch(function(){ return false; }); return __etbSaveChain; }
+function etbScheduleSave(){
   if(__etbSuppressSave) return;
   if(__etbSaveTimer) clearTimeout(__etbSaveTimer);
-  __etbSaveTimer=setTimeout(function(){ __etbSaveTimer=null; try{ if(window.ETB && ETB.saveActive) ETB.saveActive(); }catch(e){} }, 700);
+  __etbSaveTimer=setTimeout(__etbRunSave, ETB_SAVE_DEBOUNCE_MS);                    // debounce: save shortly after the last action
+  if(!__etbMaxTimer) __etbMaxTimer=setTimeout(__etbRunSave, ETB_SAVE_MAXWAIT_MS);   // hard cap: force a save during continuous editing
+}
+// flush a pending write now (a pending timer == an unsaved change); otherwise just wait out any in-flight write
+function etbFlushSave(){ if(__etbSaveTimer || __etbMaxTimer) return __etbRunSave(); return __etbSaveChain; }
+window.__etbOnChange = function(){
+  try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}   // keep the host current-step panel in sync
+  etbScheduleSave();
 };
 function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
 function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ __etbSuppressSave=true; return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }).finally(function(){ __etbSuppressSave=false; }); } }catch(e){ __etbSuppressSave=false; } return Promise.resolve(); }
-if(typeof window!=="undefined"){ window.addEventListener("beforeunload",function(){ if(__etbSaveTimer){ try{ etbFlushSave(); }catch(e){} } }); }
+if(typeof window!=="undefined"){
+  window.addEventListener("beforeunload",function(){ try{ etbFlushSave(); }catch(e){} });
+  document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden"){ try{ etbFlushSave(); }catch(e){} } });   // tab-hide: matches the app's persist flush
+}
 
 /* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
 function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
@@ -991,6 +1004,7 @@ async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
   await flushPersist();                                                       // save the current division fully before repointing the bin
+  try{ await etbFlushSave(); }catch(e){}                                       // + flush the current division's ETB doc before divisionId changes
   document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));   // close any open modal
   divisionId=newDiv; localStorage.setItem("rd_division",divisionId);
   selectedObj=null; addingFor=null; editingSub=null; armedDel=null; armedDelRisk=null; draftRisk=null; editingRiskId=null;
@@ -1033,7 +1047,7 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=()=>{ etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); __etbSuppressSave=false; renderAll(); };
+  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); renderAll(); __etbSuppressSave=false; };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
@@ -2702,6 +2716,7 @@ function applyJson(){
   normalizeTree(state.tree);
   cacheTree();
   renderStatus();renderOutline();refreshGraphAndPanel();
+  if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}   // applying pasted JSON is a mutation → autosave
   renderIssues(target,validateTree(state.tree),"Applied. No validation issues.");
   return true;
 }

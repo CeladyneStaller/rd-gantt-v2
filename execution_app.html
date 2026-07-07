@@ -1230,6 +1230,61 @@ html[data-theme="dark"] #etb-view{
     return c.kind === 'model' ? c.modelId : null;
   }
 
+  // ---- quarter helpers (calendar quarters, matching YYYY"Q"N) ----
+  function quarterRange(q) {                          // 'YYYYQN' -> { start:'YYYY-MM-DD', end:'YYYY-MM-DD' } | null
+    var m = /^(\d{4})Q([1-4])$/.exec(String(q == null ? '' : q).trim());
+    if (!m) return null;
+    var y = +m[1], sm = (+m[2] - 1) * 3, pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var ey = y, em = sm + 3; if (em >= 12) { ey = y + 1; em = 0; }
+    var last = new Date(Date.UTC(ey, em, 1) - 86400000);
+    return { start: y + '-' + pad(sm + 1) + '-01',
+             end: last.getUTCFullYear() + '-' + pad(last.getUTCMonth() + 1) + '-' + pad(last.getUTCDate()) };
+  }
+  function quarterList(used, refYear, back, fwd) {    // rolling window ∪ used, sorted; caller adds the blank option
+    back = back == null ? 1 : back; fwd = fwd == null ? 2 : fwd;
+    var set = {};
+    for (var y = refYear - back; y <= refYear + fwd; y++) for (var q = 1; q <= 4; q++) set[y + 'Q' + q] = 1;
+    (used || []).forEach(function (u) { if (/^\d{4}Q[1-4]$/.test(u)) set[u] = 1; });
+    return Object.keys(set).sort();
+  }
+
+  // ---- layered grouping of objectives by an ordered list of dimensions ----
+  // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
+  // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
+  // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  function _dimKey(o, dim, portfolio) {
+    if (dim === 'division') return o.divisionId || '';
+    if (dim === 'product') return effProduct(o, portfolio) || '';
+    if (dim === 'model') return effModel(o, portfolio) || '';
+    if (dim === 'quarter') return o.quarter || '';
+    if (dim === 'owner') return o.owner || '';
+    if (dim === 'initiative') return o.initiativeId || '';
+    return '';
+  }
+  function _dimOrder(dim, keys, portfolio) {
+    var none = keys.indexOf('') >= 0, rest = keys.filter(function (k) { return k !== ''; });
+    var src = dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
+            : dim === 'model' ? portfolio.models : dim === 'initiative' ? portfolio.initiatives : null;
+    if (src) { var idx = {}; src.forEach(function (r, i) { idx[r.id] = i; });
+      rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
+        return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
+    } else { rest.sort(); }
+    if (none) rest.push('');
+    return rest;
+  }
+  function groupObjectives(objs, dims, portfolio) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+    var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
+    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    return _dimOrder(dim, seen, portfolio).map(function (k) {
+      var node = { key: k, dim: dim };
+      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      else node.objs = buckets[k];
+      return node;
+    });
+  }
+
   // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
   // Enforces the node invariant (at most one of productId/modelId) and the
   // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
@@ -1648,6 +1703,9 @@ html[data-theme="dark"] #etb-view{
     effClass: effClass,
     effProduct: effProduct,
     effModel: effModel,
+    quarterRange: quarterRange,
+    quarterList: quarterList,
+    groupObjectives: groupObjectives,
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
@@ -1715,17 +1773,30 @@ let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 /* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
-var __etbSaveTimer=null, __etbSuppressSave=false;
-function etbFlushSave(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } try{ if(window.ETB && ETB.saveActive) return ETB.saveActive(); }catch(e){} return Promise.resolve(false); }
-window.__etbOnChange = function(){
-  try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}
+var __etbSaveTimer=null, __etbMaxTimer=null, __etbSuppressSave=false, __etbSaveChain=Promise.resolve();
+var ETB_SAVE_DEBOUNCE_MS=700, ETB_SAVE_MAXWAIT_MS=2500;   // mirror the app's persist() timings
+function __etbClearSaveTimers(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } if(__etbMaxTimer){ clearTimeout(__etbMaxTimer); __etbMaxTimer=null; } }
+// serialize writes so a debounced save and a flush can never overlap (no self-inflicted 412);
+// each ETB.saveActive is already a read-modify-write against its per-division doc's etag.
+function __etbRunSave(){ __etbClearSaveTimers(); __etbSaveChain=__etbSaveChain.then(function(){ try{ if(window.ETB && ETB.saveActive) return ETB.saveActive(); }catch(e){} return false; }).catch(function(){ return false; }); return __etbSaveChain; }
+function etbScheduleSave(){
   if(__etbSuppressSave) return;
   if(__etbSaveTimer) clearTimeout(__etbSaveTimer);
-  __etbSaveTimer=setTimeout(function(){ __etbSaveTimer=null; try{ if(window.ETB && ETB.saveActive) ETB.saveActive(); }catch(e){} }, 700);
+  __etbSaveTimer=setTimeout(__etbRunSave, ETB_SAVE_DEBOUNCE_MS);                    // debounce: save shortly after the last action
+  if(!__etbMaxTimer) __etbMaxTimer=setTimeout(__etbRunSave, ETB_SAVE_MAXWAIT_MS);   // hard cap: force a save during continuous editing
+}
+// flush a pending write now (a pending timer == an unsaved change); otherwise just wait out any in-flight write
+function etbFlushSave(){ if(__etbSaveTimer || __etbMaxTimer) return __etbRunSave(); return __etbSaveChain; }
+window.__etbOnChange = function(){
+  try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}   // keep the host current-step panel in sync
+  etbScheduleSave();
 };
 function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
 function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ __etbSuppressSave=true; return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }).finally(function(){ __etbSuppressSave=false; }); } }catch(e){ __etbSuppressSave=false; } return Promise.resolve(); }
-if(typeof window!=="undefined"){ window.addEventListener("beforeunload",function(){ if(__etbSaveTimer){ try{ etbFlushSave(); }catch(e){} } }); }
+if(typeof window!=="undefined"){
+  window.addEventListener("beforeunload",function(){ try{ etbFlushSave(); }catch(e){} });
+  document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden"){ try{ etbFlushSave(); }catch(e){} } });   // tab-hide: matches the app's persist flush
+}
 
 /* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
 function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
@@ -1992,6 +2063,7 @@ async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
   await flushPersist();                                                       // save the current division fully before repointing the bin
+  try{ await etbFlushSave(); }catch(e){}                                       // + flush the current division's ETB doc before divisionId changes
   document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));   // close any open modal
   divisionId=newDiv; localStorage.setItem("rd_division",divisionId);
   selectedObj=null; addingFor=null; editingSub=null; armedDel=null; armedDelRisk=null; draftRisk=null; editingRiskId=null;
@@ -2034,7 +2106,7 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=()=>{ etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); __etbSuppressSave=false; renderAll(); };
+  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); renderAll(); __etbSuppressSave=false; };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
@@ -3703,6 +3775,7 @@ function applyJson(){
   normalizeTree(state.tree);
   cacheTree();
   renderStatus();renderOutline();refreshGraphAndPanel();
+  if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}   // applying pasted JSON is a mutation → autosave
   renderIssues(target,validateTree(state.tree),"Applied. No validation issues.");
   return true;
 }
