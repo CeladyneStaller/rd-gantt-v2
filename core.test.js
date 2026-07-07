@@ -33,6 +33,11 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   eq(C.allocId('objective', 'DIV-FC', [], { quarter: '2026Q3' }), 'OBJ-FC-2026Q3-01', 'quarter-stamped objective');
   eq(C.allocId('keyResult', 'OBJ-FC-2026Q3-02', [], {}), 'KR-FC-2026Q3-02-1', 'leaf KR unpadded');
   eq(C.allocId('stageGate', 'OBJ-FC-2026Q3-02', ['SG-FC-2026Q3-02-1'], {}), 'SG-FC-2026Q3-02-2', 'leaf SG increments');
+  eq(C.allocId('product', 'DIV-FC', [], {}), 'PRD-FC-1', 'first product under a division');
+  eq(C.allocId('product', 'DIV-FC', ['PRD-FC-1','PRD-FC-2'], {}), 'PRD-FC-3', 'next product increments');
+  eq(C.allocId('model', 'PRD-FC-1', [], {}), 'MDL-FC-1-1', 'first model under a product');
+  eq(C.allocId('model', 'PRD-FC-1', ['MDL-FC-1-1'], {}), 'MDL-FC-1-2', 'next model increments');
+  eq(C.allocId('model', 'PRD-FC-1', ['MDL-FC-11-3'], {}), 'MDL-FC-1-1', 'model numbering not confused by sibling product PRD-FC-11');
   var threw = false; try { C.allocId('division', null, ['DIV-FC'], { code: 'FC' }); } catch (e) { threw = true; }
   ok(threw, 'duplicate division code throws');
 })();
@@ -129,6 +134,79 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   approx(C.keyResultScore('KR1', exec), 80, 'gate reading scores the linked KR (value up)');
   approx(C.objectiveScore('O1', exec), 80, 'objective scores from the linked gate reading');
   approx(C.stageGateScore('SG1', exec), 80, 'gate readiness = cascaded-down target + own reading');
+})();
+
+/* ---- milestone KPIs: hosted score + achievement (standalone gating signal) --- */
+(function () {
+  eq(C.KPI_LEVEL.milestone, 3, 'milestone sits at the initiative tier in the KPI level map');
+  eq(C.KPI_LEVEL.milestone, C.KPI_LEVEL.initiative, 'milestone is a peer of initiative');
+
+  var exec = { 'D': {
+    kpis: [
+      { id: 'Kms1', objectiveId: null, hostType: 'milestone', hostId: 'MS1', direction: 'up', target: 100 },
+      { id: 'Kms2', objectiveId: null, hostType: 'milestone', hostId: 'MS1', direction: 'up', target: 100 }
+    ],
+    kpiUpdates: [{ kpiId: 'Kms1', value: 100, timestamp: 1 }, { kpiId: 'Kms2', value: 0, timestamp: 1 }]
+  } };
+  approx(C.milestoneScore('MS1', exec), 50, 'milestone score = mean of its hosted KPIs (100 & 0)');
+  isNull(C.milestoneScore('MSX', exec), 'milestone with no KPIs -> null score');
+
+  // achievement: KPI score at 100 OR manual completedDate; no-KPI milestone -> manual only
+  eq(C.milestoneAchieved({ id: 'MS1' }, exec), false, 'not achieved at 50% with no completed date');
+  var execFull = { 'D': {
+    kpis: [{ id: 'Kf', objectiveId: null, hostType: 'milestone', hostId: 'MS2', direction: 'up', target: 100 }],
+    kpiUpdates: [{ kpiId: 'Kf', value: 100, timestamp: 1 }]
+  } };
+  eq(C.milestoneAchieved({ id: 'MS2' }, execFull), true, 'achieved when KPI score hits 100%');
+  eq(C.milestoneAchieved({ id: 'MSX', completedDate: 30 }, exec), true, 'no-KPI milestone achieved by manual completedDate');
+  eq(C.milestoneAchieved({ id: 'MSX' }, exec), false, 'no-KPI milestone not achieved without a mark');
+
+  // isolation: milestone KPIs never enter an objective's score (same stance as stage gates)
+  var execObj = { 'D': {
+    keyResults: [{ id: 'KRo', objectiveId: 'O1', statement: 'k' }],
+    kpis: [
+      { id: 'Kkr', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRo', direction: 'up', target: 100 },
+      { id: 'Kmo', objectiveId: null, hostType: 'milestone', hostId: 'MS3', direction: 'up', target: 100 }
+    ],
+    kpiUpdates: [{ kpiId: 'Kkr', value: 100, timestamp: 1 }, { kpiId: 'Kmo', value: 0, timestamp: 1 }]
+  } };
+  approx(C.objectiveScore('O1', execObj), 100, 'milestone KPI is excluded from the objective/OKR score');
+  approx(C.milestoneScore('MS3', execObj), 0, 'the same milestone KPI still scores the milestone');
+})();
+
+/* ---- milestone KPIs as a define-down parent (1b: target cascades down, links validate) --- */
+(function () {
+  // milestone-level definer with a target; a KR links up via linkParent (direct) -> KR inherits target/name/direction
+  var msDef = { id:'Kmd', hostType:'milestone', hostId:'MS1', isDefiner:true, groupId:null, direction:'up', unit:'A', target:100, name:'Peak current' };
+  var krDirect = { id:'Kkd', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', linkParent:'Kmd', linkType:'direct', target:null };
+  var kd=[msDef, krDirect];
+  approx(C.effTarget(krDirect, kd), 100, '1b: milestone target cascades DOWN to a direct-linked KR');
+  eq(C.kpiName(krDirect, kd), 'Peak current', 'linked KR inherits the milestone KPI name');
+  eq(C.kpiDirection(krDirect, kd), 'up', 'linked KR inherits the milestone KPI direction');
+  // contribute: KR may override its target, else inherits
+  var krC1={ id:'Kc1', hostType:'keyResult', hostId:'KR2', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:80 };
+  approx(C.effTarget(krC1,[msDef,krC1]), 80, 'contribute-linked KR keeps its own target override');
+  var krC2={ id:'Kc2', hostType:'keyResult', hostId:'KR3', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:null };
+  approx(C.effTarget(krC2,[msDef,krC2]), 100, 'contribute-linked KR with no target inherits the milestone target');
+  // peer link: a milestone KPI contributing to an initiative KPI resolves (define-down across the tier), no cycle
+  var initDef={ id:'Kin', hostType:'initiative', hostId:'I1', isDefiner:true, groupId:null, direction:'up', target:100, name:'Init metric' };
+  var msPeer={ id:'Kmp', hostType:'milestone', hostId:'MS1', linkParent:'Kin', linkType:'contribute', target:null };
+  eq(C.wouldCreateCycle('Kmp','Kin',[initDef,msPeer]), false, 'peer milestone<->initiative link is not a cycle');
+  approx(C.effTarget(msPeer,[initDef,msPeer]), 100, 'peer link: milestone inherits the initiative target');
+  eq(C.wouldCreateCycle('Kin','Kin',[initDef]), true, 'self-link is still rejected as a cycle');
+})();
+
+/* ---- milestone KPIs: readings on linked KRs roll UP to the milestone score (1c) --- */
+(function () {
+  var msDef={ id:'Kmd', hostType:'milestone', hostId:'MS1', isDefiner:true, groupId:null, direction:'up', target:100, name:'Peak current' };
+  var kr={ id:'Kkr', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:null };
+  var exec={ 'D':{ keyResults:[{id:'KR1',objectiveId:'O1'}], kpis:[msDef,kr], kpiUpdates:[{kpiId:'Kkr',value:80,timestamp:1}] } };
+  approx(C.effValue(msDef, exec['D'].kpis, exec), 80, '1c: a linked KR reading rolls UP to the milestone definer value');
+  approx(C.milestoneScore('MS1', exec), 80, 'milestoneScore reflects the rolled-up KR reading (80/100 up)');
+  eq(C.milestoneAchieved({id:'MS1'}, exec), false, 'milestone not achieved at 80%');
+  exec['D'].kpiUpdates=[{kpiId:'Kkr',value:100,timestamp:1}];
+  approx(C.milestoneScore('MS1', exec), 100, 'milestoneScore hits 100 when the KR reading meets the target');
+  eq(C.milestoneAchieved({id:'MS1'}, exec), true, 'milestone achieved when the rolled-up KPI reaches 100');
 })();
 
 /* ---- KPI link groups: initiative-level definition + lower override ------ */
@@ -784,6 +862,204 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(C.wouldCreateCycle('X','A',kpis)===false, 'a fresh node X under root A = no cycle');
   ok(C.wouldCreateCycle('A','A',kpis)===true, 'self-link = cycle');
   ok(C.wouldCreateCycle('C','A',kpis)===false, 'C under A (already its ancestor, no new loop) = no cycle');
+})();
+
+/* ---- product composition (model-to-model): children / parents / descendants / cycle ---- */
+(function(){
+  // sys-M contains stack-N; stack-N contains cell-P.  (edge.parent CONTAINS edge.child)
+  var comp=[ {id:'e1',parent:'M',child:'N'}, {id:'e2',parent:'M',child:'K'}, {id:'e3',parent:'N',child:'P'} ];
+  ok(JSON.stringify(C.compositionChildren('M',comp))==='["N","K"]', 'direct sub-products of M = [N,K]');
+  ok(JSON.stringify(C.compositionParents('N',comp))==='["M"]', 'N is used in M');
+  ok(C.descendantModels('M',comp).sort().join(',')==='K,N,P', 'transitive descendants of M = K,N,P');
+  ok(C.descendantModels('P',comp).length===0, 'leaf P has no descendants');
+  ok(C.wouldComposeCycle('M','M',comp)===true, 'self-compose = cycle');
+  ok(C.wouldComposeCycle('N','M',comp)===true, 'N containing M when M already contains N = cycle');
+  ok(C.wouldComposeCycle('P','M',comp)===true, 'P containing M (M is a transitive ancestor) = cycle');
+  ok(C.wouldComposeCycle('M','Q',comp)===false, 'M containing a fresh model Q = no cycle');
+  ok(C.compositionChildren('M',undefined).length===0, 'null-safe on empty composition');
+})();
+
+/* ---- importableModelKpis: a model's keyResult-hosted definer specs only ---- */
+(function(){
+  var kpis=[
+    {id:'k1',objectiveId:'N',hostType:'keyResult',linkParent:null,name:'Power'},
+    {id:'k2',objectiveId:'N',hostType:'keyResult',linkParent:null,name:'Efficiency'},
+    {id:'k3',objectiveId:'N',hostType:'keyResult',linkParent:'k1',linkType:'contribute'}, // a member, not a definer
+    {id:'k4',objectiveId:'N',hostType:'component',linkParent:null,name:'Seal torque'},     // component-level, excluded
+    {id:'k5',objectiveId:'OTHER',hostType:'keyResult',linkParent:null,name:'Other model'}  // different model
+  ];
+  var imp=C.importableModelKpis('N',kpis).map(k=>k.id);
+  ok(imp.length===2 && imp.indexOf('k1')>=0 && imp.indexOf('k2')>=0, 'only N\'s keyResult definers (k1,k2)');
+  ok(imp.indexOf('k3')<0, 'member specs excluded');
+  ok(imp.indexOf('k4')<0, 'component-level metrics excluded');
+  ok(imp.indexOf('k5')<0, 'other models excluded');
+})();
+
+/* ---- rawScore: bare value vs bare target ---- */
+(function(){
+  ok(C.rawScore(100,100,'up')===100, 'meets an up target = 100');
+  ok(C.rawScore(null,100,'up')===null, 'no value = null');
+  ok(C.rawScore(100,null,'up')===null, 'no target = null');
+  ok(C.rawScore(50,{lo:40,hi:60},'range')===100, 'inside a range = 100');
+  ok(C.rawScore(50,50,'up')===C.rawScore(50,50,'down'), 'exact hit scores equal either direction');
+})();
+
+/* ---- cross-doc linkage scope (execution → product/model KPIs) ---- */
+(function(){
+  // products P1-P4; models M1,M2 in P1, M3 in P2, M4 in P3, M5 in P4; composition M1⊃M3, M3⊃M4
+  var P = {
+    products:[{id:'P1'},{id:'P2'},{id:'P3'},{id:'P4'}],
+    models:[{id:'M1',productId:'P1'},{id:'M2',productId:'P1'},{id:'M3',productId:'P2'},{id:'M4',productId:'P3'},{id:'M5',productId:'P4'}],
+    initiatives:[{id:'I1'},{id:'I2',productId:'P4'}],
+    objectives:[
+      {id:'O1',divisionId:'D',modelId:'M1',initiativeId:'I1'},    // classified to model M1
+      {id:'O2',divisionId:'D',productId:'P2',initiativeId:'I1'},  // classified to product P2
+      {id:'O3',divisionId:'D',initiativeId:'I2'},                 // agnostic → inherits I2 (product P4)
+      {id:'OX',divisionId:'OTHER',modelId:'M5',initiativeId:'I1'} // another division, ignored
+    ]
+  };
+  var comp = [{id:'e1',parent:'M1',child:'M3'},{id:'e2',parent:'M3',child:'M4'}];
+  var t = C.classifiedTargets(P, comp, 'D');
+  ok(t.models.slice().sort().join(',')==='M1,M3,M4,M5', 'in-scope models: classified M1, P2\'s M3, sub-products M3→M4, inherited P4\'s M5');
+  ok(t.models.indexOf('M2')<0, 'a sibling model of a model-classified product (M2 in P1) is NOT in scope');
+  ok(t.products.slice().sort().join(',')==='P1,P2,P3,P4', 'in-scope products: P2 classified, P1 (M1), P3 (M4 sub-product), P4 (inherited + M5)');
+
+  var specK = [
+    {id:'PK1',hostType:'product',hostId:'P1',name:'P1 power'},          // product definer, in scope
+    {id:'MK1',hostType:'keyResult',objectiveId:'M1',name:'M1 spec'},    // model headline definer, in scope
+    {id:'MK1b',hostType:'keyResult',objectiveId:'M1',linkParent:'MK1',linkType:'contribute'}, // linked member, not a headline
+    {id:'MK2',hostType:'keyResult',objectiveId:'M2',name:'M2 spec'},    // M2 out of scope → excluded
+    {id:'PK4',hostType:'product',hostId:'P4',name:'P4 power'}           // product definer, in scope
+  ];
+  ok(C.targetKpisInScope({products:['P1','P4'],models:['M1']}, specK).map(function(k){return k.id;}).sort().join(',')==='MK1,PK1,PK4',
+     'linkable targets = model headline specs + product definers; excludes members + out-of-scope models');
+})();
+
+/* ---- execution KPI linked UP to a product KPI (the issue-2 mechanism) ---- */
+(function(){
+  var PK = {id:'PK',hostType:'product',hostId:'P1',name:'Power density',direction:'up',unit:'W/cm2',target:1.5};
+  var MC = {id:'MC',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'contribute',target:null};
+  var MD = {id:'MD',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'direct',target:0.9};       // own target ignored by direct
+  var MS = {id:'MS',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'specification',target:2.0}; // firewall + own target
+  var exec = { keyResults:[], stageGates:[], kpis:[MC,MD,MS], kpiUpdates:[
+    {kpiId:'MC',value:1.2,timestamp:10}, {kpiId:'MS',value:9.9,timestamp:10}
+  ]};
+  var pool = exec.kpis.concat([PK]);   // allKpisPool = execution kpis + product KPIs pulled from spec docs
+  var em = C.withPortfolio({objectives:[{id:'O1',quarter:'Q1 2026'}]}, {'D':exec});
+
+  ok(C.kpiName(MC,pool)==='Power density', 'member name resolves to the product KPI (rootOf)');
+  ok(C.kpiDirection(MC,pool)==='up' && C.kpiUnit(MC,pool)==='W/cm2', 'member direction/unit resolve to the product KPI');
+  approx(C.effTarget(MC,pool), 1.5, 'contribute member with no own target inherits the product target');
+  approx(C.effTarget(MD,pool), 1.5, 'direct member takes the product target (ignores its own)');
+  approx(C.effTarget(MS,pool), 2.0, 'specification member keeps its own target');
+  approx(C.effValue(MC,pool,em), 1.2, 'member value comes from the execution doc reading');
+  approx(C.kpiScoreResolved(MC,pool,em), 80, 'score = 1.2 vs 1.5 (up) = 80');
+  approx(C.effValue(PK,pool,em), 1.2, 'product rollup takes the contribute member (1.2), NOT the spec-firewalled MS (9.9)');
+})();
+
+/* ---- FMEA / risk register ---- */
+(function(){
+  // RPN + band
+  ok(C.calcRpn(10,8,5)===400, 'rpn = s*o*d');
+  ok(C.calcRpn(0,0,0)===1, 'blank sod floors each factor at 1');
+  ok(C.calcRpn('7','3','4')===84, 'rpn parses string sod');
+  ok(C.rpnBand(200)==='high' && C.rpnBand(199)==='med' && C.rpnBand(100)==='med' && C.rpnBand(99)==='low', 'band thresholds 200/100');
+  ok(C.fmeaScaleLabel('severity',1)==='None' && C.fmeaScaleLabel('severity',10)==='Critical', 'severity scale label ends');
+  ok(C.fmeaScaleLabel('detection',10)==='Undetectable', 'detection 10 = undetectable');
+
+  // a problem: two modes, worst raw cause 9*9*8=648, a lower cause 5*5*4=100
+  var prob = { rid:'r1', objectiveId:'O', gateId:null, status:'open', modes:[
+    { mid:'m1', status:'open', effects:[ { eid:'e1', status:'open', causes:[
+      { cid:'c1', severity:9, occurrence:9, detection:8, status:'open' },   // 648
+      { cid:'c2', severity:5, occurrence:5, detection:4, status:'open' } ]} ]},   // 100
+    { mid:'m2', status:'open', effects:[ { eid:'e2', status:'open', causes:[
+      { cid:'c3', severity:6, occurrence:2, detection:2, status:'open' } ]} ]} ]};   // 24
+  ok(C.worstRpn(prob)===648, 'worstRpn spans the whole tree');
+  ok(C.worstUnresolvedRpn(prob,false)===648, 'unresolved worst = 648 when nothing resolved / gate open');
+
+  // resolving the worst cause drops unresolved to the next (100), but raw worst still 648
+  var p2 = JSON.parse(JSON.stringify(prob)); p2.modes[0].effects[0].causes[0].status='resolved';
+  ok(C.worstUnresolvedRpn(p2,false)===100, 'resolving a cause is skipped by unresolved worst');
+  ok(C.worstRpn(p2)===648, 'raw worst ignores resolution');
+  // resolving the whole effect skips its causes
+  var p3 = JSON.parse(JSON.stringify(prob)); p3.modes[0].effects[0].status='resolved';
+  ok(C.worstUnresolvedRpn(p3,false)===24, 'resolved effect skips all its causes → next mode 24');
+  // problem resolved OR gate passed → 0
+  var p4 = JSON.parse(JSON.stringify(prob)); p4.status='resolved';
+  ok(C.worstUnresolvedRpn(p4,false)===0, 'resolved problem → 0');
+  ok(C.worstUnresolvedRpn(prob,true)===0, 'passed gate → 0 regardless of open causes');
+
+  // scoping: only this objective's problems
+  var exec = { risks:[ prob, {rid:'r2',objectiveId:'OTHER',modes:[]}, {rid:'r3',objectiveId:'O',status:'open',modes:[
+    { mid:'m',status:'open',effects:[{eid:'e',status:'open',causes:[{cid:'c',severity:5,occurrence:3,detection:1,status:'open'}]}]} ]} ] };   // 15
+  var mine = C.fmeaProblemsFor(exec,'O');
+  ok(mine.length===2 && mine[0].rid==='r1' && mine[1].rid==='r3', 'fmeaProblemsFor filters by objectiveId');
+  ok(C.fmeaProblemsFor(exec,'MISSING').length===0, 'no problems for an unknown objective');
+
+  // rollup with a gate-passed predicate
+  var roll = C.fmeaRollup(mine, function(gid){ return false; });
+  ok(roll.total===2 && roll.openHigh===1 && roll.openLow===1 && roll.openMed===0 && roll.clear===0, 'rollup bands: one high (648), one low (15)');
+  ok(roll.worst===648, 'rollup worst = 648');
+  // give r1 a passed gate → it clears, leaving only the low
+  var g1 = JSON.parse(JSON.stringify(prob)); g1.gateId='G1';
+  var roll2 = C.fmeaRollup([g1, mine[1]], function(gid){ return gid==='G1'; });
+  ok(roll2.openHigh===0 && roll2.clear===1 && roll2.openLow===1, 'a passed gate clears its problem from the rollup');
+
+  // constructors: correct shape + unique ids
+  var bp = C.blankProblem('O');
+  ok(bp.objectiveId==='O' && bp.status==='open' && bp.gateId===null, 'blankProblem tagged to objective, open, no gate');
+  ok(bp.modes.length===1 && bp.modes[0].effects.length===1 && bp.modes[0].effects[0].causes.length===1, 'blankProblem seeds one mode/effect/cause');
+  var c = bp.modes[0].effects[0].causes[0];
+  ok(c.severity===1 && c.occurrence===1 && c.detection===1 && c.status==='open', 'seeded cause defaults to 1/1/1 open');
+  ok(C.blankCause().cid !== C.blankCause().cid, 'fmea ids are unique');
+
+  // migration: fills missing arrays/fields, maps legacy id, preserves given ids, keeps objectiveId
+  var mig = C.migrateProblem({ id:'legacy', problem:'p', objectiveId:'O', modes:[ { mode:'m', effects:[ { effect:'e', causes:[ { cause:'c', severity:7 } ] } ] } ] });
+  ok(mig.rid==='legacy', 'migrate maps legacy id → rid');
+  ok(mig.objectiveId==='O' && mig.status==='open' && mig.gateId===null, 'migrate keeps objectiveId, defaults status/gate');
+  ok(mig.modes[0].status==='open' && mig.modes[0].effects[0].causes[0].occurrence===1 && mig.modes[0].effects[0].causes[0].detection===1, 'migrate fills missing sod + statuses');
+  ok(mig.modes[0].effects[0].causes[0].severity===7, 'migrate preserves provided sod');
+  ok(C.migrateProblem(null).modes.length===0 && C.migrateProblem({}).status==='open', 'migrate is null/empty safe');
+
+  // knowns: constructor seeds empty; migrate accepts string or {text} form, keeps ids, is null-safe
+  ok(Array.isArray(bp.knowns) && bp.knowns.length===0, 'blankProblem seeds an empty knowns list');
+  var kmig = C.migrateProblem({ problem:'p', knowns:['legacy string', {kid:'k9', text:'kept'}, {}] });
+  ok(kmig.knowns.length===3, 'migrate keeps all knowns');
+  ok(kmig.knowns[0].text==='legacy string' && !!kmig.knowns[0].kid, 'migrate wraps a string known into {kid,text}');
+  ok(kmig.knowns[1].kid==='k9' && kmig.knowns[1].text==='kept', 'migrate preserves an object known + its id');
+  ok(kmig.knowns[2].text==='' && !!kmig.knowns[2].kid, 'migrate fills a blank known');
+  ok(C.migrateProblem({}).knowns.length===0, 'migrate: no knowns → empty list');
+
+  // ---- quarter helpers + layered grouping ----
+  (function(){
+    var qr=C.quarterRange;
+    ok(qr('2026Q1').start==='2026-01-01' && qr('2026Q1').end==='2026-03-31', 'Q1 → Jan1–Mar31');
+    ok(qr('2026Q2').start==='2026-04-01' && qr('2026Q2').end==='2026-06-30', 'Q2 → Apr1–Jun30');
+    ok(qr('2026Q3').start==='2026-07-01' && qr('2026Q3').end==='2026-09-30', 'Q3 → Jul1–Sep30');
+    ok(qr('2026Q4').start==='2026-10-01' && qr('2026Q4').end==='2026-12-31', 'Q4 → Oct1–Dec31 (year end)');
+    ok(qr('bad')===null && qr('')===null && qr('2026Q5')===null, 'invalid quarter → null');
+    var ql=C.quarterList(['2099Q4','junk'],2026,1,2);
+    ok(ql.indexOf('2025Q1')>=0 && ql.indexOf('2028Q4')>=0, 'quarterList spans [ref-1 … ref+2]');
+    ok(ql.indexOf('2099Q4')>=0 && ql.indexOf('junk')<0, 'quarterList unions valid used, drops malformed');
+    ok(ql[0]==='2025Q1' && ql[ql.length-1]==='2099Q4', 'quarterList sorted');
+
+    var P={ divisions:[{id:'D1'},{id:'D2'}], products:[{id:'P1',divisionId:'D1'}], models:[{id:'M1',productId:'P1'}],
+      initiatives:[{id:'I1',divisionId:'D1',modelId:'M1'},{id:'I2',divisionId:'D2'}], objectives:[] };
+    var oA={id:'oA',divisionId:'D1',initiativeId:'I1'};                // inherits M1(→P1) from I1
+    var oB={id:'oB',divisionId:'D1',initiativeId:'I1',productId:'P1'}; // own product P1, no model
+    var oC={id:'oC',divisionId:'D2',initiativeId:'I2'};               // fully agnostic
+    var objs=[oA,oB,oC];
+    var g1=C.groupObjectives(objs,['division'],P);
+    ok(g1.length===2 && g1[0].key==='D1' && g1[0].objs.length===2 && g1[1].key==='D2', 'group by division, portfolio order');
+    var g0=C.groupObjectives(objs,[],P);
+    ok(g0.length===1 && g0[0].objs.length===3 && g0[0].dim===null, 'no dims → single flat bucket');
+    var g2=C.groupObjectives(objs,['division','product','model'],P);
+    var d1=g2[0]; ok(d1.key==='D1' && d1.children.length===1 && d1.children[0].key==='P1', 'nested D1 › P1');
+    var p1=d1.children[0], mk=p1.children.map(function(n){return n.key;});
+    ok(mk.indexOf('M1')>=0 && mk.indexOf('')>=0, 'P1 splits into {M1, none}');
+    ok(p1.children[p1.children.length-1].key==='', 'none bucket ordered last');
+    var d2=g2[1]; ok(d2.key==='D2' && d2.children[0].key==='' && d2.children[0].children[0].key==='' && d2.children[0].children[0].objs[0].id==='oC', 'agnostic path D2 › none › none → oC');
+  })();
 })();
 
 /* ---- summary ------------------------------------------------------------- */

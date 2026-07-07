@@ -42,6 +42,8 @@
   .theme-toggle{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
   .theme-toggle .theme-opt{border:0;background:transparent;color:var(--muted);padding:5px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit}
   .theme-toggle .theme-opt[aria-pressed="true"]{background:var(--pill-active-bg);color:var(--pill-active-fg)}
+.gb-dim{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:12px;font-family:inherit}
+.gb-arrow{color:var(--muted);margin:0 3px}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
   header{display:flex;align-items:center;gap:16px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
@@ -620,7 +622,7 @@ const SCHEMAS = {
   milestone:  [["name","Name","text"],["initiativeId","Initiative","ref:initiative"],
                ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],["order","Order","number"]],
   objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
-               ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter (e.g. 2026Q3)","text"],
+               ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter","quarter"],
                ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["milestoneIds","Linked milestones","multiref:milestone"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
@@ -629,7 +631,8 @@ let activeEntity = "division";
 let editingId = null;
 let pfView = "tree";
 let lens = "division";   // Overview: by division vs by product/model
-let pfGroupBy = "hierarchy";                       // Structure/Gantt grouping dimension
+let pfGroupMode = "hierarchy";                     // "hierarchy" (entity tree) | "dims" (custom layered grouping)
+let pfGroupDims = ["division"];                    // ordered grouping dimensions used when pfGroupMode==="dims"
 const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"" };   // seeded from URL params (seed-on-load)
 
 function renderPortfolio(){
@@ -655,6 +658,12 @@ function openEditor(id, entityOverride, prefill){
       const cur = rec[k]||[];
       html += `<select data-f="${k}" multiple size="3">`+
         SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
+    } else if(type==="quarter"){
+      const opts = RD.quarterList(pfQuartersList(), new Date().getFullYear(), 1, 2);
+      const cur = rec[k]!=null ? String(rec[k]) : "";
+      html += `<select data-f="${k}"><option value="">— none —</option>`+
+        opts.map(q=>`<option value="${esc(q)}" ${q===cur?'selected':''}>${esc(q)}</option>`).join("")+
+        (cur && opts.indexOf(cur)<0 ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : "")+`</select>`;
     } else {
       const val = type==="date" ? dayToIso(rec[k]) : (rec[k]!=null?rec[k]:"");
       html += `<input data-f="${k}" type="${type==='date'?'date':type==='number'?'number':'text'}" value="${esc(String(val))}"/>`;
@@ -679,11 +688,21 @@ function openEditor(id, entityOverride, prefill){
     const rebuildModels=(sel)=>{ _ms.innerHTML='<option value="">— none —</option>'+
       (_ps.value ? portfolio.models.filter(m=>m.productId===_ps.value) : portfolio.models)
         .map(m=>`<option value="${m.id}" ${sel===m.id?'selected':''}>${esc(m.name||m.id)}</option>`).join(""); };
+    // objective with no own product/model → show the value it inherits from its initiative (frictionless; stored only if changed on save)
+    if(activeEntity==="objective" && !_ps.value && !_ms.value){
+      const initId=(document.querySelector('#pfModalBody [data-f="initiativeId"]')||{}).value||"";
+      const init=initId?byId("initiative",initId):null;
+      if(init){ if(init.modelId){ _ps.value=(byId("model",init.modelId)||{}).productId||""; _ms.value=init.modelId; } else if(init.productId){ _ps.value=init.productId; } }
+    }
     if(_ms.value && !_ps.value){ const m=portfolio.models.find(x=>x.id===_ms.value); if(m) _ps.value=m.productId; }   // model set but product blank → show its product
     rebuildModels(_ms.value);
     _ps.addEventListener("change",()=>{ const keep=_ms.value && portfolio.models.some(m=>m.id===_ms.value && m.productId===_ps.value); rebuildModels(keep?_ms.value:""); });
     _ms.addEventListener("change",()=>{ if(_ms.value){ const m=portfolio.models.find(x=>x.id===_ms.value); if(m && m.productId){ _ps.value=m.productId; rebuildModels(_ms.value); } } });
   }
+  // quarter → auto-fill planned start/end (always refills on pick; the dates stay freely editable afterward)
+  const _qSel=document.querySelector('#pfModalBody [data-f="quarter"]'),
+        _stIn=document.querySelector('#pfModalBody [data-f="plannedStart"]'), _enIn=document.querySelector('#pfModalBody [data-f="plannedEnd"]');
+  if(_qSel && _stIn && _enIn){ _qSel.addEventListener("change",()=>{ const r=RD.quarterRange(_qSel.value); if(r){ _stIn.value=r.start; _enIn.value=r.end; } }); }
   document.getElementById("pfModal").hidden = false;
   const f = document.querySelector("#pfModalBody [data-f]"); if(f) f.focus();
 }
@@ -1076,13 +1095,20 @@ function objMatches(o){ const f=pfFilters;
   if(f.status && nodeBand("objective",o.id)!==f.status) return false;
   return true; }
 function pfQuartersList(){ const s=new Set(); portfolio.objectives.forEach(o=>{ if(o.quarter) s.add(o.quarter); }); return Array.from(s).sort(); }
-function pfGroupKey(o){ if(pfGroupBy==="division") return o.divisionId; if(pfGroupBy==="product") return effProductOf(o)||"—"; if(pfGroupBy==="quarter") return o.quarter||"—"; if(pfGroupBy==="owner") return o.owner||"—"; return ""; }
-function pfGroupLabel(k){ if(pfGroupBy==="division") return nameOf("division",byId("division",k))||k; if(pfGroupBy==="product") return k==="—"?"— unclassified —":(productName(k)||k); return (k==="—"||k==="")?"— none —":k; }
-function pfGroupOrder(groups){ let order=Object.keys(groups); if(pfGroupBy==="division") order=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]); else if(pfGroupBy==="product") order=portfolio.products.map(p=>p.id).concat(["—"]).filter(k=>groups[k]); else order.sort(); return order; }
+const GROUP_DIMS=[["division","Division"],["product","Product"],["model","Model"],["quarter","Quarter"],["owner","Owner"],["initiative","Initiative"]];
+function dimLabel(dim,key){
+  if(key===""||key==null||key==="__all__") return "— none —";
+  if(dim==="division")   return nameOf("division",byId("division",key))||key;
+  if(dim==="product")    return productName(key)||key;
+  if(dim==="model")      return (byId("model",key)||{}).name||key;
+  if(dim==="initiative") return nameOf("initiative",byId("initiative",key))||key;
+  return key;   // quarter, owner: the key itself
+}
+function collectObjs(n){ if(n.objs) return n.objs; let a=[]; (n.children||[]).forEach(c=>{ a=a.concat(collectObjs(c)); }); return a; }
 function filterBarHtml(showGroup){
   const f=pfFilters;
   const sel=(label,key,opts,cur)=>`<label class="fbf">${label}<select data-fb="${key}"><option value="">All</option>${opts.map(o=>`<option value="${esc(o[0])}" ${o[0]===cur?'selected':''}>${esc(o[1])}</option>`).join("")}</select></label>`;
-  const grp = showGroup ? `<label class="fbf">Group by<select data-fb="groupBy">${[["hierarchy","Hierarchy"],["division","Division"],["product","Product"],["quarter","Quarter"],["owner","Owner"]].map(o=>`<option value="${o[0]}" ${o[0]===pfGroupBy?'selected':''}>${o[1]}</option>`).join("")}</select></label><span class="fb-sep"></span>` : `<span class="fb-lbl">Filter</span>`;
+  const grp = showGroup ? groupByControlHtml() : `<span class="fb-lbl">Filter</span>`;
   const chips = pfActiveChips();
   return `<div class="fb-row">${grp}`+
     sel("Division","division",portfolio.divisions.map(d=>[d.id,d.name]),f.division)+
@@ -1100,8 +1126,29 @@ function pfActiveChips(){
   if(!out.length) return "";
   return out.map(c=>`<span class="fchip">${esc(c[1])}<span class="fx" data-fclr="${c[0]}">✕</span></span>`).join("")+`<button class="fchip clear" data-fclr="__all">clear all</button>`;
 }
+function groupByControlHtml(){
+  const modeSel=`<label class="fbf">Group by<select data-gb="mode"><option value="hierarchy" ${pfGroupMode==="hierarchy"?'selected':''}>Hierarchy</option><option value="dims" ${pfGroupMode==="dims"?'selected':''}>Custom…</option></select></label>`;
+  if(pfGroupMode!=="dims") return modeSel+`<span class="fb-sep"></span>`;
+  const dims=pfGroupDims.slice(); let chain="";
+  dims.forEach((d,i)=>{
+    const used=dims.filter((x,j)=>j!==i);
+    const opts=GROUP_DIMS.filter(gd=>gd[0]===d||used.indexOf(gd[0])<0);
+    chain+=(i?`<span class="gb-arrow">›</span>`:"")+`<select class="gb-dim" data-gb="dim" data-i="${i}"><option value="__rm">✕ remove</option>${opts.map(gd=>`<option value="${gd[0]}" ${gd[0]===d?'selected':''}>${esc(gd[1])}</option>`).join("")}</select>`;
+  });
+  const unused=GROUP_DIMS.filter(gd=>dims.indexOf(gd[0])<0);
+  if(unused.length) chain+=(dims.length?`<span class="gb-arrow">›</span>`:"")+`<select class="gb-dim" data-gb="add"><option value="">+ add</option>${unused.map(gd=>`<option value="${gd[0]}">${esc(gd[1])}</option>`).join("")}</select>`;
+  return modeSel+chain+`<span class="fb-sep"></span>`;
+}
 function wireFilterBar(host){
-  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; if(k==="groupBy") pfGroupBy=s.value; else pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-fb]").forEach(s=>s.onchange=()=>{ const k=s.dataset.fb; pfFilters[k]=s.value; closeEditor(); renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-gb]").forEach(s=>s.onchange=()=>{ const t=s.dataset.gb;
+    if(t==="mode"){ pfGroupMode=s.value; if(pfGroupMode==="dims" && !pfGroupDims.length) pfGroupDims=["division"]; }
+    else if(t==="add"){ if(s.value) pfGroupDims=pfGroupDims.concat([s.value]); }
+    else if(t==="dim"){ const i=+s.dataset.i, nd=s.value;
+      if(nd==="__rm") pfGroupDims=pfGroupDims.slice(0,i).concat(pfGroupDims.slice(i+1));
+      else { const arr=pfGroupDims.slice(); arr[i]=nd; pfGroupDims=arr.filter((d,j)=>j===i||d!==nd); } }
+    closeEditor(); renderPortfolio(); renderGantt(); renderMilestones();
+  });
   host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
 function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
@@ -1110,23 +1157,31 @@ function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id &
 function groupedTreeHtml(){
   const objs = portfolio.objectives.filter(objMatches);
   if(!objs.length) return '<p class="hint">No objectives match the current filters.</p>';
-  const em=pfMap(), groups={};
-  objs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
-  let h=`<div class="tree">`;
-  pfGroupOrder(groups).forEach(k=>{
-    const items=groups[k].slice();
-    const vs=items.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
-    h+=`<div class="pfgrp"><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(pfGroupLabel(k))} <span class="tsub">${items.length} obj</span></div>`;
-    items.forEach(o=>{ const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
-      h+=`<div class="tleaf" style="padding-left:14px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`; });
+  const em=pfMap();
+  const nodes = RD.groupObjectives(objs, pfGroupDims, portfolio);
+  return `<div class="tree">`+renderGroupNodes(nodes, em, 0)+`</div>`;
+}
+function renderGroupNodes(nodes, em, depth){
+  if(nodes.length===1 && nodes[0].dim==null){ return nodes[0].objs.map(o=>objLeafHtml(o,0)).join(""); }   // no dims → flat, no header
+  let h="";
+  nodes.forEach(n=>{
+    const under=collectObjs(n);
+    const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
+    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))} <span class="tsub">${under.length} obj</span></div>`;
+    if(n.children) h+=renderGroupNodes(n.children, em, depth+1);
+    else h+=n.objs.map(o=>objLeafHtml(o,depth+1)).join("");
     h+=`</div>`;
   });
-  return h+`</div>`;
+  return h;
+}
+function objLeafHtml(o,indent){
+  const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
+  return `<div class="tleaf" style="padding-left:${indent*14+14}px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`;
 }
 function renderPortfolioTree(){
   treeCtx = "portfolio";
   const host=document.getElementById("pfTree");
-  if(pfGroupBy!=="hierarchy"){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); return; }
+  if(pfGroupMode!=="hierarchy"){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); return; }
   const filt=pfAnyFilter();
   const divs = filt ? portfolio.divisions.filter(divShows) : portfolio.divisions;
   if(!divs.length){ host.innerHTML = filt ? '<p class="hint">No items match the current filters.</p>' : '<p class="hint">No divisions yet — switch to Tables to add one.</p>'; return; }
@@ -1236,9 +1291,17 @@ function reconcileObjClass(rec){
   if(RD.validateClassification(test, portfolio).ok){ rec.productId=null; rec.modelId=null; return true; }
   return false;
 }
+function collapseInheritedClass(data){
+  // objective: if the chosen product/model equals what it would inherit from its initiative, store blank so it keeps inheriting
+  const init = data.initiativeId ? byId("initiative", data.initiativeId) : null;
+  if(!init) return;                                  // no initiative → nothing to inherit; leave as-is
+  if(data.modelId){ if(data.modelId===(init.modelId||null)){ data.modelId=null; data.productId=null; } }
+  else if(data.productId){ if(data.productId===(init.productId||null) && !init.modelId){ data.productId=null; } }
+}
 function saveRecord(){
   const data = readEditor();
   const ent = activeEntity;
+  if(ent==="objective") collapseInheritedClass(data);
   const list = SEL[ent]();
   hideEditorErr();
   let reapply, cleared=false;
@@ -1621,19 +1684,31 @@ function renderGantt(){
     if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
-  const grpMode = (pfGroupBy==="product"||pfGroupBy==="quarter"||pfGroupBy==="owner");
+  // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
+  function buildGroupRoots(nodes, depth, keyPrefix){
+    const out=[];
+    nodes.forEach(n=>{
+      const key=keyPrefix+"/"+n.dim+":"+n.key;
+      const kids = n.children ? buildGroupRoots(n.children, depth+1, key)
+                              : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean);
+      if(!kids.length) return;
+      const dss=[], des=[];
+      (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
+        else { const gg=node.g; if(gg.ds!=null)dss.push(gg.ds); const e=gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); if(e!=null)des.push(e); } }); })(kids);
+      const under=collectObjs(n), vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
+      out.push({ synthetic:true, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
+        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
+    });
+    return out;
+  }
+  const grpMode = (pfGroupMode==="dims" && pfGroupDims.length>0);
   let roots=[];
   if(grpMode){
     const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
-    const groups={}; gobjs.forEach(o=>{ const k=pfGroupKey(o); (groups[k]=groups[k]||[]).push(o); });
-    pfGroupOrder(groups).forEach(k=>{
-      const kids = groups[k].map(o=>build("objective",o,1)).filter(Boolean);   // objective bars (+ their gates) under a group header
-      if(!kids.length) return;
-      const dss=kids.map(n=>n.g.ds).filter(v=>v!=null), des=kids.map(n=>{ const gg=n.g; return gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); }).filter(v=>v!=null);
-      const vs=groups[k].map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
-      roots.push({ synthetic:true, label:pfGroupLabel(k), band:gband, depth:0, key:"grp:"+k, kids,
-        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
-    });
+    roots = buildGroupRoots(RD.groupObjectives(gobjs, pfGroupDims, portfolio), 0, "");
+  } else if(pfGroupMode==="dims"){                                             // dims cleared → flat objectives, no division tree
+    const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
+    roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean);
   } else {
     P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
   }
@@ -1672,7 +1747,7 @@ function renderGantt(){
     const g=n.g, hasKids=n.kids.length>0, collapsed=ganttCollapsed.has(n.key);
     const tri = hasKids ? `<span class="gtri" data-gtoggle="${n.key}">${collapsed?'▸':'▾'}</span>` : `<span class="gspacer"></span>`;
     if(n.synthetic){
-      html+=`<div class="grow ggrouprow"><div class="glabel" style="padding-left:6px">${tri}<span class="gdot" style="background:${bandColor(n.band)}"></span><span class="gname group">${esc(n.label)}</span></div><div class="gtrack">`;
+      html+=`<div class="grow ggrouprow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}<span class="gdot" style="background:${bandColor(n.band)}"></span><span class="gname group">${esc(n.label)}</span></div><div class="gtrack">`;
       if(g.ds!=null&&g.de!=null) html+=`<div class="ggroupbar" style="left:${x(g.ds)}px;width:${Math.max(2,x(g.de)-x(g.ds))}px"></div>`;
       html+=`</div></div>`;
       return;

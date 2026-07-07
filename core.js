@@ -1,1040 +1,1057 @@
 /* ============================================================================
-   Core test harness (pure Node, headless). Run: node core.test.js
-   Exits non-zero on any failure. Assertion count must never regress.
+   Unified R&D Suite — Shared Core (frozen spec v1.3)
+   Pure logic only. No DOM, no network. Runs headless in Node and injects into
+   the browser shells via build.py (between the CORE markers).
+
+   Conventions (spec v1.3)
+   -----------------------
+   - Dates are integer day-counts (days since an arbitrary epoch). Shells convert
+     ISO <-> day-count; the core only does max / +lag arithmetic.
+   - percentComplete is an integer 0..100.
+   - A KPI is the measurement atom, hosted by exactly one Key Result or one
+     stage-gate (kpi.hostType / kpi.hostId). A value enters ONLY via kpiUpdates
+     (in an exec doc), keyed by kpiId; a KPI's current value = the latest update
+     by timestamp.
+   - Scoring rolls up: KPI score -> Key Result score (mean of its KPIs) ->
+     Objective score (mean of its Key Results). Stage-gate KPIs are gating only
+     and never feed the objective OKR score (spec v1.3 §A, decision #1).
+   - Unscored: a KPI with a null target or no read yet is excluded from its KR's
+     mean (g1). A KR with no scorable KPIs is unscored; an objective with no
+     scorable KRs has no band, not zero. No synthesized KRs (decision #3).
+   - For direction 'range', score is 100 inside [lo,hi] and falls off linearly to
+     0 at one full band-width outside the band.
    ============================================================================ */
-var C = require('./core.js');
 
-var count = 0, fails = 0;
-function eq(a, b, msg) {
-  count++;
-  if (JSON.stringify(a) !== JSON.stringify(b)) {
-    fails++; console.error('FAIL: ' + msg + ' — got ' + JSON.stringify(a) + ' expected ' + JSON.stringify(b));
+(function (root) {
+  'use strict';
+
+  // ---- small helpers --------------------------------------------------------
+  function mean(arr) {
+    if (!arr.length) return null;
+    var s = 0;
+    for (var i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
   }
-}
-function approx(a, b, msg, eps) {
-  count++; eps = eps || 1e-9;
-  if (a == null || Math.abs(a - b) > eps) {
-    fails++; console.error('FAIL: ' + msg + ' — got ' + a + ' expected ' + b);
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+  // ---- IDs ------------------------------------------------------------------
+  // Type-prefixed, parent-scoped, monotonic counter. The counter is an
+  // ALLOCATION number, never a position: reordering existing ids never changes
+  // the next id. Display order lives in the separate `order` field.
+  var ID_PREFIX = {
+    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
+    product: 'PRD', model: 'MDL'
+  };
+  // Structural levels pad to 2 digits; leaf metrics use plain integers.
+  var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
+
+  function stemFromParent(type, parentId, opts) {
+    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
+    if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
+    return parentStem;
   }
-}
-function ok(x, msg) { count++; if (!x) { fails++; console.error('FAIL: ' + msg); } }
-function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAIL: ' + msg + ' — got ' + JSON.stringify(x)); } }
 
-/* ---- IDs: monotonic, position-independent, unique, padded ---------------- */
-(function () {
-  eq(C.allocId('division', null, [], { code: 'FC' }), 'DIV-FC', 'division id');
-  eq(C.allocId('initiative', 'DIV-FC', [], {}), 'INIT-FC-01', 'first initiative');
-  eq(C.allocId('initiative', 'DIV-FC', ['INIT-FC-01', 'INIT-FC-02'], {}), 'INIT-FC-03', 'next initiative');
-  // position independence: reordering existing ids gives the same next id
-  eq(C.allocId('initiative', 'DIV-FC', ['INIT-FC-02', 'INIT-FC-01'], {}), 'INIT-FC-03', 'order-independent');
-  // a gap (deleted #2) does NOT reuse the gap — counter is allocation, not position
-  eq(C.allocId('initiative', 'DIV-FC', ['INIT-FC-01', 'INIT-FC-03'], {}), 'INIT-FC-04', 'no reuse of gaps');
-  eq(C.allocId('milestone', 'INIT-FC-01', ['MS-FC-01-02'], {}), 'MS-FC-01-03', 'milestone id');
-  eq(C.allocId('objective', 'DIV-FC', [], { quarter: '2026Q3' }), 'OBJ-FC-2026Q3-01', 'quarter-stamped objective');
-  eq(C.allocId('keyResult', 'OBJ-FC-2026Q3-02', [], {}), 'KR-FC-2026Q3-02-1', 'leaf KR unpadded');
-  eq(C.allocId('stageGate', 'OBJ-FC-2026Q3-02', ['SG-FC-2026Q3-02-1'], {}), 'SG-FC-2026Q3-02-2', 'leaf SG increments');
-  eq(C.allocId('product', 'DIV-FC', [], {}), 'PRD-FC-1', 'first product under a division');
-  eq(C.allocId('product', 'DIV-FC', ['PRD-FC-1','PRD-FC-2'], {}), 'PRD-FC-3', 'next product increments');
-  eq(C.allocId('model', 'PRD-FC-1', [], {}), 'MDL-FC-1-1', 'first model under a product');
-  eq(C.allocId('model', 'PRD-FC-1', ['MDL-FC-1-1'], {}), 'MDL-FC-1-2', 'next model increments');
-  eq(C.allocId('model', 'PRD-FC-1', ['MDL-FC-11-3'], {}), 'MDL-FC-1-1', 'model numbering not confused by sibling product PRD-FC-11');
-  var threw = false; try { C.allocId('division', null, ['DIV-FC'], { code: 'FC' }); } catch (e) { threw = true; }
-  ok(threw, 'duplicate division code throws');
-})();
-
-/* ---- KPI scoring: directions, clamp, null cases ------------------------- */
-(function () {
-  approx(C.kpiScore({ direction: 'up', target: 100 }, 80), 80, 'up partial');
-  approx(C.kpiScore({ direction: 'up', target: 100 }, 150), 100, 'up clamps at 100');
-  approx(C.kpiScore({ direction: 'down', target: 10 }, 10), 100, 'down at target');
-  approx(C.kpiScore({ direction: 'down', target: 10 }, 20), 50, 'down worse');
-  approx(C.kpiScore({ direction: 'range', target: { lo: 5, hi: 7 } }, 6), 100, 'range inside');
-  approx(C.kpiScore({ direction: 'range', target: { lo: 5, hi: 7 } }, 8), 50, 'range one half-width out');
-  approx(C.kpiScore({ direction: 'range', target: { lo: 5, hi: 7 } }, 9), 0, 'range full-width out');
-  isNull(C.kpiScore({ direction: 'up', target: null }, 50), 'null target -> unscored');
-  isNull(C.kpiScore({ direction: 'up', target: 100 }, null), 'no read -> unscored');
-})();
-
-/* ---- KPI -> KR -> objective rollup --------------------------------------- */
-(function () {
-  // 4 Key Results, each hosting one KPI; 3 at 100, 1 at 0 -> objective 75.
-  var exec = {
-    'DIV-FC': {
-      keyResults: [
-        { id: 'KR-a', objectiveId: 'O1', statement: 'a' }, { id: 'KR-b', objectiveId: 'O1', statement: 'b' },
-        { id: 'KR-c', objectiveId: 'O1', statement: 'c' }, { id: 'KR-d', objectiveId: 'O1', statement: 'd' }
-      ],
-      kpis: [
-        { id: 'K-a', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR-a', direction: 'up', target: 100 },
-        { id: 'K-b', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR-b', direction: 'up', target: 100 },
-        { id: 'K-c', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR-c', direction: 'up', target: 100 },
-        { id: 'K-d', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR-d', direction: 'up', target: 100 }
-      ],
-      kpiUpdates: [
-        { kpiId: 'K-a', value: 100, timestamp: 1 }, { kpiId: 'K-b', value: 100, timestamp: 1 },
-        { kpiId: 'K-c', value: 100, timestamp: 1 }, { kpiId: 'K-d', value: 0, timestamp: 1 }
-      ]
+  // allocId(type, parentId, existingIds, opts?)
+  //   division:  opts.code required (parentId may be null)
+  //   objective: opts.quarter required, parentId = division id
+  //   others:    parentId = immediate logical parent (initiative / objective / host)
+  function allocId(type, parentId, existingIds, opts) {
+    opts = opts || {};
+    var prefix = ID_PREFIX[type];
+    if (!prefix) throw new Error('allocId: unknown type ' + type);
+    var stem = stemFromParent(type, parentId, opts);
+    if (type === 'division') {
+      var did = prefix + '-' + stem;
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      return did;
     }
-  };
-  approx(C.kpiCurrentValue('K-a', exec), 100, 'kpi current value');
-  approx(C.keyResultScore('KR-a', exec), 100, 'KR score = its single KPI');
-  approx(C.objectiveScore('O1', exec), 75, '3x100 + 1x0 = 75');
-  exec['DIV-FC'].kpiUpdates.push({ kpiId: 'K-d', value: 100, timestamp: 2 });
-  approx(C.objectiveScore('O1', exec), 100, 'latest-wins update on the KPI');
-
-  // a KR with MULTIPLE KPIs averages them
-  var exec2 = { 'D': {
-    keyResults: [{ id: 'KRm', objectiveId: 'O1', statement: 'multi' }],
-    kpis: [{ id: 'Km1', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRm', direction: 'up', target: 100 },
-           { id: 'Km2', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRm', direction: 'up', target: 100 }],
-    kpiUpdates: [{ kpiId: 'Km1', value: 100, timestamp: 1 }, { kpiId: 'Km2', value: 0, timestamp: 1 }]
-  } };
-  approx(C.keyResultScore('KRm', exec2), 50, 'KR = mean of its two KPIs (100,0)');
-  approx(C.objectiveScore('O1', exec2), 50, 'objective = its single KR (50)');
-
-  // stage-gate KPIs are gating only -> excluded from objective score
-  var exec3 = { 'D': {
-    keyResults: [{ id: 'KRk', objectiveId: 'O1', statement: 'k' }],
-    stageGates: [{ id: 'SGk', objectiveId: 'O1', plannedDate: 10 }],
-    kpis: [{ id: 'Kkr', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRk', direction: 'up', target: 100 },
-           { id: 'Ksg', objectiveId: 'O1', hostType: 'stageGate', hostId: 'SGk', direction: 'up', target: 100 }],
-    kpiUpdates: [{ kpiId: 'Kkr', value: 100, timestamp: 1 }, { kpiId: 'Ksg', value: 0, timestamp: 1 }]
-  } };
-  approx(C.objectiveScore('O1', exec3), 100, 'stage-gate KPI excluded from objective score');
-  approx(C.stageGateScore('SGk', exec3), 0, 'stage-gate score = its gating KPI (0)');
-
-  // decision #3: no KR -> null (no synthesized KR); KR with only an unscored KPI -> null
-  isNull(C.objectiveScore('O1', { 'D': { keyResults: [], kpis: [], kpiUpdates: [] } }), 'no KR -> null (no band)');
-  var exec5 = { 'D': {
-    keyResults: [{ id: 'KRn', objectiveId: 'O1', statement: 'n' }],
-    kpis: [{ id: 'Kn', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRn', direction: 'up', target: null }],
-    kpiUpdates: []
-  } };
-  isNull(C.objectiveScore('O1', exec5), 'KR with only an unscored KPI -> objective null');
-})();
-
-/* ---- KPI link groups: define-down targets, status-up values ------------- */
-(function () {
-  // define on a Key Result, link a stage-gate member, measure AT the gate.
-  var exec = { 'D': {
-    keyResults: [{ id: 'KR1', objectiveId: 'O1', statement: 'kr' }],
-    stageGates: [{ id: 'SG1', objectiveId: 'O1', plannedDate: 10 }],
-    kpis: [
-      { id: 'Kkr', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR1', groupId: 'G1', isDefiner: true,
-        name: 'Limiting current', direction: 'up', unit: 'A/cm2', target: 100 },
-      { id: 'Kg', objectiveId: 'O1', hostType: 'stageGate', hostId: 'SG1', groupId: 'G1', isDefiner: false, target: null }
-    ],
-    kpiUpdates: [{ id: 'u1', kpiId: 'Kg', value: 80, timestamp: 1 }]   // reading entered at the GATE
-  } };
-  var kpis = exec['D'].kpis;
-  approx(C.effTarget(kpis[1], kpis), 100, 'target cascades DOWN to the gate member');
-  approx(C.effValue(kpis[0], kpis, exec), 80, 'value cascades UP to the KR member');
-  eq(C.kpiDirection(kpis[1], kpis), 'up', 'gate member inherits direction from definer');
-  eq(C.kpiName(kpis[1], kpis), 'Limiting current', 'gate member inherits name from definer');
-  approx(C.keyResultScore('KR1', exec), 80, 'gate reading scores the linked KR (value up)');
-  approx(C.objectiveScore('O1', exec), 80, 'objective scores from the linked gate reading');
-  approx(C.stageGateScore('SG1', exec), 80, 'gate readiness = cascaded-down target + own reading');
-})();
-
-/* ---- milestone KPIs: hosted score + achievement (standalone gating signal) --- */
-(function () {
-  eq(C.KPI_LEVEL.milestone, 3, 'milestone sits at the initiative tier in the KPI level map');
-  eq(C.KPI_LEVEL.milestone, C.KPI_LEVEL.initiative, 'milestone is a peer of initiative');
-
-  var exec = { 'D': {
-    kpis: [
-      { id: 'Kms1', objectiveId: null, hostType: 'milestone', hostId: 'MS1', direction: 'up', target: 100 },
-      { id: 'Kms2', objectiveId: null, hostType: 'milestone', hostId: 'MS1', direction: 'up', target: 100 }
-    ],
-    kpiUpdates: [{ kpiId: 'Kms1', value: 100, timestamp: 1 }, { kpiId: 'Kms2', value: 0, timestamp: 1 }]
-  } };
-  approx(C.milestoneScore('MS1', exec), 50, 'milestone score = mean of its hosted KPIs (100 & 0)');
-  isNull(C.milestoneScore('MSX', exec), 'milestone with no KPIs -> null score');
-
-  // achievement: KPI score at 100 OR manual completedDate; no-KPI milestone -> manual only
-  eq(C.milestoneAchieved({ id: 'MS1' }, exec), false, 'not achieved at 50% with no completed date');
-  var execFull = { 'D': {
-    kpis: [{ id: 'Kf', objectiveId: null, hostType: 'milestone', hostId: 'MS2', direction: 'up', target: 100 }],
-    kpiUpdates: [{ kpiId: 'Kf', value: 100, timestamp: 1 }]
-  } };
-  eq(C.milestoneAchieved({ id: 'MS2' }, execFull), true, 'achieved when KPI score hits 100%');
-  eq(C.milestoneAchieved({ id: 'MSX', completedDate: 30 }, exec), true, 'no-KPI milestone achieved by manual completedDate');
-  eq(C.milestoneAchieved({ id: 'MSX' }, exec), false, 'no-KPI milestone not achieved without a mark');
-
-  // isolation: milestone KPIs never enter an objective's score (same stance as stage gates)
-  var execObj = { 'D': {
-    keyResults: [{ id: 'KRo', objectiveId: 'O1', statement: 'k' }],
-    kpis: [
-      { id: 'Kkr', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KRo', direction: 'up', target: 100 },
-      { id: 'Kmo', objectiveId: null, hostType: 'milestone', hostId: 'MS3', direction: 'up', target: 100 }
-    ],
-    kpiUpdates: [{ kpiId: 'Kkr', value: 100, timestamp: 1 }, { kpiId: 'Kmo', value: 0, timestamp: 1 }]
-  } };
-  approx(C.objectiveScore('O1', execObj), 100, 'milestone KPI is excluded from the objective/OKR score');
-  approx(C.milestoneScore('MS3', execObj), 0, 'the same milestone KPI still scores the milestone');
-})();
-
-/* ---- milestone KPIs as a define-down parent (1b: target cascades down, links validate) --- */
-(function () {
-  // milestone-level definer with a target; a KR links up via linkParent (direct) -> KR inherits target/name/direction
-  var msDef = { id:'Kmd', hostType:'milestone', hostId:'MS1', isDefiner:true, groupId:null, direction:'up', unit:'A', target:100, name:'Peak current' };
-  var krDirect = { id:'Kkd', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', linkParent:'Kmd', linkType:'direct', target:null };
-  var kd=[msDef, krDirect];
-  approx(C.effTarget(krDirect, kd), 100, '1b: milestone target cascades DOWN to a direct-linked KR');
-  eq(C.kpiName(krDirect, kd), 'Peak current', 'linked KR inherits the milestone KPI name');
-  eq(C.kpiDirection(krDirect, kd), 'up', 'linked KR inherits the milestone KPI direction');
-  // contribute: KR may override its target, else inherits
-  var krC1={ id:'Kc1', hostType:'keyResult', hostId:'KR2', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:80 };
-  approx(C.effTarget(krC1,[msDef,krC1]), 80, 'contribute-linked KR keeps its own target override');
-  var krC2={ id:'Kc2', hostType:'keyResult', hostId:'KR3', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:null };
-  approx(C.effTarget(krC2,[msDef,krC2]), 100, 'contribute-linked KR with no target inherits the milestone target');
-  // peer link: a milestone KPI contributing to an initiative KPI resolves (define-down across the tier), no cycle
-  var initDef={ id:'Kin', hostType:'initiative', hostId:'I1', isDefiner:true, groupId:null, direction:'up', target:100, name:'Init metric' };
-  var msPeer={ id:'Kmp', hostType:'milestone', hostId:'MS1', linkParent:'Kin', linkType:'contribute', target:null };
-  eq(C.wouldCreateCycle('Kmp','Kin',[initDef,msPeer]), false, 'peer milestone<->initiative link is not a cycle');
-  approx(C.effTarget(msPeer,[initDef,msPeer]), 100, 'peer link: milestone inherits the initiative target');
-  eq(C.wouldCreateCycle('Kin','Kin',[initDef]), true, 'self-link is still rejected as a cycle');
-})();
-
-/* ---- milestone KPIs: readings on linked KRs roll UP to the milestone score (1c) --- */
-(function () {
-  var msDef={ id:'Kmd', hostType:'milestone', hostId:'MS1', isDefiner:true, groupId:null, direction:'up', target:100, name:'Peak current' };
-  var kr={ id:'Kkr', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', linkParent:'Kmd', linkType:'contribute', target:null };
-  var exec={ 'D':{ keyResults:[{id:'KR1',objectiveId:'O1'}], kpis:[msDef,kr], kpiUpdates:[{kpiId:'Kkr',value:80,timestamp:1}] } };
-  approx(C.effValue(msDef, exec['D'].kpis, exec), 80, '1c: a linked KR reading rolls UP to the milestone definer value');
-  approx(C.milestoneScore('MS1', exec), 80, 'milestoneScore reflects the rolled-up KR reading (80/100 up)');
-  eq(C.milestoneAchieved({id:'MS1'}, exec), false, 'milestone not achieved at 80%');
-  exec['D'].kpiUpdates=[{kpiId:'Kkr',value:100,timestamp:1}];
-  approx(C.milestoneScore('MS1', exec), 100, 'milestoneScore hits 100 when the KR reading meets the target');
-  eq(C.milestoneAchieved({id:'MS1'}, exec), true, 'milestone achieved when the rolled-up KPI reaches 100');
-})();
-
-/* ---- KPI link groups: initiative-level definition + lower override ------ */
-(function () {
-  var exec = { 'D': {
-    keyResults: [{ id: 'KR2', objectiveId: 'O1', statement: 'kr' }],
-    stageGates: [],
-    kpis: [
-      { id: 'Ki', objectiveId: null, hostType: 'initiative', hostId: 'INIT1', groupId: 'G2', isDefiner: true,
-        name: 'X', direction: 'up', unit: 'u', target: 200 },
-      { id: 'Kk', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR2', groupId: 'G2', isDefiner: false, target: null }
-    ],
-    kpiUpdates: [{ id: 'u1', kpiId: 'Kk', value: 100, timestamp: 1 }]
-  } };
-  approx(C.keyResultScore('KR2', exec), 50, 'initiative target (200) cascades down to KR -> 100/200');
-  exec['D'].kpis[1].target = 100;   // KR overrides locally
-  approx(C.keyResultScore('KR2', exec), 100, 'KR-level target override beats the initiative target');
-})();
-
-/* ---- KPI link groups: higher value overpowers, lower never reads up ----- */
-(function () {
-  var exec = { 'D': {
-    keyResults: [{ id: 'KR3', objectiveId: 'O1', statement: 'kr' }],
-    stageGates: [{ id: 'SG3', objectiveId: 'O1', plannedDate: 10 }],
-    kpis: [
-      { id: 'Kk3', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR3', groupId: 'G3', isDefiner: true,
-        name: 'X', direction: 'up', unit: 'u', target: 100 },
-      { id: 'Kg3', objectiveId: 'O1', hostType: 'stageGate', hostId: 'SG3', groupId: 'G3', isDefiner: false, target: null }
-    ],
-    kpiUpdates: [
-      { id: 'u1', kpiId: 'Kg3', value: 50, timestamp: 1 },   // gate reading
-      { id: 'u2', kpiId: 'Kk3', value: 90, timestamp: 2 }    // KR reading (higher level)
-    ]
-  } };
-  approx(C.keyResultScore('KR3', exec), 90, 'higher-level reading overpowers the lower one for the KR');
-  approx(C.stageGateScore('SG3', exec), 50, 'lower level keeps its own reading, never reads up');
-})();
-
-/* ---- KPI link groups: standalone KPI is its own definer (v1.3 parity) --- */
-(function () {
-  var exec = { 'D': {
-    keyResults: [{ id: 'KR4', objectiveId: 'O1', statement: 'kr' }],
-    kpis: [{ id: 'Ks', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR4', groupId: null, isDefiner: true,
-             name: 'S', direction: 'down', unit: 'ms', target: 10 }],
-    kpiUpdates: [{ id: 'u1', kpiId: 'Ks', value: 20, timestamp: 1 }]
-  } };
-  approx(C.keyResultScore('KR4', exec), 50, 'standalone KPI scores from its own target/value (down 10 vs 20)');
-  eq(C.kpiDirection(exec['D'].kpis[0], exec['D'].kpis), 'down', 'standalone resolves identity to itself');
-})();
-
-/* ---- tiers: quarterly vs overall, collapse, company grand-mean ----------- */
-(function () {
-  // Division D with two initiatives across two quarters.
-  // Q1: O1 (score 70), O2 (score 90) -> Q1 div = 80
-  // Q2: O3 (score 100)               -> Q2 div = 100
-  // overall div = mean(70,90,100) = 86.667  (grand mean, NOT mean of quarter means 90)
-  var portfolio = {
-    initiatives: [{ id: 'I1', divisionId: 'D' }, { id: 'I2', divisionId: 'D' }],
-    objectives: [
-      { id: 'O1', divisionId: 'D', initiativeId: 'I1', quarter: 'Q1' },
-      { id: 'O2', divisionId: 'D', initiativeId: 'I1', quarter: 'Q1' },
-      { id: 'O3', divisionId: 'D', initiativeId: 'I2', quarter: 'Q2' }
-    ]
-  };
-  function okr(o, v) {
-    return { kr: { id: 'KR-' + o, objectiveId: o, statement: o },
-             kpi: { id: 'K-' + o, objectiveId: o, hostType: 'keyResult', hostId: 'KR-' + o, direction: 'up', target: 100 },
-             up: { id: 'U-' + o, kpiId: 'K-' + o, value: v, timestamp: 1 } };
+    var base = prefix + '-' + stem + '-';
+    var max = 0;
+    for (var i = 0; i < existingIds.length; i++) {
+      var id = existingIds[i];
+      if (id.indexOf(base) === 0) {
+        var n = parseInt(id.slice(base.length), 10);
+        if (!isNaN(n) && n > max) max = n;
+      }
+    }
+    var next = max + 1;
+    var pad = ID_PAD[type] || 0;
+    var num = pad ? String(next).padStart(pad, '0') : String(next);
+    return base + num;
   }
-  var a = okr('O1', 70), b = okr('O2', 90), c = okr('O3', 100);
-  var exec = { 'D': { keyResults: [a.kr, b.kr, c.kr], kpis: [a.kpi, b.kpi, c.kpi], kpiUpdates: [a.up, b.up, c.up] } };
-  approx(C.score('division', 'D', portfolio, exec, 'Q1'), 80, 'division quarterly Q1');
-  approx(C.score('division', 'D', portfolio, exec, 'Q2'), 100, 'division quarterly Q2');
-  approx(C.score('division', 'D', portfolio, exec), (70 + 90 + 100) / 3, 'division overall = grand mean');
-  // collapse: I2 spans exactly one quarter
-  eq(C.boundsOf('initiative', 'I2', portfolio), ['Q2'], 'I2 single bound');
-  approx(C.score('initiative', 'I2', portfolio, exec),
-         C.score('initiative', 'I2', portfolio, exec, 'Q2'), 'single-quarter collapse equal');
-  eq(C.boundsOf('initiative', 'I1', portfolio), ['Q1'], 'I1 single bound (both objs Q1)');
-  // company grand-mean differs from mean of division scores when sizes differ.
-  // Add division E with one objective at 0 in Q1.
-  portfolio.initiatives.push({ id: 'I3', divisionId: 'E' });
-  portfolio.objectives.push({ id: 'O4', divisionId: 'E', initiativeId: 'I3', quarter: 'Q1' });
-  var d4 = okr('O4', 0);
-  exec['E'] = { keyResults: [d4.kr], kpis: [d4.kpi], kpiUpdates: [d4.up] };
-  // company overall grand mean = mean(70,90,100,0) = 65
-  approx(C.score('company', null, portfolio, exec), (70 + 90 + 100 + 0) / 4, 'company overall = grand mean of all objectives');
-  // mean of division scores would be mean(86.667, 0) = 43.33 -> assert NOT equal
-  var dMean = (C.rollupDivision('D', portfolio, exec) + C.rollupDivision('E', portfolio, exec)) / 2;
-  ok(Math.abs(C.rollupCompany(portfolio, exec) - dMean) > 1, 'company != mean of division scores (d2 property)');
-  // empty bound -> null
-  isNull(C.score('division', 'D', portfolio, exec, 'Q9'), 'empty quarter -> null');
-  // bands
-  eq(C.band(95), 'on-track', 'band on-track'); eq(C.band(75), 'at-risk', 'band at-risk');
-  eq(C.band(40), 'off-track', 'band off-track'); eq(C.band(null), 'no-band', 'band none');
-})();
 
-/* ---- classification: lattice, resolution, validation --------------------- */
-(function () {
-  var portfolio = {
-    products: [{ id: 'P1' }, { id: 'P2' }],
-    models: [{ id: 'M1', productId: 'P1' }, { id: 'M1b', productId: 'P1' }, { id: 'M2', productId: 'P2' }],
-    initiatives: [
-      { id: 'Iag', divisionId: 'D' },                       // agnostic
-      { id: 'Iprod', divisionId: 'D', productId: 'P1' },    // product-specific
-      { id: 'Imod', divisionId: 'D', modelId: 'M1' }        // model-specific
-    ],
-    objectives: []
-  };
-  // resolution / inheritance
-  eq(C.effProduct({ initiativeId: 'Iprod' }, portfolio), 'P1', 'objective inherits product');
-  eq(C.effModel({ initiativeId: 'Iprod' }, portfolio), null, 'product-only -> no model');
-  eq(C.effProduct({ initiativeId: 'Imod' }, portfolio), 'P1', 'model resolves to parent product');
-  eq(C.effModel({ initiativeId: 'Imod' }, portfolio), 'M1', 'model resolves to model');
-  eq(C.effProduct({ initiativeId: 'Iag', modelId: 'M2' }, portfolio), 'P2', 'own model wins over agnostic init');
+  // ---- KPI levels + typed-link resolution (Unified KPI Model) --------------
+  // A KPI is the measurement atom, hosted at a level (hostType). Levels rank the
+  // hierarchy for link-direction validation + default-type lookup ONLY; they do
+  // NOT drive resolution. Resolution follows explicit typed parent links (see the
+  // typed-link block below). Legacy groupId/isDefiner data is normalized on the
+  // fly (linkOf) and scores identically.
+  var KPI_LEVEL = { product: 5, component: 4, initiative: 3, milestone: 3, keyResult: 2, stageGate: 1, task: 0 };
+  var PORTFOLIO_KEY = '__portfolio__';   // reserved docs-map key: portfolio KPIs join resolution, skipped by structural iteration
 
-  // validation rows of §5.3
-  ok(C.validateClassification({ initiativeId: 'Iag', modelId: 'M2' }, portfolio).ok, 'agnostic init allows any model');
-  ok(C.validateClassification({ initiativeId: 'Iag', productId: 'P2' }, portfolio).ok, 'agnostic init allows any product');
-  ok(C.validateClassification({ initiativeId: 'Iprod' }, portfolio).ok, 'product init: objective inherits');
-  ok(C.validateClassification({ initiativeId: 'Iprod', modelId: 'M1' }, portfolio).ok, 'product init: model under it ok');
-  ok(C.validateClassification({ initiativeId: 'Iprod', modelId: 'M1b' }, portfolio).ok, 'product init: sibling model under it ok');
-  ok(!C.validateClassification({ initiativeId: 'Iprod', productId: 'P2' }, portfolio).ok, 'product init: different product blocked');
-  ok(!C.validateClassification({ initiativeId: 'Iprod', modelId: 'M2' }, portfolio).ok, 'product init: model under other product blocked');
-  ok(C.validateClassification({ initiativeId: 'Imod', modelId: 'M1' }, portfolio).ok, 'model init: same model ok');
-  ok(!C.validateClassification({ initiativeId: 'Imod', modelId: 'M1b' }, portfolio).ok, 'model init: other model blocked');
-  ok(!C.validateClassification({ initiativeId: 'Imod', productId: 'P1' }, portfolio).ok, 'model init: broaden to product blocked');
-  ok(C.validateClassification({ initiativeId: 'Imod' }, portfolio).ok, 'model init: agnostic objective inherits (ok)');
-  ok(!C.validateClassification({ initiativeId: 'Iag', productId: 'P1', modelId: 'M1' }, portfolio).ok, 'node both set blocked');
-})();
+  function progressLinear(value, target, direction) {
+    if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
+    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    return 0;
+  }
+  function progressRange(value, lo, hi) {
+    if (value >= lo && value <= hi) return 100;
+    var width = (hi - lo) || 1;
+    var d = value < lo ? (lo - value) : (value - hi);
+    return 100 * Math.max(0, 1 - d / width);
+  }
 
-/* ---- sliced rollups: product aggregates across models, sub-aggregate ------ */
-(function () {
-  var portfolio = {
-    products: [{ id: 'P1' }],
-    models: [{ id: 'M1', productId: 'P1' }, { id: 'M2', productId: 'P1' }],
-    initiatives: [{ id: 'I1', divisionId: 'D' }],
-    objectives: [
-      { id: 'O1', divisionId: 'D', initiativeId: 'I1', quarter: 'Q1', modelId: 'M1' },
-      { id: 'O2', divisionId: 'D', initiativeId: 'I1', quarter: 'Q1', modelId: 'M2' }
-    ]
-  };
-  var exec = { 'D': {
-    keyResults: [{ id: 'KR1', objectiveId: 'O1', statement: 'a' }, { id: 'KR2', objectiveId: 'O2', statement: 'b' }],
-    kpis: [{ id: 'K1', objectiveId: 'O1', hostType: 'keyResult', hostId: 'KR1', direction: 'up', target: 100 },
-           { id: 'K2', objectiveId: 'O2', hostType: 'keyResult', hostId: 'KR2', direction: 'up', target: 100 }],
-    kpiUpdates: [{ kpiId: 'K1', value: 60, timestamp: 1 }, { kpiId: 'K2', value: 100, timestamp: 1 }]
-  } };
-  approx(C.sliceScore('product', 'P1', portfolio, exec), 80, 'product P1 = mean across its models (60,100)');
-  approx(C.sliceScore('model', 'M1', portfolio, exec), 60, 'model M1 sub-aggregate');
-  approx(C.sliceScore('model', 'M2', portfolio, exec), 100, 'model M2 sub-aggregate');
-  approx(C.sliceScore('product', 'P1', portfolio, exec, 'Q1'), 80, 'product quarterly filter');
-  isNull(C.sliceScore('product', 'P1', portfolio, exec, 'Q9'), 'product empty quarter -> null');
-})();
+  // ---- statistics (for statistical KPI targets) ----------------------------
+  function statSum(xs){ var s=0; for(var i=0;i<xs.length;i++) s+=xs[i]; return s; }
+  function statAverage(xs){ return xs.length ? statSum(xs)/xs.length : null; }
+  function statMedian(xs){ if(!xs.length) return null; var a=xs.slice().sort(function(p,q){return p-q;}); var m=Math.floor(a.length/2); return a.length%2 ? a[m] : (a[m-1]+a[m])/2; }
+  function statMax(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]>m) m=xs[i]; return m; }
+  function statMin(xs){ if(!xs.length) return null; var m=xs[0]; for(var i=1;i<xs.length;i++) if(xs[i]<m) m=xs[i]; return m; }
+  function statStdDev(xs){ if(xs.length<2) return xs.length?0:null; var mu=statAverage(xs),s=0; for(var i=0;i<xs.length;i++){ var d=xs[i]-mu; s+=d*d; } return Math.sqrt(s/(xs.length-1)); }
+  function statCV(xs){ var mu=statAverage(xs); if(mu==null||mu===0) return null; var sd=statStdDev(xs); return sd==null?null:(sd/Math.abs(mu))*100; }
+  function statRange(xs){ if(!xs.length) return null; return statMax(xs)-statMin(xs); }
+  function computeStat(name, xs){
+    switch(name){
+      case 'average': return statAverage(xs);
+      case 'median':  return statMedian(xs);
+      case 'stddev':  return statStdDev(xs);
+      case 'cv':      return statCV(xs);
+      case 'range':   return statRange(xs);
+      case 'max':     return statMax(xs);
+      case 'min':     return statMin(xs);
+    }
+    return statAverage(xs);
+  }
+  // all readings posted to a kpi id, newest first
+  function readingsFor(kpiId, execDocs){
+    var out=[];
+    for(var div in execDocs){ if(!execDocs.hasOwnProperty(div)) continue;
+      var ups=execDocs[div].kpiUpdates||[];
+      for(var i=0;i<ups.length;i++) if(ups[i].kpiId===kpiId) out.push(ups[i]);
+    }
+    out.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    return out;
+  }
+  // resolved value for a member id honoring the definer's targetType:
+  // 'statistical' aggregates the latest readCount readings; else the newest reading.
+  function resolvedReadingValue(kpiId, defn, execDocs){
+    var ups=readingsFor(kpiId, execDocs);
+    if(!ups.length) return null;
+    if(defn && defn.targetType==='statistical'){
+      var n=parseInt(defn.readCount,10);
+      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
+      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      if(!xs.length) return null;
+      return computeStat(defn.statistic||'average', xs);
+    }
+    return ups[0].value;
+  }
 
-/* ---- cascade: the §6.1 worked example, exactly --------------------------- */
-(function () {
-  var today = 50;
-  var portfolio = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 150 }],
-    milestones: [
-      { id: 'M1', initiativeId: 'I', plannedDate: 100 },
-      { id: 'M2', initiativeId: 'I', plannedDate: 150 }
-    ],
-    milestoneEdges: [{ fromMs: 'M1', toMs: 'M2', lagDays: 0 }],
-    objectives: [
-      { id: 'O1', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 90, milestoneIds: ['M1'] },
-      { id: 'O2', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 140, milestoneIds: [] }
-    ],
-    objectiveEdges: []
-  };
-  // Drive O1 -> projEnd 110 via a stage-gate actualDate; O2 -> 155 via a task.
-  var exec = { 'D': {
-    stageGates: [{ id: 'SG1', objectiveId: 'O1', plannedDate: 90, actualDate: 110 }],
-    tasks: [{ id: 'T1', objectiveId: 'O2', plannedStart: 0, plannedEnd: 140, percentComplete: 0, actualEnd: 155 }]
-  } };
-  var r = C.cascade(portfolio, exec, today);
-  approx(r.objectiveProjectedEnd['O1'], 110, 'O1 projEnd = 110');
-  approx(r.objectiveProjectedEnd['O2'], 155, 'O2 projEnd = 155');
-  approx(r.milestoneEffective['M1'], 110, 'M1 effective = 110');
-  approx(r.milestoneEffective['M2'], 150, 'M2 effective = 150');
-  approx(r.initiativeProjectedEnd['I'], 155, 'I projEnd = 155');
-  approx(r.longTermSlip['I'], 5, 'long-term slip = 5 days');
+  // latest reading posted to a specific KPI id (the host where it was entered)
+  function kpiCurrentValue(kpiId, execDocs) {
+    var latest = null;
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ups = execDocs[div].kpiUpdates || [];
+      for (var i = 0; i < ups.length; i++) {
+        if (ups[i].kpiId === kpiId) {
+          if (!latest || ups[i].timestamp > latest.timestamp) latest = ups[i];
+        }
+      }
+    }
+    return latest ? latest.value : null;
+  }
 
-  // Variant: O1 slips to 160 -> drives through milestone chain, slip 10
-  exec['D'].stageGates[0].actualDate = 160;
-  var r2 = C.cascade(portfolio, exec, today);
-  approx(r2.milestoneEffective['M1'], 160, 'variant M1 = 160');
-  approx(r2.milestoneEffective['M2'], 160, 'variant M2 = 160 via chain');
-  approx(r2.longTermSlip['I'], 10, 'variant slip = 10');
-})();
+  function allKpis(execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ks = execDocs[div].kpis || [];
+      for (var i = 0; i < ks.length; i++) out.push(ks[i]);
+    }
+    return out;
+  }
+  // ---- typed-link resolution (Unified KPI Model, Phase B) ------------------
+  // Each KPI optionally points at ONE parent via linkParent + linkType
+  // (direct|contribute|specification) + optional linkPriority; the tree IS the
+  // group and its root (linkParent==null) owns identity + authors the target.
+  //   direct        : child shows the parent's target exactly (no override); value flows up
+  //   contribute    : child may override the target (else inherit); value flows up
+  //   specification : child may override the target (else inherit); value does NOT flow up (firewall)
+  // Legacy groupId/isDefiner is normalized on the fly by linkOf (definer/standalone
+  // -> root, every member -> contribute-child of its definer), so existing data
+  // resolves identically. Precedence among contributors to a parent (§7): the
+  // node's OWN reading ranks above its children; among children direct outranks
+  // contribute; then quarter (nulls last), then reading recency. linkPriority wins first.
+  var LINK_OWN_RANK = 3;                    // a node's own directly-posted reading
+  function relationRank(type){ return type==='direct'?2 : type==='contribute'?1 : 0; }
+  function kpiById(id, kpis){ for(var i=0;i<kpis.length;i++) if(kpis[i].id===id) return kpis[i]; return null; }
+  function legacyDefinerId(kpi, kpis){
+    var g=kpi.groupId; if(!g) return null; var first=null;
+    for(var i=0;i<kpis.length;i++){ if(kpis[i].groupId===g){ if(first==null) first=kpis[i].id; if(kpis[i].isDefiner) return kpis[i].id; } }
+    return first;
+  }
+  // normalized link for either model: {parent, type, priority}
+  function linkOf(kpi, kpis){
+    if(kpi.linkParent !== undefined) return { parent:kpi.linkParent, type:kpi.linkType||'contribute', priority:kpi.linkPriority||0 };
+    if(!kpi.groupId || kpi.isDefiner) return { parent:null, type:'contribute', priority:0 };
+    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:0 };
+  }
+  function rootOf(kpi, kpis){ var seen={}, cur=kpi;
+    while(cur){ if(seen[cur.id]) return cur; seen[cur.id]=1; var lk=linkOf(cur,kpis);
+      if(lk.parent==null) return cur; var p=kpiById(lk.parent,kpis); if(!p) return cur; cur=p; }
+    return kpi; }
+  function childrenOf(kpiId, kpis){ var out=[]; for(var i=0;i<kpis.length;i++) if(linkOf(kpis[i],kpis).parent===kpiId) out.push(kpis[i]); return out; }
+  // wouldCreateCycle: true if pointing childId's parent at parentId would form a cycle — i.e. childId === parentId,
+  // or childId already sits on parentId's ancestor chain. (A pre-existing upstream cycle is not attributed to this edit.)
+  function wouldCreateCycle(childId, parentId, kpis){
+    if(childId===parentId) return true;
+    var seen={}, cur=kpiById(parentId,kpis);
+    while(cur){ if(cur.id===childId) return true; if(seen[cur.id]) return false; seen[cur.id]=1;
+      var lk=linkOf(cur,kpis); cur=(lk.parent!=null)?kpiById(lk.parent,kpis):null; }
+    return false;
+  }
+  // ── product composition (model-to-model): edges are { id, parent, child }, meaning parent-model CONTAINS child-model.
+  // A child model plugged into a parent model is a "sub-product". This edge list is the canonical graph (planning reads
+  // it directly; the designer hosts the imported specs on a refModel-marked component). All four helpers are pure over
+  // the edge array — no portfolio, no DOM.
+  function compositionChildren(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].parent===modelId) out.push(composition[i].child); return out; }
+  function compositionParents(modelId, composition){ var out=[]; composition=composition||[]; for(var i=0;i<composition.length;i++) if(composition[i].child===modelId) out.push(composition[i].parent); return out; }
+  function descendantModels(modelId, composition){ composition=composition||[]; var out={}, stack=[modelId];
+    while(stack.length){ var kids=compositionChildren(stack.pop(), composition);
+      for(var i=0;i<kids.length;i++) if(!out[kids[i]]){ out[kids[i]]=1; stack.push(kids[i]); } }
+    var arr=[]; for(var k in out) arr.push(k); return arr; }
+  // true if making parentModel contain childModel would form a composition cycle — i.e. same model, or childModel
+  // already (transitively) contains parentModel. (A duplicate direct edge is the caller's check, not a cycle.)
+  function wouldComposeCycle(parentModel, childModel, composition){
+    if(parentModel===childModel) return true;
+    return descendantModels(childModel, composition).indexOf(parentModel)!==-1;
+  }
+  // model N's importable specs: the keyResult-hosted DEFINER kpis scoped to that model (its headline specifications).
+  // A parent system references these when N is plugged in as a sub-product; component-level internals are excluded.
+  function importableModelKpis(modelId, kpis){
+    var out=[]; kpis=kpis||[]; for(var i=0;i<kpis.length;i++){ var k=kpis[i];
+      if(k.objectiveId===modelId && k.hostType==='keyResult' && linkOf(k,kpis).parent==null) out.push(k); }
+    return out;
+  }
+  // score a bare value against a bare target (number, or {lo,hi} for range) given direction — 0..100 or null.
+  // used for imported sub-product specs, where the value comes from the child doc and the target may be an override.
+  function rawScore(value, target, dir){
+    if(value==null || target==null) return null;
+    var raw = (dir==='range' && target && typeof target==='object')
+      ? progressRange(value, target.lo, target.hi)
+      : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
+  // group = every KPI sharing a root (retained name/semantics for shells)
+  function groupMembers(kpi, kpis){ var r=rootOf(kpi,kpis), out=[]; for(var i=0;i<kpis.length;i++) if(rootOf(kpis[i],kpis)===r) out.push(kpis[i]); return out; }
+  // identity lives on the root (a lone KPI is its own root)
+  function definerOf(kpi, kpis){ return rootOf(kpi, kpis); }
+  function kpiDirection(kpi, kpis){ return rootOf(kpi, kpis).direction; }
+  function kpiUnit(kpi, kpis){ return rootOf(kpi, kpis).unit; }
+  function kpiName(kpi, kpis){ return rootOf(kpi, kpis).name; }
 
-/* ---- cascade: in-progress task extension, no-children, cycle guard -------- */
-(function () {
-  var today = 100;
-  // task 40% done, behind: planned [0,80], remaining 60% of 80 = 48 from today -> 148
-  var portfolio = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 80 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 80, milestoneIds: [] }],
-    objectiveEdges: []
-  };
-  var exec = { 'D': { tasks: [{ id: 'T', objectiveId: 'O', plannedStart: 0, plannedEnd: 80, percentComplete: 40 }] } };
-  var r = C.cascade(portfolio, exec, today);
-  approx(r.objectiveProjectedEnd['O'], 148, 'in-progress extension 100 + ceil(0.6*80)=148');
+  function objectiveQuarter(objId, execDocs){
+    if(objId==null || !execDocs) return null; var pf=execDocs[PORTFOLIO_KEY]; if(!pf) return null;
+    var objs=pf.objectives||[]; for(var i=0;i<objs.length;i++) if(objs[i].id===objId) return objs[i].quarter||null; return null;
+  }
+  function precKey(kpi, reading, rank, execDocs){
+    return { priority:(kpi.linkPriority||0), rank:rank, quarter:objectiveQuarter(kpi.objectiveId, execDocs), ts:(reading?(reading.timestamp||0):0) };
+  }
+  function precCmp(x, y){                    // sort comparator: negative => x wins (ranks first)
+    if(x.priority!==y.priority) return y.priority-x.priority;
+    if(x.rank!==y.rank) return y.rank-x.rank;
+    if(x.quarter!==y.quarter){ if(x.quarter==null) return 1; if(y.quarter==null) return -1; return x.quarter<y.quarter?1:-1; }
+    return (y.ts||0)-(x.ts||0);
+  }
+  function latestReadingObj(kpiId, execDocs){ var ups=readingsFor(kpiId, execDocs); return ups.length?ups[0]:null; }
 
-  // no children -> objective intrinsic = its planned end; initiative slip 0
-  var p2 = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 80 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 80, milestoneIds: [] }],
-    objectiveEdges: []
-  };
-  var r2 = C.cascade(p2, { 'D': {} }, 10);
-  approx(r2.objectiveProjectedEnd['O'], 80, 'no children -> planned end');
-  approx(r2.longTermSlip['I'], 0, 'no slip when on plan');
+  // effective TARGET — walk UP the parent chain (§6)
+  function effectiveTarget(kpi, kpis, seen){
+    seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
+    var lk=linkOf(kpi,kpis);
+    if(lk.parent==null) return kpi.target!=null?kpi.target:null;
+    var P=kpiById(lk.parent,kpis); if(!P) return kpi.target!=null?kpi.target:null;
+    if(lk.type==='direct') return effectiveTarget(P, kpis, seen);
+    return kpi.target!=null ? kpi.target : effectiveTarget(P, kpis, seen);
+  }
+  // effective VALUE — own reading + direct/contribute children, precedence winner (§6/§7)
+  function effectiveValue(kpi, kpis, execDocs, root, seen){
+    seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
+    root = root || rootOf(kpi, kpis);
+    var pool=[];
+    var ownV=resolvedReadingValue(kpi.id, root, execDocs);
+    if(ownV!=null) pool.push({ value:ownV, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
+    var kids=childrenOf(kpi.id, kpis);
+    for(var i=0;i<kids.length;i++){ var lk=linkOf(kids[i],kpis);
+      if(lk.type==='specification') continue;                          // firewall: value does not flow up
+      var v=effectiveValue(kids[i], kpis, execDocs, root, seen);
+      if(v!=null) pool.push({ value:v, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
+    }
+    if(!pool.length) return null;
+    pool.sort(function(a,b){ return precCmp(a.key, b.key); });
+    return pool[0].value;                                              // highest precedence contributor that has a value
+  }
+  // public 2/3-arg aliases (harness + shells call these)
+  function effTarget(kpi, kpis){ return effectiveTarget(kpi, kpis); }
+  function effValue(kpi, kpis, execDocs){ return effectiveValue(kpi, kpis, execDocs); }
+  // materialize legacy groupId/isDefiner into explicit link fields (apps: on load, write back on save)
+  function migrateKpiLinks(kpis){ var changed=false;
+    for(var i=0;i<kpis.length;i++){ var k=kpis[i]; if(k.linkParent!==undefined) continue;
+      var lk=linkOf(k, kpis); k.linkParent=lk.parent; k.linkType=lk.type; if(lk.priority) k.linkPriority=lk.priority; changed=true; }
+    return changed;
+  }
 
-  // cycle guard: A<->B must terminate
-  var p3 = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 100 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [
-      { id: 'A', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 50, milestoneIds: [] },
-      { id: 'B', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 50, milestoneIds: [] }
-    ],
-    objectiveEdges: [{ fromObj: 'A', toObj: 'B', lagDays: 0 }, { fromObj: 'B', toObj: 'A', lagDays: 0 }]
-  };
-  var r3 = C.cascade(p3, { 'D': {} }, 10);
-  ok(r3.objectiveProjectedEnd['A'] != null && r3.objectiveProjectedEnd['B'] != null, 'cycle terminates with values');
-  ok(r3.cycles.length > 0, 'cycle reported');
-})();
+  // kpiScore(kpi, currentValue) -> 0..100 or null. Pure formula against the
+  // kpi's own direction/target (used for standalone KPIs and unit tests).
+  function kpiScore(kpi, currentValue) {
+    if (kpi.targetType === 'binary') {
+      if (currentValue == null) return null;
+      return currentValue >= 1 ? 100 : 0;
+    }
+    if (kpi.target == null) return null;
+    if (currentValue == null) return null;
+    var raw;
+    if (kpi.direction === 'range') {
+      raw = progressRange(currentValue, kpi.target.lo, kpi.target.hi);
+    } else {
+      raw = progressLinear(currentValue, kpi.target, kpi.direction);
+    }
+    return clamp(raw, 0, 100);
+  }
 
-/* ---- cascade: gate chaining, locks, committed baselines ------------------ */
-(function () {
-  var today = 50;
-  // O with three gates; G1 finished LATE at 70, G2/G3 undone (pfGate floors to today=50).
-  function build(chain) {
+  // group/level-aware score: resolved target (down) vs resolved value (up),
+  // direction from the definer.
+  function kpiScoreResolved(kpi, kpis, execDocs) {
+    var defn = definerOf(kpi, kpis);
+    if (defn.targetType === 'binary') {
+      var bv = effValue(kpi, kpis, execDocs);
+      if (bv == null) return null;
+      return bv >= 1 ? 100 : 0;
+    }
+    var target = effTarget(kpi, kpis);
+    if (target == null) return null;
+    var value = effValue(kpi, kpis, execDocs);
+    if (value == null) return null;
+    var dir = kpiDirection(kpi, kpis);
+    var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
+                                : progressLinear(value, target, dir);
+    return clamp(raw, 0, 100);
+  }
+
+  // all KPIs hosted by (hostType, hostId), scanned across exec docs
+  function kpisFor(hostType, hostId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div)) continue;
+      var ks = execDocs[div].kpis || [];
+      for (var i = 0; i < ks.length; i++) {
+        if (ks[i].hostType === hostType && ks[i].hostId === hostId) out.push(ks[i]);
+      }
+    }
+    return out;
+  }
+
+  function meanScorable(kpis, execDocs) {
+    var all = allKpis(execDocs);
+    var scores = [];
+    for (var i = 0; i < kpis.length; i++) {
+      var s = kpiScoreResolved(kpis[i], all, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // find a KR object across exec docs
+  function findKr(krId, execDocs) {
+    for (var div in execDocs) { if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].id === krId) return krs[i];
+    }
+    return null;
+  }
+  // score one embedded KPI (sub-KR tracker) from its stored `current`
+  function scoreEmbeddedKpi(k) {
+    var tt = k.targetType || k.type || 'demonstration';
+    if (tt === 'binary') {
+      if (k.current == null) return null;
+      return Number(k.current) >= 1 ? 100 : 0;
+    }
+    if (k.current == null) return null;
+    var cur = Number(k.current); if (isNaN(cur)) return null;
+    if (k.target == null || k.target === '') return null;
+    var tgt = Number(k.target); if (isNaN(tgt)) return null;
+    var dir = (k.direction === 'down' || k.direction === 'decrease') ? 'down' : 'up';
+    return clamp(progressLinear(cur, tgt, dir), 0, 100);
+  }
+  function meanEmbedded(kpis) {
+    var scores = [];
+    for (var i = 0; i < (kpis || []).length; i++) { var s = scoreEmbeddedKpi(kpis[i]); if (s != null) scores.push(s); }
+    return mean(scores);
+  }
+  // weighted mean of sub-KR scores (percentage -> progress, kpi -> embedded KPI mean)
+  function subKrScore(subKrs) {
+    var totalW = 0, sum = 0, any = false;
+    for (var i = 0; i < (subKrs || []).length; i++) {
+      var skr = subKrs[i], pct;
+      if ((skr.trackingType || 'percentage') === 'kpi') pct = meanEmbedded(skr.kpis || []);
+      else pct = (skr.progress == null) ? null : clamp(Number(skr.progress), 0, 100);
+      if (pct == null) continue;
+      var w = Number(skr.weight) || 1;
+      totalW += w; sum += w * pct; any = true;
+    }
+    return (any && totalW > 0) ? sum / totalW : null;
+  }
+  // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
+  // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
+  function keyResultScore(krId, execDocs) {
+    var kr = findKr(krId, execDocs);
+    var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
+    if (tt === 'percentage') {
+      if (!kr || kr.progress == null) return null;
+      return clamp(Number(kr.progress), 0, 100);
+    }
+    if (tt === 'subkr') return subKrScore(kr.subKrs || []);
+    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
+  }
+  // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
+  function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
+  function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
+  // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
+  // gating/readiness signal, NOT folded into the OKR score — same stance as stageGateScore).
+  function milestoneScore(msId, execDocs) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs); }
+  // milestoneAchieved -> manual completion mark (ms.completedDate) OR KPI score at 100.
+  // A milestone with no scorable KPIs is achieved only by the manual mark.
+  function milestoneAchieved(ms, execDocs) {
+    if (ms && ms.completedDate) return true;
+    var s = milestoneScore(ms && ms.id, execDocs);
+    return s != null && s >= 100;
+  }
+
+  // ---- objective & tier scores ---------------------------------------------
+  function krsForObjective(objId, execDocs) {
+    var out = [];
+    for (var div in execDocs) {
+      if (!execDocs.hasOwnProperty(div) || div === PORTFOLIO_KEY) continue;
+      var krs = execDocs[div].keyResults || [];
+      for (var i = 0; i < krs.length; i++) if (krs[i].objectiveId === objId) out.push(krs[i]);
+    }
+    return out;
+  }
+
+  // objectiveScore -> mean of scorable Key Result scores; null when none are
+  // scorable (an objective with no Key Result is unscored -> no band, decision #3).
+  function objectiveScore(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs);
+    var scores = [];
+    for (var i = 0; i < krs.length; i++) {
+      var s = keyResultScore(krs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores); // null if empty
+  }
+
+  function objectivesInScope(entityType, entityId, portfolio) {
+    var objs = portfolio.objectives || [];
+    switch (entityType) {
+      case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
+      case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
+      case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'company':    return objs.slice();
+      default: return [];
+    }
+  }
+
+  // score(entityType, entityId, portfolio, execDocs, quarter?)
+  //   quarter omitted -> OVERALL (grand mean of the entity's objectives)
+  //   quarter given   -> QUARTERLY (objectives stamped that quarter)
+  // Returns 0..100 or null (no scorable objectives in the bound -> no band).
+  function score(entityType, entityId, portfolio, execDocs, quarter) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // boundsOf -> sorted distinct quarters in scope. length 1 => caller collapses
+  // quarterly and overall into a single number.
+  function boundsOf(entityType, entityId, portfolio) {
+    var objs = objectivesInScope(entityType, entityId, portfolio);
+    var seen = {}, out = [];
+    for (var i = 0; i < objs.length; i++) {
+      var q = objs[i].quarter;
+      if (q && !seen[q]) { seen[q] = 1; out.push(q); }
+    }
+    out.sort();
+    return out;
+  }
+
+  function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
+  function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
+  function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
+  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+
+  // Combine the portfolio doc into a docs map for cross-document KPI resolution.
+  // Portfolio KPIs join the resolution pool (their targets/identity cascade down
+  // to linked exec members; values cascade up from exec readings). The reserved
+  // key is skipped by structural iteration, so KRs/gates/objectives never double.
+  function withPortfolio(portfolio, execDocs) {
+    var m = {}; m[PORTFOLIO_KEY] = portfolio || {};
+    for (var k in execDocs) { if (execDocs.hasOwnProperty(k)) m[k] = execDocs[k]; }
+    return m;
+  }
+
+  function band(s) {
+    if (s == null) return 'no-band';
+    if (s >= 90) return 'on-track';
+    if (s >= 70) return 'at-risk';
+    return 'off-track';
+  }
+
+  // ---- product / model classification (§5) ---------------------------------
+  function ownClass(node) {
+    if (node.modelId) return { kind: 'model', modelId: node.modelId };
+    if (node.productId) return { kind: 'product', productId: node.productId };
+    return { kind: 'agnostic' };
+  }
+  function parentProductOf(modelId, portfolio) {
+    var ms = portfolio.models || [];
+    for (var i = 0; i < ms.length; i++) if (ms[i].id === modelId) return ms[i].productId;
+    return null;
+  }
+  function initiativeOf(obj, portfolio) {
+    var inits = portfolio.initiatives || [];
+    for (var i = 0; i < inits.length; i++) if (inits[i].id === obj.initiativeId) return inits[i];
+    return null;
+  }
+  function effClass(obj, portfolio) {
+    var c = ownClass(obj);
+    if (c.kind === 'agnostic') {
+      var init = initiativeOf(obj, portfolio);
+      if (init) c = ownClass(init);
+    }
+    return c;
+  }
+  function effProduct(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    if (c.kind === 'model') return parentProductOf(c.modelId, portfolio);
+    if (c.kind === 'product') return c.productId;
+    return null;
+  }
+  function effModel(obj, portfolio) {
+    var c = effClass(obj, portfolio);
+    return c.kind === 'model' ? c.modelId : null;
+  }
+
+  // ---- quarter helpers (calendar quarters, matching YYYY"Q"N) ----
+  function quarterRange(q) {                          // 'YYYYQN' -> { start:'YYYY-MM-DD', end:'YYYY-MM-DD' } | null
+    var m = /^(\d{4})Q([1-4])$/.exec(String(q == null ? '' : q).trim());
+    if (!m) return null;
+    var y = +m[1], sm = (+m[2] - 1) * 3, pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var ey = y, em = sm + 3; if (em >= 12) { ey = y + 1; em = 0; }
+    var last = new Date(Date.UTC(ey, em, 1) - 86400000);
+    return { start: y + '-' + pad(sm + 1) + '-01',
+             end: last.getUTCFullYear() + '-' + pad(last.getUTCMonth() + 1) + '-' + pad(last.getUTCDate()) };
+  }
+  function quarterList(used, refYear, back, fwd) {    // rolling window ∪ used, sorted; caller adds the blank option
+    back = back == null ? 1 : back; fwd = fwd == null ? 2 : fwd;
+    var set = {};
+    for (var y = refYear - back; y <= refYear + fwd; y++) for (var q = 1; q <= 4; q++) set[y + 'Q' + q] = 1;
+    (used || []).forEach(function (u) { if (/^\d{4}Q[1-4]$/.test(u)) set[u] = 1; });
+    return Object.keys(set).sort();
+  }
+
+  // ---- layered grouping of objectives by an ordered list of dimensions ----
+  // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
+  // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
+  // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  function _dimKey(o, dim, portfolio) {
+    if (dim === 'division') return o.divisionId || '';
+    if (dim === 'product') return effProduct(o, portfolio) || '';
+    if (dim === 'model') return effModel(o, portfolio) || '';
+    if (dim === 'quarter') return o.quarter || '';
+    if (dim === 'owner') return o.owner || '';
+    if (dim === 'initiative') return o.initiativeId || '';
+    return '';
+  }
+  function _dimOrder(dim, keys, portfolio) {
+    var none = keys.indexOf('') >= 0, rest = keys.filter(function (k) { return k !== ''; });
+    var src = dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
+            : dim === 'model' ? portfolio.models : dim === 'initiative' ? portfolio.initiatives : null;
+    if (src) { var idx = {}; src.forEach(function (r, i) { idx[r.id] = i; });
+      rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
+        return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
+    } else { rest.sort(); }
+    if (none) rest.push('');
+    return rest;
+  }
+  function groupObjectives(objs, dims, portfolio) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+    var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
+    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    return _dimOrder(dim, seen, portfolio).map(function (k) {
+      var node = { key: k, dim: dim };
+      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      else node.objs = buckets[k];
+      return node;
+    });
+  }
+
+  // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
+  // Enforces the node invariant (at most one of productId/modelId) and the
+  // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
+  function validateClassification(obj, portfolio) {
+    if (obj.productId && obj.modelId) return { ok: false, reason: 'objective sets both productId and modelId' };
+    var init = initiativeOf(obj, portfolio);
+    if (!init) return { ok: false, reason: 'objective has no initiative' };
+    if (init.productId && init.modelId) return { ok: false, reason: 'initiative sets both productId and modelId' };
+
+    var io = ownClass(init);
+    var oo = ownClass(obj);
+    if (oo.kind === 'agnostic') return { ok: true };           // inherits; always valid
+    if (io.kind === 'agnostic') return { ok: true };           // anything allowed below agnostic
+
+    if (io.kind === 'product') {
+      if (oo.kind === 'product') {
+        return oo.productId === io.productId
+          ? { ok: true }
+          : { ok: false, reason: 'objective pins a different product than its initiative' };
+      }
+      // oo is model -> must be under the initiative's product
+      return parentProductOf(oo.modelId, portfolio) === io.productId
+        ? { ok: true }
+        : { ok: false, reason: 'objective model belongs to a different product than its initiative' };
+    }
+
+    if (io.kind === 'model') {
+      // initiative is at the finest grain: objective must match exactly (no broaden)
+      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+    }
+    return { ok: true };
+  }
+
+  // sliceScore(axis, id, portfolio, execDocs, quarter?) -> 0..100 or null
+  function sliceScore(axis, id, portfolio, execDocs, quarter) {
+    var objs = (portfolio.objectives || []).filter(function (o) {
+      var match = axis === 'product' ? (effProduct(o, portfolio) === id)
+                                     : (effModel(o, portfolio) === id);
+      if (!match) return false;
+      if (quarter != null && o.quarter !== quarter) return false;
+      return true;
+    });
+    var scores = [];
+    for (var i = 0; i < objs.length; i++) {
+      var s = objectiveScore(objs[i].id, execDocs);
+      if (s != null) scores.push(s);
+    }
+    return mean(scores);
+  }
+
+  // ---- stage-gate state classifier (pure; baseline-aware) ------------------
+  // passed-late compares the actual finish to the COMMITTED reference
+  // (baselineDate if set, else plannedDate); overdue is about the current plan.
+  function classifyGate(g, today) {
+    if (!g) return 'pending';
+    var ref = (g.baselineDate != null) ? g.baselineDate : g.plannedDate;
+    if (g.actualDate != null) {
+      return (ref != null && g.actualDate > ref) ? 'passed-late' : 'passed';
+    }
+    if (g.plannedDate != null && g.plannedDate < today) return 'overdue';
+    return 'pending';
+  }
+
+  // ---- schedule cascade (§6) -----------------------------------------------
+  // cascade(portfolio, execDocs, today) ->
+  //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
+  //     longTermSlip, gateEffective, gateSlipped, cycles }
+  function cascade(portfolio, execDocs, today) {
+    var objs = portfolio.objectives || [];
+    var inits = portfolio.initiatives || [];
+    var miles = portfolio.milestones || [];
+    var objById = {}; objs.forEach(function (o) { objById[o.id] = o; });
+    var cycles = [];
+
+    function execFor(divId) { return execDocs[divId] || {}; }
+    function childrenOf(obj) {
+      var ex = execFor(obj.divisionId);
+      var sgs = (ex.stageGates || []).filter(function (s) { return s.objectiveId === obj.id; });
+      var tasks = (ex.tasks || []).filter(function (t) { return t.objectiveId === obj.id; });
+      return { sgs: sgs, tasks: tasks };
+    }
+
+    function pfTask(t) {
+      if (t.actualEnd != null) return t.actualEnd;
+      var started = (t.actualStart != null) || (t.percentComplete && t.percentComplete > 0);
+      if (started) {
+        var frac = clamp((t.percentComplete || 0) / 100, 0, 1);
+        return Math.max(t.plannedEnd, today + Math.ceil((1 - frac) * (t.plannedEnd - t.plannedStart)));
+      }
+      return t.plannedEnd; // not started
+    }
+    // A stage-gate is a checkpoint: done -> actualDate; otherwise it cannot have
+    // finished before now, so it projects to max(plannedDate, today).
+    function pfGate(s) {
+      if (s.actualDate != null) return s.actualDate;
+      return Math.max(s.plannedDate, today);
+    }
+
+    // Stage 1a: gather children once; index every gate globally
+    var childCache = {}, gateById = {}, gateObjOf = {};
+    objs.forEach(function (o) {
+      var c = childrenOf(o);
+      childCache[o.id] = c;
+      c.sgs.forEach(function (s) { gateById[s.id] = s; gateObjOf[s.id] = o; });
+    });
+
+    // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
+    // Edges and the chain flag may live on the portfolio (cross-division) OR in an
+    // execDoc (per-division, authored in the execution app). Both are merged here.
+    // With none of them, a gate has no preds and gateEff == pfGate.
+    var gatePreds = {};
+    Object.keys(gateById).forEach(function (gid) { gatePreds[gid] = []; });
+    function addGateEdge(e) { if (e && gatePreds[e.toGate]) gatePreds[e.toGate].push({ from: e.fromGate, lag: e.lagDays || 0 }); }
+    (portfolio.stageGateEdges || []).forEach(addGateEdge);
+    for (var dk in execDocs) {
+      if (!execDocs.hasOwnProperty(dk) || dk === PORTFOLIO_KEY) continue;
+      (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
+    }
+    objs.forEach(function (o) {
+      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
+      if (!o.chainGatesByDate && !exChain) return;
+      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
+        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+      for (var i = 1; i < seq.length; i++) {
+        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+    });
+
+    // Stage 1b: gate->gate forward pass, seeded from pfGate (cycle-guarded, lagged).
+    // A locked gate is exempt from INHERITED push (committed date holds), but it
+    // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
+    // read as on-time: the seed still floors at today via pfGate.
+    var gateEff = {}, gateStack = {};
+    function computeGateEff(gid) {
+      if (gateEff[gid] != null) return gateEff[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      var seed = pfGate(g);
+      if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
+      gateStack[gid] = true;
+      var res = seed, preds = gatePreds[gid];
+      for (var i = 0; i < preds.length; i++) {
+        if (gateStack[preds[i].from]) { cycles.push('GATE:' + preds[i].from); continue; }
+        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag);
+      }
+      gateStack[gid] = false;
+      gateEff[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
+
+    // baseline-aware slip per gate: slipped iff committed and now forecast past it.
+    var gateSlipped = {};
+    Object.keys(gateById).forEach(function (gid) {
+      var g = gateById[gid];
+      gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
+    });
+
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
+    var intrinsic = {};
+    objs.forEach(function (o) {
+      var c = childCache[o.id], vals = [];
+      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
+      intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+    });
+
+    // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
+    var objPreds = {}; objs.forEach(function (o) { objPreds[o.id] = []; });
+    (portfolio.objectiveEdges || []).forEach(function (e) {
+      if (objPreds[e.toObj]) objPreds[e.toObj].push({ from: e.fromObj, lag: e.lagDays || 0 });
+    });
+    var projEnd = {}, objStack = {};
+    function computeProjEnd(id) {
+      if (projEnd[id] != null) return projEnd[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objStack[id]) { cycles.push('OBJ:' + id); return intrinsic[id]; } // break cycle
+      objStack[id] = true;
+      var cs = o.plannedStart;
+      var preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objStack[preds[i].from]) { cycles.push('OBJ:' + preds[i].from); continue; }
+        cs = Math.max(cs, computeProjEnd(preds[i].from) + preds[i].lag);
+      }
+      var dur = o.plannedEnd - o.plannedStart;
+      var res = Math.max(intrinsic[id], cs + dur);
+      objStack[id] = false;
+      projEnd[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // Stage 3: vertical lift into milestones
+    var effective = {};
+    miles.forEach(function (m) { effective[m.id] = m.plannedDate; });
+    objs.forEach(function (o) {
+      (o.milestoneIds || []).forEach(function (mid) {
+        if (effective[mid] != null) effective[mid] = Math.max(effective[mid], projEnd[o.id]);
+      });
+    });
+
+    // Stage 4: lateral MS->MS forward pass (topological, cycle-guarded)
+    var msById = {}; miles.forEach(function (m) { msById[m.id] = m; });
+    var msPreds = {}; miles.forEach(function (m) { msPreds[m.id] = []; });
+    (portfolio.milestoneEdges || []).forEach(function (e) {
+      if (msPreds[e.toMs]) msPreds[e.toMs].push({ from: e.fromMs, lag: e.lagDays || 0 });
+    });
+    var msDone = {}, msStack = {};
+    function liftMilestone(id) {
+      if (msDone[id]) return effective[id];
+      if (!msById[id]) return effective[id] || 0;
+      if (msStack[id]) { cycles.push('MS:' + id); return effective[id]; }
+      msStack[id] = true;
+      var preds = msPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (msStack[preds[i].from]) { cycles.push('MS:' + preds[i].from); continue; }
+        effective[id] = Math.max(effective[id], liftMilestone(preds[i].from) + preds[i].lag);
+      }
+      msStack[id] = false;
+      msDone[id] = true;
+      return effective[id];
+    }
+    miles.forEach(function (m) { liftMilestone(m.id); });
+
+    // Stage 5: initiative projected end + headline slip
+    var initProjEnd = {}, slip = {};
+    inits.forEach(function (I) {
+      var vals = [I.plannedEnd];
+      miles.forEach(function (m) { if (m.initiativeId === I.id) vals.push(effective[m.id]); });
+      objs.forEach(function (o) {
+        if (o.initiativeId === I.id && (!o.milestoneIds || o.milestoneIds.length === 0)) {
+          vals.push(projEnd[o.id]);
+        }
+      });
+      var pe = Math.max.apply(null, vals);
+      initProjEnd[I.id] = pe;
+      slip[I.id] = pe - I.plannedEnd;
+    });
+
     return {
-      initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
-      milestones: [], milestoneEdges: [],
-      objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [], chainGatesByDate: chain }],
-      objectiveEdges: [], stageGateEdges: []
+      objectiveProjectedEnd: projEnd,
+      milestoneEffective: effective,
+      initiativeProjectedEnd: initProjEnd,
+      longTermSlip: slip,
+      gateEffective: gateEff,
+      gateSlipped: gateSlipped,
+      cycles: cycles
     };
   }
-  var execChain = { 'D': { stageGates: [
-    { id: 'G1', objectiveId: 'O', plannedDate: 30, actualDate: 70 },
-    { id: 'G2', objectiveId: 'O', plannedDate: 40 },
-    { id: 'G3', objectiveId: 'O', plannedDate: 45 }
-  ] } };
 
-  // no chain: each gate stands alone (gateEff == pfGate)
-  var rNo = C.cascade(build(false), execChain, today);
-  approx(rNo.gateEffective['G1'], 70, 'solo G1 = its late actual (70)');
-  approx(rNo.gateEffective['G2'], 50, 'solo G2 = max(plannedDate 40, today 50) = 50');
-  ok(rNo.gateEffective['G3'] === 50, 'solo G3 floors to today, not pushed by G1');
+  // ---- cross-doc linkage scope (execution → product/model KPIs) -----------
+  // The product/model KPI targets a division's execution can report against: the products/models its objectives
+  // are classified to (own or inherited from their initiative), the models under any classified product, and
+  // every sub-product reachable by composition (transitive). Pure over the portfolio + the composition edges.
+  // Returns { products:[ids], models:[ids] } (deduped; order not significant).
+  function classifiedTargets(portfolio, composition, divisionId) {
+    var models = (portfolio && portfolio.models) || [];
+    var objs = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o.divisionId === divisionId; });
+    var prod = {}, mod = {};
+    objs.forEach(function (o) {
+      var c = effClass(o, portfolio);
+      if (c.kind === 'model') mod[c.modelId] = 1;
+      else if (c.kind === 'product') prod[c.productId] = 1;
+    });
+    for (var i = 0; i < models.length; i++) if (prod[models[i].productId]) mod[models[i].id] = 1;   // a classified product → its models are seeds
+    Object.keys(mod).forEach(function (mid) {                                                        // + sub-products, transitively
+      var d = descendantModels(mid, composition); for (var j = 0; j < d.length; j++) mod[d[j]] = 1;
+    });
+    for (var k = 0; k < models.length; k++) if (mod[models[k].id] && models[k].productId) prod[models[k].productId] = 1;   // product-level targets of every in-scope model
+    return { products: Object.keys(prod), models: Object.keys(mod) };
+  }
+  // The linkable DEFINER kpis for a set of in-scope targets, over a pool of spec-doc kpis: each in-scope model's
+  // headline specs (keyResult-hosted definers) + each in-scope product's product-level definer kpis.
+  function targetKpisInScope(targets, kpis) {
+    var pset = {}, out = [], seen = {};
+    (targets.products || []).forEach(function (p) { pset[p] = 1; });
+    kpis = kpis || [];
+    (targets.models || []).forEach(function (m) {
+      var mk = importableModelKpis(m, kpis);
+      for (var i = 0; i < mk.length; i++) if (!seen[mk[i].id]) { seen[mk[i].id] = 1; out.push(mk[i]); }
+    });
+    for (var j = 0; j < kpis.length; j++) {
+      var k = kpis[j];
+      if (k.hostType === 'product' && pset[k.hostId] && linkOf(k, kpis).parent == null && !seen[k.id]) { seen[k.id] = 1; out.push(k); }
+    }
+    return out;
+  }
 
-  // chainGatesByDate: G1(30)->G2(40)->G3(45); late G1 pushes both to 70
-  var rCh = C.cascade(build(true), execChain, today);
-  approx(rCh.gateEffective['G2'], 70, 'chained G2 pushed to late G1 end (70)');
-  approx(rCh.gateEffective['G3'], 70, 'chained G3 pushed through the chain (70)');
-  approx(rCh.objectiveProjectedEnd['O'], 70, 'chained gate end flows into objective projEnd');
-
-  // lock exempts the locked gate from inherited push, and shields downstream
-  var execLock = JSON.parse(JSON.stringify(execChain));
-  execLock['D'].stageGates[1].locked = true;       // lock G2
-  execLock['D'].stageGates[1].baselineDate = 40;   // committed to 40
-  var rLk = C.cascade(build(true), execLock, today);
-  approx(rLk.gateEffective['G2'], 50, 'locked G2 holds at its own pfGate (50), not pushed to 70');
-  approx(rLk.gateEffective['G3'], 50, 'locked G2 shields G3 (inherits committed 50, not 70)');
-
-  // lock NEVER fakes on-time: a locked, overdue, undone gate still floors to today AND slips
-  var pSolo = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }],
-    objectiveEdges: [], stageGateEdges: []
+  // ---- FMEA / risk register (pure) -----------------------------------------
+  // A problem is a modes → effects → causes tree; RPN = severity × occurrence ×
+  // detection (each 1–10). "Unresolved" RPN skips resolved nodes and is zeroed
+  // once the problem is resolved or its linked stage-gate has passed. Scoped to
+  // an objective via objectiveId; optional gateId links to a stage-gate.
+  var FMEA_SCALES = {
+    severity:   ['None','Very minor','Minor','Low','Moderate','Significant','High','Very high','Hazardous','Critical'],
+    occurrence: ['Unlikely','Remote','Very low','Low','Moderate','Medium-high','High','Very high','Very high+','Almost certain'],
+    detection:  ['Almost certain','Very high','High','Moderately high','Moderate','Low','Very low','Remote','Very remote','Undetectable']
   };
-  var execOv = { 'D': { stageGates: [{ id: 'GL', objectiveId: 'O', plannedDate: 30, baselineDate: 30, locked: true }] } };
-  var rOv = C.cascade(pSolo, execOv, today);
-  approx(rOv.gateEffective['GL'], 50, 'locked overdue gate still forecasts to today (50), not frozen at 30');
-  ok(rOv.gateSlipped['GL'] === true, 'locked overdue gate is flagged slipped vs its committed baseline');
+  function calcRpn(s, o, d) { return (parseInt(s, 10) || 1) * (parseInt(o, 10) || 1) * (parseInt(d, 10) || 1); }
+  function rpnBand(r) { return r >= 200 ? 'high' : r >= 100 ? 'med' : 'low'; }
+  function fmeaScaleLabel(kind, v) { var a = FMEA_SCALES[kind]; if (!a) return ''; return a[(parseInt(v, 10) || 1) - 1] || ''; }
+  function worstRpn(prob) {
+    var max = 0, modes = (prob && prob.modes) || [];
+    for (var i = 0; i < modes.length; i++) { var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function worstUnresolvedRpn(prob, gatePassed) {
+    if (gatePassed) return 0;
+    if (!prob || prob.status === 'resolved') return 0;
+    var max = 0, modes = prob.modes || [];
+    for (var i = 0; i < modes.length; i++) { if (modes[i].status === 'resolved') continue; var effs = modes[i].effects || [];
+      for (var j = 0; j < effs.length; j++) { if (effs[j].status === 'resolved') continue; var cs = effs[j].causes || [];
+        for (var k = 0; k < cs.length; k++) { if (cs[k].status === 'resolved') continue;
+          var r = calcRpn(cs[k].severity, cs[k].occurrence, cs[k].detection); if (r > max) max = r; } } }
+    return max;
+  }
+  function fmeaProblemsFor(exec, objectiveId) {
+    var out = [], risks = (exec && exec.risks) || [];
+    for (var i = 0; i < risks.length; i++) if (risks[i].objectiveId === objectiveId) out.push(risks[i]);
+    return out;
+  }
+  // rollup over a set of problems. gatePassed is a fn(gateId)->bool (defaults to none passed).
+  function fmeaRollup(problems, gatePassed) {
+    var gp = gatePassed || function () { return false; };
+    var out = { total: problems.length, openHigh: 0, openMed: 0, openLow: 0, clear: 0, worst: 0 };
+    for (var i = 0; i < problems.length; i++) {
+      var u = worstUnresolvedRpn(problems[i], gp(problems[i].gateId));
+      if (u > out.worst) out.worst = u;
+      if (u >= 200) out.openHigh++; else if (u >= 100) out.openMed++; else if (u > 0) out.openLow++; else out.clear++;
+    }
+    return out;
+  }
+  var _fmeaSeq = 0;
+  function fmeaId(prefix) { _fmeaSeq++; return (prefix || 'x') + '_' + Date.now().toString(36) + '_' + _fmeaSeq.toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  function blankCause() { return { cid: fmeaId('c'), cause: '', severity: 1, occurrence: 1, detection: 1, mitigation: '', status: 'open' }; }
+  function blankEffect() { return { eid: fmeaId('e'), effect: '', status: 'open', causes: [blankCause()] }; }
+  function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
+  function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
+  // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
+  function migrateProblem(r) {
+    r = r || {};
+    return {
+      rid: r.rid || r.id || fmeaId('r'),
+      problem: r.problem || '',
+      objectiveId: (r.objectiveId != null) ? r.objectiveId : null,
+      gateId: r.gateId || null,
+      status: r.status || 'open',
+      knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
+      modes: (r.modes || []).map(function (m) { m = m || {};
+        return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
+          effects: (m.effects || []).map(function (e) { e = e || {};
+            return { eid: e.eid || fmeaId('e'), effect: e.effect || '', status: e.status || 'open',
+              causes: (e.causes || []).map(function (c) { c = c || {};
+                return { cid: c.cid || fmeaId('c'), cause: c.cause || '',
+                  severity: c.severity || 1, occurrence: c.occurrence || 1, detection: c.detection || 1,
+                  mitigation: c.mitigation || '', status: c.status || 'open' };
+              }) };
+          }) };
+      })
+    };
+  }
 
-  // baseline-aware slip thresholds (all finished at 70)
-  var execBl = { 'D': { stageGates: [
-    { id: 'B60', objectiveId: 'O', plannedDate: 40, actualDate: 70, baselineDate: 60 },
-    { id: 'B80', objectiveId: 'O', plannedDate: 40, actualDate: 70, baselineDate: 80 },
-    { id: 'BNo', objectiveId: 'O', plannedDate: 40, actualDate: 70 }
-  ] } };
-  var rBl = C.cascade(pSolo, execBl, today);
-  ok(rBl.gateSlipped['B60'] === true, 'committed 60, finished 70 -> slipped');
-  ok(rBl.gateSlipped['B80'] === false, 'committed 80, finished 70 -> not slipped');
-  ok(rBl.gateSlipped['BNo'] === false, 'no committed baseline -> never slipped');
-
-  // explicit stageGateEdges across objectives, with lag
-  var pEdge = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [
-      { id: 'Oa', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] },
-      { id: 'Ob', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }
-    ],
-    objectiveEdges: [], stageGateEdges: [{ fromGate: 'Ga', toGate: 'Gb', lagDays: 5 }]
+  // ---- exports --------------------------------------------------------------
+  var API = {
+    allocId: allocId,
+    kpiScore: kpiScore,
+    kpiScoreResolved: kpiScoreResolved,
+    kpiCurrentValue: kpiCurrentValue,
+    kpisFor: kpisFor,
+    groupMembers: groupMembers,
+    definerOf: definerOf,
+    kpiDirection: kpiDirection,
+    kpiUnit: kpiUnit,
+    kpiName: kpiName,
+    effTarget: effTarget,
+    effValue: effValue,
+    linkOf: linkOf,
+    rootOf: rootOf,
+    wouldCreateCycle: wouldCreateCycle,
+    compositionChildren: compositionChildren,
+    compositionParents: compositionParents,
+    descendantModels: descendantModels,
+    wouldComposeCycle: wouldComposeCycle,
+    importableModelKpis: importableModelKpis,
+    rawScore: rawScore,
+    childrenOf: childrenOf,
+    effectiveTarget: effectiveTarget,
+    effectiveValue: effectiveValue,
+    migrateKpiLinks: migrateKpiLinks,
+    KPI_LEVEL: KPI_LEVEL,
+    computeStat: computeStat,
+    scoreEmbeddedKpi: scoreEmbeddedKpi,
+    subKrScore: subKrScore,
+    keyResultScore: keyResultScore,
+    stageGateScore: stageGateScore,
+    hostScore: hostScore,
+    milestoneScore: milestoneScore,
+    milestoneAchieved: milestoneAchieved,
+    krsForObjective: krsForObjective,
+    objectiveScore: objectiveScore,
+    score: score,
+    boundsOf: boundsOf,
+    band: band,
+    rollupObjective: rollupObjective,
+    rollupInitiative: rollupInitiative,
+    rollupDivision: rollupDivision,
+    rollupCompany: rollupCompany,
+    withPortfolio: withPortfolio,
+    PORTFOLIO_KEY: PORTFOLIO_KEY,
+    ownClass: ownClass,
+    effClass: effClass,
+    effProduct: effProduct,
+    effModel: effModel,
+    quarterRange: quarterRange,
+    quarterList: quarterList,
+    groupObjectives: groupObjectives,
+    validateClassification: validateClassification,
+    sliceScore: sliceScore,
+    cascade: cascade,
+    classifyGate: classifyGate,
+    classifiedTargets: classifiedTargets,
+    targetKpisInScope: targetKpisInScope,
+    // FMEA / risk register
+    calcRpn: calcRpn,
+    rpnBand: rpnBand,
+    fmeaScaleLabel: fmeaScaleLabel,
+    FMEA_SCALES: FMEA_SCALES,
+    worstRpn: worstRpn,
+    worstUnresolvedRpn: worstUnresolvedRpn,
+    fmeaProblemsFor: fmeaProblemsFor,
+    fmeaRollup: fmeaRollup,
+    fmeaId: fmeaId,
+    blankProblem: blankProblem,
+    blankMode: blankMode,
+    blankEffect: blankEffect,
+    blankCause: blankCause,
+    migrateProblem: migrateProblem,
+    // exposed for tests / shells
+    _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
   };
-  var execEdge = { 'D': { stageGates: [
-    { id: 'Ga', objectiveId: 'Oa', plannedDate: 30, actualDate: 70 },
-    { id: 'Gb', objectiveId: 'Ob', plannedDate: 40 }
-  ] } };
-  var rEd = C.cascade(pEdge, execEdge, today);
-  approx(rEd.gateEffective['Gb'], 75, 'cross-objective edge: Gb = Ga end (70) + lag 5');
 
-  // gate cycle guard: Gx<->Gy terminates and is reported
-  var pCyc = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }],
-    objectiveEdges: [], stageGateEdges: [{ fromGate: 'Gx', toGate: 'Gy', lagDays: 0 }, { fromGate: 'Gy', toGate: 'Gx', lagDays: 0 }]
-  };
-  var execCyc = { 'D': { stageGates: [
-    { id: 'Gx', objectiveId: 'O', plannedDate: 40 },
-    { id: 'Gy', objectiveId: 'O', plannedDate: 45 }
-  ] } };
-  var rCy = C.cascade(pCyc, execCyc, today);
-  ok(rCy.gateEffective['Gx'] != null && rCy.gateEffective['Gy'] != null, 'gate cycle terminates with values');
-  ok(rCy.cycles.some(function (c) { return c.indexOf('GATE:') === 0; }), 'gate cycle reported');
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.RDCore = API;
 
-  // backward compat: with no new fields, gateEffective == pfGate, no slip flags
-  var execPlain = { 'D': { stageGates: [
-    { id: 'P1', objectiveId: 'O', plannedDate: 90 },                 // future, undone -> max(90,50)=90
-    { id: 'P2', objectiveId: 'O', plannedDate: 30, actualDate: 35 }  // done -> 35
-  ] } };
-  var rPl = C.cascade(pSolo, execPlain, today);
-  ok(rPl.gateEffective['P1'] === 90 && rPl.gateEffective['P2'] === 35, 'no new fields -> gateEffective == pfGate (forecast unchanged)');
-  ok(rPl.gateSlipped['P1'] === false && rPl.gateSlipped['P2'] === false, 'no baselines -> no slip flags');
-})();
-
-/* ---- cascade: gate edges + chain flag sourced from execDocs -------------- */
-(function () {
-  var today = 50;
-  var portfolio = {
-    initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 0, plannedEnd: 40 }],
-    milestones: [], milestoneEdges: [],
-    objectives: [
-      { id: 'Oa', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] },
-      { id: 'Ob', divisionId: 'D', initiativeId: 'I', plannedStart: 0, plannedEnd: 40, milestoneIds: [] }
-    ],
-    objectiveEdges: []   // NO portfolio.stageGateEdges, NO objective.chainGatesByDate
-  };
-  // edge + chain flag live in the execDoc, as the execution app writes them
-  var exec = { 'D': {
-    stageGates: [
-      { id: 'Ga', objectiveId: 'Oa', plannedDate: 30, actualDate: 70 },
-      { id: 'Gb', objectiveId: 'Ob', plannedDate: 40 },
-      { id: 'Gc1', objectiveId: 'Oa', plannedDate: 32 },
-      { id: 'Gc2', objectiveId: 'Oa', plannedDate: 38 }
-    ],
-    stageGateEdges: [{ fromGate: 'Ga', toGate: 'Gb', lagDays: 5 }],
-    chainGatesByDate: { 'Oa': true }
-  } };
-  var r = C.cascade(portfolio, exec, today);
-  approx(r.gateEffective['Gb'], 75, 'execDoc edge: Gb = Ga end (70) + lag 5');
-  approx(r.gateEffective['Gc1'], 70, 'execDoc chain flag: Gc1 pushed by late Ga (70)');
-  approx(r.gateEffective['Gc2'], 70, 'execDoc chain flag: Gc2 pushed through the chain (70)');
-})();
-
-/* ---- classifyGate: pure state machine ------------------------------------ */
-(function () {
-  var T = 50;
-  ok(C.classifyGate({ actualDate: 40, plannedDate: 50 }, T) === 'passed', 'done on/before plan -> passed');
-  ok(C.classifyGate({ actualDate: 70, plannedDate: 50 }, T) === 'passed-late', 'done after plan (no baseline) -> passed-late');
-  ok(C.classifyGate({ actualDate: 70, plannedDate: 50, baselineDate: 55 }, T) === 'passed-late', 'done after committed baseline -> passed-late');
-  ok(C.classifyGate({ actualDate: 58, plannedDate: 60, baselineDate: 55 }, T) === 'passed-late', 'baseline precedence: 58 > committed 55 -> passed-late even though < plan 60');
-  ok(C.classifyGate({ actualDate: 52, plannedDate: 60, baselineDate: 55 }, T) === 'passed', 'done before committed baseline -> passed');
-  ok(C.classifyGate({ plannedDate: 30 }, T) === 'overdue', 'undone & plan past due -> overdue');
-  ok(C.classifyGate({ plannedDate: 90 }, T) === 'pending', 'undone & plan in future -> pending');
-  ok(C.classifyGate(null, T) === 'pending', 'null gate -> pending');
-})();
-
-/* ---- KR tracking modes: statistics, statistical/binary KPIs, %, sub-KRs --- */
-(function(){
-  // computeStat
-  approx(C.computeStat('average', [10,20,30,40]), 25, 'stat average');
-  approx(C.computeStat('median', [10,20,30,40]), 25, 'stat median (even)');
-  approx(C.computeStat('median', [10,20,30]), 20, 'stat median (odd)');
-  approx(C.computeStat('max', [10,20,30,40]), 40, 'stat max');
-  approx(C.computeStat('min', [10,20,30,40]), 10, 'stat min');
-  approx(C.computeStat('range', [10,20,30,40]), 30, 'stat range');
-  approx(C.computeStat('stddev', [10,20,30,40]), 12.909944, 'stat stddev (sample n-1)', 1e-4);
-  approx(C.computeStat('cv', [10,20,30,40]), 51.639778, 'stat cv (%)', 1e-4);
-
-  // statistical KPI: aggregate latest readCount readings, then grade vs target
-  var exStat = { D: {
-    keyResults: [{ id:'KRs', objectiveId:'O', trackingType:'kpi' }],
-    kpis: [{ id:'Ks', hostType:'keyResult', hostId:'KRs', objectiveId:'O', direction:'up', target:30, targetType:'statistical', statistic:'average', readCount:3, groupId:null }],
-    kpiUpdates: [{kpiId:'Ks',value:10,timestamp:1},{kpiId:'Ks',value:20,timestamp:2},{kpiId:'Ks',value:30,timestamp:3},{kpiId:'Ks',value:40,timestamp:4}]
-  }};
-  approx(C.keyResultScore('KRs', exStat), 100, 'statistical KPI: avg of latest 3 (40,30,20)=30 vs target 30 -> 100');
-  exStat.D.kpis[0].readCount = '';
-  exStat.D.kpis[0].target = 25;
-  approx(C.keyResultScore('KRs', exStat), 100, 'statistical readCount blank -> avg all (25) vs target 25 -> 100');
-
-  // binary KPI: met (>=1) -> 100, else 0
-  var exBin = { D: {
-    keyResults: [{ id:'KRb', objectiveId:'O', trackingType:'kpi' }],
-    kpis: [{ id:'Kb', hostType:'keyResult', hostId:'KRb', objectiveId:'O', targetType:'binary', groupId:null }],
-    kpiUpdates: [{ kpiId:'Kb', value:1, timestamp:1 }]
-  }};
-  approx(C.keyResultScore('KRb', exBin), 100, 'binary KPI met (1) -> 100');
-  exBin.D.kpiUpdates = [{ kpiId:'Kb', value:0, timestamp:1 }];
-  approx(C.keyResultScore('KRb', exBin), 0, 'binary KPI not met (0) -> 0');
-  ok(C.kpiScore({ targetType:'binary' }, 1) === 100 && C.kpiScore({ targetType:'binary' }, 0) === 0 && C.kpiScore({ targetType:'binary' }, null) === null, 'kpiScore binary 1/0/null');
-
-  // percentage KR -> manual progress
-  var exPct = { D: { keyResults:[{ id:'KRp', objectiveId:'O', trackingType:'percentage', progress:70 }], kpis:[], kpiUpdates:[] }};
-  approx(C.keyResultScore('KRp', exPct), 70, 'percentage KR -> manual progress 70');
-  exPct.D.keyResults[0] = { id:'KRp', objectiveId:'O', trackingType:'percentage' };
-  ok(C.keyResultScore('KRp', exPct) === null, 'percentage KR with no progress -> null');
-
-  // sub-KR weighted rollup
-  var exSub = { D: { keyResults:[{ id:'KRx', objectiveId:'O', trackingType:'subkr', subKrs:[
-    { name:'a', weight:1, trackingType:'percentage', progress:80 },
-    { name:'b', weight:3, trackingType:'kpi', kpis:[{ type:'demonstration', direction:'up', target:50, current:50 }] }
-  ]}], kpis:[], kpiUpdates:[] }};
-  approx(C.keyResultScore('KRx', exSub), 95, 'subkr KR: weighted (1*80 + 3*100)/4 = 95');
-
-  // embedded-KPI scoring units
-  approx(C.scoreEmbeddedKpi({ type:'demonstration', direction:'up', target:100, current:80 }), 80, 'embedded up: 80/100 -> 80');
-  approx(C.scoreEmbeddedKpi({ direction:'decrease', target:50, current:50 }), 100, 'embedded decrease at target -> 100');
-  approx(C.scoreEmbeddedKpi({ direction:'decrease', target:50, current:100 }), 50, 'embedded decrease over target -> 50');
-  ok(C.scoreEmbeddedKpi({ type:'binary', current:1 }) === 100, 'embedded binary met -> 100');
-  ok(C.scoreEmbeddedKpi({ type:'binary', current:0 }) === 0, 'embedded binary unmet -> 0');
-  ok(C.scoreEmbeddedKpi({ type:'demonstration', direction:'up', target:100, current:null }) === null, 'embedded unmeasured -> null');
-
-  // subKrScore null handling
-  approx(C.subKrScore([
-    { weight:1, trackingType:'percentage', progress:80 },
-    { weight:3, trackingType:'kpi', kpis:[{ type:'demonstration', direction:'up', target:50, current:null }] }
-  ]), 80, 'subKrScore skips unmeasured sub-KR (only the 80 counts)');
-  ok(C.subKrScore([]) === null, 'empty subKrs -> null');
-
-  // back-compat: KR with no trackingType behaves as KPI-mean (unchanged)
-  var exCompat = { D: {
-    keyResults: [{ id:'KRc', objectiveId:'O' }],
-    kpis: [{ id:'Kc', hostType:'keyResult', hostId:'KRc', objectiveId:'O', direction:'up', target:100, groupId:null }],
-    kpiUpdates: [{ kpiId:'Kc', value:80, timestamp:1 }]
-  }};
-  approx(C.keyResultScore('KRc', exCompat), 80, 'back-compat: KR with no trackingType -> KPI mean (80)');
-})();
-
-/* ---- cross-document KPI resolution (portfolio target ↓ / exec readings ↑) -- */
-(function(){
-  var pf = {
-    objectives: [{ id:'O1', initiativeId:'INIT1', divisionId:'D', quarter:'Q1' }],
-    kpis: [{ id:'PK1', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G1', direction:'up', target:80, unit:'A/g' }],
-    keyResults: [{ id:'KR1', objectiveId:'O1' }]   // duplicate structure that must NOT be double-counted
-  };
-  var ex = {
-    keyResults: [{ id:'KR1', objectiveId:'O1' }],
-    kpis: [{ id:'EK1', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G1' }],
-    kpiUpdates: [{ kpiId:'EK1', value:60, timestamp:1 }]
-  };
-  var combined = C.withPortfolio(pf, { D: ex });
-  ok(combined['__portfolio__'] === pf && combined.D === ex, 'withPortfolio builds reserved-key map');
-  ok(C.PORTFOLIO_KEY === '__portfolio__', 'PORTFOLIO_KEY exported');
-  ok(C.krsForObjective('O1', combined).length === 1, 'structural iterators skip portfolio keyResults (no double-count)');
-
-  var pool = ex.kpis.concat(pf.kpis); // mimics allKpis(combined)
-  approx(C.effTarget(ex.kpis[0], pool), 80, 'exec member effTarget climbs into portfolio definer -> 80');
-  approx(C.effValue(ex.kpis[0], pool, combined), 60, 'exec member effValue resolves its own reading -> 60');
-  approx(C.effValue(pf.kpis[0], pool, combined), 60, 'initiative definer value descends across objective scope to exec reading -> 60');
-  approx(C.kpiScoreResolved(pf.kpis[0], pool, combined), 75, 'initiative KPI scored from exec reading -> 75');
-  approx(C.keyResultScore('KR1', combined), 75, 'cross-doc KR: target 80 (portfolio) vs value 60 (exec) -> 75');
-
-  approx(C.rollupObjective('O1', pf, combined), 75, 'rollupObjective reads cross-doc cascade -> 75');
-  approx(C.rollupInitiative('INIT1', pf, combined), 75, 'rollupInitiative cross-doc -> 75');
-  approx(C.rollupDivision('D', pf, combined), 75, 'rollupDivision cross-doc -> 75');
-  approx(C.rollupCompany(pf, combined), 75, 'rollupCompany cross-doc -> 75');
-
-  // statistical portfolio target aggregating exec readings
-  var pf2 = { objectives:[{id:'O1',initiativeId:'INIT1',divisionId:'D',quarter:'Q1'}],
-    kpis:[{ id:'PK2', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G2', direction:'up', target:30, targetType:'statistical', statistic:'average', readCount:3 }] };
-  var ex2 = { keyResults:[{id:'KR1',objectiveId:'O1'}],
-    kpis:[{ id:'EK2', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G2' }],
-    kpiUpdates:[{kpiId:'EK2',value:10,timestamp:1},{kpiId:'EK2',value:20,timestamp:2},{kpiId:'EK2',value:30,timestamp:3},{kpiId:'EK2',value:40,timestamp:4}] };
-  approx(C.keyResultScore('KR1', C.withPortfolio(pf2,{D:ex2})), 100, 'cross-doc statistical: avg latest 3 (40,30,20)=30 vs portfolio target 30 -> 100');
-
-  // binary portfolio target met by exec reading
-  var pf3 = { objectives:[{id:'O1',initiativeId:'INIT1',divisionId:'D',quarter:'Q1'}],
-    kpis:[{ id:'PK3', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G3', targetType:'binary' }] };
-  var ex3 = { keyResults:[{id:'KR1',objectiveId:'O1'}],
-    kpis:[{ id:'EK3', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G3' }],
-    kpiUpdates:[{kpiId:'EK3',value:1,timestamp:1}] };
-  approx(C.keyResultScore('KR1', C.withPortfolio(pf3,{D:ex3})), 100, 'cross-doc binary: exec reading 1 vs portfolio binary target -> 100');
-})();
-
-/* ---- Unified KPI Model: typed links (Phase B) ---------------------------- */
-(function(){
-  function docOf(kpis, ups){ return { D: { kpis:kpis, kpiUpdates:ups||[] } }; }
-
-  eq(C.KPI_LEVEL.product, 5, 'level: product = 5');
-  eq(C.KPI_LEVEL.component, 4, 'level: component = 4');
-
-  // direct: child shows parent target exactly (own ignored); value flows up
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
-      { id:'C', hostType:'initiative', hostId:'I', target:55, linkParent:'R', linkType:'direct' }
-    ];
-    var ex=docOf(kpis,[{kpiId:'C',value:80,timestamp:1}]);
-    approx(C.effectiveTarget(kpis[1], kpis), 100, 'direct: child target = parent (own 55 ignored)');
-    approx(C.effectiveValue(kpis[0], kpis, ex), 80, 'direct: child value flows up to root');
-  })();
-
-  // contribute: child overrides target (else inherits); value flows up
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
-      { id:'Ca', hostType:'keyResult', hostId:'K1', target:90, linkParent:'R', linkType:'contribute' },
-      { id:'Cb', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
-    ];
-    approx(C.effectiveTarget(kpis[1], kpis), 90, 'contribute: own target override wins');
-    approx(C.effectiveTarget(kpis[2], kpis), 100, 'contribute: no own target -> inherit parent');
-    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Ca',value:45,timestamp:1}])), 45, 'contribute: value flows up');
-  })();
-
-  // specification: target inherits/overrides; value does NOT flow up (firewall)
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
-      { id:'C', hostType:'component', hostId:'CMP', linkParent:'R', linkType:'specification' }
-    ];
-    var ex=docOf(kpis,[{kpiId:'C',value:70,timestamp:1}]);
-    approx(C.effectiveTarget(kpis[1], kpis), 100, 'specification: target cascades down');
-    ok(C.effectiveValue(kpis[0], kpis, ex)==null, 'specification firewall: component value hidden from product');
-    approx(C.effectiveValue(kpis[1], kpis, ex), 70, 'specification child still reads its own value');
-  })();
-
-  // precedence: direct outranks contribute among children (no linkPriority)
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
-      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
-      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
-    ];
-    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cd',value:70,timestamp:1},{kpiId:'Cc',value:40,timestamp:5}])), 70,
-      'precedence: direct child (70) beats contribute child (40) despite older reading');
-  })();
-
-  // precedence: a node's own reading outranks its children
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'keyResult', hostId:'K', direction:'up', target:100, linkParent:null },
-      { id:'C', hostType:'stageGate', hostId:'G', linkParent:'R', linkType:'contribute' }
-    ];
-    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'C',value:40,timestamp:5},{kpiId:'R',value:90,timestamp:1}])), 90,
-      'precedence: parent own reading (90) outranks contribute child (40)');
-  })();
-
-  // precedence: quarter descending among same-type children
-  (function(){
-    var pf={ objectives:[{id:'Oq1',quarter:'Q1'},{id:'Oq2',quarter:'Q2'}] };
-    var kpis=[
-      { id:'R', hostType:'initiative', hostId:'I', objectiveId:null, direction:'up', target:100, linkParent:null },
-      { id:'Cq1', hostType:'keyResult', hostId:'K1', objectiveId:'Oq1', linkParent:'R', linkType:'contribute' },
-      { id:'Cq2', hostType:'keyResult', hostId:'K2', objectiveId:'Oq2', linkParent:'R', linkType:'contribute' }
-    ];
-    var ex=C.withPortfolio(pf, { D:{ kpis:kpis, kpiUpdates:[{kpiId:'Cq1',value:30,timestamp:9},{kpiId:'Cq2',value:60,timestamp:1}] } });
-    approx(C.effectiveValue(kpis[0], kpis, ex), 60, 'precedence: Q2 contributor (60) beats Q1 (30) despite older reading');
-  })();
-
-  // precedence: explicit linkPriority overrides relationRank
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
-      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
-      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute', linkPriority:5 }
-    ];
-    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cd',value:70,timestamp:1},{kpiId:'Cc',value:40,timestamp:1}])), 40,
-      'precedence: linkPriority 5 lifts contribute (40) above direct (70)');
-  })();
-
-  // fall-through: unmeasured top-ranked contributor skipped -> next with a value
-  (function(){
-    var kpis=[
-      { id:'R', hostType:'initiative', hostId:'I', direction:'up', target:100, linkParent:null },
-      { id:'Cd', hostType:'keyResult', hostId:'K1', linkParent:'R', linkType:'direct' },
-      { id:'Cc', hostType:'keyResult', hostId:'K2', linkParent:'R', linkType:'contribute' }
-    ];
-    approx(C.effectiveValue(kpis[0], kpis, docOf(kpis,[{kpiId:'Cc',value:55,timestamp:1}])), 55,
-      'fall-through: unmeasured direct child skipped, contribute value (55) used');
-  })();
-
-  // multi-hop chain: product -> component -> initiative -> KR
-  (function(){
-    var kpis=[
-      { id:'RP', hostType:'product', hostId:'P', direction:'up', target:100, linkParent:null },
-      { id:'CMP', hostType:'component', hostId:'C', linkParent:'RP', linkType:'specification' },
-      { id:'INI', hostType:'initiative', hostId:'I', linkParent:'CMP', linkType:'contribute' },
-      { id:'KR', hostType:'keyResult', hostId:'K', linkParent:'INI', linkType:'contribute' }
-    ];
-    var ex=docOf(kpis,[{kpiId:'KR',value:80,timestamp:1}]);
-    approx(C.effectiveTarget(kpis[3], kpis), 100, 'chain: target cascades product -> KR');
-    approx(C.effectiveValue(kpis[1], kpis, ex), 80, 'chain: KR value flows up through initiative to component');
-    ok(C.effectiveValue(kpis[0], kpis, ex)==null, 'chain: specification edge firewalls component value from product');
-  })();
-
-  // cycle safety: a linkParent cycle must terminate, not hang
-  (function(){
-    var kpis=[
-      { id:'A', hostType:'initiative', hostId:'I', direction:'up', linkParent:'B', linkType:'contribute' },
-      { id:'B', hostType:'keyResult', hostId:'K', linkParent:'A', linkType:'contribute' }
-    ];
-    var ex=docOf(kpis,[{kpiId:'A',value:25,timestamp:1}]);
-    ok(C.effectiveTarget(kpis[0], kpis)!==undefined, 'cycle: effectiveTarget terminates');
-    ok(C.effectiveValue(kpis[0], kpis, ex)!==undefined, 'cycle: effectiveValue terminates');
-  })();
-
-  // migrateKpiLinks: legacy groupId/isDefiner -> link fields, identical scores
-  (function(){
-    var legacy=[
-      { id:'D', hostType:'keyResult', hostId:'K', objectiveId:'O', groupId:'G', isDefiner:true, direction:'up', target:100 },
-      { id:'M', hostType:'stageGate', hostId:'G1', objectiveId:'O', groupId:'G', isDefiner:false }
-    ];
-    var ex=docOf(legacy,[{kpiId:'M',value:80,timestamp:1}]);
-    var before=C.effectiveValue(legacy[0], legacy, ex);
-    ok(C.migrateKpiLinks(legacy)===true, 'migrate: reports a change');
-    eq(legacy[0].linkParent, null, 'migrate: definer becomes root');
-    eq(legacy[1].linkParent, 'D', 'migrate: member links to its definer');
-    eq(legacy[1].linkType, 'contribute', 'migrate: member link is contribute');
-    approx(C.effectiveValue(legacy[0], legacy, ex), before, 'migrate: value identical before/after');
-    approx(C.effectiveValue(legacy[0], legacy, ex), 80, 'migrate: value is the member reading');
-    ok(C.migrateKpiLinks(legacy)===false, 'migrate: idempotent second time');
-  })();
-})();
-
-/* ---- hostScore: generic host-level scoring (product/component) ------------ */
-(function(){
-  var kpis=[
-    { id:'P', hostType:'product', hostId:'PRD', direction:'down', target:50, linkParent:null },
-    { id:'C', hostType:'component', hostId:'CMP', direction:'up', target:100, linkParent:null }
-  ];
-  var em={ D:{ kpis:kpis, kpiUpdates:[{kpiId:'P',value:62,timestamp:1},{kpiId:'C',value:80,timestamp:1}] } };
-  approx(C.hostScore('product','PRD',em), C.kpiScore({targetType:'demonstration',direction:'down',target:50},62), 'hostScore(product) = product KPI score');
-  approx(C.hostScore('component','CMP',em), 80, 'hostScore(component) up 100 vs 80 = 80');
-  ok(C.hostScore('product','NONE',em)==null, 'hostScore with no KPIs on host = null');
-})();
-
-/* ---- wouldCreateCycle: reject linking that would loop the parent chain ---- */
-(function(){
-  // chain: C -> B -> A(root)
-  var kpis=[ {id:'A',linkParent:null}, {id:'B',linkParent:'A',linkType:'contribute'}, {id:'C',linkParent:'B',linkType:'contribute'} ];
-  ok(C.wouldCreateCycle('A','C',kpis)===true, 'pointing root A at its descendant C = cycle');
-  ok(C.wouldCreateCycle('B','C',kpis)===true, 'pointing B at its descendant C = cycle');
-  ok(C.wouldCreateCycle('X','A',kpis)===false, 'a fresh node X under root A = no cycle');
-  ok(C.wouldCreateCycle('A','A',kpis)===true, 'self-link = cycle');
-  ok(C.wouldCreateCycle('C','A',kpis)===false, 'C under A (already its ancestor, no new loop) = no cycle');
-})();
-
-/* ---- product composition (model-to-model): children / parents / descendants / cycle ---- */
-(function(){
-  // sys-M contains stack-N; stack-N contains cell-P.  (edge.parent CONTAINS edge.child)
-  var comp=[ {id:'e1',parent:'M',child:'N'}, {id:'e2',parent:'M',child:'K'}, {id:'e3',parent:'N',child:'P'} ];
-  ok(JSON.stringify(C.compositionChildren('M',comp))==='["N","K"]', 'direct sub-products of M = [N,K]');
-  ok(JSON.stringify(C.compositionParents('N',comp))==='["M"]', 'N is used in M');
-  ok(C.descendantModels('M',comp).sort().join(',')==='K,N,P', 'transitive descendants of M = K,N,P');
-  ok(C.descendantModels('P',comp).length===0, 'leaf P has no descendants');
-  ok(C.wouldComposeCycle('M','M',comp)===true, 'self-compose = cycle');
-  ok(C.wouldComposeCycle('N','M',comp)===true, 'N containing M when M already contains N = cycle');
-  ok(C.wouldComposeCycle('P','M',comp)===true, 'P containing M (M is a transitive ancestor) = cycle');
-  ok(C.wouldComposeCycle('M','Q',comp)===false, 'M containing a fresh model Q = no cycle');
-  ok(C.compositionChildren('M',undefined).length===0, 'null-safe on empty composition');
-})();
-
-/* ---- importableModelKpis: a model's keyResult-hosted definer specs only ---- */
-(function(){
-  var kpis=[
-    {id:'k1',objectiveId:'N',hostType:'keyResult',linkParent:null,name:'Power'},
-    {id:'k2',objectiveId:'N',hostType:'keyResult',linkParent:null,name:'Efficiency'},
-    {id:'k3',objectiveId:'N',hostType:'keyResult',linkParent:'k1',linkType:'contribute'}, // a member, not a definer
-    {id:'k4',objectiveId:'N',hostType:'component',linkParent:null,name:'Seal torque'},     // component-level, excluded
-    {id:'k5',objectiveId:'OTHER',hostType:'keyResult',linkParent:null,name:'Other model'}  // different model
-  ];
-  var imp=C.importableModelKpis('N',kpis).map(k=>k.id);
-  ok(imp.length===2 && imp.indexOf('k1')>=0 && imp.indexOf('k2')>=0, 'only N\'s keyResult definers (k1,k2)');
-  ok(imp.indexOf('k3')<0, 'member specs excluded');
-  ok(imp.indexOf('k4')<0, 'component-level metrics excluded');
-  ok(imp.indexOf('k5')<0, 'other models excluded');
-})();
-
-/* ---- rawScore: bare value vs bare target ---- */
-(function(){
-  ok(C.rawScore(100,100,'up')===100, 'meets an up target = 100');
-  ok(C.rawScore(null,100,'up')===null, 'no value = null');
-  ok(C.rawScore(100,null,'up')===null, 'no target = null');
-  ok(C.rawScore(50,{lo:40,hi:60},'range')===100, 'inside a range = 100');
-  ok(C.rawScore(50,50,'up')===C.rawScore(50,50,'down'), 'exact hit scores equal either direction');
-})();
-
-/* ---- cross-doc linkage scope (execution → product/model KPIs) ---- */
-(function(){
-  // products P1-P4; models M1,M2 in P1, M3 in P2, M4 in P3, M5 in P4; composition M1⊃M3, M3⊃M4
-  var P = {
-    products:[{id:'P1'},{id:'P2'},{id:'P3'},{id:'P4'}],
-    models:[{id:'M1',productId:'P1'},{id:'M2',productId:'P1'},{id:'M3',productId:'P2'},{id:'M4',productId:'P3'},{id:'M5',productId:'P4'}],
-    initiatives:[{id:'I1'},{id:'I2',productId:'P4'}],
-    objectives:[
-      {id:'O1',divisionId:'D',modelId:'M1',initiativeId:'I1'},    // classified to model M1
-      {id:'O2',divisionId:'D',productId:'P2',initiativeId:'I1'},  // classified to product P2
-      {id:'O3',divisionId:'D',initiativeId:'I2'},                 // agnostic → inherits I2 (product P4)
-      {id:'OX',divisionId:'OTHER',modelId:'M5',initiativeId:'I1'} // another division, ignored
-    ]
-  };
-  var comp = [{id:'e1',parent:'M1',child:'M3'},{id:'e2',parent:'M3',child:'M4'}];
-  var t = C.classifiedTargets(P, comp, 'D');
-  ok(t.models.slice().sort().join(',')==='M1,M3,M4,M5', 'in-scope models: classified M1, P2\'s M3, sub-products M3→M4, inherited P4\'s M5');
-  ok(t.models.indexOf('M2')<0, 'a sibling model of a model-classified product (M2 in P1) is NOT in scope');
-  ok(t.products.slice().sort().join(',')==='P1,P2,P3,P4', 'in-scope products: P2 classified, P1 (M1), P3 (M4 sub-product), P4 (inherited + M5)');
-
-  var specK = [
-    {id:'PK1',hostType:'product',hostId:'P1',name:'P1 power'},          // product definer, in scope
-    {id:'MK1',hostType:'keyResult',objectiveId:'M1',name:'M1 spec'},    // model headline definer, in scope
-    {id:'MK1b',hostType:'keyResult',objectiveId:'M1',linkParent:'MK1',linkType:'contribute'}, // linked member, not a headline
-    {id:'MK2',hostType:'keyResult',objectiveId:'M2',name:'M2 spec'},    // M2 out of scope → excluded
-    {id:'PK4',hostType:'product',hostId:'P4',name:'P4 power'}           // product definer, in scope
-  ];
-  ok(C.targetKpisInScope({products:['P1','P4'],models:['M1']}, specK).map(function(k){return k.id;}).sort().join(',')==='MK1,PK1,PK4',
-     'linkable targets = model headline specs + product definers; excludes members + out-of-scope models');
-})();
-
-/* ---- execution KPI linked UP to a product KPI (the issue-2 mechanism) ---- */
-(function(){
-  var PK = {id:'PK',hostType:'product',hostId:'P1',name:'Power density',direction:'up',unit:'W/cm2',target:1.5};
-  var MC = {id:'MC',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'contribute',target:null};
-  var MD = {id:'MD',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'direct',target:0.9};       // own target ignored by direct
-  var MS = {id:'MS',hostType:'keyResult',objectiveId:'O1',linkParent:'PK',linkType:'specification',target:2.0}; // firewall + own target
-  var exec = { keyResults:[], stageGates:[], kpis:[MC,MD,MS], kpiUpdates:[
-    {kpiId:'MC',value:1.2,timestamp:10}, {kpiId:'MS',value:9.9,timestamp:10}
-  ]};
-  var pool = exec.kpis.concat([PK]);   // allKpisPool = execution kpis + product KPIs pulled from spec docs
-  var em = C.withPortfolio({objectives:[{id:'O1',quarter:'Q1 2026'}]}, {'D':exec});
-
-  ok(C.kpiName(MC,pool)==='Power density', 'member name resolves to the product KPI (rootOf)');
-  ok(C.kpiDirection(MC,pool)==='up' && C.kpiUnit(MC,pool)==='W/cm2', 'member direction/unit resolve to the product KPI');
-  approx(C.effTarget(MC,pool), 1.5, 'contribute member with no own target inherits the product target');
-  approx(C.effTarget(MD,pool), 1.5, 'direct member takes the product target (ignores its own)');
-  approx(C.effTarget(MS,pool), 2.0, 'specification member keeps its own target');
-  approx(C.effValue(MC,pool,em), 1.2, 'member value comes from the execution doc reading');
-  approx(C.kpiScoreResolved(MC,pool,em), 80, 'score = 1.2 vs 1.5 (up) = 80');
-  approx(C.effValue(PK,pool,em), 1.2, 'product rollup takes the contribute member (1.2), NOT the spec-firewalled MS (9.9)');
-})();
-
-/* ---- FMEA / risk register ---- */
-(function(){
-  // RPN + band
-  ok(C.calcRpn(10,8,5)===400, 'rpn = s*o*d');
-  ok(C.calcRpn(0,0,0)===1, 'blank sod floors each factor at 1');
-  ok(C.calcRpn('7','3','4')===84, 'rpn parses string sod');
-  ok(C.rpnBand(200)==='high' && C.rpnBand(199)==='med' && C.rpnBand(100)==='med' && C.rpnBand(99)==='low', 'band thresholds 200/100');
-  ok(C.fmeaScaleLabel('severity',1)==='None' && C.fmeaScaleLabel('severity',10)==='Critical', 'severity scale label ends');
-  ok(C.fmeaScaleLabel('detection',10)==='Undetectable', 'detection 10 = undetectable');
-
-  // a problem: two modes, worst raw cause 9*9*8=648, a lower cause 5*5*4=100
-  var prob = { rid:'r1', objectiveId:'O', gateId:null, status:'open', modes:[
-    { mid:'m1', status:'open', effects:[ { eid:'e1', status:'open', causes:[
-      { cid:'c1', severity:9, occurrence:9, detection:8, status:'open' },   // 648
-      { cid:'c2', severity:5, occurrence:5, detection:4, status:'open' } ]} ]},   // 100
-    { mid:'m2', status:'open', effects:[ { eid:'e2', status:'open', causes:[
-      { cid:'c3', severity:6, occurrence:2, detection:2, status:'open' } ]} ]} ]};   // 24
-  ok(C.worstRpn(prob)===648, 'worstRpn spans the whole tree');
-  ok(C.worstUnresolvedRpn(prob,false)===648, 'unresolved worst = 648 when nothing resolved / gate open');
-
-  // resolving the worst cause drops unresolved to the next (100), but raw worst still 648
-  var p2 = JSON.parse(JSON.stringify(prob)); p2.modes[0].effects[0].causes[0].status='resolved';
-  ok(C.worstUnresolvedRpn(p2,false)===100, 'resolving a cause is skipped by unresolved worst');
-  ok(C.worstRpn(p2)===648, 'raw worst ignores resolution');
-  // resolving the whole effect skips its causes
-  var p3 = JSON.parse(JSON.stringify(prob)); p3.modes[0].effects[0].status='resolved';
-  ok(C.worstUnresolvedRpn(p3,false)===24, 'resolved effect skips all its causes → next mode 24');
-  // problem resolved OR gate passed → 0
-  var p4 = JSON.parse(JSON.stringify(prob)); p4.status='resolved';
-  ok(C.worstUnresolvedRpn(p4,false)===0, 'resolved problem → 0');
-  ok(C.worstUnresolvedRpn(prob,true)===0, 'passed gate → 0 regardless of open causes');
-
-  // scoping: only this objective's problems
-  var exec = { risks:[ prob, {rid:'r2',objectiveId:'OTHER',modes:[]}, {rid:'r3',objectiveId:'O',status:'open',modes:[
-    { mid:'m',status:'open',effects:[{eid:'e',status:'open',causes:[{cid:'c',severity:5,occurrence:3,detection:1,status:'open'}]}]} ]} ] };   // 15
-  var mine = C.fmeaProblemsFor(exec,'O');
-  ok(mine.length===2 && mine[0].rid==='r1' && mine[1].rid==='r3', 'fmeaProblemsFor filters by objectiveId');
-  ok(C.fmeaProblemsFor(exec,'MISSING').length===0, 'no problems for an unknown objective');
-
-  // rollup with a gate-passed predicate
-  var roll = C.fmeaRollup(mine, function(gid){ return false; });
-  ok(roll.total===2 && roll.openHigh===1 && roll.openLow===1 && roll.openMed===0 && roll.clear===0, 'rollup bands: one high (648), one low (15)');
-  ok(roll.worst===648, 'rollup worst = 648');
-  // give r1 a passed gate → it clears, leaving only the low
-  var g1 = JSON.parse(JSON.stringify(prob)); g1.gateId='G1';
-  var roll2 = C.fmeaRollup([g1, mine[1]], function(gid){ return gid==='G1'; });
-  ok(roll2.openHigh===0 && roll2.clear===1 && roll2.openLow===1, 'a passed gate clears its problem from the rollup');
-
-  // constructors: correct shape + unique ids
-  var bp = C.blankProblem('O');
-  ok(bp.objectiveId==='O' && bp.status==='open' && bp.gateId===null, 'blankProblem tagged to objective, open, no gate');
-  ok(bp.modes.length===1 && bp.modes[0].effects.length===1 && bp.modes[0].effects[0].causes.length===1, 'blankProblem seeds one mode/effect/cause');
-  var c = bp.modes[0].effects[0].causes[0];
-  ok(c.severity===1 && c.occurrence===1 && c.detection===1 && c.status==='open', 'seeded cause defaults to 1/1/1 open');
-  ok(C.blankCause().cid !== C.blankCause().cid, 'fmea ids are unique');
-
-  // migration: fills missing arrays/fields, maps legacy id, preserves given ids, keeps objectiveId
-  var mig = C.migrateProblem({ id:'legacy', problem:'p', objectiveId:'O', modes:[ { mode:'m', effects:[ { effect:'e', causes:[ { cause:'c', severity:7 } ] } ] } ] });
-  ok(mig.rid==='legacy', 'migrate maps legacy id → rid');
-  ok(mig.objectiveId==='O' && mig.status==='open' && mig.gateId===null, 'migrate keeps objectiveId, defaults status/gate');
-  ok(mig.modes[0].status==='open' && mig.modes[0].effects[0].causes[0].occurrence===1 && mig.modes[0].effects[0].causes[0].detection===1, 'migrate fills missing sod + statuses');
-  ok(mig.modes[0].effects[0].causes[0].severity===7, 'migrate preserves provided sod');
-  ok(C.migrateProblem(null).modes.length===0 && C.migrateProblem({}).status==='open', 'migrate is null/empty safe');
-
-  // knowns: constructor seeds empty; migrate accepts string or {text} form, keeps ids, is null-safe
-  ok(Array.isArray(bp.knowns) && bp.knowns.length===0, 'blankProblem seeds an empty knowns list');
-  var kmig = C.migrateProblem({ problem:'p', knowns:['legacy string', {kid:'k9', text:'kept'}, {}] });
-  ok(kmig.knowns.length===3, 'migrate keeps all knowns');
-  ok(kmig.knowns[0].text==='legacy string' && !!kmig.knowns[0].kid, 'migrate wraps a string known into {kid,text}');
-  ok(kmig.knowns[1].kid==='k9' && kmig.knowns[1].text==='kept', 'migrate preserves an object known + its id');
-  ok(kmig.knowns[2].text==='' && !!kmig.knowns[2].kid, 'migrate fills a blank known');
-  ok(C.migrateProblem({}).knowns.length===0, 'migrate: no knowns → empty list');
-})();
-
-/* ---- summary ------------------------------------------------------------- */
-if (fails) {
-  console.error('\n' + fails + ' / ' + count + ' assertions FAILED');
-  process.exit(1);
-} else {
-  console.log('PASS — ' + count + ' assertions green');
-}
+})(typeof window !== 'undefined' ? window : this);
