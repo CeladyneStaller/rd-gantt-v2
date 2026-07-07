@@ -1773,7 +1773,7 @@ let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 /* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
-var __etbSaveTimer=null, __etbMaxTimer=null, __etbSuppressSave=false, __etbSaveChain=Promise.resolve();
+var __etbSaveTimer=null, __etbMaxTimer=null, __etbSuppressSave=true, __etbSaveChain=Promise.resolve();   // START suppressed: no ETB save until the initial broker load completes (else the empty tree clobbers the saved one)
 var ETB_SAVE_DEBOUNCE_MS=700, ETB_SAVE_MAXWAIT_MS=2500;   // mirror the app's persist() timings
 function __etbClearSaveTimers(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } if(__etbMaxTimer){ clearTimeout(__etbMaxTimer); __etbMaxTimer=null; } }
 // serialize writes so a debounced save and a flush can never overlap (no self-inflicted 412);
@@ -1993,10 +1993,11 @@ async function loadAll(){
     const ex = await apiGet(execId());
     if(ex){ adoptExec(ex); } else { exec = blankExec(); execEtag = "0"; execVersion = 0; markSaved(); }
     fillObjSelect();
-    etbSyncObjective(); etbLoadForDivision();
+    etbSyncObjective();
+    try{ await etbLoadForDivision(); }finally{ __etbSuppressSave=false; }   // only now are ETB writes armed
     setMsg("Loaded "+divName(divisionId)+".", "ok");
     startPoll();
-  }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
+  }catch(e){ __etbSuppressSave=false; setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
   renderAll();
 }
 /* ---- autosave (same protocol as the product designer; per-division EXEC bin) ----

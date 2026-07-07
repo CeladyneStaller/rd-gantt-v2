@@ -8,6 +8,7 @@ global.document={ addEventListener:function(ev,fn){ (docL[ev]=docL[ev]||[]).push
 const block=fs.readFileSync('/tmp/etb_plumbing.js','utf8');
 eval(block+"\n; global.__P={ onChange:window.__etbOnChange, flush:etbFlushSave, setSuppress:function(v){__etbSuppressSave=v;} };");
 const P=global.__P;
+P.setSuppress(false);   // block now starts suppressed until the initial load; arm saves for the plumbing tests
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; console.error('FAIL:',m);}};
 
