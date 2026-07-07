@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+(function(){try{
+  var t=localStorage.getItem('rd_theme');
+  if(t!=='light'&&t!=='dark'){ t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+  document.documentElement.setAttribute('data-theme',t);
+}catch(e){ document.documentElement.setAttribute('data-theme','dark'); }})();
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>R&D Suite</title>
@@ -19,6 +26,19 @@
     --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
     --r:12px; --maxw:1080px;
   }
+  html[data-theme="light"]{
+    --bg:#f3f5f8; --bg-2:#ffffff; --surface:#ffffff; --surface-2:#eef2f6;
+    --line:#e2e6ec; --line-2:#d3d9e2;
+    --ink:#1a2431; --muted:#5c6b7d; --faint:#8b97a6;
+    --accent:#157a6b; --accent-deep:#0e5a4d; --accent-ink:#ffffff;
+    --amber:#a9711a;
+  }
+  html[data-theme="light"] body::before{ background-image:
+      linear-gradient(rgba(15,23,42,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15,23,42,.045) 1px, transparent 1px); }
+  .theme-toggle{display:inline-flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:2px}
+  .theme-toggle .theme-opt{border:0;background:transparent;color:var(--muted);padding:4px 12px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12.5px}
+  .theme-toggle .theme-opt[aria-pressed="true"]{background:var(--accent-deep);color:#fff}
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{
@@ -139,6 +159,10 @@
       <b>R&amp;D&nbsp;Suite</b><span>/ hydrogen</span>
     </div>
     <div class="stat"><span class="dot"></span>internal tools</div>
+    <div class="theme-toggle" role="group" aria-label="Theme" style="margin-left:14px">
+      <button type="button" class="theme-opt" data-theme-set="light">Light</button>
+      <button type="button" class="theme-opt" data-theme-set="dark">Dark</button>
+    </div>
   </header>
 
   <section class="hero">
@@ -182,7 +206,8 @@
   <main class="phases" id="grid"></main>
 
   <footer>
-    <span class="f-mono">plan · execute · experiment · specify · analyze</span>
+    <span class="f-mono">Hosted on <b>GitHub&nbsp;Pages</b> · embeddable in <b>Confluence</b></span>
+    <span class="f-mono">plan · execute · experiment · specify · <b>analyze</b></span>
   </footer>
 
 </div>
@@ -198,9 +223,9 @@ const GROUPS = [
     { name:"Planning", glyph:"grid", href:"planning_app.html",
       desc:"Shape the portfolio — divisions, products, models, and the OKRs and stage-gates that hang off them.",
       tag:"OKRs · stage-gates · classification" },
-    { name:"Overall Gantt", glyph:"gantt", href:"#",
+    { name:"Overall Gantt", glyph:"gantt", href:"Overall_Gantt.html",
       desc:"Every division's schedule, milestones, and stage-gate dependencies on one timeline.",
-      tag:"schedule · milestones · deps", soon:true },
+      tag:"schedule · milestones · deps" },
   ]},
   { title:"Execution", note:"run the quarter", apps:[
     { name:"Execution", glyph:"target", href:"execution_app.html",
@@ -208,9 +233,9 @@ const GROUPS = [
       tag:"KRs · KPIs · FMEA · autosave" },
   ]},
   { title:"Experiments", note:"decide what to run next", apps:[
-    { name:"Experiment Tree", glyph:"tree", href:"#",
+    { name:"Experiment Tree", glyph:"tree", href:"Q_tracker_with_ETB.html",
       desc:"Plan experiments as logic trees — key reads, pass/fail criteria, and the next run each result points to.",
-      tag:"logic trees · key reads · criteria", soon:true },
+      tag:"logic trees · key reads · criteria" },
   ]},
   { title:"Product specs", note:"define what you're building", apps:[
     { name:"Product Designer", glyph:"stack", href:"product_designer.html",
@@ -218,13 +243,13 @@ const GROUPS = [
       tag:"models · specs · sub-products · gating" },
   ]},
   { title:"Analysis", note:"make sense of the data", apps:[
-    { name:"DoE Analysis", glyph:"scatter", href:"#",
+    { name:"DoE Analysis", glyph:"scatter", href:"doe-analysis-1.html",
       desc:"Turn Scribner and FCTS test data into design-of-experiments surfaces, effects, and covariance.",
-      tag:"PolCurve · HFR · surfaces", soon:true },
+      tag:"PolCurve · HFR · surfaces" },
     { name:"Analysis Portal", glyph:"flask", href:"#",
       desc:"Drop in raw test runs and get plots, comparisons, and Excel exports back automatically.",
-      tag:"FastAPI · plots · exports", soon:true },
-    { name:"Procedure Builder", glyph:"nodes", href:"#",
+      tag:"FastAPI · plots · exports" },
+    { name:"Procedure Builder", glyph:"nodes", href:"",
       desc:"Compose custom analysis workflows as a node graph — typed steps, with figures and files as outputs.",
       tag:"DAG · nodes · typed edges", soon:true },
   ]},
@@ -264,6 +289,16 @@ document.getElementById('grid').innerHTML = GROUPS.map(g =>
 const cards = [...document.querySelectorAll('.card')];
 cards.forEach((c,i)=> c.style.setProperty('--d', (i*45)+'ms'));
 requestAnimationFrame(()=> requestAnimationFrame(()=> document.body.classList.add('ready')));
+</script>
+<script>
+(function(){
+  function cur(){ return document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'; }
+  function sync(){ var c=cur(); document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-theme-set')===c?'true':'false'); }); }
+  function set(t){ t=(t==='light')?'light':'dark'; document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('rd_theme',t);}catch(e){} sync(); }
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.addEventListener('click',function(){ set(b.getAttribute('data-theme-set')); }); });
+  sync();
+  if(window.matchMedia){ try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(e){ try{ if(!localStorage.getItem('rd_theme')){ document.documentElement.setAttribute('data-theme', e.matches?'dark':'light'); sync(); } }catch(_){} }); }catch(e){} }
+})();
 </script>
 </body>
 </html>

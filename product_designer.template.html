@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+(function(){try{
+  var t=localStorage.getItem('rd_theme');
+  if(t!=='light'&&t!=='dark'){ t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+  document.documentElement.setAttribute('data-theme',t);
+}catch(e){ document.documentElement.setAttribute('data-theme','dark'); }})();
+</script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Product Specification — Model</title>
@@ -9,9 +16,31 @@
     --bg:#0f1620; --panel:#15202d; --panel2:#1b2937; --line:#26384a;
     --ink:#e6edf3; --muted:#8aa0b4; --accent:#3fd0c9; --accent2:#7ca8ff;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --none:#5b7186;
+    --pill-ok-bg:#10371f; --pill-ok-fg:#34d399; --pill-ok-bd:#1f5a34;
+    --pill-warn-bg:#3a2f10; --pill-warn-fg:#fbbf24; --pill-warn-bd:#5f4a17;
+    --pill-bad-bg:#3a1414; --pill-bad-fg:#f87171; --pill-bad-bd:#6b2020;
+    --pill-neutral-bg:#1c2733; --pill-neutral-fg:#93a7bd;
+    --pill-active-bg:#16233e; --pill-active-fg:#7ca8ff; --pill-active-bd:#2a3a5a;
+    --pill-info-bg:#13314a; --pill-info-fg:#add4ff; --pill-info-bd:#1d4a6e;
+    --on-accent:#08121a; --on-danger:#1a0a0c; --scrim:rgba(0,0,0,.55);
     --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
     --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   }
+  html[data-theme="light"]{
+    --bg:#f5f6f8; --panel:#ffffff; --panel2:#eef1f5; --line:#e2e5ea;
+    --ink:#1b2530; --muted:#5f6b78; --accent:#2d6cae; --accent2:#3a6ea5;
+    --ok:#128a5e; --warn:#b07515; --bad:#c23b3b; --none:#8a94a0;
+    --pill-ok-bg:#e6f4ee; --pill-ok-fg:#0f6e56; --pill-ok-bd:#bfe3d1;
+    --pill-warn-bg:#fbeed8; --pill-warn-fg:#8a5a0b; --pill-warn-bd:#e6cfa0;
+    --pill-bad-bg:#fbe9e9; --pill-bad-fg:#9a2d2d; --pill-bad-bd:#eecccc;
+    --pill-neutral-bg:#eeeeeb; --pill-neutral-fg:#5f6166;
+    --pill-active-bg:#dbe6f1; --pill-active-fg:#2d6cae; --pill-active-bd:#c5d6e8;
+    --pill-info-bg:#e7f0fb; --pill-info-fg:#1d4a6e; --pill-info-bd:#bcd6f0;
+    --on-accent:#ffffff; --on-danger:#ffffff; --scrim:rgba(15,23,42,.32);
+  }
+  .theme-toggle{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+  .theme-toggle .theme-opt{border:0;background:transparent;color:var(--muted);padding:5px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit}
+  .theme-toggle .theme-opt[aria-pressed="true"]{background:var(--pill-active-bg);color:var(--pill-active-fg)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
@@ -19,19 +48,22 @@
   header h1 .dot{color:var(--accent)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
+  body.readonly [data-addkpi], body.readonly [data-addkr], body.readonly [data-addlink], body.readonly [data-addsg], body.readonly [data-addsub], body.readonly [data-addsubkr], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editmodel], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
+  .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
+  body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
   .msg{padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
   .msg.show{display:block}
-  .msg.info{background:#13314a;color:#add4ff;border:1px solid #1d4a6e}
-  .msg.err{background:#3a1620;color:#ffb4bd;border:1px solid #5e2230}
-  .msg.ok{background:#13311f;color:#9ff0c4;border:1px solid #1d5e3a}
+  .msg.info{background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
+  .msg.err{background:var(--pill-bad-bg);color:var(--pill-bad-fg);border:1px solid var(--pill-bad-bd)}
+  .msg.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
   select.obj{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:8px;font-size:14px;min-width:340px}
   .objhead{display:flex;align-items:center;gap:16px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
   .objhead .sc{font-size:40px;font-weight:800;line-height:1}
   .objhead .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
   .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-  .band.on-track{background:#10371f;color:var(--ok)} .band.at-risk{background:#3a2f10;color:var(--warn)}
-  .band.off-track{background:#3a1414;color:var(--bad)} .band.no-band{background:#1c2733;color:var(--none)}
+  .band.on-track{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .band.at-risk{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+  .band.off-track{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .band.no-band{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
   .sub{margin:18px 0}
   .sub h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:10px}
   .sub h3 button{margin-left:auto}
@@ -42,10 +74,10 @@
   input,select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:6px;font-family:var(--sans);font-size:13px}
   input.mono{font-family:var(--mono)}
   input.tiny{width:70px} input.sm{width:120px}
-  button.act{background:var(--accent);color:#08121a;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
+  button.act{background:var(--accent);color:var(--on-accent);border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
   button.ghost{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px}
-  button.danger{color:var(--bad);border-color:#5e2230}
-  button.danger.armed{background:var(--bad);color:#1a0a0c}
+  button.danger{color:var(--bad);border-color:var(--pill-bad-bd)}
+  button.danger.armed{background:var(--bad);color:var(--on-danger)}
   button.mini{padding:3px 8px;font-size:12px}
   .row-actions{display:flex;gap:6px;align-items:center}
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
@@ -66,22 +98,33 @@
   table.kpitable{margin:0}
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
-  .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
+  .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .imp-list{padding:2px 4px 6px}
   .imp-src{font-size:12px;font-weight:600;color:var(--accent2);margin:8px 0 3px;display:flex;align-items:center;gap:6px}
-  .imp-div{font-family:var(--mono);font-size:9px;color:var(--muted);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:0 5px;font-weight:400}
-  .imp-row{display:grid;grid-template-columns:1.4fr 1.4fr auto 26px;gap:8px;align-items:center;padding:3px 6px;border-top:1px solid #1b2740;font-size:12px}
+  .imp-div{font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:0 5px;font-weight:400}
+  .imp-row{display:grid;grid-template-columns:1.4fr 1.4fr auto 26px;gap:8px;align-items:center;padding:3px 6px;border-top:1px solid var(--line);font-size:12px}
   .imp-where{color:var(--fg)}.imp-mdl{color:var(--muted)}
-  .imp-kpi{color:var(--fg)}.imp-rel{font-family:var(--mono);font-size:9px;color:var(--muted);border:1px solid #2a3a5a;border-radius:5px;padding:0 4px;margin-left:3px}
+  .imp-kpi{color:var(--fg)}.imp-rel{font-family:var(--mono);font-size:9px;color:var(--muted);border:1px solid var(--pill-active-bd);border-radius:5px;padding:0 4px;margin-left:3px}
   .imp-val{font-family:var(--mono);font-size:11px;text-align:right}.imp-score{font-family:var(--mono);font-weight:600;text-align:right}
+  .own-head{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12px}
+  .own-head .chev{font-size:9px;transition:transform .15s;display:inline-block;color:var(--none)}
+  .own-head.collapsed .chev{transform:rotate(-90deg)}
+  .own-prod-head{color:var(--accent2);font-weight:600;margin:8px 0 2px}
+  .own-model-head{color:var(--fg);font-weight:500;padding-left:14px;margin:2px 0}
+  .own-body.collapsed{display:none}
+  .own-spec{display:grid;grid-template-columns:1.5fr auto 30px;gap:8px;align-items:center;padding:3px 6px 3px 28px;border-top:1px solid var(--line);font-size:12px}
+  .own-spec-name{color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .own-spec-tgt{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+  .own-spec-score{font-family:var(--mono);font-weight:600;text-align:right}
+  .own-note{padding:3px 6px 3px 28px;font-size:12px}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
   .gate-sched .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .gate-sched .sched-sep{color:var(--line)}
-  .dep-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:5px;padding:2px 6px}
+  .dep-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:2px 6px}
   .dep-chip button{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;line-height:1;padding:0}
   .dep-chip button:hover{color:var(--bad)}
-  .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:#3a2f10;border:1px solid #5a4a18;border-radius:5px;padding:2px 7px}
+  .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:5px;padding:2px 7px}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
@@ -104,8 +147,15 @@
   .item-list{display:flex;flex-direction:column;gap:8px}
   .item-list.collapsed{display:none}
   .icard{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .drag-handle{cursor:grab;color:var(--muted);font-size:14px;line-height:1;padding:2px 3px;flex:none;user-select:none;opacity:.45}
+  .drag-handle:hover{opacity:1;color:var(--accent2)}
+  .drag-handle:active{cursor:grabbing}
+  .icard.drag-over{box-shadow:inset 0 3px 0 0 var(--accent)}
+  .kpitable .row-grip{font-size:12px;padding:0;margin-right:3px;vertical-align:middle;opacity:.4}
+  .kpitable .row-grip:hover{opacity:1;color:var(--accent2)}
+  .kpitable tr.row-drop-over > td{box-shadow:inset 0 2px 0 0 var(--accent)}
   .icard-top{display:flex;align-items:center;gap:10px;padding:8px 12px}
-  .icard-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);background:#16233e;border:1px solid #2a3a5a;border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
+  .icard-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .icard-title{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .icard-title.click{cursor:pointer}
   .icard-title.click:hover{color:var(--accent)}
@@ -116,12 +166,12 @@
   .icard-actions .gate-meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .icard-meta{border-top:1px solid var(--line);background:var(--panel)}
   .statepill{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:2px 7px;flex:none}
-  .statepill.passed{background:#10371f;color:var(--ok)}
-  .statepill.passed-late{background:#3a2f10;color:var(--warn)}
-  .statepill.overdue{background:#3a1414;color:var(--bad)}
-  .statepill.pending{background:#1c2733;color:var(--none)}
+  .statepill.passed{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+  .statepill.passed-late{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+  .statepill.overdue{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
+  .statepill.pending{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
   /* modal */
-  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
+  .overlay{display:none;position:fixed;inset:0;background:var(--scrim);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
   .overlay.open{display:flex}
   .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
   .modal-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
@@ -138,11 +188,11 @@
   .seg-btn{background:var(--panel2);border:none;border-right:1px solid var(--line);color:var(--muted);padding:6px 13px;font-size:12px;cursor:pointer}
   .seg-btn:last-child{border-right:none}
   .seg-btn:hover{color:var(--ink)}
-  .seg-btn.seg-pending{background:#1c2733;color:var(--ink)}
-  .seg-btn.seg-active{background:#16233e;color:var(--accent2)}
-  .seg-btn.seg-hit{background:#10371f;color:var(--ok)}
-  .seg-btn.seg-missed{background:#3a1414;color:var(--bad)}
-  .seg-btn.on{background:#16233e;color:var(--accent2)}
+  .seg-btn.seg-pending{background:var(--pill-neutral-bg);color:var(--ink)}
+  .seg-btn.seg-active{background:var(--pill-active-bg);color:var(--pill-active-fg)}
+  .seg-btn.seg-hit{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+  .seg-btn.seg-missed{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
+  .seg-btn.on{background:var(--pill-active-bg);color:var(--pill-active-fg)}
   .modal-field{margin:0 0 12px}
   .modal-field>.lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
   #modalBody .modal-field input[type=text],#modalBody .modal-field input[type=number],#modalBody .modal-field select,#subkrBody .modal-field input[type=text],#subkrBody .modal-field input[type=number],#subkrBody .modal-field select{width:100%}
@@ -167,7 +217,7 @@
   .qw-now{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-left:auto}
   .qw-weeks{display:flex;gap:3px}
   .qw-cell{width:18px;height:7px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
-  .qw-cell.done{background:#24405e;border-color:#2a3a5a}
+  .qw-cell.done{background:var(--pill-active-bg);border-color:var(--pill-active-bd)}
   .qw-cell.now{background:var(--accent);border-color:var(--accent)}
   .qw-track{flex:1;min-width:120px;height:7px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;overflow:hidden}
   .qw-fill{height:100%;background:var(--accent)}
@@ -196,6 +246,7 @@
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px"><option>loading…</option></select>
   <select class="obj" id="modelSelect" style="margin-left:6px"><option>loading…</option></select>
+  <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:8px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
 </header>
@@ -206,6 +257,12 @@
     <h3>Sync</h3>
     <p class="hint">The broker is baked in; the token lives in this browser only. The division is taken from <code>?division=DIV-FC</code> (or your last session). An SSO embed can pass <code>?token=…</code>; it strips itself. No token ⇒ this document is kept locally in the browser.</p>
     <label class="read-row" style="max-width:520px">Broker token <input class="mono" id="tokenInput" type="password" style="min-width:280px" placeholder="paste token"/><button class="act mini" id="tokenSave">Save</button></label>
+    <h3 style="margin-top:20px">Appearance</h3>
+    <p class="hint">Theme is saved in this browser only, and shared across the R&amp;D suite.</p>
+    <div class="theme-toggle" role="group" aria-label="Theme">
+      <button type="button" class="theme-opt" data-theme-set="light">Light</button>
+      <button type="button" class="theme-opt" data-theme-set="dark">Dark</button>
+    </div>
     <h3 style="margin-top:20px">Product families</h3>
     <p class="hint">Products and models are authored in the Planning app; this list is read-only. Product-level KPIs are shared across a product's models and can be linked from any specification or component.</p>
     <div id="prodList"></div>
@@ -220,6 +277,7 @@
   <div id="modelHeadWrap"></div>
   <div id="subKR" class="sub"></div>
   <div id="subSG" class="sub"></div>
+  <div id="subCMP" class="sub"></div>
   <div id="initPanel" class="sub"></div>
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
@@ -257,21 +315,27 @@ const DOCID   = "DOC";
 
 /* ---------------- broker (shared with planning / execution) ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
-(function seedToken(){ const u=new URL(location.href); const t=u.searchParams.get("token");
-  if(t){ localStorage.setItem("rd_broker_token", t); u.searchParams.delete("token"); history.replaceState({},"",u.toString()); } })();
+const URLP = (function(){ const u=new URL(location.href), p=u.searchParams;
+  const t=p.get("token"); if(t){ localStorage.setItem("rd_broker_token",t); p.delete("token"); history.replaceState({},"",u.toString()); }
+  return { readonly: p.has("readonly"), product: p.get("product")||"" }; })();   // quarter N/A (product-spec tool, no time axis)
+const RO = URLP.readonly;
+if(RO) document.body.classList.add("readonly");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t=tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
 async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
-async function apiPut(id,d,etag){ const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
+async function apiPut(id,d,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc:d})}); if(!r.ok) throw r; return r.json(); }
 
 let doc = blankDoc();
 let selectedModel = null;
-let selectedProduct = null;
+let selectedProduct = URLP.product || null;   // seeded from ?product= (seed-on-load); fill logic keeps it if valid
 let portfolio = null;                 // read-only: division resolution + products/models registry
 let divisionId = null;
 let specEtag = "0", specVersion = 0, portfolioVersion = 0, portfolioEtag = "0", pollTimer = null;
+let refDocs = {};                     // cross-doc cache: "SPEC-<div>" -> {doc, etag, version, failed?} for sub-product resolution
+let _refBusy = false;                 // guards the lazy referenced-doc fetch so renderAll can't stampede it
+let subAddOpen = false, subPickProduct = null, subPickModel = null;   // "add sub-product" picker state
 function specId(){ return "SPEC-"+divisionId; }
 function resolveDivision(){ const u=new URL(location.href); return u.searchParams.get("division") || localStorage.getItem("rd_division") || null; }
 
@@ -279,6 +343,33 @@ function blankDoc(){ return { keyResults:[], stageGates:[], kpis:[], kpiUpdates:
 // on load: materialize legacy links, then re-tag designer hostTypes (product KPIs, components)
 function normalizeKpis(kpis){ if(!kpis) return; RD.migrateKpiLinks(kpis);
   for(const k of kpis){ if(k.hostType==="initiative") k.hostType="product"; else if(k.hostType==="stageGate") k.hostType="component"; } }
+// One-time repair for docs written before component ids were allocated against the stageGate array: multiple
+// components (and sometimes a sub-product host) collided on one id, so a KPI on one appeared on all of them.
+// Re-id every colliding stageGate; re-home its KPIs where we can tell them apart (sub-product members carry
+// refModel), and collapse the genuinely-ambiguous plain-component metrics onto the first such component.
+function dedupeStructuralIds(){
+  let changed=false;
+  const sgs=doc.stageGates||[], kpis=doc.kpis||[];
+  const groups={}; sgs.forEach(g=>{ (groups[g.id]=groups[g.id]||[]).push(g); });
+  const used=new Set(sgs.map(g=>g.id));
+  Object.keys(groups).forEach(oldId=>{
+    const grp=groups[oldId]; if(grp.length<2) return;   // no collision on this id
+    changed=true;
+    const hosted=kpis.filter(k=>k.hostType==="component" && k.hostId===oldId);
+    grp.forEach(g=>{ const fresh=RD.allocId("stageGate", g.objectiveId||selectedModel, [...used]); used.add(fresh); g.__newId=fresh; });
+    const firstNormal=grp.find(g=>!g.refModel) || grp[0];
+    hosted.forEach(k=>{
+      let host=null;
+      if(k.refModel) host=grp.find(g=>g.refModel===k.refModel);   // sub-product member → its own host, by refModel
+      k.hostId=(host||firstNormal).__newId;                       // else → the first plain component
+    });
+    grp.forEach(g=>{ g.id=g.__newId; delete g.__newId; });
+  });
+  // keyResults were always allocated correctly, but de-dup defensively (ids only)
+  const krs=doc.keyResults||[]; const kseen=new Set(); const kused=new Set(krs.map(k=>k.id));
+  krs.forEach(kr=>{ if(kseen.has(kr.id)){ const fresh=RD.allocId("keyResult", kr.objectiveId||selectedModel, [...kused]); kr.id=fresh; kused.add(fresh); changed=true; } kseen.add(kr.id); });
+  return changed;
+}
 // resolver reads span the union of this spec doc + the portfolio registry (product/initiative KPIs live there);
 // writes stay in doc.kpis (link members are spec-doc-hosted, pointing at a registry KPI id).
 function allKpis(){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? doc.kpis.concat(portfolio.kpis) : doc.kpis; }
@@ -292,23 +383,45 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
 
 /* ---------------- persistence ---------------- */
 function persistLocal(){ try{ localStorage.setItem(PSD_KEY, JSON.stringify(doc)); }catch(e){} }
-let _persistBusy=false, _persistAgain=false;
-async function persist(){
-  if(!tok()){ persistLocal(); return; }
-  if(_persistBusy){ _persistAgain=true; return; }   // coalesce rapid saves so they don't race the etag (self-inflicted 412)
-  _persistBusy=true;
+let _savedDoc=null;
+function markSaved(){ try{ _savedDoc=JSON.stringify(doc); }catch(e){ _savedDoc=null; } }   // call after load/adopt/save
+function docDirty(){ let s; try{ s=JSON.stringify(doc); }catch(e){ return false; } return s!==_savedDoc; }
+
+// --- autosave scheduling: batch rapid real edits into fewer broker writes ---
+// persist() (what renders + mutations call) only SCHEDULES a write, and only when the doc actually changed;
+// the write is debounced (a quiet gap) with a hard max-wait cap so a change can't sit unsaved indefinitely.
+const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
+let _saveT=null, _saveMaxT=null;
+function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
+function persist(){
+  if(RO) return;                                           // read-only: never write
+  if(!docDirty()) return;                                  // no-op render — nothing to save, don't even schedule
+  if(_saveT) clearTimeout(_saveT);
+  _saveT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_DEBOUNCE_MS);
+  if(!_saveMaxT) _saveMaxT=setTimeout(()=>{ _clearSaveTimers(); persistNow(); }, SAVE_MAXWAIT_MS);
+}
+// immediate, awaitable flush — MUST run before any context change (division switch, remote adopt, page hide/unload)
+function flushPersist(){ _clearSaveTimers(); return persistNow(); }
+
+// the actual write, serialized through a promise chain so writes never overlap (no self-inflicted 412),
+// dirty-checked, and bin-guarded so a write that resolves after a division switch can't clobber the new bin's etag.
+let _saveChain=Promise.resolve();
+function persistNow(){ _saveChain=_saveChain.then(_doPersist).catch(function(){}); return _saveChain; }
+async function _doPersist(){
+  if(!docDirty()) return;                                  // already saved (e.g. coalesced with a prior write)
+  const snap=JSON.stringify(doc);
+  if(!tok()){ persistLocal(); _savedDoc=snap; return; }
+  const targetId=specId();                                 // remember which bin this write is for
   try{
-    const res = await apiPut(specId(), doc, specEtag);
-    specEtag = res.etag; specVersion = res.version; setMsg("Saved.","ok");
+    const res=await apiPut(targetId, doc, specEtag);
+    if(specId()===targetId){ specEtag=res.etag; specVersion=res.version; _savedDoc=snap; setMsg("Saved.","ok"); }
+    // else: division changed while this write was in flight — it landed, but leave the current bin's etag alone
   }catch(e){
+    if(specId()!==targetId) return;                        // stale write for a bin we're no longer viewing
     if(e.status===412){
-      try{ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); }
-        setMsg("Another editor saved first — reloaded; re-apply your change.","err"); }
-      catch(e2){ setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
+      try{ const s=await apiGet(targetId); if(s && specId()===targetId){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Another editor saved first — reloaded; re-apply your change.","err"); } }
+      catch(e2){ if(specId()===targetId) setMsg("Save conflict couldn't resolve ("+(e2.status||e2)+").","err"); }
     } else setMsg("Save failed ("+(e.status||e)+").","err");
-  }finally{
-    _persistBusy=false;
-    if(_persistAgain){ _persistAgain=false; persist(); }   // one coalesced follow-up saves the latest state with the fresh etag
   }
 }
 // product-KPI records + their readings live in the shared portfolio; write it with If-Match, auto-merging on conflict.
@@ -332,12 +445,15 @@ async function persistPortfolio(reapply, okMsg){
     } else setMsg("Portfolio save failed ("+(e.status||e)+").","err");
   }
 }
-function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version; }
+function adoptSpec(s){ doc=Object.assign(blankDoc(), s.doc); normalizeKpis(doc.kpis); specEtag=s.etag; specVersion=s.version;
+  markSaved(); if(dedupeStructuralIds()){ persistLocal(); persist(); } }
 function loadLocal(){
   let raw=null; try{ raw=localStorage.getItem(PSD_KEY); }catch(e){}
   if(raw){ try{ doc=Object.assign(blankDoc(), JSON.parse(raw)); }catch(e){ doc=blankDoc(); } }
   else doc=blankDoc();
   normalizeKpis(doc.kpis);
+  dedupeStructuralIds();
+  persistLocal(); markSaved();
 }
 async function loadAll(){
   if(!tok()){ loadLocal(); fillModelSelect(); renderProdList(); renderAll(); setMsg("No broker token — working locally (⚙ to sync).","info"); return; }
@@ -357,11 +473,13 @@ async function loadAll(){
 }
 function startPoll(){ if(pollTimer) return; pollTimer=setInterval(pollOnce,25000); }
 async function switchDivision(newDiv){
-  if(!newDiv || newDiv===divisionId) return;                     // current doc is already autosaved, so no confirm
+  if(!newDiv || newDiv===divisionId) return;
+  stopPoll();                                                    // no poll mid-switch
+  await flushPersist();                                          // save the current division fully before repointing doc/specId
   divisionId = newDiv;
   localStorage.setItem("rd_division", divisionId);
   selectedProduct=null; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; armedDel=null;
-  stopPoll();                                                    // avoid the poll firing mid-switch with a stale version
+  refDocs={}; subAddOpen=false; subPickProduct=null; subPickModel=null;
   if(!tok()){ fillModelSelect(); renderProdList(); renderAll(); return; }   // offline has no portfolio anyway
   try{
     const s = await apiGet(specId());
@@ -375,10 +493,15 @@ function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } 
 async function pollOnce(){
   if(!tok()) return;
   try{
+    await flushPersist();   // write any pending local edits before reconciling against remote versions
     const pv=await apiVersion("portfolio");
     if(pv.version!==portfolioVersion){ const p=await apiGet("portfolio"); if(p){ portfolio=p.doc; portfolioVersion=p.version; portfolioEtag=p.etag; renderAll(); } }
     const sv=await apiVersion(specId());
     if(sv.version!==specVersion){ const s=await apiGet(specId()); if(s){ adoptSpec(s); fillModelSelect(); renderProdList(); renderAll(); setMsg("Updated from another editor.","info"); } }
+    let refChanged=false;
+    for(const id in refDocs){ try{ const cur=refDocs[id]; const v=await apiVersion(id);
+      if(cur.failed || v.version!==cur.version){ const s=await apiGet(id); if(s){ const d=Object.assign(blankDoc(), s.doc); normalizeKpis(d.kpis); refDocs[id]={doc:d, etag:s.etag, version:s.version}; refChanged=true; } } }catch(e){} }
+    if(refChanged) renderAll();
   }catch(e){}
 }
 function exportDoc(){
@@ -414,6 +537,57 @@ function hostLabel(k){
   return esc(k.hostId);
 }
 
+/* ---------------- cross-doc resolution (sub-products) ----------------
+   A sub-product is a child MODEL (a specific version of another product) plugged into this model. Its live
+   values live in that product's SPEC bin, which may be in another division — so we fetch + cache those docs
+   and resolve the referenced KPIs in their own doc context. The portfolio.composition edge list is the graph. */
+function refDivOfModel(modelId){ const p=productById(productIdOf(modelId)); return p?p.divisionId:null; }
+function refDocOfModel(modelId){ const div=refDivOfModel(modelId); if(!div) return null;
+  if(div===divisionId) return {doc, etag:specEtag, version:specVersion}; return refDocs["SPEC-"+div]||null; }
+function refAllKpis(rdoc){ return (portfolio && portfolio.kpis && portfolio.kpis.length) ? (rdoc.kpis||[]).concat(portfolio.kpis) : (rdoc.kpis||[]); }
+function refEm(rdoc){ return RD.withPortfolio(portfolio, {["REF"]:rdoc}); }
+async function fetchRefDoc(div){
+  if(!div || !tok()) return null;
+  const id="SPEC-"+div; if(id===specId()) return {doc, etag:specEtag, version:specVersion};
+  try{ const s=await apiGet(id); const d=s?Object.assign(blankDoc(), s.doc):blankDoc(); normalizeKpis(d.kpis);
+    refDocs[id]={doc:d, etag:s?s.etag:"0", version:s?s.version:0}; return refDocs[id]; }
+  catch(e){ refDocs[id]={doc:blankDoc(), etag:"0", version:0, failed:true}; return refDocs[id]; }  // stop the render loop; poll retries
+}
+function neededRefDivs(){
+  if(!selectedModel || !portfolio) return [];
+  const s=new Set(), comp=portfolio.composition||[];
+  RD.compositionChildren(selectedModel, comp).forEach(cm=>{      // sub-products (down)
+    const d=refDivOfModel(cm); if(d && d!==divisionId && !refDocs["SPEC-"+d]) s.add(d); });
+  RD.compositionParents(selectedModel, comp).forEach(pm=>{       // owners this model is a component in (up)
+    const d=refDivOfModel(pm); if(d && d!==divisionId && !refDocs["SPEC-"+d]) s.add(d); });
+  return [...s];
+}
+async function ensureRefDocs(){        // fire-and-forget from renderAll; only re-renders when something new arrives
+  if(_refBusy) return; const divs=neededRefDivs(); if(!divs.length) return;
+  _refBusy=true; let got=false;
+  try{ for(const d of divs){ const r=await fetchRefDoc(d); if(r) got=true; } }
+  finally{ _refBusy=false; if(got) renderAll(); }
+}
+// resolve one imported spec row from the child doc: raw KPI value if the spec is KPI-tracked, else its conformance score.
+function resolveRef(member){
+  let name=member.name, dir="up", unit=member.unit||"", stackTgt=null, stackVal=null, live=false, pending=false;
+  const rd=refDocOfModel(member.refModel);
+  if(rd && rd.doc){
+    const kr=(rd.doc.keyResults||[]).find(r=>r.id===member.refKr);
+    if(kr){
+      name=kr.statement||name;
+      const RAK=refAllKpis(rd.doc), REM=refEm(rd.doc);
+      const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,RAK).parent==null);
+      if(pk){ dir=RD.kpiDirection(pk,RAK)||"up"; unit=RD.kpiUnit(pk,RAK)||""; stackTgt=RD.effTarget(pk,RAK); stackVal=RD.effValue(pk,RAK,REM); }
+      else { dir="up"; unit="%"; stackTgt=100; stackVal=RD.keyResultScore(kr.id, REM); }   // percentage/sub-spec tracked → conformance
+      live=true;
+    } else live=true;   // doc loaded but the referenced spec is gone
+  } else if(refDivOfModel(member.refModel) && refDivOfModel(member.refModel)!==divisionId){ pending=true; }
+  const tgt=(member.target!=null)?member.target:stackTgt;
+  const score=RD.rawScore(stackVal, tgt, dir);
+  return {name, dir, unit, stackTgt, stackVal, tgt, score, live, pending, overridden:member.target!=null};
+}
+
 /* ---------------- model select ---------------- */
 function fillDivSelect(){
   const ds=document.getElementById("divSelect"); if(!ds) return;
@@ -430,7 +604,6 @@ function fillModelSelect(){
     ps.innerHTML = prods.length ? prods.map(p=>`<option value="${p.id}">${esc(p.name||p.id)}</option>`).join("")
                                 : `<option value="">no products</option>`;
     if(prods.length){ if(!selectedProduct || !prods.find(p=>p.id===selectedProduct)) selectedProduct=prods[0].id; ps.value=selectedProduct; }
-    else selectedProduct=null;
     ps.onchange=()=>{ selectedProduct=ps.value; selectedModel=null; modelEditing=null; addingFor=null; editingSub=null; fillModelSelect(); renderAll(); };
   }
   const s=document.getElementById("modelSelect"), ms=allModels();
@@ -512,7 +685,8 @@ function saveSub(){
     const arr = isProdKpi ? (portfolio.kpis=portfolio.kpis||[]) : SUB[type].arr();
     const objScope=isProdKpi?null:selectedModel;
     const parent=isProdKpi?a.hostId:selectedModel;
-    const id=RD.allocId(SUB[type].idType, parent, allKpis().map(x=>x.id));
+    const idPool=(type==="kpi")?allKpis().map(x=>x.id):arr.map(x=>x.id);   // stageGates/keyResults must be allocated against THEIR array, not the KPI pool, or every one collides on -1
+    const id=RD.allocId(SUB[type].idType, parent, idPool);
     const base={ id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.linkParent=null; }
     const rec=Object.assign(base, data); arr.push(rec);
@@ -570,6 +744,100 @@ function postRead(host, kpiId){
   renderAll(); setMsg("Reading posted.","ok");
 }
 
+/* ---------------- sub-products (product-as-component, model-to-model) ---------------- */
+function subProductHosts(modelId){ return doc.stageGates.filter(g=>g.objectiveId===modelId && g.refModel); }
+// products with at least one model addable here without a cycle / duplication
+function eligibleSubProducts(){
+  if(!selectedModel || !portfolio) return [];
+  const comp=portfolio.composition||[], already=new Set(RD.compositionChildren(selectedModel, comp));
+  return (portfolio.products||[]).filter(p=>(portfolio.models||[]).some(m=>
+    m.productId===p.id && m.id!==selectedModel && !already.has(m.id) && !RD.wouldComposeCycle(selectedModel, m.id, comp)));
+}
+function eligibleModelsOf(prodId){
+  if(!selectedModel || !portfolio) return [];
+  const comp=portfolio.composition||[], already=new Set(RD.compositionChildren(selectedModel, comp));
+  return (portfolio.models||[]).filter(m=> m.productId===prodId && m.id!==selectedModel
+    && !already.has(m.id) && !RD.wouldComposeCycle(selectedModel, m.id, comp));
+}
+function openSubAdd(){
+  const prods=eligibleSubProducts();
+  subAddOpen=true; subPickProduct=prods.length?prods[0].id:null; subPickModel=null;
+  addingFor=null; editingSub=null; armedDel=null;
+  if(subPickProduct){ const d=(productById(subPickProduct)||{}).divisionId; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); }
+  renderAll();
+}
+function closeSubAdd(){ subAddOpen=false; subPickProduct=null; subPickModel=null; renderAll(); }
+function addSubProduct(childModel){
+  if(!childModel || !selectedModel) return;
+  const comp=(portfolio.composition=portfolio.composition||[]);
+  if(RD.wouldComposeCycle(selectedModel, childModel, comp)){ setMsg("That would create a composition cycle.","err"); return; }
+  if(comp.some(e=>e.parent===selectedModel && e.child===childModel)){ setMsg("That model is already a sub-product here.","err"); return; }
+  const rd=refDocOfModel(childModel);
+  if(!rd || !rd.doc){ setMsg("Still loading that product's specs — try again in a moment.","err"); return; }
+  const RAK=refAllKpis(rd.doc);
+  const specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===childModel);   // import the child model's SPECIFICATIONS, any tracking type
+  const hostId=RD.allocId("stageGate", selectedModel, doc.stageGates.map(x=>x.id));
+  const cpid=productIdOf(childModel), cname=(modelById(childModel)||{}).name||childModel;
+  doc.stageGates.push({ id:hostId, objectiveId:selectedModel, refModel:childModel, refProduct:cpid, name:(productName(cpid)+" · "+cname) });
+  specs.forEach(src=>{
+    const kid=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id));
+    const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===src.id && RD.linkOf(k,RAK).parent==null);
+    doc.kpis.push({ id:kid, objectiveId:selectedModel, hostType:"component", hostId:hostId,
+      refModel:childModel, refKr:src.id, linkType:"specification", linkParent:null,
+      name:src.statement||src.id, unit:(pk?RD.kpiUnit(pk,RAK):"%"), target:null });
+  });
+  const edge={ id:"CMP-"+hostId, parent:selectedModel, child:childModel };
+  comp.push(edge);
+  subAddOpen=false; subPickProduct=null; subPickModel=null;
+  renderAll(); persist();
+  persistPortfolio(()=>{ portfolio.composition=portfolio.composition||[]; if(!portfolio.composition.some(e=>e.id===edge.id)) portfolio.composition.push(edge); },
+    "Sub-product added"+(specs.length?" ("+specs.length+" spec"+(specs.length===1?"":"s")+" imported)":""));
+}
+function removeSubProduct(hostId){
+  if(armedDel!==hostId){ armedDel=hostId; renderAll(); return; }
+  armedDel=null;
+  const host=doc.stageGates.find(g=>g.id===hostId); if(!host){ renderAll(); return; }
+  const child=host.refModel;
+  doc.kpis=doc.kpis.filter(k=>!(k.hostType==="component" && k.hostId===hostId));
+  doc.stageGates=doc.stageGates.filter(g=>g.id!==hostId);
+  const gone=e=>e.id==="CMP-"+hostId || (e.parent===selectedModel && e.child===child);
+  const before=(portfolio.composition||[]).length;
+  portfolio.composition=(portfolio.composition||[]).filter(e=>!gone(e));
+  renderAll(); persist();
+  if((portfolio.composition||[]).length!==before){
+    persistPortfolio(()=>{ portfolio.composition=(portfolio.composition||[]).filter(e=>!gone(e)); }, "Sub-product removed");
+  }
+}
+
+/* keep a sub-product's imported specs in sync with the child model's current specifications: add a member for
+   any child spec not yet imported, so specs added to the sub-product later show up automatically. */
+function syncSubProductSpecs(){
+  let changed=false;
+  subProductHosts(selectedModel).forEach(hst=>{
+    const child=hst.refModel, rd=refDocOfModel(child);
+    if(!rd || !rd.doc || rd.failed) return;   // child specs unknown right now → leave existing imports alone
+    const RAK=refAllKpis(rd.doc);
+    const childSpecs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===child);
+    const have=new Set(doc.kpis.filter(k=>k.hostType==="component" && k.hostId===hst.id && k.refKr).map(k=>k.refKr));
+    childSpecs.forEach(src=>{
+      if(have.has(src.id)) return;
+      const kid=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id));
+      const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===src.id && RD.linkOf(k,RAK).parent==null);
+      doc.kpis.push({ id:kid, objectiveId:selectedModel, hostType:"component", hostId:hst.id,
+        refModel:child, refKr:src.id, linkType:"specification", linkParent:null,
+        name:src.statement||src.id, unit:(pk?RD.kpiUnit(pk,RAK):"%"), target:null });
+      changed=true;
+    });
+  });
+  return changed;
+}
+// associate one imported sub-product spec with a product specification of this model (traceability + live-score display)
+function setLinkSpec(kid, krId){
+  const m=doc.kpis.find(k=>k.id===kid); if(!m) return;
+  if(krId && doc.keyResults.some(r=>r.id===krId && r.objectiveId===selectedModel)) m.linkSpec=krId; else delete m.linkSpec;
+  renderAll(); persist(); setMsg(m.linkSpec?"Imported spec linked to a product specification.":"Link cleared.","ok");
+}
+
 /* ---------------- render root ---------------- */
 function renderAll(){
   if(!doc){ document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); renderModal(); return; }
@@ -577,22 +845,25 @@ function renderAll(){
   if(models.length && (!selectedModel || !models.find(m=>m.id===selectedModel))) selectedModel=models[0].id;
   const pid = selectedModel?productIdOf(selectedModel):null;
   document.getElementById("docPill").textContent = divisionId ? (divName()+(pid?" · "+productName(pid):"")) : "Product specification";
-  renderProductPanel();
+  renderComponentOwners();
   if(!divProducts().length){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">'+(tok()?'No products in this division yet — add products and models in the <b>Planning</b> app, then reload.':'Add a broker token in ⚙ to load products and models from the portfolio.')+'</p>';
-    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML="";
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else if(!models.length){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">No models in this product yet — add them in the <b>Planning</b> app.</p>';
-    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML="";
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else if(!selectedModel){
     document.getElementById("modelHeadWrap").innerHTML='<p class="hint">Select a model.</p>';
+    document.getElementById("subKR").innerHTML=""; document.getElementById("subSG").innerHTML=""; document.getElementById("subCMP").innerHTML="";
   } else {
     const m=models.find(x=>x.id===selectedModel);
     document.getElementById("modelHeadWrap").innerHTML = modelHeader(m)+modelMetricStrip(m)+signalBars();
     const eb=document.querySelector("[data-editmodel]"); if(eb) eb.onclick=()=>openModelEditor(modelById(eb.dataset.editmodel));
-    renderSpecs(); renderComponents();
+    syncSubProductSpecs();
+    renderSpecs(); renderComponents(); renderSubProducts();
   }
   renderModal();
+  ensureRefDocs();
   persist();
 }
 function clearSubs(){ ["KR","SG"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
@@ -600,6 +871,7 @@ function col(b){ return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b
 
 /* ---------------- dashboard shell ---------------- */
 const panelCollapsed = new Set(["INIT"]);
+let ownerCollapsed = new Set();   // collapse state for Component-owner product/model groups
 function panelHead(key, title, cnt, actionsHtml){
   const open=!panelCollapsed.has(key);
   return `<div class="panel-header"><span class="panel-title${open?'':' collapsed'}" data-panel="${key}"><span class="chev">▼</span>${esc(title)}${cnt!=null?` <span class="cnt">${cnt}</span>`:''}</span><span class="ha">${actionsHtml||''}</span></div>`;
@@ -611,9 +883,9 @@ function modelMetricStrip(m){
   const sc=RD.objectiveScore(selectedModel, em), b=RD.band(sc);
   const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
   const specOn=specs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
-  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel && !r.refModel);
   const compOn=comps.filter(g=>RD.band(RD.hostScore("component", g.id, em))==="on-track").length;
-  const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel);
+  const modelKpis=doc.kpis.filter(k=>k.objectiveId===selectedModel && !k.refModel);
   const measured=modelKpis.filter(k=>RD.effValue(k, allKpis(), em)!=null).length;
   const pid=productIdOf(selectedModel);
   const prodKpis=pid?allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length:0;
@@ -659,6 +931,14 @@ function openModal(title, body){
 function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); document.getElementById("modalBody").innerHTML=""; }
 
 function renderModal(){
+  // add-sub-product picker
+  if(subAddOpen){
+    document.getElementById("modalTitle").textContent="Add sub-product";
+    const mb=document.getElementById("modalBody"); mb.innerHTML=subAddBody();
+    document.getElementById("modalOverlay").classList.add("open");
+    wireSubAdd(mb);
+    return;
+  }
   // 0) product-model editor
   if(modelEditing!=null){
     document.getElementById("modalTitle").textContent = "Model spec details";
@@ -914,58 +1194,75 @@ function saveSubKrModal(){
 }
 
 /* ---------------- component-specification editor (was gate target) ---------------- */
-let draftTgt=null, draftTgtGate=null, draftTgtId=null;
-function openTgtModal(gateId, kpiId){
-  draftTgtGate=gateId; draftTgtId=kpiId||null;
+let draftTgt=null, draftTgtGate=null, draftTgtId=null, draftTgtHostType="component";
+function openTgtModal(gateId, kpiId, hostType){
+  draftTgtGate=gateId; draftTgtId=kpiId||null; draftTgtHostType=hostType||"component";
   const pk=kpiId?doc.kpis.find(k=>k.id===kpiId):null;
+  const isRange = !!(pk && pk.direction==="range" && pk.target && typeof pk.target==="object");
   draftTgt={
     name:pk?(pk.name||""):"",
     type:pk?(pk.targetType||"demonstration"):"demonstration",
-    dir:(pk&&pk.direction==="down")?"decrease":"increase",
-    target:(pk&&pk.target!=null)?pk.target:"",
+    dir: isRange ? "range" : ((pk&&pk.direction==="down")?"decrease":"increase"),
+    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",
+    targetLo: isRange ? pk.target.lo : "",
+    targetHi: isRange ? pk.target.hi : "",
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
-    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    gates:(pk&&pk.gates)?pk.gates:""
   };
-  document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit component specification":"Add component specification";
+  const noun = draftTgtHostType==="keyResult" ? "KPI" : "component specification";
+  document.getElementById("kpiTgtTitle").textContent=(kpiId?"Edit ":"Add ")+noun;
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
   wireTgtModal();
 }
-function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; draftTgtHostType="component"; }
 function tgtModalBody(){
-  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isRange=d.dir==="range";
+  const isKr=draftTgtHostType==="keyResult", noun=isKr?"KPI":"specification";
+  const specs=(doc.keyResults||[]).filter(r=>r.objectiveId===selectedModel);
+  const gateOpts=`<option value="">— none (standalone) —</option>`+specs.map(kr=>`<option value="${kr.id}"${d.gates===kr.id?" selected":""}>${esc(kr.statement||kr.id)}</option>`).join("");
+  const gateField = isKr ? "" : `<div class="modal-field"><span class="lbl">Gates a product specification (optional)</span><select data-tf="gates">${gateOpts}</select><span class="hint" style="display:block;margin-top:2px">a gating spec is a different way to measure the same requirement — it is shown as a gate on that product spec, but keeps its own target &amp; readings and does not roll into the product spec's score</span></div>`;
   return `
-    <div class="modal-field"><span class="lbl">Specification name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
+    <div class="modal-field"><span class="lbl">Name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Cathode Pt loading"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"]],d.dir,"tgtdir")}</div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ At least"],["decrease","↓ At most"],["range","↔ Range"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${(isBin||isRange)?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 0.25"></div>
+    <div class="modal-field" style="display:${(!isBin&&isRange)?"block":"none"}"><span class="lbl">Range low</span><input type="number" step="any" data-tf="targetLo" value="${esc(d.targetLo)}" placeholder="e.g. 2"></div>
+    <div class="modal-field" style="display:${(!isBin&&isRange)?"block":"none"}"><span class="lbl">Range high</span><input type="number" step="any" data-tf="targetHi" value="${esc(d.targetHi)}" placeholder="e.g. 4"></div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
-    <div class="hint" style="margin:0 0 12px">readings are posted from the component's specification table; statistical targets aggregate the latest reads</div>
-    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
+    ${gateField}
+    <div class="hint" style="margin:0 0 12px">readings are posted from the ${isKr?"specification's metric":"component's specification"} table; statistical targets aggregate the latest reads</div>
+    <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update ":"Save "}${noun}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
 function wireTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
   body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
-  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
   const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
   const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
 }
 function saveTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
-  const d=draftTgt;
+  const d=draftTgt, isKr=draftTgtHostType==="keyResult";
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
-  if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:"component", hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:draftTgtHostType, hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
-  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
+  else {
+    if(d.dir==="range"){ pk.direction="range"; const lo=parseTargetNum(d.targetLo), hi=parseTargetNum(d.targetHi); pk.target=(lo!=null&&hi!=null)?{lo,hi}:null; }
+    else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); }
+    pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg("Component specification saved.","ok");
+  if(!isKr && d.gates && (doc.keyResults||[]).some(r=>r.id===d.gates)){ pk.gates=d.gates; } else { delete pk.gates; }
+  const gk=pk.gates?(doc.keyResults||[]).find(r=>r.id===pk.gates):null;
+  closeTgtModal(); renderAll(); setMsg(gk?("Gating spec saved — gates “"+(gk.statement||gk.id)+"”."):(isKr?"KPI saved.":"Component specification saved."),"ok");
 }
 
 /* ---------------- KPI link groups ---------------- */
@@ -1007,18 +1304,44 @@ function linkCandidates(hostType, hostId){
     if(seen.has(root.id) || root.hostId===hostId) return;   // don't offer a metric already hosted here
     seen.add(root.id); out.push(root);
   });
+  // product specifications that have no measurement KPI yet (percentage/sub-spec tracked) — offered so a
+  // component metric can still be linked to them; the anchor KPI is materialized on selection.
+  if(hostType!=="product" && O){
+    (doc.keyResults||[]).filter(r=>r.objectiveId===O).forEach(kr=>{
+      const hasKpi=AK.some(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,AK).parent==null);
+      if(!hasKpi) out.push({ id:"SPECREF-"+kr.id, hostType:"keyResult", hostId:kr.id, name:kr.statement||kr.id, direction:"up", target:null, unit:null });
+    });
+  }
   return out;
 }
+// A product specification is linkable only once it has a keyResult-hosted measurement KPI. Percentage/sub-spec
+// specs have none, so we materialize one on demand. For value-flowing links (contribute/direct) the spec then
+// DERIVES its conformance from its linked component metrics (kpi tracking); specification links leave it alone.
+function materializeSpecKpi(krId, deriveFromMetrics){
+  const kr=doc.keyResults.find(r=>r.id===krId); if(!kr) return null;
+  const AK=allKpis();
+  let pk=doc.kpis.find(k=>k.hostType==="keyResult" && k.hostId===krId && RD.linkOf(k,AK).parent==null);
+  if(!pk){ const id=RD.allocId("kpi", selectedModel, AK.map(x=>x.id));
+    pk={ id, objectiveId:selectedModel, hostType:"keyResult", hostId:krId, linkParent:null, name:kr.statement||krId, direction:"up", target:null, unit:null };
+    doc.kpis.push(pk); }
+  if(deriveFromMetrics && kr.trackingType!=="kpi"){ kr.trackingType="kpi"; delete kr.progress; delete kr.subKrs; }
+  return pk.id;
+}
 function makeLinkMember(hostType, hostId, parentId, linkType){
-  const AK=allKpis(); const parent=AK.find(k=>k.id===parentId); if(!parent) return;
+  const AK0=allKpis(); let parent0=AK0.find(k=>k.id===parentId), realParentId=parentId;
+  let synthKr=null;
+  if(!parent0 && typeof parentId==="string" && parentId.indexOf("SPECREF-")===0) synthKr=parentId.slice("SPECREF-".length);
+  const thisProd = hostType==="product" ? hostId : (selectedModel?productIdOf(selectedModel):null);
+  const type = linkType || (synthKr ? "contribute" : linkDefaultFor(parent0, hostType, thisProd));
+  if(synthKr){ realParentId=materializeSpecKpi(synthKr, type!=="specification"); if(!realParentId) return; }
+  const AK=allKpis(); const parent=AK.find(k=>k.id===realParentId); if(!parent) return;
   const objScope = hostType==="product" ? null : selectedModel;
   const id=RD.allocId("kpi", objScope || hostId, AK.map(x=>x.id));
-  if(RD.wouldCreateCycle(id, parentId, AK)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-  const thisProd = objScope ? productIdOf(objScope) : (hostType==="product"?hostId:null);
-  const type=linkType || linkDefaultFor(parent, hostType, thisProd);
-  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:parentId, linkType:type, linkPriority:0,
+  if(RD.wouldCreateCycle(id, realParentId, AK)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+  doc.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:realParentId, linkType:type, linkPriority:0,
                   name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked ("+type+").","ok");
+  addingFor=null; restoreReturn(); renderAll();
+  setMsg(synthKr ? ("Linked to specification ("+type+")"+(type!=="specification"?" — its conformance now derives from linked metrics":"")) : ("Linked ("+type+")."),"ok");
 }
 function unlinkKpi(id){
   const AK=allKpis(); const m=doc.kpis.find(k=>k.id===id); if(!m) return;
@@ -1035,18 +1358,20 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const AK=allKpis();
   const thisProd = hostType==="product" ? hostId : (selectedModel?productIdOf(selectedModel):null);
-  // group by provenance: this product's own metrics / division initiatives / OTHER products' registry KPIs (import)
-  const mine=[], inits=[], others={};
+  // group by provenance: product specifications / this product's own metrics / division initiatives / OTHER products' registry KPIs (import)
+  const mine=[], specs=[], inits=[], others={};
   cands.forEach(d=>{
     if(d.hostType==="product" && d.hostId!==thisProd){ (others[d.hostId]=others[d.hostId]||[]).push(d); }
     else if(d.hostType==="initiative"){ inits.push(d); }
+    else if(d.hostType==="keyResult"){ specs.push(d); }
     else mine.push(d);
   });
-  const opt=d=>`<option value="${d.id}" data-defrel="${linkDefaultFor(d, hostType, thisProd)}">${esc(RD.kpiName(d, AK)||d.id)} · ${hostLabel(d)}</option>`;
+  const opt=d=>{ const nm=esc((d.name!=null?d.name:RD.kpiName(d, AK))||d.id);
+    return `<option value="${d.id}" data-defrel="${linkDefaultFor(d, hostType, thisProd)}">${nm}${d.hostType==="keyResult"?"":" · "+hostLabel(d)}</option>`; };
   const grp=(lbl,arr)=>arr.length?`<optgroup label="${esc(lbl)}">`+arr.map(opt).join("")+`</optgroup>`:"";
-  let optionsHtml=grp("This product", mine)+grp("Division initiatives", inits);
+  let optionsHtml=grp("Product specifications", specs)+grp("This product's metrics", mine)+grp("Division initiatives", inits);
   Object.keys(others).forEach(pid=>{ const dt=divOfProduct(pid); optionsHtml+=grp("Import from "+productName(pid)+(dt?" ["+dt+"]":""), others[pid]); });
-  const first=mine[0]||inits[0]||(others[Object.keys(others)[0]]||[])[0]||cands[0];
+  const first=specs[0]||mine[0]||inits[0]||(others[Object.keys(others)[0]]||[])[0]||cands[0];
   const defType=linkDefaultFor(first, hostType, thisProd);
   return `<div class="ed"><label style="grid-column:1/-1">Link to a product, specification, or another product's KPI
     <select data-linkdef>`+optionsHtml+`</select></label>
@@ -1114,29 +1439,68 @@ function importsPanelHtml(pid){
   });
   return `<div class="panel">${panelHead("IMPORTS","Cross-product dependencies",imps.length,'')}<div class="item-list${listOpen("IMPORTS")}"><div class="imp-list">${body}</div></div></div>`;
 }
-function renderProductPanel(){
+// target of an owner spec, for reference while building this model's specs: KPI-tracked → its ≥/≤ target+unit
+// (or ✓ pass for binary); percentage/sub-spec tracked → 100% conformance.
+function ownerSpecTarget(kr, rd){
+  const RAK=refAllKpis(rd.doc);
+  const pk=(rd.doc.kpis||[]).find(k=>k.hostType==="keyResult" && k.hostId===kr.id && RD.linkOf(k,RAK).parent==null);
+  if(pk){
+    if(pk.targetType==="binary") return "✓ pass";
+    const dir=RD.kpiDirection(pk,RAK), unit=RD.kpiUnit(pk,RAK), tgt=RD.effTarget(pk,RAK);
+    if(tgt==null) return "—";
+    const arrow=(typeof tgt==="object")?"":(dir==="down"?"≤ ":dir==="up"?"≥ ":"");
+    return arrow+fmtTarget(tgt, unit);
+  }
+  const tt=kr.trackingType||"kpi";
+  return (tt==="percentage"||tt==="subkr") ? "100%" : "—";
+}
+function renderComponentOwners(){
   const host=document.getElementById("initPanel");
+  const comp=(portfolio&&portfolio.composition)||[];
+  const parents = selectedModel ? RD.compositionParents(selectedModel, comp) : [];
   const pid = selectedModel?productIdOf(selectedModel):null;
-  if(!pid){
-    host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?'This model has no product family in the portfolio.':'—'}</p></div></div>`;
+  if(!parents.length){
+    host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",null,'')}<div class="item-list${listOpen("INIT")}"><p class="hint">${selectedModel?"This model isn't used as a sub-product in any other model yet. When it is, the owner products and their specifications show here.":"—"}</p></div></div>`+(pid?importsPanelHtml(pid):"");
     wireExec(host); return;
   }
-  const pname=productName(pid);
-  const n=allKpis().filter(k=>k.hostType==="product"&&k.hostId===pid).length;
-  const inner=`<div class="icard"><div class="icard-top">
-      <span class="icard-title">${esc(pname)}</span>
-      <span class="pill">${n} metric${n===1?'':'s'}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="product:${pid}">+ KPI</button></span>
-      </div><div class="icard-meta">${kpiTable("product", pid, null)}</div></div>`;
-  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">shared across this product · link from a specification or component</span>`;
-  host.innerHTML=`<div class="panel">${panelHead("INIT","Product KPIs · "+esc(pname),1,acts)}<div class="item-list${listOpen("INIT")}">${inner}</div></div>`+importsPanelHtml(pid);
+  const col2=k=>ownerCollapsed.has(k);   // collapsed?
+  const byProd={}; parents.forEach(pm=>{ const ppid=productIdOf(pm); (byProd[ppid]=byProd[ppid]||[]).push(pm); });
+  let inner="";
+  Object.keys(byProd).forEach(ppid=>{
+    const pdiv=divOfProduct(ppid), pk="OWNP:"+ppid, pc=col2(pk);
+    let mbody="";
+    byProd[ppid].forEach(pm=>{
+      const mk="OWNM:"+pm, mc=col2(mk), rd=refDocOfModel(pm), pmName=(modelById(pm)||{}).name||pm;
+      let sbody="";
+      if(!rd || !rd.doc){ sbody=`<div class="own-note hint">loading…</div>`; }
+      else if(rd.failed){ sbody=`<div class="own-note"><span class="statepill pending" title="couldn't reach that product's SPEC bin">unreachable</span></div>`; }
+      else {
+        const REM=refEm(rd.doc), specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===pm);
+        if(!specs.length) sbody=`<div class="own-note hint">no specifications yet</div>`;
+        else specs.forEach(kr=>{ const s=RD.keyResultScore(kr.id, REM);
+          sbody+=`<div class="own-spec"><span class="own-spec-name" title="${esc(kr.statement||kr.id)}">${esc(kr.statement||kr.id)}</span>`+
+            `<span class="own-spec-tgt">${esc(ownerSpecTarget(kr, rd))}</span>`+
+            `<span class="own-spec-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span></div>`;
+        });
+      }
+      mbody+=`<div class="own-grp"><div class="own-head own-model-head${mc?' collapsed':''}" data-owntoggle="${esc(mk)}"><span class="chev">▼</span><span>${esc(pmName)}</span></div>`+
+             `<div class="own-body${mc?' collapsed':''}">${sbody}</div></div>`;
+    });
+    inner+=`<div class="own-grp"><div class="own-head own-prod-head${pc?' collapsed':''}" data-owntoggle="${esc(pk)}"><span class="chev">▼</span><span>${esc(productName(ppid))}</span>${pdiv?`<span class="imp-div">${esc(pdiv)}</span>`:''}</div>`+
+           `<div class="own-body${pc?' collapsed':''}">${mbody}</div></div>`;
+  });
+  const acts=`<span class="pill" style="text-transform:none;letter-spacing:0">products this model is a component in</span>`;
+  host.innerHTML=`<div class="panel">${panelHead("INIT","Component owners",parents.length,acts)}<div class="item-list${listOpen("INIT")}"><div class="imp-list">${inner}</div></div></div>`+(pid?importsPanelHtml(pid):"");
   wireExec(host);
+  host.querySelectorAll("[data-owntoggle]").forEach(el=>el.onclick=(e)=>{ e.stopPropagation(); const k=el.dataset.owntoggle; if(ownerCollapsed.has(k)) ownerCollapsed.delete(k); else ownerCollapsed.add(k); renderComponentOwners(); });
 }
 
 /* ---------------- metric table ---------------- */
 function kpiTable(hostType, hostId, objScope){
   const AK=allKpis(), EM=emForCore();
   const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
+  const canReorder = hostType!=="product";   // doc-hosted metrics (component/spec) reorder within doc.kpis; product KPIs are a shared registry
+  const hostKey = hostType+"|"+hostId+"|"+(objScope==null?"":objScope);
   let h=`<table class="kpitable"><thead><tr><th>Metric</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
   if(!rows.length) h += `<tr><td colspan="7" class="hint">no metrics yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
@@ -1147,8 +1511,11 @@ function kpiTable(hostType, hostId, objScope){
     let badge='';
     if(member){ const imp=importSource(k, AK); badge = imp ? `<span class="linkbadge" title="imported from ${esc(imp)}">🔗 imported · ${esc(imp)}</span>` : `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`; }
     else if(defLinks) badge=`<span class="linkbadge" title="defines a linked metric">🔗 defines ${childCount(k)}</span>`;
+    if(k.gates){ const gk=(doc.keyResults||[]).find(r=>r.id===k.gates); badge += `<span class="linkbadge" title="a gate for a product specification (different measure of the same requirement)">⛒ gates ${esc(gk?(gk.statement||gk.id):k.gates)}</span>`; }
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
-    h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
+    const grip = canReorder ? `<span class="drag-handle row-grip" draggable="true" title="drag to reorder">⠿</span>` : '';
+    const trAttrs = canReorder ? ` data-droprow="${k.id}" data-rowhost="${esc(hostKey)}"` : '';
+    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
       <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
       <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
@@ -1160,32 +1527,91 @@ function kpiTable(hostType, hostId, objScope){
   return h;
 }
 
+/* ---------------- drag-and-drop reorder (product specs + components) ----------------
+   Both lists render in array order, so reordering = moving the element within its array,
+   preserving other models' / sub-product-host entries in place. */
+let _dragId=null, _dragKind=null;
+function reorderWithin(arrName, isMine, fromId, toId){
+  const arr=doc[arrName]||[]; const mine=arr.filter(isMine);
+  const fi=mine.findIndex(r=>r.id===fromId); if(fi<0) return false;
+  const [m]=mine.splice(fi,1); let ti=mine.findIndex(r=>r.id===toId); if(ti<0) ti=mine.length; mine.splice(ti,0,m);
+  let i=0; doc[arrName]=arr.map(r=>isMine(r)?mine[i++]:r); return true;
+}
+function reorderSpec(fromId,toId){ return reorderWithin('keyResults', r=>r.objectiveId===selectedModel, fromId, toId); }
+function reorderComp(fromId,toId){ return reorderWithin('stageGates', r=>r.objectiveId===selectedModel && !r.refModel, fromId, toId); }
+function wireReorder(host, kind){
+  const move = kind==='spec' ? reorderSpec : reorderComp;
+  host.querySelectorAll('[data-draghandle]').forEach(h=>{
+    h.ondragstart=e=>{ _dragId=h.getAttribute('data-draghandle'); _dragKind=kind;
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',_dragId);}catch(_){}
+        const card=h.closest('.icard'); if(card){ try{e.dataTransfer.setDragImage(card,12,12);}catch(_){} } } };
+    h.ondragend=()=>{ _dragId=null; _dragKind=null; host.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); };
+  });
+  host.querySelectorAll('[data-dropzone]').forEach(z=>{
+    z.ondragover=e=>{ if(_dragKind!==kind) return; e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; if(z.getAttribute('data-dropzone')!==_dragId) z.classList.add('drag-over'); };
+    z.ondragleave=()=>z.classList.remove('drag-over');
+    z.ondrop=e=>{ if(_dragKind!==kind) return; e.preventDefault(); z.classList.remove('drag-over');
+      const toId=z.getAttribute('data-dropzone'), fromId=_dragId; _dragId=null; _dragKind=null;
+      if(fromId && toId && fromId!==toId && move(fromId,toId)){ renderAll(); persist(); setMsg('Reordered.','ok'); } };
+  });
+}
+let _rowFrom=null, _rowHost=null;
+function reorderKpiRow(hostKey, fromId, toId){
+  const p=hostKey.split("|"), hostType=p[0], hostId=p[1], objScope=(p[2]===""?null:p[2]);
+  const arr=doc.kpis, isMine=k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId;
+  const mine=arr.filter(isMine); const fi=mine.findIndex(k=>k.id===fromId); if(fi<0) return false;
+  const [m]=mine.splice(fi,1); let ti=mine.findIndex(k=>k.id===toId); if(ti<0) ti=mine.length; mine.splice(ti,0,m);
+  let i=0; doc.kpis=arr.map(k=>isMine(k)?mine[i++]:k); return true;
+}
+function wireKpiRows(host){
+  host.querySelectorAll('tr[data-droprow] .row-grip').forEach(g=>{
+    g.ondragstart=e=>{ const tr=g.closest('tr'); if(!tr) return; _rowFrom=tr.getAttribute('data-droprow'); _rowHost=tr.getAttribute('data-rowhost');
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',_rowFrom);}catch(_){} try{e.dataTransfer.setDragImage(tr,12,8);}catch(_){} } e.stopPropagation(); };
+    g.ondragend=()=>{ _rowFrom=null; _rowHost=null; host.querySelectorAll('tr.row-drop-over').forEach(x=>x.classList.remove('row-drop-over')); };
+  });
+  host.querySelectorAll('tr[data-droprow]').forEach(tr=>{
+    tr.ondragover=e=>{ if(_rowFrom==null || tr.getAttribute('data-rowhost')!==_rowHost) return; e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; if(tr.getAttribute('data-droprow')!==_rowFrom) tr.classList.add('row-drop-over'); };
+    tr.ondragleave=()=>tr.classList.remove('row-drop-over');
+    tr.ondrop=e=>{ if(_rowFrom==null || tr.getAttribute('data-rowhost')!==_rowHost) return; e.preventDefault(); e.stopPropagation(); tr.classList.remove('row-drop-over');
+      const toId=tr.getAttribute('data-droprow'), fromId=_rowFrom, hk=_rowHost; _rowFrom=null; _rowHost=null;
+      if(fromId && toId && fromId!==toId && reorderKpiRow(hk, fromId, toId)){ renderAll(); persist(); setMsg('Reordered.','ok'); } };
+  });
+}
 /* ---------------- specification list (was KRs) ---------------- */
 function renderSpecs(){
   const host=document.getElementById("subKR");
   const specs=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  const AK=allKpis(), EM=emForCore();
   let inner="";
   if(!specs.length) inner+=`<p class="hint">none yet — a product specification is a requirement the product must meet; its metrics roll up to the model's conformance score</p>`;
   specs.forEach((kr,idx)=>{
     const s=RD.keyResultScore(kr.id, emForCore());
-    inner+=`<div class="icard"><div class="icard-top">
+    const gates=AK.filter(k=>k.gates===kr.id);
+    const gatesHtml = gates.length ? `<div class="hint" style="margin:6px 0 0">⛒ gated by: `+gates.map(g=>{
+      const gs=RD.kpiScoreResolved(g, AK, EM);
+      return `<a class="rowedit" data-edit="kpi:${g.id}" title="on ${esc(componentName(g.hostId))} — a different measure of this requirement">${esc(RD.kpiName(g,AK)||g.id)} <b style="color:${col(RD.band(gs))}">${gs==null?'—':Math.round(gs)}</b></a>`;
+    }).join(" · ")+`</div>` : '';
+    const subIn=AK.filter(k=>k.hostType==="component" && k.refKr && k.linkSpec===kr.id);
+    const subHtml = subIn.length ? `<div class="hint" style="margin:6px 0 0">↳ from sub-products: `+subIn.map(k=>{ const r=resolveRef(k); return `<span title="imported sub-product spec">${esc(r.name||k.id)} <b style="color:${col(RD.band(r.score))}">${r.score==null?'—':Math.round(r.score)}</b></span>`; }).join(" · ")+`</div>` : '';
+    inner+=`<div class="icard" data-dropzone="${kr.id}"><div class="icard-top">
+      <span class="drag-handle" draggable="true" data-draghandle="${kr.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
       <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
       <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div></div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
-  wireExec(host);
+  wireExec(host); wireReorder(host,'spec');
 }
 
 /* ---------------- component list (was stage-gates; no scheduling) ---------------- */
 function renderComponents(){
   const host=document.getElementById("subSG");
-  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel);
+  const comps=doc.stageGates.filter(r=>r.objectiveId===selectedModel && !r.refModel);
   let inner="";
   if(!comps.length) inner+=`<p class="hint">none yet — components are the parts that must meet specifications to deliver the product specs</p>`;
   comps.forEach((g,idx)=>{
@@ -1193,7 +1619,8 @@ function renderComponents(){
     const tags=[];
     if(g.ctype) tags.push(`<span class="pill">${esc(g.ctype)}</span>`);
     if(g.status) tags.push(`<span class="statepill pending">${esc(g.status)}</span>`);
-    inner+=`<div class="icard"><div class="icard-top">
+    inner+=`<div class="icard" data-dropzone="${g.id}"><div class="icard-top">
+      <span class="drag-handle" draggable="true" data-draghandle="${g.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">C${idx+1}</span>
       <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
       ${tags.join(" ")}
@@ -1206,26 +1633,114 @@ function renderComponents(){
   });
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  wireExec(host); wireReorder(host,'comp');
+}
+
+/* ---------------- sub-products panel (model-to-model composition) ---------------- */
+function renderSubProducts(){
+  const host=document.getElementById("subCMP");
+  const hosts=subProductHosts(selectedModel);
+  const specOptsBase=doc.keyResults.filter(r=>r.objectiveId===selectedModel);
+  let inner="";
+  if(!hosts.length) inner+=`<p class="hint">none yet — plug a specific model of another product in as a sub-product; its specs import as <b>specification</b> links (visible here, but they don't roll into this model's conformance)</p>`;
+  hosts.forEach(hst=>{
+    const child=hst.refModel, rd=refDocOfModel(child);
+    const specs=doc.kpis.filter(k=>k.hostType==="component" && k.hostId===hst.id);
+    let note="";
+    if(!rd && refDivOfModel(child) && refDivOfModel(child)!==divisionId) note=`<span class="pill">loading…</span>`;
+    else if(rd && rd.failed) note=`<span class="statepill pending" title="couldn't reach that product's SPEC bin">unreachable</span>`;
+    let rows=`<table class="kpitable"><thead><tr><th>Imported spec</th><th>dir</th><th>stack target</th><th>stack value</th><th>your target</th><th>score</th><th>links to spec</th></tr></thead><tbody>`;
+    if(!specs.length) rows+=`<tr><td colspan="7" class="hint">this model has no importable specifications</td></tr>`;
+    specs.forEach(m=>{
+      const r=resolveRef(m);
+      const st=fmtTarget(r.stackTgt, r.unit), sv=r.stackVal==null?'<span class="pill">no read</span>':esc(String(r.stackVal));
+      const ovrVal=(m.target!=null && typeof m.target!=='object')?m.target:'';
+      rows+=`<tr><td>${esc(r.name||'')||'(unnamed)'}${r.pending?' <span class="pill">…</span>':''}</td><td class="mono">${r.dir||''}</td>`+
+        `<td class="mono">${st}</td><td class="kpi-now">${sv}</td>`+
+        `<td><div class="read-row"><input class="tiny" type="number" data-ovr="${m.id}" value="${ovrVal}" placeholder="${r.stackTgt!=null?esc(String(r.stackTgt)):'inherit'}"/>`+
+        `<button class="ghost mini" data-setovr="${m.id}">set</button></div>${r.overridden?' <span class="pill">override</span>':''}</td>`+
+        `<td style="color:${col(RD.band(r.score))};font-weight:600">${r.score==null?'—':Math.round(r.score)}</td>`+
+        `<td><select class="tiny" data-linkspec="${m.id}"><option value="">—</option>`+specOptsBase.map(kr=>`<option value="${kr.id}"${m.linkSpec===kr.id?' selected':''}>${esc(kr.statement||kr.id)}</option>`).join("")+`</select></td></tr>`;
+    });
+    rows+=`</tbody></table>`;
+    inner+=`<div class="icard"><div class="icard-top">
+      <span class="icard-title">${esc(hst.name||child)}</span>
+      <span class="pill mono">${esc(child)}</span> ${note}
+      <span class="icard-actions"><button class="ghost mini danger ${armedDel===hst.id?'armed':''}" data-delsub="${hst.id}">${armedDel===hst.id?'confirm':'remove'}</button></span>
+      </div><div class="icard-meta">${rows}</div></div>`;
+  });
+  const acts=`<button class="ghost mini" data-addsub="1">+ add sub-product</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("CMP","Sub-products",hosts.length,acts)}<div class="item-list${listOpen("CMP")}">${inner}</div></div>`;
   wireExec(host);
+  host.querySelectorAll("[data-addsub]").forEach(b=>b.onclick=()=>openSubAdd());
+  host.querySelectorAll("[data-delsub]").forEach(b=>b.onclick=()=>removeSubProduct(b.dataset.delsub));
+  host.querySelectorAll("[data-setovr]").forEach(b=>b.onclick=()=>setOverride(host, b.dataset.setovr));
+  host.querySelectorAll("[data-linkspec]").forEach(sel=>sel.onchange=()=>setLinkSpec(sel.dataset.linkspec, sel.value));
+}
+function setOverride(scope, kid){
+  const m=doc.kpis.find(k=>k.id===kid); if(!m) return;
+  const inp=scope.querySelector(`[data-ovr="${kid}"]`); if(!inp) return;
+  m.target = inp.value==="" ? null : Number(inp.value);
+  renderAll(); persist(); setMsg(m.target==null?"Override cleared — inheriting the stack target.":"Override set.","ok");
+}
+/* the add-sub-product picker (rendered as a modal via renderModal) */
+function subAddBody(){
+  const prods=eligibleSubProducts();
+  if(!prods.length) return `<p class="hint">No other product has a model that can be added here — every candidate would either duplicate an existing sub-product or form a composition cycle.</p>
+    <div class="row-actions"><button class="ghost mini" type="button" data-subcancel="1">Close</button></div>`;
+  if(!subPickProduct || !prods.find(p=>p.id===subPickProduct)) subPickProduct=prods[0].id;
+  const models=eligibleModelsOf(subPickProduct);
+  if(models.length && (!subPickModel || !models.find(m=>m.id===subPickModel))) subPickModel=models[0].id;
+  if(!models.length) subPickModel=null;
+  const byDiv={}; prods.forEach(p=>{ (byDiv[p.divisionId]=byDiv[p.divisionId]||[]).push(p); });
+  const dName=id=>{ const d=(portfolio&&portfolio.divisions||[]).find(x=>x.id===id); return d?(d.name||d.id):id; };
+  let prodOpts=""; Object.keys(byDiv).forEach(dv=>{ prodOpts+=`<optgroup label="${esc(dName(dv))}${dv===divisionId?' · this division':''}">`+
+    byDiv[dv].map(p=>`<option value="${p.id}"${p.id===subPickProduct?' selected':''}>${esc(p.name||p.id)}</option>`).join("")+`</optgroup>`; });
+  const modelOpts= models.length ? models.map(m=>`<option value="${m.id}"${m.id===subPickModel?' selected':''}>${esc(m.name||m.id)}</option>`).join("")
+                                 : `<option value="">no addable models</option>`;
+  let preview="";
+  if(subPickModel){
+    const rd=refDocOfModel(subPickModel);
+    if(!rd || !rd.doc) preview=`<span class="pill">loading specs…</span>`;
+    else if(rd.failed) preview=`<span class="statepill pending">couldn't reach that product's SPEC bin — is it configured on the broker?</span>`;
+    else { const specs=(rd.doc.keyResults||[]).filter(r=>r.objectiveId===subPickModel);
+      preview= specs.length ? `<b>${specs.length}</b> specification${specs.length===1?'':'s'} will import: `+specs.slice(0,6).map(s=>esc(s.statement||s.id)).join(", ")+(specs.length>6?", …":"")
+                            : `this model has no specifications yet — it will be added as an empty sub-product`; }
+  }
+  return `<div class="modal-field"><span class="lbl">Product</span><select data-subprod>${prodOpts}</select><div class="hint" style="margin:4px 0 0">Any product in the portfolio; models that would duplicate or form a cycle are hidden.</div></div>
+    <div class="modal-field"><span class="lbl">Model (version)</span><select data-submodel>${modelOpts}</select></div>
+    <div class="modal-field"><span class="lbl">Imports</span><div class="read-row" style="padding:2px 0">${preview||'<span class="hint">select a model</span>'}</div></div>
+    <div class="row-actions">
+      <button class="act mini" type="button" data-subadd="1"${subPickModel?'':' disabled'}>Add sub-product</button>
+      <button class="ghost mini" type="button" data-subcancel="1">Cancel</button></div>`;
+}
+function wireSubAdd(mb){
+  const ps=mb.querySelector("[data-subprod]"); if(ps) ps.onchange=()=>{ subPickProduct=ps.value; subPickModel=null;
+    const d=(productById(subPickProduct)||{}).divisionId; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); else renderAll(); };
+  const msel=mb.querySelector("[data-submodel]"); if(msel) msel.onchange=()=>{ subPickModel=msel.value||null;
+    const d=subPickModel?refDivOfModel(subPickModel):null; if(d && d!==divisionId && !refDocs["SPEC-"+d]) fetchRefDoc(d).then(renderAll); else renderAll(); };
+  const add=mb.querySelector("[data-subadd]"); if(add) add.onclick=()=>{ if(subPickModel) addSubProduct(subPickModel); };
+  const cx=mb.querySelector("[data-subcancel]"); if(cx) cx.onclick=()=>closeSubAdd();
 }
 
 /* ---------------- shared wiring ---------------- */
 function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
-  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else if(ht==="keyResult") openTgtModal(hid, null, "keyResult"); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{ const rel=host.querySelector("[data-linkrel]"); const o=sel.options[sel.selectedIndex]; if(rel && o && o.dataset.defrel) rel.value=o.dataset.defrel; });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":");
-    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && k.hostType==="component" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } }
+    if(t==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k && !isMemberKpi(k) && (k.hostType==="component"||k.hostType==="keyResult")){ openTgtModal(k.hostId, id, k.hostType); return; } }
     subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
   host.querySelectorAll("[data-panel]").forEach(el=>el.onclick=()=>{ const k=el.dataset.panel; if(panelCollapsed.has(k)) panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); });
+  wireKpiRows(host);
 }
 
 /* ---------------- product-model editor ---------------- */
@@ -1276,10 +1791,21 @@ document.getElementById("kpiTgtX").onclick = closeTgtModal;
 document.getElementById("kpiTgtOverlay").onclick = (e)=>{ if(e.target.id==="kpiTgtOverlay") closeTgtModal(); };
 document.getElementById("exportBtn").onclick = exportDoc;
 document.getElementById("importInput").onchange = (e)=>{ if(e.target.files&&e.target.files[0]) importDoc(e.target.files[0]); e.target.value=""; };
-window.addEventListener("beforeunload", persistLocal);
+window.addEventListener("beforeunload", ()=>{ flushPersist(); persistLocal(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 
 /* boot */
 loadAll();
+</script>
+<script>
+(function(){
+  function cur(){ return document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'; }
+  function sync(){ var c=cur(); document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-theme-set')===c?'true':'false'); }); }
+  function set(t){ t=(t==='light')?'light':'dark'; document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('rd_theme',t);}catch(e){} sync(); }
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.addEventListener('click',function(){ set(b.getAttribute('data-theme-set')); }); });
+  sync();
+  if(window.matchMedia){ try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(e){ try{ if(!localStorage.getItem('rd_theme')){ document.documentElement.setAttribute('data-theme', e.matches?'dark':'light'); sync(); } }catch(_){} }); }catch(e){} }
+})();
 </script>
 </body>
 </html>

@@ -45,9 +45,13 @@ ok('no saved + OS(light) seeds light',        seed(null,   false).window.documen
     ok('dark (:root) defines all '+need.length+' tokens'+(missDark.length?' [missing: '+missDark.join(',')+']':''), missDark.length===0);
     ok('light palette defines all '+need.length+' tokens'+(missLight.length?' [missing: '+missLight.join(',')+']':''), missLight.length===0);
 
-    // --- ETB now follows the toggle, not the OS media query ---
-    ok('ETB dark palette keyed off data-theme (no prefers-color-scheme left)',
-       /html\[data-theme="dark"\]\s+#etb-view/.test(css) && !/prefers-color-scheme/.test(css));
+    // --- ETB (execution only) now follows the toggle, not the OS media query ---
+    if(/#etb-view/.test(css)){
+      ok('ETB dark palette keyed off data-theme (no prefers-color-scheme left)',
+         /html\[data-theme="dark"\]\s+#etb-view/.test(css) && !/prefers-color-scheme/.test(css));
+    } else {
+      ok('no prefers-color-scheme media query left (app has no ETB)', !/prefers-color-scheme/.test(css));
+    }
 
     console.log(fail? "\u2717 theme system FAILED" : "\u2705 theme: OS-seed + saved-wins + toggle persist + full palettes + ETB on toggle");
     process.exitCode = fail?1:0;

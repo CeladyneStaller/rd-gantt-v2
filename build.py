@@ -53,9 +53,40 @@ def run_check() -> None:
         sys.exit("core harness FAILED — aborting build")
 
 
+# The three tool apps share one theme palette (same :root var names). This guards
+# against silent drift: the light-palette block, seed script, and toggle handler
+# must be byte-identical across them. (index.html is bespoke and excluded.)
+_PAL_START = 'html[data-theme="light"]{'
+_PAL_END = '--scrim:rgba(15,23,42,.32);\n  }'
+_SEED_SIG = "document.documentElement.setAttribute('data-theme',t);"
+_HANDLER_SIG = "b.getAttribute('data-theme-set')"
+
+
+def _theme_palette(html: str) -> str:
+    i = html.find(_PAL_START)
+    j = html.find(_PAL_END, i)
+    assert i != -1 and j != -1, "theme light-palette block not found"
+    return html[i:j + len(_PAL_END)]
+
+
+def check_theme_sync() -> None:
+    palettes = {}
+    for tmpl, _ in TARGETS:
+        with open(os.path.join(HERE, tmpl), "r", encoding="utf-8") as f:
+            h = f.read()
+        palettes[tmpl] = _theme_palette(h)
+        assert _SEED_SIG in h, f"{tmpl}: theme seed script missing"
+        assert _HANDLER_SIG in h, f"{tmpl}: theme toggle handler missing"
+    ref = next(iter(palettes.values()))
+    drift = [t for t, v in palettes.items() if v != ref]
+    assert not drift, "theme light-palette DRIFT across tool apps: " + ", ".join(drift)
+    print(f"✓ theme palette in sync across {len(TARGETS)} tool apps ({len(ref)} chars)")
+
+
 def main():
     if "--check" in sys.argv:
         run_check()
+    check_theme_sync()
     os.makedirs(OUT, exist_ok=True)
     with open(CORE, "r", encoding="utf-8") as f:
         core_src = f.read()
