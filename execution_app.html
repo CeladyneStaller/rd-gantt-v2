@@ -244,6 +244,264 @@
   .sig-fill{height:100%;border-radius:4px 0 0 4px}
   .sig-val{font-family:var(--mono);font-weight:700;font-size:13px;width:32px;text-align:right;flex:none}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js"></script>
+<style id="etb-scoped">
+#etb-view{
+    --bg:#fbfbfa; --surface:#ffffff; --surface-2:#f5f5f3;
+    --ink:#1c1d1f; --muted:#6b6e73; --faint:#9a9da2;
+    --line:#e7e7e3; --line-strong:#d6d6d1;
+    --accent:#34618e; --accent-soft:#dbe6f1;
+    --ok-bg:#e6f4ee; --ok-fg:#0f6e56;
+    --amber-bg:#fbeed8; --amber-fg:#8a5a0b;
+    --plan-bg:#eeeeeb; --plan-fg:#5f6166;
+    --stop-bg:#fbe9e9; --stop-fg:#9a2d2d;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:8px; --surface2:#f5f5f3;
+  }
+@media (prefers-color-scheme: dark){
+#etb-view{
+      --bg:#1a1b1d; --surface:#222426; --surface-2:#26282b;
+      --ink:#e7e7e4; --muted:#a3a6ab; --faint:#76797e;
+      --line:#33363a; --line-strong:#414549;
+      --accent:#6aa0d8; --accent-soft:#1f2e3e;
+      --ok-bg:#163a30; --ok-fg:#7fd6b6;
+      --amber-bg:#3a2e14; --amber-fg:#e7b25f;
+      --plan-bg:#2c2f33; --plan-fg:#a3a6ab;
+      --stop-bg:#3a1d1d; --stop-fg:#e89090;
+    }
+}
+#etb-view *{box-sizing:border-box}
+#etb-view, #etb-view{margin:0}
+#etb-view{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+#etb-view button, #etb-view input, #etb-view textarea, #etb-view select{font-family:inherit;font-size:inherit;color:inherit}
+#etb-view button{cursor:pointer;background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:5px 11px;transition:background .12s}
+#etb-view button:hover{background:var(--surface-2)}
+#etb-view button:active{transform:translateY(.5px)}
+#etb-view button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#etb-view button.primary:hover{filter:brightness(1.05)}
+#etb-view input, #etb-view textarea{background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:6px 9px;width:100%}
+#etb-view textarea{resize:vertical}
+#etb-view a{color:var(--accent)}
+#etb-view code, #etb-view .mono{font-family:var(--mono);font-size:12.5px}
+#etb-view .topbar{display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:5}
+#etb-view .brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+#etb-view .brand .v{color:var(--faint);font-weight:400;font-size:11px;margin-left:6px}
+#etb-view .tabs{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px}
+#etb-view .tabs button{border:0;background:transparent;padding:4px 12px;border-radius:6px;color:var(--muted)}
+#etb-view .tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+#etb-view .spacer{flex:1}
+#etb-view .actions{display:flex;gap:7px;align-items:center}
+#etb-view .statusline{padding:6px 18px;border-bottom:1px solid var(--line);background:var(--surface-2);color:var(--muted);font-size:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+#etb-view .statusline .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+#etb-view .etb-main{max-width:1000px;margin:0 auto;padding:20px 18px 80px}
+#etb-view .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
+#etb-view .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
+#etb-view .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 8px;border-radius:999px;font-weight:500;white-space:nowrap}
+#etb-view .pill.complete{background:var(--ok-bg);color:var(--ok-fg)}
+#etb-view .pill.in_progress{background:var(--amber-bg);color:var(--amber-fg)}
+#etb-view .pill.planned{background:var(--plan-bg);color:var(--plan-fg)}
+#etb-view .pill.success{background:var(--ok-bg);color:var(--ok-fg)}
+#etb-view .pill.pause{background:var(--amber-bg);color:var(--amber-fg)}
+#etb-view .pill.stop{background:var(--stop-bg);color:var(--stop-fg)}
+#etb-view .tag{font-size:11px;color:var(--faint)}
+#etb-view .tag.reach-active{color:var(--accent)}
+#etb-view .tag.reach-not_pursued{color:var(--faint)}
+#etb-view .story{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#etb-view .story .step{display:flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:5px 9px}
+#etb-view .story .step .c{font-weight:600}
+#etb-view .story .step .r{color:var(--muted);font-size:12px}
+#etb-view .story .arrow{color:var(--faint)}
+#etb-view .story .end{border-style:solid}
+#etb-view .node{border-left:3px solid var(--accent);padding:2px 0 2px 14px;margin:10px 0}
+#etb-view .node.reach-pending{border-left-color:var(--line-strong);opacity:.92}
+#etb-view .node.reach-not_pursued{border-left-style:dashed;border-left-color:var(--line-strong);opacity:.55}
+#etb-view .node-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+#etb-view .node-head .code{font-weight:600;font-family:var(--mono);font-size:13px}
+#etb-view .node-head .name{font-weight:500}
+#etb-view .meta{color:var(--muted);font-size:12.5px;margin:3px 0}
+#etb-view .meta .lab{color:var(--faint)}
+#etb-view .verdict{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
+#etb-view .results{margin:8px 0 2px;padding-left:2px}
+#etb-view .result{border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin:7px 0;background:var(--surface)}
+#etb-view .result.observed{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+#etb-view .result-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#etb-view .result-top .lbl{font-weight:500}
+#etb-view .result .crit{font-family:var(--mono);font-size:12px;color:var(--muted);margin:5px 0}
+#etb-view .result .concl{font-size:13px;margin:3px 0}
+#etb-view .result .concl b{color:var(--muted);font-weight:500}
+#etb-view .result .nextrow{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:6px}
+#etb-view .result .nextrow .arr{color:var(--faint)}
+#etb-view .observed-badge{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 7px;font-weight:600}
+#etb-view .child{margin-left:16px;border-left:1px dotted var(--line-strong);padding-left:6px}
+#etb-view .outcome-line{font-size:12.5px;color:var(--muted);margin:6px 0 2px;padding:6px 9px;background:var(--surface-2);border-radius:6px}
+#etb-view .unattached h2{color:var(--stop-fg)}
+#etb-view #jsonArea{min-height:340px;font-family:var(--mono);font-size:12.5px;line-height:1.45}
+#etb-view .issues{margin-top:12px;display:flex;flex-direction:column;gap:5px}
+#etb-view .issue{font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid var(--line)}
+#etb-view .issue.error{background:var(--stop-bg);color:var(--stop-fg);border-color:transparent}
+#etb-view .issue.warning{background:var(--amber-bg);color:var(--amber-fg);border-color:transparent}
+#etb-view .issue .rule{font-family:var(--mono);font-size:11px;opacity:.8;margin-right:6px}
+#etb-view .test{display:flex;gap:9px;align-items:flex-start;font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)}
+#etb-view .test .mk{font-family:var(--mono);font-weight:600}
+#etb-view .test.pass .mk{color:var(--ok-fg)}
+#etb-view .test.fail .mk{color:var(--stop-fg)}
+#etb-view .test .err{font-family:var(--mono);font-size:11.5px;color:var(--stop-fg);margin-top:2px}
+#etb-view .muted{color:var(--muted)}
+#etb-view .hint{color:var(--faint);font-size:12px}
+#etb-view .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;z-index:20;padding:60px 16px}
+#etb-view .overlay.open{display:flex}
+#etb-view .sheet{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;max-width:460px;width:100%;padding:20px 22px}
+#etb-view .sheet h3{margin:0 0 4px}
+#etb-view .field{margin:12px 0}
+#etb-view .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+#etb-view .sheet .row{display:flex;gap:8px;margin-top:14px}
+#etb-view .keynote{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.45}
+#etb-view .graph-controls{display:flex;gap:7px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+#etb-view #cy{width:100%;height:560px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+#etb-view .cy-msg{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;padding:20px;text-align:center}
+#etb-view .legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:10px;color:var(--muted);font-size:12px}
+#etb-view .legend .lg{display:inline-flex;align-items:center;gap:6px}
+#etb-view .legend .sep{color:var(--faint)}
+#etb-view .legend .sw{width:14px;height:11px;border-radius:3px;border:1px solid;display:inline-block}
+#etb-view .legend .ln{width:18px;height:0;border-top-width:2px;border-top-style:solid;display:inline-block}
+#etb-view .legend .ln.active{border-color:var(--accent);border-top-width:2.5px}
+#etb-view .legend .ln.pending{border-color:var(--muted)}
+#etb-view .legend .ln.np{border-color:var(--faint);border-top-style:dashed}
+#etb-view .drawer{position:fixed;inset:0;z-index:30;display:none}
+#etb-view .drawer.open{display:block}
+#etb-view .drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+#etb-view .drawer-body{position:absolute;top:0;right:0;height:100%;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line-strong);box-shadow:-8px 0 24px rgba(0,0,0,.12);overflow-y:auto;padding:16px 18px 40px;animation:etb-slidein .16s ease}
+@keyframes etb-slidein{from{transform:translateX(20px);opacity:.6}to{transform:none;opacity:1}}
+#etb-view .drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+#etb-view .drawer-head #drawerTitle{font-size:15px;line-height:1.35}
+#etb-view .drawer-head button{border:0;background:transparent;font-size:16px;color:var(--muted);padding:2px 6px}
+#etb-view .p-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 12px}
+#etb-view .p-row{margin:8px 0}
+#etb-view .p-lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:2px}
+#etb-view .p-val{font-size:13.5px}
+#etb-view .link{cursor:pointer;color:var(--accent)}
+#etb-view .audit{font-size:12px;color:var(--ink);border-left:2px solid var(--line-strong);padding:4px 0 4px 9px;margin:5px 0}
+#etb-view .scoped{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+#etb-view .scoped summary{cursor:pointer;font-size:13px;color:var(--accent);user-select:none}
+#etb-view .scoped-ta{margin-top:8px;min-height:200px;font-family:var(--mono);font-size:12px;line-height:1.4}
+#etb-view .scoped-bar{display:flex;gap:9px;align-items:center;margin-top:8px}
+#etb-view .scoped-msg{font-size:12px}
+#etb-view .flash{background:var(--ok-bg);color:var(--ok-fg);font-size:12.5px;padding:6px 10px;border-radius:6px;margin-bottom:10px}
+#etb-view #drawerContent select{background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;width:100%;height:34px}
+#etb-view #drawerContent input, #etb-view #drawerContent textarea{width:100%}
+#etb-view #drawerContent textarea{min-height:46px}
+#etb-view .p-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#etb-view .p-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+#etb-view .mini-field{display:flex;flex-direction:column;gap:3px}
+#etb-view .mini-lab{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+#etb-view .link-wrap{display:flex;gap:8px;align-items:center}
+#etb-view .link-wrap select{flex:1}
+#etb-view button.mini{border:0;background:transparent;color:var(--faint);font-size:13px;padding:2px 6px;line-height:1}
+#etb-view button.mini:hover{color:var(--stop-fg)}
+#etb-view button.mini2{border:1px solid var(--line-strong);background:var(--surface);font-size:11.5px;padding:3px 9px;border-radius:6px;margin-left:8px;white-space:nowrap}
+#etb-view button.danger{border:1px solid var(--stop-fg);color:var(--stop-fg);background:var(--surface)}
+#etb-view button.danger:hover{background:var(--stop-bg)}
+#etb-view .p-danger{margin-top:16px;padding-top:10px;border-top:1px solid var(--line)}
+#etb-view .confirm-inline{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+#etb-view .confirm-q{font-size:12px;color:var(--stop-fg)}
+#etb-view button.sm{font-size:11.5px;padding:3px 10px;border-radius:6px}
+#etb-view .io-msg{font-size:12px;align-self:center}
+#etb-view .io-msg.ok{color:var(--ok-fg)}
+#etb-view .io-msg.warn{color:var(--amber-fg)}
+#etb-view .io-msg.error{color:var(--stop-fg)}
+#etb-view .io-msg.muted{color:var(--muted)}
+#etb-view .field-hint{font-size:11px;color:var(--faint);margin-top:3px}
+#etb-view .muted.small{font-size:11.5px;color:var(--faint);margin:4px 0}
+#etb-view .obs-radio{flex:0 0 auto;margin:0 4px 0 0;width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+#etb-view .result.sentinel{border-style:dashed}
+#etb-view .result.sentinel .lbl{font-weight:500}
+#etb-view .kr-row{display:flex;gap:8px;align-items:center;margin:6px 0}
+#etb-view #drawerContent .kr-row .kr-name{flex:2;width:auto}
+#etb-view #drawerContent .kr-row .kr-unit{flex:1;width:auto;min-width:54px}
+#etb-view .crit-box{margin:8px 0}
+#etb-view .crit-row{display:flex;gap:6px;align-items:center;margin:5px 0}
+#etb-view #drawerContent .crit-row .kr-sel{flex:2;width:auto;min-width:0}
+#etb-view #drawerContent .crit-row .op-sel{flex:0 0 52px;width:52px;text-align:center;padding:6px 4px}
+#etb-view #drawerContent .crit-row .val-in{flex:1;width:auto;min-width:0}
+#etb-view .dz{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+#etb-view .dz-lab{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--stop-fg);font-weight:600;margin-bottom:8px}
+#etb-view .kr-card{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
+#etb-view .kr-card .kr-row{margin:0}
+#etb-view .kr-pass{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
+#etb-view .kr-pass-lab{font-size:11px;color:var(--muted);white-space:nowrap}
+#etb-view #drawerContent .kr-pass .op-sel{flex:0 0 56px;width:56px;text-align:center;padding:6px 4px}
+#etb-view #drawerContent .kr-card .crit-in{flex:1 1 120px;width:auto;min-width:120px}
+#etb-view .hm-row{display:flex;gap:8px;align-items:center;margin:5px 0}
+#etb-view .hm-lab{flex:1;display:flex;flex-direction:column;line-height:1.2;min-width:0}
+#etb-view .hm-name{font-size:13px}
+#etb-view .hm-tgt{font-size:11px;color:var(--muted);font-family:var(--mono)}
+#etb-view #drawerContent .hm-row .hm-sel{flex:0 0 96px;width:96px}
+#etb-view .crit-manual{margin-top:4px}
+#etb-view .repeat-banner{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;color:var(--muted)}
+#etb-view .repeat-tag{font-size:11px;color:var(--accent);border:1px solid var(--line);border-radius:10px;padding:1px 7px;margin-left:6px}
+#etb-view .link-tag{font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:8px;padding:1px 6px;border-radius:9px;background:var(--surface2);color:var(--muted);text-transform:uppercase}
+#etb-view .link-tag.over{background:var(--amber-bg,#fff3cd);color:var(--amber-fg,#8a6d00)}
+#etb-view .acc-box{margin-top:8px}
+#etb-view .acc-row{display:flex;gap:6px;align-items:center;margin:5px 0}
+#etb-view .acc-flag{font-size:13px;color:var(--muted);flex:0 0 auto}
+#etb-view .acc-flag.done{color:var(--ok-fg)}
+#etb-view #drawerContent .acc-row .acc-in{flex:1;width:auto;min-width:0}
+#etb-view .acc-badges{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+#etb-view .acc-badge{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--muted)}
+#etb-view .acc-badge.done{border-color:var(--ok-fg);background:var(--ok-bg);color:var(--ok-fg)}
+#etb-view .acc-rollup{padding:10px 14px}
+#etb-view .acc-rollup>summary{cursor:pointer;font-weight:600;font-size:13px}
+#etb-view .acc-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+#etb-view .acc-line{display:flex;gap:8px;align-items:baseline;font-size:12px}
+#etb-view .acc-line-lab{font-weight:600}
+#etb-view .acc-line-meta{color:var(--muted)}
+#etb-view .outcome-edit{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+#etb-view .result .p-row{margin:6px 0}
+</style>
+<style id="exp-summary-css">
+#expSummary{margin-bottom:10px}
+#expSummary .exs-wrap{display:flex;gap:14px;flex-wrap:wrap}
+#expSummary .exs-cards{flex:1 1 340px;min-width:280px;display:flex;flex-direction:column;gap:10px}
+#expSummary .exs-graph{flex:1 1 300px;min-width:260px;min-height:190px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);position:relative;overflow:hidden}
+#expSummary .exs-graph .cy-msg,#expSummary .exs-graph-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:12px}
+#expSummary .exs-card{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--panel2)}
+#expSummary .exs-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+#expSummary .exs-code{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700}
+#expSummary .exs-name{flex:1;font-size:13px;font-weight:600;color:var(--ink);min-width:0}
+#expSummary .exs-badge{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:10px;white-space:nowrap}
+#expSummary .b-planned{background:#eeeeeb;color:#5f6166}
+#expSummary .b-complete{background:#e6f4ee;color:#0f6e56}
+#expSummary .b-running,#expSummary .b-in_progress{background:#fbeed8;color:#8a5a0b}
+#expSummary .exs-field{display:flex;gap:8px;font-size:12px;margin:3px 0;color:var(--ink)}
+#expSummary .exs-lab{color:var(--muted);min-width:74px;flex:0 0 auto}
+#expSummary .exs-reads{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+#expSummary .exs-read{display:flex;justify-content:space-between;gap:8px;font-size:11.5px}
+#expSummary .exs-kn{color:var(--ink)}
+#expSummary .exs-kt{color:var(--muted);font-family:var(--mono);white-space:nowrap}
+#expSummary .exs-none,#expSummary .exs-empty{color:var(--muted);font-size:12px;font-style:italic;padding:4px 0}
+#expSummary .exs-actions{margin-top:8px}
+#expSummary button.mini{padding:5px 12px;font-size:12px}
+#expRecBody .er-sec{margin:12px 0}
+#expRecBody .er-lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:6px}
+#expRecBody .erk{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+#expRecBody .erk-main{flex:1;min-width:0}
+#expRecBody .erk-name{font-size:13px;color:var(--ink)}
+#expRecBody .erk-crit{font-size:11px;color:var(--muted)}
+#expRecBody .erk-input{width:110px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+#expRecBody .erk-unit{color:var(--muted);font-size:12px;min-width:40px}
+#expRecBody .erp{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin:5px 0;cursor:pointer}
+#expRecBody .erp-dot{width:16px;text-align:center;font-weight:700}
+#expRecBody .erp-lab{font-weight:500;color:var(--ink)}
+#expRecBody .er-concl{padding:8px 11px;border-radius:7px;font-size:12.5px;margin:10px 0}
+#expRecBody .er-pending{background:var(--panel2);color:var(--muted)}
+#expRecBody .er-match{background:#e6f4ee;color:#0f6e56}
+#expRecBody .er-multi,#expRecBody .er-none{background:#fbeed8;color:#8a5a0b}
+#expRecBody .er-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+#expRecBody #erDate{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+</style>
 </head>
 <body>
 <header>
@@ -273,6 +531,111 @@
   <div id="subSG" class="sub"></div>
   <div id="subRISK" class="sub"></div>
   <div id="subTASK" class="sub"></div>
+  <div id="subEXP" class="sub">
+  <div id="expSummary"></div>
+<div id="etb-view">
+
+  <div class="topbar">
+    <div class="brand">Experiment logic tree<span class="v">v1.0 · foundation</span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-view="outline" aria-selected="false">Outline</button>
+      <button role="tab" data-view="graph" aria-selected="true">Graph</button>
+      <button role="tab" data-view="waterfall" aria-selected="false">Waterfall</button>
+      <button role="tab" data-view="json" aria-selected="false">JSON</button>
+      <button role="tab" data-view="tests" aria-selected="false">Tests</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <span id="ioMsg" class="io-msg muted"></span>
+      <button id="btnAddExp">+ Experiment</button>
+      <button id="btnLoad">Reload</button>
+      <button id="btnSave" class="primary">Save/button>
+      <button id="btnSettings" title="Storage settings" aria-label="Storage settings">Settings</button>
+    </div>
+  </div>
+
+  <div class="statusline" id="statusline"></div>
+
+  <div class="etb-main">
+    <section id="view-outline" hidden></section>
+    <section id="view-graph">
+      <div class="graph-controls">
+        <button id="btnFit">Fit</button>
+        <button id="btnZoomIn" aria-label="Zoom in">+</button>
+        <button id="btnZoomOut" aria-label="Zoom out">&minus;</button>
+        <button id="btnRelayout">Re-layout</button>
+        <span class="hint">Tap a node to open its details.</span>
+      </div>
+      <div id="cy"></div>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:var(--ok-bg);border-color:var(--ok-fg)"></span>complete</span>
+        <span class="lg"><span class="sw" style="background:var(--amber-bg);border-color:var(--amber-fg)"></span>in progress</span>
+        <span class="lg"><span class="sw" style="background:var(--plan-bg);border-color:var(--plan-fg)"></span>planned</span>
+        <span class="lg sep">·</span>
+        <span class="lg"><span class="ln active"></span>active path</span>
+        <span class="lg"><span class="ln pending"></span>pending</span>
+        <span class="lg"><span class="ln np"></span>not pursued</span>
+      </div>
+    </section>
+    <section id="view-waterfall" hidden></section>
+    <section id="view-json" hidden>
+      <div class="panel">
+        <h2>Raw model</h2>
+        <p class="hint">This is the editing surface for now. Edit the JSON, validate, then apply to update the outline. Saving to JSONBin writes the whole document.</p>
+        <textarea id="jsonArea" spellcheck="false"></textarea>
+        <div class="row" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button id="btnFormat">Format</button>
+          <button id="btnValidate">Validate</button>
+          <button id="btnApply" class="primary">Apply changes</button>
+          <button id="btnRevert">Revert</button>
+          <span id="jsonMsg" class="io-msg muted"></span>
+        </div>
+        <div class="issues" id="jsonIssues"></div>
+      </div>
+    </section>
+    <section id="view-tests" hidden>
+      <div class="panel">
+        <h2>Logic tests</h2>
+        <p class="hint">The same suite that guards the data-layer logic, run in the browser. Useful after editing the model or porting changes.</p>
+        <div class="row" style="display:flex;gap:8px;margin-bottom:12px"><button id="btnRunTests" class="primary">Run tests</button><span id="testSummary" class="muted"></span></div>
+        <div id="testResults"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-backdrop" data-close></div>
+    <aside class="drawer-body" role="dialog" aria-label="Experiment detail">
+      <div class="drawer-head"><div id="drawerTitle"></div><button data-close aria-label="Close details">&#10005;</button></div>
+      <div id="drawerContent"></div>
+    </aside>
+  </div>
+
+  <div class="overlay" id="settings">
+    <div class="sheet">
+      <h3>Storage settings</h3>
+      <p class="muted" style="font-size:12.5px;margin:2px 0 0">Storage is handled by the broker (token in ⚙). These fields are unused.</p>
+      <div class="field"><label for="binId">Bin ID</label><input id="binId" placeholder="e.g. 66ab12cd1f5677401f1a2b3c"></div>
+      <div class="field"><label for="masterKey">Master key (X-Master-Key)</label><input id="masterKey" type="password" placeholder="$2a$10$..."></div>
+      <div class="field"><label for="editorName">Your name (for audit log)</label><input id="editorName" placeholder="initials or name"></div>
+      <div class="row">
+        <button id="btnSaveCreds" class="primary">Save</button>
+        <button id="btnClearCreds">Clear</button>
+        <span id="credsMsg" class="io-msg muted"></span>
+        <div class="spacer" style="flex:1"></div>
+        <button id="btnCloseSettings">Close</button>
+      </div>
+      <p class="keynote">Keys are stored only in this browser (local storage), never in the tool file. Clearing removes them from this browser.</p>
+      <div class="dz">
+        <div class="dz-lab">Danger zone</div>
+        <div class="row"><button id="btnClearAll" class="danger">Clear all data</button><span id="clearAllMsg" class="io-msg muted"></span></div>
+        <p class="keynote" style="margin-top:8px">Deletes every experiment in this logic tree and the local copy, leaving a blank tree. Your bin connection is kept — nothing is removed from JSONBin unless you Save afterward.</p>
+      </div>
+    </div>
+  </div>
+
+
+  </div>
   <div id="initPanel" class="sub"></div>
 </main>
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
@@ -280,6 +643,7 @@
 <div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
 <div id="fmeaOverlay" class="overlay" style="z-index:140"><div class="modal" style="max-width:840px"><div class="modal-head"><span class="modal-title" id="fmeaTitle"></span><button class="modal-x" id="fmeaX" title="Close">×</button></div><div id="fmeaBody"></div></div></div>
 
+<div id="expRecOverlay" class="overlay" style="z-index:150"><div class="modal" style="max-width:600px"><div class="modal-head"><span class="modal-title" id="expRecTitle"></span><button class="modal-x" id="expRecX" title="Close">×</button></div><div id="expRecBody"></div></div></div>
 <script>
 /* ============================================================================
    Unified R&D Suite — Shared Core (frozen spec v1.3)
@@ -1317,6 +1681,120 @@ let exec = blankExec();          // this division's doc (read-write)
 let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
+/* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
+function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
+function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }); } }catch(e){} return Promise.resolve(); }
+
+/* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
+function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
+function etbEvalCriterion(crit,keyRead,measured){ if(measured==null||measured===''||isNaN(Number(measured)))return 'pending'; if(crit&&typeof crit.status==='string'){ if(!keyRead||keyRead.critical_value===''||keyRead.critical_value==null)return 'pending'; var pc=etbApplyOp(keyRead.direction||'>=',measured,keyRead.critical_value); return (pc===(crit.status==='hit'))?'pass':'fail'; } if(crit.value===''||crit.value==null)return 'pending'; return etbApplyOp(crit.op||'>',measured,crit.value)?'pass':'fail'; }
+function etbMatchResults(exp,readings){ readings=readings||{}; var krById={}; (exp.key_reads||[]).forEach(function(k){krById[k.id]=k;}); var states={},matched=[],anyPending=false; (exp.possible_results||[]).forEach(function(r){ var crits=Array.isArray(r.criteria)?r.criteria:[]; if(!crits.length){states[r.id]='no-criteria';return;} var f=false,p=false; crits.forEach(function(c){ var meas=readings.hasOwnProperty(c.key_read_id)?readings[c.key_read_id]:null; var st=etbEvalCriterion(c,krById[c.key_read_id],meas); if(st==='fail')f=true; else if(st==='pending')p=true; }); if(f)states[r.id]='fail'; else if(p){states[r.id]='pending';anyPending=true;} else {states[r.id]='pass';matched.push(r.id);} }); return {matched:matched,states:states,complete:!anyPending}; }
+function etbCritText(k){ if(!k)return ''; var u=k.unit?(' '+k.unit):''; var g=({'<=':'\u2264','<':'<','=':'=','>':'>','>=':'\u2265'})[k.direction||'>=']||(k.direction||''); var cv=(k.critical_value===''||k.critical_value==null)?'?':k.critical_value; return g+' '+cv+u; }
+
+function renderExpSummary(){
+  var host=document.getElementById('expSummary'); if(!host) return;
+  if(!selectedObj){ host.innerHTML=''; return; }
+  var cur=[]; try{ cur=(window.ETB&&ETB.currentExperiments)?ETB.currentExperiments():[]; }catch(e){}
+  var ro=(typeof RO!=='undefined'&&RO);
+  var cards = cur.length ? cur.map(function(exp){
+    var reads=(exp.key_reads||[]).map(function(k){ return '<div class="exs-read"><span class="exs-kn">'+esc(k.name||k.id)+'</span><span class="exs-kt">'+esc(etbCritText(k))+'</span></div>'; }).join('') || '<div class="exs-none">No key reads defined.</div>';
+    return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(exp.status||'planned')+'">'+esc(exp.status||'planned')+'</span></div>'+
+      (exp.hypothesis?('<div class="exs-field"><span class="exs-lab">Hypothesis</span><span>'+esc(exp.hypothesis)+'</span></div>'):'')+
+      '<div class="exs-field"><span class="exs-lab">Key reads</span><div class="exs-reads">'+reads+'</div></div>'+
+      (ro?'':'<div class="exs-actions"><button class="act mini" data-rec="'+esc(exp.id)+'">Record outcome</button></div>')+
+    '</div>';
+  }).join('') : '<div class="exs-empty">No current experiment on the active branch \u2014 record the prior step\u2019s outcome, or add experiments below.</div>';
+  host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",cur.length,"")+'<div class="'+listOpen("EXP")+'"><div class="exs-wrap"><div class="exs-cards">'+cards+'</div><div class="exs-graph" id="expSummaryGraph"><div class="exs-graph-empty">experiment graph</div></div></div></div></div>';
+  host.querySelectorAll('[data-panel]').forEach(function(el){ el.onclick=function(){ var k=el.dataset.panel; if(panelCollapsed.has(k))panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); }; });
+  host.querySelectorAll('[data-rec]').forEach(function(b){ b.onclick=function(){ openExpRecorder(b.getAttribute('data-rec')); }; });
+  if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph'); if(gc && window.ETB && ETB.renderFocusedGraph){ ETB.renderFocusedGraph(gc, cur.map(function(e){return e.id;})); } }
+}
+
+function __erReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
+function expRecSync(){ var picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked'); var b=document.getElementById('erRecord'); if(b) b.disabled=!picked; }
+function openExpRecorder(expId){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
+  window.__expRecId=expId;
+  document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
+  var krs=exp.key_reads||[], prs=exp.possible_results||[];
+  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="number" step="any" class="erk-input" data-kr="'+esc(k.id)+'" oninput="expRecEval()" placeholder="measured"><span class="erk-unit">'+esc(k.unit||'')+'</span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
+  var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('') : '<div class="exs-none">No possible results defined.</div>';
+  document.getElementById('expRecBody').innerHTML =
+    '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values</div>'+krHtml+'</div>'+
+    '<div id="erConclusion" class="er-concl er-pending"></div>'+
+    '<div class="er-sec"><div class="er-lab">Result</div>'+prHtml+'</div>'+
+    '<div class="er-sec"><div class="er-lab">Recorded date</div><input type="date" id="erDate"></div>'+
+    '<div class="er-actions"><button class="ghost" id="erCancel">Cancel</button><button class="act" id="erRecord" disabled>Record outcome</button></div>';
+  var d=document.getElementById('erDate'); if(d) d.value=new Date().toISOString().slice(0,10);
+  document.getElementById('erCancel').onclick=closeExpRecorder;
+  document.getElementById('erRecord').onclick=recordExpOutcome;
+  document.getElementById('expRecX').onclick=closeExpRecorder;
+  expRecEval();
+  document.getElementById('expRecOverlay').classList.add('open');
+}
+function expRecEval(){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null; if(!exp) return;
+  var m=etbMatchResults(exp,__erReadings());
+  var dots=document.querySelectorAll('#expRecBody .erp-dot');
+  for(var i=0;i<dots.length;i++){ var st=m.states[dots[i].getAttribute('data-rid')]; var info=({pass:['#0f6e56','\u2713'],fail:['#c9c9c4','\u2717'],pending:['#C9A227','\u00b7'],'no-criteria':['#ccc','']})[st]||['#ccc','']; dots[i].textContent=info[1]; dots[i].style.color=info[0]; }
+  var panel=document.getElementById('erConclusion');
+  var matched=m.matched.map(function(id){ return (exp.possible_results||[]).find(function(r){return r.id===id;}); }).filter(Boolean);
+  if(matched.length===1){ var r=matched[0]; panel.className='er-concl er-match'; panel.innerHTML='<b>\u2713 Matched:</b> '+esc(r.label||r.id)+(r.conclusion?(' \u2014 '+esc(r.conclusion)):''); var radio=document.querySelector('#expRecBody input[name="erp-pick"][value="'+String(r.id).replace(/"/g,'')+'"]'); if(radio) radio.checked=true; }
+  else if(matched.length>1){ panel.className='er-concl er-multi'; panel.innerHTML='Multiple results match \u2014 pick one below.'; }
+  else if(m.complete){ panel.className='er-concl er-none'; panel.innerHTML='No defined result matches \u2014 pick one below to record manually.'; }
+  else { panel.className='er-concl er-pending'; panel.innerHTML='Enter measured values to auto-determine the result\u2026'; }
+  expRecSync();
+}
+function closeExpRecorder(){ var ov=document.getElementById('expRecOverlay'); if(ov) ov.classList.remove('open'); }
+function recordExpOutcome(){
+  var expId=window.__expRecId, picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked');
+  if(!expId||!picked) return;
+  var d=document.getElementById('erDate');
+  var readings=__erReadings();
+  var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:readings };
+  if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
+  var wrote=writeKpiUpdatesFromReads(expId, readings);
+  closeExpRecorder();
+  if(wrote){ try{ setMsg('Outcome recorded \u00b7 '+wrote+' KPI reading'+(wrote===1?'':'s')+' posted to the objective.', 'ok'); }catch(e){} try{ renderAll(); }catch(e){} }
+  else { try{ renderExpSummary(); }catch(e){} }
+}
+
+/* ---- Phase 3: bridge the ETB key-read editor to the objective's KPIs, and write readings on record ---- */
+function hubKpiLabel(k){
+  try{
+    if(k.hostType==='keyResult'){ var krs=exec.keyResults.filter(function(x){return x.objectiveId===selectedObj;}); var i=krs.findIndex(function(x){return x.id===k.hostId;}); var kr=krs[i]||exec.keyResults.find(function(x){return x.id===k.hostId;}); return 'KR'+(i>=0?(i+1):'')+(kr?(' \u00b7 '+String(kr.statement||kr.id).slice(0,28)):''); }
+    if(k.hostType==='stageGate'){ var g=exec.stageGates.find(function(x){return x.id===k.hostId;}); return 'gate \u00b7 '+((g&&(g.name||g.gate_id))||k.hostId); }
+    if(k.hostType==='task'){ var t=exec.tasks.find(function(x){return x.id===k.hostId;}); return 'task \u00b7 '+((t&&t.name)||k.hostId); }
+    if(k.hostType==='objective'){ return 'objective'; }
+    if(k.hostType==='product'||k.hostType==='model'){ return k.hostType+' spec'; }
+  }catch(e){}
+  return k.hostType||'';
+}
+window.hubProjectKpis = function(){
+  try{
+    if(!selectedObj) return [];
+    var AK=allKpisPool(), out=[], seen={};
+    AK.forEach(function(k){
+      if(k.objectiveId!==selectedObj || seen[k.id]) return; seen[k.id]=1;
+      var dir=RD.kpiDirection(k,AK);
+      out.push({ gid:k.id, name:(RD.kpiName(k,AK)||k.id), unit:(RD.kpiUnit(k,AK)||''), direction:((dir==='down'||dir==='decrease')?'<=':'>='), label:hubKpiLabel(k) });
+    });
+    return out;
+  }catch(e){ return []; }
+};
+function writeKpiUpdatesFromReads(expId, readings){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return 0;
+  var byId={}; (exp.key_reads||[]).forEach(function(k){ byId[k.id]=k; });
+  var valid={}; try{ allKpisPool().forEach(function(k){ if(k.objectiveId===selectedObj) valid[k.id]=1; }); }catch(e){}
+  if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
+  var ts=Date.now(), wrote=0;
+  Object.keys(readings||{}).forEach(function(krId){
+    var k=byId[krId]; if(!k||!k.source_kpi_gid||!valid[k.source_kpi_gid]) return;
+    exec.kpiUpdates.push({ kpiId:k.source_kpi_gid, value:Number(readings[krId]), timestamp:ts, note:'exp '+(exp.code||exp.id) });
+    wrote++;
+  });
+  return wrote;
+}
 let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "" = all quarters
 let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
 let pollTimer = null;
@@ -1402,6 +1880,7 @@ async function loadAll(){
     const ex = await apiGet(execId());
     if(ex){ adoptExec(ex); } else { exec = blankExec(); execEtag = "0"; execVersion = 0; markSaved(); }
     fillObjSelect();
+    etbSyncObjective(); etbLoadForDivision();
     setMsg("Loaded "+divName(divisionId)+".", "ok");
     startPoll();
   }catch(e){ setMsg("Load failed ("+(e.status||e)+"). Check token in ⚙.", "err"); }
@@ -1513,7 +1992,7 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=()=>{ selectedObj=s.value; renderAll(); };
+  s.onchange=()=>{ selectedObj=s.value; etbSyncObjective(); renderAll(); };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
@@ -1640,7 +2119,7 @@ function renderAll(){
     ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
-  renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal();
+  renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal(); renderExpSummary();
   if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
@@ -2568,6 +3047,1455 @@ function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 /* boot */
 divisionId = resolveDivision();
 loadAll();
+</script>
+<script>
+;(function(){
+const ETB_ROOT=document.getElementById("etb-view");
+
+"use strict";
+// ============================================================
+// CORE LOGIC (verified under Node; see test view)
+// ============================================================
+const SCHEMA_VERSION = "1.0";
+const SENTINELS = ["other","inconclusive"];
+const isSentinel = (rid)=>SENTINELS.includes(rid);
+
+function enumerateEdges(tree){
+  const edges=[];
+  for(const [eid,exp] of Object.entries(tree.experiments||{})){
+    for(const r of exp.possible_results||[]){
+      for(const to of r.next_experiment_ids||[]) edges.push({from:eid,via:r.id,viaKind:"result",to});
+    }
+    const ao=exp.actual_outcome;
+    if(ao && isSentinel(ao.result_id)){
+      for(const to of ao.next_experiment_ids||[]) edges.push({from:eid,via:ao.result_id,viaKind:"sentinel",to});
+    }
+  }
+  return edges;
+}
+function childrenByParent(edges){const m={};for(const e of edges)(m[e.from]||=[]).push(e);return m;}
+function resolveParents(tree,edges){
+  edges=edges||enumerateEdges(tree);
+  const parent={},counts={};
+  for(const e of edges){counts[e.to]=(counts[e.to]||0)+1;parent[e.to]={experiment_id:e.from,result_id:e.via,viaKind:e.viaKind};}
+  for(const id of Object.keys(tree.experiments||{})) if(!(id in parent)) parent[id]=null;
+  const dupes=Object.keys(counts).filter(id=>counts[id]>1);
+  return {parent,dupes};
+}
+function findRoots(tree,edges){
+  edges=edges||enumerateEdges(tree);
+  const hasParent=new Set(edges.map(e=>e.to));
+  const roots=Object.keys(tree.experiments||{}).filter(id=>!hasParent.has(id));
+  return {root:roots.length===1?roots[0]:null,roots};
+}
+// The node to start traversal from. Prefers the single structural root; under
+// transient multi-root/no-root states falls back to the declared root_experiment_id.
+function effectiveRoot(tree,edges){
+  const {root,roots}=findRoots(tree,edges);
+  if(root) return root;
+  if(tree.root_experiment_id&&(tree.experiments||{})[tree.root_experiment_id]) return tree.root_experiment_id;
+  return roots.length?roots[0]:null;
+}
+function selectedVia(exp){const ao=exp&&exp.actual_outcome;if(!ao)return null;return ao.result_id;}
+function computeReachability(tree){
+  const edges=enumerateEdges(tree);
+  const kids=childrenByParent(edges);
+  const root=effectiveRoot(tree,edges);
+  const state={};
+  if(!root) return state;
+  const queue=[[root,"active"]];
+  while(queue.length){
+    const [eid,st]=queue.shift();
+    if(state[eid]!==undefined) continue;
+    state[eid]=st;
+    const exp=tree.experiments[eid];
+    const out=kids[eid]||[];
+    if(st==="not_pursued"){for(const e of out)queue.push([e.to,"not_pursued"]);}
+    else if(st==="pending"){for(const e of out)queue.push([e.to,"pending"]);}
+    else{
+      const sel=selectedVia(exp);
+      if(sel==null){for(const e of out)queue.push([e.to,"pending"]);}
+      else{for(const e of out)queue.push([e.to,e.via===sel?"active":"not_pursued"]);}
+    }
+  }
+  return state;
+}
+function resolveOutcome(exp){
+  const ao=exp.actual_outcome;
+  if(!ao) return null;
+  if(isSentinel(ao.result_id)){
+    return {kind:"sentinel",resultId:ao.result_id,label:ao.result_id,conclusion:ao.conclusion||null,terminal:ao.terminal||null,nextId:(ao.next_experiment_ids||[])[0]||null};
+  }
+  const r=(exp.possible_results||[]).find(x=>x.id===ao.result_id);
+  return {kind:"result",resultId:ao.result_id,label:r?r.label:ao.result_id,conclusion:r?r.conclusion||null:null,terminal:r?r.terminal||null:null,nextId:r?(r.next_experiment_ids||[])[0]||null:null,missing:!r};
+}
+function traversedPath(tree){
+  const root=effectiveRoot(tree);
+  const path=[];const seen=new Set();let cur=root;
+  while(cur&&!seen.has(cur)){
+    seen.add(cur);
+    const exp=tree.experiments[cur];
+    if(!exp) break;
+    const out=resolveOutcome(exp);
+    if(!out){path.push({experimentId:cur,code:exp.code,name:exp.name,pending:true});break;}
+    path.push({experimentId:cur,code:exp.code,name:exp.name,resultId:out.resultId,resultLabel:out.label,conclusion:out.conclusion,terminal:out.terminal});
+    if(out.terminal) break;
+    cur=out.nextId;
+  }
+  return path;
+}
+function terminalReached(tree){
+  const path=traversedPath(tree);const last=path[path.length-1];
+  if(last&&last.terminal) return {reached:true,type:last.terminal.type,label:last.terminal.label,atExperimentId:last.experimentId};
+  return {reached:false};
+}
+
+// Reachability state of a single branch (edge) out of an experiment.
+function branchState(reach,parentId,parentExp,via){
+  const pr=reach[parentId];
+  if(pr==="not_pursued") return "not_pursued";
+  if(pr==="pending"||pr===undefined) return "pending";
+  const sel=selectedVia(parentExp);
+  if(sel==null) return "pending";
+  return via===sel ? "active" : "not_pursued";
+}
+
+// Map the tree into Cytoscape elements (semantic data only; colors applied in cyStyle).
+// Experiments become nodes; each result's next/terminal becomes an edge (+terminal node).
+function buildGraphElements(tree,reach){
+  const nodes=[],edges=[];
+  const exps=tree.experiments||{};
+  for(const [eid,exp] of Object.entries(exps)){
+    nodes.push({data:{id:eid,kind:"experiment",code:exp.code||eid,name:exp.name||"",status:exp.status||"planned",reach:reach[eid]||"pending",repeat:!!exp.repeat_of,label:(exp.repeat_of?"↻ ":"")+(exp.code||eid)+"\n"+(exp.name||"")}});
+    const ao=exp.actual_outcome;
+    for(const r of exp.possible_results||[]){
+      const bs=branchState(reach,eid,exp,r.id);
+      const observed=ao&&!isSentinel(ao.result_id)&&ao.result_id===r.id;
+      const accN=(r.accomplishments||[]).length;const accR=accN>0&&!!observed;
+      const nextId=(r.next_experiment_ids||[])[0];
+      if(r.terminal){
+        const tid="term_"+eid+"_"+r.id;
+        nodes.push({data:{id:tid,kind:"terminal",termType:r.terminal.type,label:r.terminal.label||r.terminal.type,branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+tid,source:eid,target:tid,label:r.label||"",viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+      } else if(nextId){
+        const lbl=(exps[nextId]&&exps[nextId].repeat_of===eid)?"repeat":(r.label||"");
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nextId,source:eid,target:nextId,label:lbl,viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+      }
+    }
+    if(ao&&isSentinel(ao.result_id)){
+      const bs=branchState(reach,eid,exp,ao.result_id);
+      const nextId=(ao.next_experiment_ids||[])[0];
+      if(ao.terminal){
+        const tid="term_"+eid+"_"+ao.result_id;
+        nodes.push({data:{id:tid,kind:"terminal",termType:ao.terminal.type,label:ao.terminal.label||ao.terminal.type,branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+tid,source:eid,target:tid,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
+      } else if(nextId){
+        edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+nextId,source:eid,target:nextId,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
+      }
+    }
+  }
+  return {nodes,edges};
+}
+
+// Presentation transform (render-only): promote each non-empty edge label to a
+// pill node sitting on its connector, so labels reserve their own space and never
+// overlap other nodes/labels (Cytoscape has no native label-collision avoidance).
+// Each labeled edge becomes  source --(in, no arrow)--> [pill] --(out, arrow)--> target.
+// Labelless edges pass through whole. buildGraphElements stays the semantic source
+// of truth (and the tested contract); this only reshapes things for layout.
+function toRenderElements(nodes,edges){
+  const outNodes=nodes.slice();const outEdges=[];
+  for(const e of edges){
+    const d=e.data;const lab=(d.label==null?"":String(d.label)).trim();
+    if(!lab){outEdges.push({data:Object.assign({},d)});continue;}
+    const lid="lblN_"+d.id;
+    outNodes.push({data:{id:lid,kind:"edgelabel",label:(d.acc?"\u2691 ":"")+lab,branchState:d.branchState,viaKind:d.viaKind,observed:!!d.observed,acc:!!d.acc,accRealized:!!d.accRealized},grabbable:false,selectable:false});
+    outEdges.push({data:{id:d.id+"__in",source:d.source,target:lid,branchState:d.branchState,viaKind:d.viaKind,half:"in",noArrow:1}});
+    outEdges.push({data:{id:d.id+"__out",source:lid,target:d.target,branchState:d.branchState,viaKind:d.viaKind,observed:!!d.observed,half:"out"}});
+  }
+  return {nodes:outNodes,edges:outEdges};
+}
+
+// ---- Mutation helpers (pure: operate on the passed tree) -----------------
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function pushAudit(exp,field,from,to,action,reason,user){(exp.audit_log||(exp.audit_log=[])).push({timestamp:new Date().toISOString(),user:user||"",field,action:action||"amend",from:from==null?null:String(from),to:to==null?null:String(to),reason:reason||null});}
+function newExperimentId(tree){let max=0;for(const k of Object.keys(tree.experiments||{})){const m=/^exp_(\d+)$/.exec(k);if(m)max=Math.max(max,parseInt(m[1],10));}let n=max+1,id="exp_"+String(n).padStart(3,"0");while(tree.experiments&&tree.experiments[id]){n++;id="exp_"+String(n).padStart(3,"0");}return id;}
+function suggestCode(tree){const codes=new Set(Object.values(tree.experiments||{}).map(e=>e.code));let k=Object.keys(tree.experiments||{}).length+1,code="EXP-"+k;while(codes.has(code)){k++;code="EXP-"+k;}return code;}
+function newResultId(tree,expId){const stem=String(expId||"").replace(/^exp_/,"")||"x";const all=new Set();for(const e of Object.values(tree.experiments||{}))for(const r of e.possible_results||[])all.add(r.id);const letters="abcdefghijklmnopqrstuvwxyz";for(let i=0;i<letters.length;i++){const id="res_"+stem+letters[i];if(!all.has(id))return id;}let i=0,id;do{id="res_"+stem+"_"+(i++);}while(all.has(id));return id;}
+function addExperiment(tree,fields){fields=fields||{};const id=newExperimentId(tree);(tree.experiments||(tree.experiments={}))[id]={id,code:fields.code||suggestCode(tree),name:fields.name||"New experiment",hypothesis:"",toggle:"",hypothesis_verdict:null,test:"",status:"planned",owner:"",planned_date:null,completed_date:null,notes:"",key_reads:[],possible_results:[],actual_outcome:null,audit_log:[]};if(Object.keys(tree.experiments).length===1)tree.root_experiment_id=id;return id;}
+function deleteExperiment(tree,expId){if(!tree.experiments)return;delete tree.experiments[expId];for(const e of Object.values(tree.experiments)){if(e.repeat_of===expId)e.repeat_of=null;for(const r of e.possible_results||[])if((r.next_experiment_ids||[]).includes(expId))r.next_experiment_ids=r.next_experiment_ids.filter(x=>x!==expId);const ao=e.actual_outcome;if(ao&&isSentinel(ao.result_id)&&(ao.next_experiment_ids||[]).includes(expId))ao.next_experiment_ids=ao.next_experiment_ids.filter(x=>x!==expId);}}
+// ---- Repeat runs: a linked copy of an experiment ----------------------------
+// hypothesis/toggle/test/key_reads/possible-result-definitions track the source
+// until overridden; status/owner/dates/outcome/notes and each result's next-step
+// stay independent. Any edit to a linked field breaks that field's link.
+function makeRepeat(tree,sourceId){
+  const s=tree.experiments[sourceId];if(!s)return null;
+  const id=newExperimentId(tree);
+  const k=Object.values(tree.experiments).filter(e=>e.repeat_of===sourceId).length+1;
+  const clone=(x)=>JSON.parse(JSON.stringify(x==null?null:x));
+  const results=(s.possible_results||[]).map((sr,i)=>({id:id+"_r"+(i+1),source_result_id:sr.id,label:sr.label||"",criteria:clone(sr.criteria||[]),conclusion:sr.conclusion||"",accomplishments:clone(sr.accomplishments||[]),next_experiment_ids:[],terminal:null}));
+  tree.experiments[id]={id,code:(s.code||"EXP")+"·R"+k,name:(s.name||"Experiment")+" (repeat)",hypothesis:s.hypothesis||"",toggle:s.toggle||"",hypothesis_verdict:null,test:s.test||"",status:"planned",owner:"",planned_date:null,completed_date:null,notes:"",key_reads:clone(s.key_reads||[]),possible_results:results,actual_outcome:null,audit_log:[],repeat_of:sourceId,overrides:{}};
+  return id;
+}
+function relinkField(tree,expId,field){const exp=tree.experiments[expId];if(!exp||!exp.overrides)return;if(field==="all")exp.overrides={};else delete exp.overrides[field];}
+// Propagate source -> repeat for every non-overridden linked field. Self-heals a
+// dangling repeat_of. Single pass in insertion order (repeats are created in order).
+function syncRepeats(tree){
+  if(!tree||!tree.experiments)return tree;
+  const clone=(x)=>JSON.parse(JSON.stringify(x==null?null:x));
+  for(const r of Object.values(tree.experiments)){
+    if(!r.repeat_of)continue;
+    const s=tree.experiments[r.repeat_of];
+    if(!s){r.repeat_of=null;continue;}
+    const ov=r.overrides||(r.overrides={});
+    if(!ov.hypothesis)r.hypothesis=s.hypothesis||"";
+    if(!ov.toggle)r.toggle=s.toggle||"";
+    if(!ov.test)r.test=s.test||"";
+    if(!ov.key_reads)r.key_reads=clone(s.key_reads||[]);
+    if(!ov.possible_results){
+      const src=s.possible_results||[];const old=r.possible_results||[];
+      const bySource=new Map();for(const rr of old)if(rr.source_result_id)bySource.set(rr.source_result_id,rr);
+      const used=new Set(src.map(sr=>bySource.get(sr.id)).filter(Boolean).map(rr=>rr.id));
+      let n=0;const freshId=()=>{let c;do{c=r.id+"_r"+(++n);}while(used.has(c));used.add(c);return c;};
+      r.possible_results=src.map(sr=>{const ex=bySource.get(sr.id);const base={source_result_id:sr.id,label:sr.label||"",criteria:clone(sr.criteria||[]),conclusion:sr.conclusion||"",accomplishments:clone(sr.accomplishments||[])};return ex?Object.assign({id:ex.id,next_experiment_ids:ex.next_experiment_ids||[],terminal:ex.terminal||null},base):Object.assign({id:freshId(),next_experiment_ids:[],terminal:null},base);});
+      const ids=new Set(r.possible_results.map(x=>x.id));
+      if(r.actual_outcome&&!isSentinel(r.actual_outcome.result_id)&&!ids.has(r.actual_outcome.result_id))r.actual_outcome=null;
+    }
+  }
+  return tree;
+}
+function addResult(tree,expId){const exp=tree.experiments[expId];if(!exp)return null;const id=newResultId(tree,expId);(exp.possible_results||(exp.possible_results=[])).push({id,label:"New result",criteria:[],conclusion:"",next_experiment_ids:[],terminal:null});markOverride(exp,"possible_results");return id;}
+function removeResult(tree,expId,resultId){const exp=tree.experiments[expId];if(!exp)return;exp.possible_results=(exp.possible_results||[]).filter(r=>r.id!==resultId);if(exp.actual_outcome&&exp.actual_outcome.result_id===resultId)exp.actual_outcome=null;markOverride(exp,"possible_results");}
+function setResultLink(tree,expId,resultId,link){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r)return;if(link.kind==="terminal"){const tt=(tree.terminal_types||{})[link.type];r.terminal={type:link.type,label:(tt&&tt.label)||link.type,note:null};r.next_experiment_ids=[];}else if(link.kind==="next"){r.next_experiment_ids=link.expId?[link.expId]:[];r.terminal=null;}else{r.next_experiment_ids=[];r.terminal=null;}}
+function setExperimentField(tree,expId,field,value,opts){const exp=tree.experiments[expId];if(!exp)return;const before=exp[field];exp[field]=value;if(field==="hypothesis"||field==="toggle"||field==="test")markOverride(exp,field);if(exp.status==="complete"&&field==="hypothesis_verdict"&&before!==value)pushAudit(exp,field,before,value,"amend",(opts&&opts.reason)||null,(opts&&opts.user)||"");}
+function setResultField(tree,expId,resultId,field,value,opts){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r)return;const before=r[field];r[field]=value;if(field==="label"||field==="conclusion")markOverride(exp,"possible_results");if(exp.status==="complete"&&field==="conclusion"&&before!==value)pushAudit(exp,"possible_results."+resultId+".conclusion",before,value,"amend",(opts&&opts.reason)||null,(opts&&opts.user)||"");}
+function recordOutcome(tree,expId,payload,opts){const exp=tree.experiments[expId];if(!exp)return;const rid=payload.result_id;const sent=isSentinel(rid);const next=sent?(payload.next_experiment_ids||(payload.next!=null?[payload.next]:[])):[];const ao={result_id:rid,recorded_date:payload.recorded_date||todayISO(),recorded_by:payload.recorded_by||"",note:payload.note||null,conclusion:sent?(payload.conclusion||null):null,next_experiment_ids:next,terminal:sent?(payload.terminal||null):null};if(exp.status==="complete")pushAudit(exp,"actual_outcome",exp.actual_outcome?JSON.stringify(exp.actual_outcome):null,JSON.stringify(ao),"amend",(opts&&opts.reason)||null,(opts&&opts.user)||"");exp.actual_outcome=ao;}
+function recordOutcomePatch(tree,expId,patch){const exp=tree.experiments[expId];if(!exp||!exp.actual_outcome)return;Object.assign(exp.actual_outcome,patch);}
+function clearOutcome(tree,expId){const exp=tree.experiments[expId];if(!exp)return;if(exp.status==="complete"&&exp.actual_outcome)pushAudit(exp,"actual_outcome",JSON.stringify(exp.actual_outcome),null,"delete",null,"");exp.actual_outcome=null;}
+
+// ---- Accomplishment flags on results (stage-gates) ------------------------
+// A flag is "would clear" on a possible result, and "cleared" once that result
+// is the recorded outcome. Definitional, so repeats inherit them unless the
+// possible_results link is overridden. gate_id is reserved for a future
+// read-only link to a Gantt/Tracker stage-gate.
+function isResultObserved(exp,resultId){const ao=exp&&exp.actual_outcome;return !!(ao&&!isSentinel(ao.result_id)&&ao.result_id===resultId);}
+function newAccId(result){const set=new Set((result.accomplishments||[]).map(a=>a.id));let i=1,id;do{id="acc_"+(i++);}while(set.has(id));return id;}
+function addAccomplishment(tree,expId,resultId){const exp=tree.experiments[expId];if(!exp)return null;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r)return null;if(!Array.isArray(r.accomplishments))r.accomplishments=[];const id=newAccId(r);r.accomplishments.push({id,type:"stage_gate",label:"",gate_id:null,note:null});markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".accomplishments",null,"added","amend",null,"");return id;}
+function removeAccomplishment(tree,expId,resultId,accId){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r||!Array.isArray(r.accomplishments))return;r.accomplishments=r.accomplishments.filter(a=>a.id!==accId);markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".accomplishments",null,"removed","amend",null,"");}
+function setAccomplishmentField(tree,expId,resultId,accId,field,value){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r||!Array.isArray(r.accomplishments))return;const a=r.accomplishments.find(x=>x.id===accId);if(!a)return;a[field]=value;markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".accomplishments",null,"edited","amend",null,"");}
+// Flat roll-up of every flagged result, with realized state, for reporting.
+function collectAccomplishments(tree){const out=[];for(const exp of Object.values((tree&&tree.experiments)||{})){for(const r of exp.possible_results||[]){for(const a of (r.accomplishments||[])){out.push({exp_id:exp.id,exp_code:exp.code||exp.id,result_id:r.id,result_label:r.label||"",label:a.label||"",type:a.type||"stage_gate",realized:isResultObserved(exp,r.id)});}}}return out;}
+
+// ---- Schema normalization + structured criteria / key reads --------------
+// Migrate older trees: ensure toggle + key_reads exist, and criteria is a list.
+// A legacy free-text criteria string becomes one row with the text parked in
+// `value` and no key read, so nothing is lost and it shows as needing attention.
+function normalizeTree(tree){
+  if(!tree||typeof tree!=="object")return tree;
+  for(const exp of Object.values(tree.experiments||{})){
+    if(typeof exp.toggle!=="string")exp.toggle="";
+    if(!Array.isArray(exp.key_reads))exp.key_reads=[];
+    for(const k of exp.key_reads){if(typeof k.unit!=="string")k.unit="";if(k.critical_value==null)k.critical_value="";if(!k.direction)k.direction=">=";}
+    if(exp.repeat_of===undefined)exp.repeat_of=null;
+    if(!exp.overrides||typeof exp.overrides!=="object")exp.overrides={};
+    for(const r of exp.possible_results||[]){
+      if(!Array.isArray(r.accomplishments))r.accomplishments=[];
+      if(Array.isArray(r.criteria))continue;
+      const s=(r.criteria==null?"":String(r.criteria)).trim();
+      r.criteria=s?[{key_read_id:null,op:"=",value:s}]:[];
+    }
+  }
+  return tree;
+}
+// Mark a linked field as locally overridden on a repeat (no-op for non-repeats).
+function markOverride(exp,field){if(exp&&exp.repeat_of){(exp.overrides||(exp.overrides={}))[field]=true;}}
+// Comparison operators: stored as ASCII, displayed as math glyphs. Single source
+// of truth for the criterion dropdown and the outline text.
+const OPS=[{value:"<",label:"<"},{value:"<=",label:"≤"},{value:"=",label:"="},{value:">=",label:"≥"},{value:">",label:">"}];
+function opLabel(op){const o=OPS.find(x=>x.value===op);return o?o.label:(op||"");}
+// Direction options for a key read's pass condition (Corey's order ≤ < = > ≥).
+const DIRS=[{value:"<=",label:"≤"},{value:"<",label:"<"},{value:"=",label:"="},{value:">",label:">"},{value:">=",label:"≥"}];
+function critText(k){if(!k)return"";const u=k.unit?(" "+k.unit):"";return opLabel(k.direction)+" "+((k.critical_value===""||k.critical_value==null)?"?":k.critical_value)+u;}
+function criteriaText(res,keyReads){
+  const arr=Array.isArray(res.criteria)?res.criteria:[];
+  const krs=keyReads||[];
+  return arr.map(c=>{
+    const k=krs.find(x=>x.id===c.key_read_id);
+    const name=k?(k.name||k.id):(c.key_read_id?c.key_read_id:"(read?)");
+    const unit=k&&k.unit?(" "+k.unit):"";
+    if(typeof c.status==="string"){
+      return (name+(c.status==="hit"?" ✓":" ✗")+(k?(" ("+critText(k)+")"):"")).trim();
+    }
+    return (name+" "+opLabel(c.op)+" "+(c.value==null?"":c.value)+unit).trim();
+  }).filter(Boolean).join("  ·  ");
+}
+function newKeyReadId(tree,expId){const stem=String(expId||"").replace(/^exp_/,"")||"x";const exp=(tree.experiments||{})[expId];const all=new Set(((exp&&exp.key_reads)||[]).map(k=>k.id));let i=1,id;do{id="kr_"+stem+"_"+(i++);}while(all.has(id));return id;}
+function addKeyRead(tree,expId){const exp=tree.experiments[expId];if(!exp)return null;const id=newKeyReadId(tree,expId);(exp.key_reads||(exp.key_reads=[])).push({id,name:"",unit:"",critical_value:"",direction:">="});markOverride(exp,"key_reads");return id;}
+function removeKeyRead(tree,expId,krId){const exp=tree.experiments[expId];if(!exp)return;exp.key_reads=(exp.key_reads||[]).filter(k=>k.id!==krId);for(const r of exp.possible_results||[])for(const c of (Array.isArray(r.criteria)?r.criteria:[]))if(c.key_read_id===krId)c.key_read_id=null;markOverride(exp,"key_reads");}
+function setKeyReadField(tree,expId,krId,field,value){const exp=tree.experiments[expId];if(!exp)return;const k=(exp.key_reads||[]).find(x=>x.id===krId);if(k)k[field]=value;markOverride(exp,"key_reads");}
+function addCriterion(tree,expId,resultId){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r)return;if(!Array.isArray(r.criteria))r.criteria=[];r.criteria.push({key_read_id:null,op:">",value:""});markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".criteria",null,"added","amend",null,"");}
+function removeCriterion(tree,expId,resultId,index){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r||!Array.isArray(r.criteria))return;r.criteria.splice(index,1);markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".criteria",null,"removed","amend",null,"");}
+function setCriterionField(tree,expId,resultId,index,field,value){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r||!Array.isArray(r.criteria)||!r.criteria[index])return;const before=r.criteria[index][field];r.criteria[index][field]=value;markOverride(exp,"possible_results");if(exp.status==="complete"&&before!==value)pushAudit(exp,"possible_results."+resultId+".criteria",before,value,"amend",null,"");}
+// Hit/miss criterion over a key read (the comparison comes from the key read itself).
+function setKeyReadStatus(tree,expId,resultId,krId,status){const exp=tree.experiments[expId];if(!exp)return;const r=(exp.possible_results||[]).find(x=>x.id===resultId);if(!r)return;if(!Array.isArray(r.criteria))r.criteria=[];const idx=r.criteria.findIndex(c=>c.key_read_id===krId&&typeof c.status==="string");if(!status){if(idx>=0)r.criteria.splice(idx,1);}else if(idx>=0){r.criteria[idx].status=status;}else{r.criteria.push({key_read_id:krId,status});}markOverride(exp,"possible_results");if(exp.status==="complete")pushAudit(exp,"possible_results."+resultId+".criteria",null,"set:"+(status||"clear"),"amend",null,"");}
+function validateTree(tree){
+  const issues=[];
+  const err=(rule,message,ref)=>issues.push({level:"error",rule,message,ref});
+  const warn=(rule,message,ref)=>issues.push({level:"warning",rule,message,ref});
+  const experiments=tree.experiments||{};
+  const ids=new Set(Object.keys(experiments));
+  const edges=enumerateEdges(tree);
+  const termTypes=new Set(Object.keys(tree.terminal_types||{}));
+  const {roots}=findRoots(tree,edges);
+  if(roots.length===0&&ids.size>0) err(1,"No root: every experiment is referenced as a next step (cycle or no entry point).");
+  else if(roots.length>1) err(1,`Multiple roots: ${roots.join(", ")}. A tree has exactly one entry point.`);
+  const {dupes}=resolveParents(tree,edges);
+  for(const d of dupes) err(2,`${d} is reached from more than one result — not a tree.`,d);
+  for(const e of edges) if(!ids.has(e.to)) err(5,`Edge from ${e.from} (${e.via}) points to missing experiment ${e.to}.`,e.from);
+  const kids=childrenByParent(edges);const color={};
+  const dfs=(n)=>{color[n]=1;for(const e of kids[n]||[]){if(!ids.has(e.to))continue;if(color[e.to]===1){err(3,`Cycle detected through ${e.to}.`,e.to);continue;}if(!color[e.to])dfs(e.to);}color[n]=2;};
+  for(const id of ids) if(!color[id]) dfs(id);
+  for(const [eid,exp] of Object.entries(experiments)){
+    for(const r of exp.possible_results||[]){
+      const nexts=r.next_experiment_ids||[];const hasNext=nexts.length>0;const hasTerm=!!r.terminal;
+      if(nexts.length>1) err(4,`${exp.code} result "${r.label}" has ${nexts.length} next experiments (max 1).`,eid);
+      if(hasNext&&hasTerm) err(6,`${exp.code} result "${r.label}" has both a next experiment and a terminal.`,eid);
+      if(!hasNext&&!hasTerm) warn(6,`${exp.code} result "${r.label}" is dangling — no next step or terminal.`,eid);
+      if(hasTerm&&!termTypes.has(r.terminal.type)) err(7,`${exp.code} result "${r.label}" uses unknown terminal type "${r.terminal.type}".`,eid);
+      for(const c of (Array.isArray(r.criteria)?r.criteria:[])){
+        const kr=(exp.key_reads||[]).find(k=>k.id===c.key_read_id);
+        if(!c.key_read_id||!kr) warn(11,`${exp.code} result "${r.label}" has a criterion with no key read selected.`,eid);
+        else if(typeof c.status==="string"&&(kr.critical_value===""||kr.critical_value==null)) warn(12,`${exp.code} result "${r.label}" marks "${kr.name||kr.id}" ${c.status}, but that key read has no critical value to test against.`,eid);
+      }
+      for(const a of (Array.isArray(r.accomplishments)?r.accomplishments:[])){
+        if(!a.label||!String(a.label).trim()) warn(13,`${exp.code} result "${r.label}" has a stage-gate flag with no label.`,eid);
+      }
+    }
+    const ao=exp.actual_outcome;
+    if(ao){
+      if(isSentinel(ao.result_id)){
+        const sNext=(ao.next_experiment_ids||[]).length>0;
+        if((ao.next_experiment_ids||[]).length>1) err(4,`${exp.code} ${ao.result_id} outcome has ${ao.next_experiment_ids.length} next experiments (max 1).`,eid);
+        if(ao.terminal&&sNext) err(6,`${exp.code} ${ao.result_id} outcome has both a next experiment and a terminal.`,eid);
+        if(ao.terminal&&!termTypes.has(ao.terminal.type)) err(7,`${exp.code} ${ao.result_id} outcome uses unknown terminal type "${ao.terminal.type}".`,eid);
+        if(!sNext&&!ao.terminal&&!(ao.conclusion||"").trim()) warn(8,`${exp.code} recorded "${ao.result_id}" with no conclusion, next step, or terminal.`,eid);
+      } else {
+        const match=(exp.possible_results||[]).some(r=>r.id===ao.result_id);
+        if(!match) err(8,`${exp.code} actual outcome "${ao.result_id}" matches no defined result.`,eid);
+      }
+      if(exp.status==="planned") warn(10,`${exp.code} has a recorded outcome but status is "planned".`,eid);
+    } else if(exp.status==="complete"){
+      warn(10,`${exp.code} is complete but has no recorded outcome.`,eid);
+    }
+    for(const a of exp.audit_log||[]){
+      const isConclusion=typeof a.field==="string"&&a.field.includes("conclusion");
+      if(a.action==="amend"&&isConclusion&&!(a.reason||"").trim()) warn(9,`${exp.code} conclusion amendment on ${a.timestamp||"?"} has no reason.`,eid);
+    }
+  }
+  return issues;
+}
+
+// ============================================================
+// SAMPLE DATA
+// ============================================================
+function sampleTree(){return {
+  schema_version:SCHEMA_VERSION,tree_id:"tree_mea_opt_2026",title:"MEA optimization plan",root_experiment_id:"exp_001",
+  terminal_types:{target_achieved:{label:"Target achieved",kind:"success"},conduct_fmea:{label:"Conduct FMEA",kind:"pause"},halt:{label:"Halt",kind:"stop"}},
+  metadata:{created_date:"2026-03-01",modified_date:"2026-05-02"},
+  experiments:{
+    exp_001:{id:"exp_001",code:"EXP-1",name:"Baseline MEA characterization",hypothesis:"Current MEA achieves >= 0.6 V at 1 A/cm2 under H2/Air, standard conditions.",toggle:"Baseline conditions (control — nothing varied)",hypothesis_verdict:"confirmed",test:"Polarization sweep OCV to 1.5 A/cm2, three replicate cells.",status:"complete",owner:"AK",planned_date:"2026-03-10",completed_date:"2026-03-14",notes:"Cell 2 excluded for membrane crossover.",key_reads:[{id:"kr_001_v",name:"Cell voltage @ 1 A/cm²",unit:"V",critical_value:"0.6",direction:">="},{id:"kr_001_hfr",name:"HFR",unit:"Ω·cm²",critical_value:"0.1",direction:"<="}],possible_results:[
+      {id:"res_001a",label:"Meets baseline",criteria:[{key_read_id:"kr_001_v",status:"hit"}],accomplishments:[{id:"acc_1",type:"stage_gate",label:"SG-1: Baseline established",gate_id:null,note:null}],conclusion:"Baseline confirmed, proceed to optimization.",next_experiment_ids:["exp_002a"],terminal:null},
+      {id:"res_001b",label:"Below baseline",criteria:[{key_read_id:"kr_001_v",status:"miss"},{key_read_id:"kr_001_v",op:">",value:"0.4"}],conclusion:"Investigate degradation pathways.",next_experiment_ids:["exp_002b"],terminal:null},
+      {id:"res_001c",label:"Severely degraded",criteria:[{key_read_id:"kr_001_v",op:"<",value:"0.4"}],conclusion:"Halt and reassess approach.",next_experiment_ids:[],terminal:{type:"halt",label:"Halt",note:null}}
+    ],actual_outcome:{result_id:"res_001a",recorded_date:"2026-03-14",recorded_by:"AK",note:null,conclusion:null,next_experiment_ids:[],terminal:null},audit_log:[]},
+    exp_002a:{id:"exp_002a",code:"EXP-2A",name:"Catalyst loading optimization",hypothesis:"Reducing Pt loading 20% holds performance within 10 mV.",toggle:"Cathode Pt loading (mg/cm²)",hypothesis_verdict:null,test:"Polarization + EIS across a loading sweep.",status:"in_progress",owner:"RM",planned_date:"2026-04-01",completed_date:null,notes:"",key_reads:[{id:"kr_002a_dv",name:"ΔV vs baseline @ 1 A/cm²",unit:"mV",critical_value:"10",direction:"<="},{id:"kr_002a_v",name:"Cell voltage @ 1 A/cm²",unit:"V",critical_value:"0.65",direction:">="},{id:"kr_002a_hfr",name:"HFR",unit:"Ω·cm²",critical_value:"0.1",direction:"<="}],possible_results:[
+      {id:"res_002a_a",label:"Performance held",criteria:[{key_read_id:"kr_002a_dv",status:"hit"}],accomplishments:[{id:"acc_1",type:"stage_gate",label:"SG-2: Catalyst loading validated",gate_id:null,note:null}],conclusion:"Loading reduction viable; verify durability.",next_experiment_ids:["exp_003"],terminal:null},
+      {id:"res_002a_final",label:"Meets all targets",criteria:[{key_read_id:"kr_002a_v",status:"hit"},{key_read_id:"kr_002a_hfr",status:"hit"}],conclusion:"Optimization complete.",next_experiment_ids:[],terminal:{type:"target_achieved",label:"Target achieved",note:null}}
+    ],actual_outcome:null,audit_log:[]},
+    exp_002b:{id:"exp_002b",code:"EXP-2B",name:"Degradation diagnosis",hypothesis:"Loss is dominated by membrane thinning.",toggle:"Failure mode (observed, not varied)",hypothesis_verdict:null,test:"Post-mortem SEM + fluoride emission rate.",status:"planned",owner:"RM",planned_date:null,completed_date:null,notes:"",key_reads:[{id:"kr_002b_fer",name:"Fluoride emission rate",unit:"µg/cm²/h",critical_value:"5",direction:"<="}],possible_results:[
+      {id:"res_002b_a",label:"Membrane-dominated",criteria:[{key_read_id:"kr_002b_fer",status:"miss"}],conclusion:"Pursue reinforced membrane.",next_experiment_ids:[],terminal:{type:"conduct_fmea",label:"Conduct FMEA",note:null}}
+    ],actual_outcome:null,audit_log:[]},
+    exp_003:{id:"exp_003",code:"EXP-3",name:"Durability baseline",hypothesis:"Optimized MEA survives 500 h with < 10% loss.",toggle:"AST cycling duration (h)",hypothesis_verdict:null,test:"AST cycling, 500 h.",status:"planned",owner:"AK",planned_date:null,completed_date:null,notes:"",key_reads:[{id:"kr_003_loss",name:"Performance loss @ 500 h",unit:"%",critical_value:"10",direction:"<"}],possible_results:[
+      {id:"res_003_a",label:"Survives",criteria:[{key_read_id:"kr_003_loss",status:"hit"}],conclusion:"Durability target met.",next_experiment_ids:[],terminal:{type:"target_achieved",label:"Target achieved",note:null}}
+    ],actual_outcome:null,audit_log:[]}
+  }
+};}
+
+// A blank tree to start fresh from: no experiments, the three default terminal
+// types seeded so the registry isn't empty.
+function emptyTree(){return {
+  schema_version:SCHEMA_VERSION,
+  tree_id:"tree_"+Math.random().toString(36).slice(2,8),
+  title:"Untitled logic tree",
+  root_experiment_id:null,
+  terminal_types:{target_achieved:{label:"Target achieved",kind:"success"},conduct_fmea:{label:"Conduct FMEA",kind:"pause"},halt:{label:"Halt",kind:"stop"}},
+  metadata:{created_date:todayISO(),modified_date:todayISO()},
+  experiments:{}
+};}
+
+// ============================================================
+// STORAGE (JSONBin + localStorage; creds never in file)
+// ============================================================
+const LS={creds:"etb_jsonbin_creds_v1",cache:"etb_tree_cache_v1",editor:"etb_editor_v1"};
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return false;}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+/* --- storage seam: broker-backed (execution-app host); per-division ETB doc, trees keyed by objective --- */
+var __etbEtag="0";
+function etbDocId(){ return "ETB-"+((typeof divisionId!=="undefined"&&divisionId)?divisionId:"unassigned"); }
+function getCreds(){ try{ return (typeof tok==="function"&&tok())?{binId:"broker",masterKey:"broker"}:null; }catch(e){ return null; } }
+function setCreds(c){ return true; }
+function clearCreds(){}
+async function loadFromBin(){
+  var r=await apiGet(etbDocId());
+  if(r){ __etbEtag=r.etag||"0"; return r.doc||{}; }
+  __etbEtag="0"; return {};
+}
+async function saveToBin(doc){
+  var r=await apiPut(etbDocId(), doc, __etbEtag);
+  if(r){ if(r.etag) __etbEtag=r.etag; else if(r.version!=null) __etbEtag=String(r.version); }
+  return true;
+}
+
+// ============================================================
+// APP STATE + RENDER
+// ============================================================
+const state={tree:null,source:"sample",loadedAt:null,savedAt:null,editor:"",amending:null,panelExpId:null,doc:null,activeProjectId:null};
+const $=(s)=>ETB_ROOT.querySelector(s);
+const el=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;};
+const esc=(s)=>String(s==null?"":s);
+
+function init(){
+  const cached=lsGet(LS.cache);
+  if(cached){try{state.tree=JSON.parse(cached);state.source="cache";}catch(e){state.tree=emptyTree();}}
+  else state.tree=emptyTree();
+  normalizeTree(state.tree);
+  state.editor=lsGet(LS.editor)||"";
+  wire();
+  renderAll();
+}
+
+function renderAll(){syncRepeats(state.tree);renderStatus();renderOutline();$("#jsonArea").value=JSON.stringify(state.tree,null,2);if(typeof cy!=="undefined"&&cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(state.panelExpId&&state.tree.experiments[state.panelExpId])renderPanel(state.panelExpId);else if(state.panelExpId)closePanel();}
+
+function renderStatus(){
+  const t=state.tree;const counts={active:0,pending:0,not_pursued:0};
+  const reach=computeReachability(t);
+  for(const v of Object.values(reach)) if(counts[v]!=null) counts[v]++;
+  const issues=validateTree(t);
+  const errs=issues.filter(i=>i.level==="error").length, warns=issues.filter(i=>i.level==="warning").length;
+  const term=terminalReached(t);
+  const n=Object.keys(t.experiments||{}).length;
+  const s=$("#statusline");s.innerHTML="";
+  const add=(html)=>{const d=el("span");d.innerHTML=html;s.appendChild(d);};
+  add(`<b>${esc(t.title||"Untitled")}</b>`);
+  add(`${n} experiment${n===1?"":"s"}`);
+  add(`<span class="dot" style="background:var(--accent)"></span>${counts.active} active · ${counts.pending} pending · ${counts.not_pursued} not pursued`);
+  add(term.reached?`Outcome so far: <b>${esc(term.label)}</b>`:`Plan in progress`);
+  const ic=errs?`<span style="color:var(--stop-fg)">${errs} error${errs===1?"":"s"}</span>`:`<span style="color:var(--ok-fg)">no errors</span>`;
+  add(`${ic}${warns?` · ${warns} warning${warns===1?"":"s"}`:""}`);
+  const srcLabel={sample:"sample data",cache:"local cache",bin:"JSONBin",fresh:"new tree"}[state.source]||state.source;
+  let when="";
+  if(state.savedAt) when=` · saved ${state.savedAt}`;
+  else if(state.loadedAt) when=` · loaded ${state.loadedAt}`;
+  add(`<span class="muted">source: ${srcLabel}${when}</span>`);
+}
+
+function statusPill(status){const labels={complete:"Complete",in_progress:"In progress",planned:"Planned"};const p=el("span","pill "+status,labels[status]||status);return p;}
+function reachTag(r){const labels={active:"active",pending:"pending",not_pursued:"not pursued"};return el("span","tag reach-"+r,labels[r]||r);}
+function terminalPill(term,types){const kind=(types&&types[term.type]&&types[term.type].kind)||"stop";const p=el("span","pill "+kind);p.textContent=term.label||term.type;return p;}
+
+function renderOutline(){
+  const t=state.tree;const root=findRoots(t).root;const reach=computeReachability(t);const types=t.terminal_types||{};
+  const container=$("#view-outline");container.innerHTML="";
+
+  if(!Object.keys(t.experiments||{}).length){
+    const p=el("div","panel");p.appendChild(Object.assign(el("h2"),{textContent:"Empty tree"}));
+    p.appendChild(el("p","hint","No experiments yet. Use \u201C+ Experiment\u201D in the toolbar to start your logic tree."));
+    container.appendChild(p);return;
+  }
+
+  // Lab story (traversed path)
+  const story=traversedPath(t);
+  const storyPanel=el("div","panel");storyPanel.appendChild(Object.assign(el("h2"),{textContent:"Decision history"}));
+  if(!root){
+    storyPanel.appendChild(el("p","hint","No single root — fix the structure (see Tests/JSON) to trace the path."));
+  } else if(story.length){
+    const wrap=el("div","story");
+    story.forEach((s,i)=>{
+      if(i>0) wrap.appendChild(Object.assign(el("span","arrow"),{textContent:"→"}));
+      const step=el("div","step");
+      step.appendChild(Object.assign(el("span","c"),{textContent:s.code||s.experimentId}));
+      if(s.pending) step.appendChild(Object.assign(el("span","r"),{textContent:"awaiting result"}));
+      else step.appendChild(Object.assign(el("span","r"),{textContent:s.resultLabel}));
+      wrap.appendChild(step);
+      if(s.terminal){
+        wrap.appendChild(Object.assign(el("span","arrow"),{textContent:"→"}));
+        const tp=terminalPill(s.terminal,types);wrap.appendChild(tp);
+      }
+    });
+    storyPanel.appendChild(wrap);
+  } else storyPanel.appendChild(el("p","hint","No experiments yet."));
+  container.appendChild(storyPanel);
+
+  // Accomplishments roll-up (stage-gates)
+  const accAll=collectAccomplishments(t);
+  if(accAll.length){
+    const det=el("details","panel acc-rollup");
+    const cleared=accAll.filter(a=>a.realized).length;
+    const sum=el("summary","");sum.innerHTML=`Stage-gate accomplishments <span class="muted">(${cleared} cleared \u00B7 ${accAll.length-cleared} would clear)</span>`;det.appendChild(sum);
+    const list=el("div","acc-list");
+    accAll.forEach(a=>{
+      const row=el("div","acc-line"+(a.realized?" done":""));
+      const fl=el("span","acc-flag"+(a.realized?" done":""));fl.textContent=a.realized?"\u2691\u2713":"\u2691";row.appendChild(fl);
+      row.appendChild(Object.assign(el("span","acc-line-lab"),{textContent:a.label||"(unnamed gate)"}));
+      row.appendChild(Object.assign(el("span","acc-line-meta"),{textContent:(a.realized?"cleared":"would clear")+" \u00B7 "+a.exp_code+" / "+a.result_label}));
+      list.appendChild(row);
+    });
+    det.appendChild(list);container.appendChild(det);
+  }
+
+  // Tree
+  const treePanel=el("div","panel");treePanel.appendChild(Object.assign(el("h2"),{textContent:"Plan"}));
+  const visited=new Set();
+  if(root) treePanel.appendChild(renderNode(root,reach,types,visited));
+  else for(const id of Object.keys(t.experiments||{})) treePanel.appendChild(renderNode(id,reach,types,visited));
+  container.appendChild(treePanel);
+
+  // Orphans
+  const orphans=Object.keys(t.experiments||{}).filter(id=>!visited.has(id));
+  if(orphans.length){
+    const op=el("div","panel unattached");op.appendChild(Object.assign(el("h2"),{textContent:"Unattached experiments"}));
+    op.appendChild(el("p","hint","Not reachable from the root — usually a broken or missing next-step reference."));
+    orphans.forEach(id=>op.appendChild(renderNode(id,reach,types,visited)));
+    container.appendChild(op);
+  }
+}
+
+function renderNode(eid,reach,types,visited){
+  const t=state.tree;const exp=t.experiments[eid];
+  const node=el("div","node");
+  if(!exp){node.appendChild(el("div","meta","Missing experiment: "+eid));return node;}
+  if(visited.has(eid)){node.appendChild(el("div","meta","(already shown above: "+eid+")"));return node;}
+  visited.add(eid);
+  const r=reach[eid]; if(r) node.classList.add("reach-"+r);
+
+  const head=el("div","node-head");
+  head.style.cursor="pointer";head.title="Open details";head.addEventListener("click",()=>openPanel(eid));
+  head.appendChild(el("span","code",exp.code||eid));
+  head.appendChild(el("span","name",exp.name||""));
+  head.appendChild(statusPill(exp.status||"planned"));
+  if(r) head.appendChild(reachTag(r));
+  if(exp.repeat_of){const src=t.experiments[exp.repeat_of];head.appendChild(Object.assign(el("span","repeat-tag"),{textContent:"\u21BB repeat of "+((src&&src.code)||exp.repeat_of)}));}
+  if(exp.hypothesis_verdict) head.appendChild(Object.assign(el("span","verdict"),{textContent:"hypothesis "+exp.hypothesis_verdict}));
+  node.appendChild(head);
+
+  if(exp.hypothesis) node.appendChild(Object.assign(el("div","meta"),{innerHTML:`<span class="lab">Hypothesis</span> ${esc(exp.hypothesis)}`}));
+  if(exp.test) node.appendChild(Object.assign(el("div","meta"),{innerHTML:`<span class="lab">Test</span> ${esc(exp.test)}`}));
+
+  const ao=exp.actual_outcome;
+  const out=resolveOutcome(exp);
+  if(ao){
+    const line=el("div","outcome-line");
+    if(out.kind==="sentinel"){
+      line.innerHTML=`<b>Outcome:</b> ${esc(ao.result_id)}${ao.note?` — ${esc(ao.note)}`:""}${out.conclusion?`<br><span class="lab">Conclusion</span> ${esc(out.conclusion)}`:""}`;
+    } else {
+      line.innerHTML=`<b>Outcome:</b> ${esc(out.label)}${ao.recorded_date?` · recorded ${esc(ao.recorded_date)}`:""}${ao.recorded_by?` by ${esc(ao.recorded_by)}`:""}`;
+    }
+    node.appendChild(line);
+  }
+
+  const results=exp.possible_results||[];
+  if(results.length){
+    const rwrap=el("div","results");
+    results.forEach(res=>{
+      const observed=ao&&!isSentinel(ao.result_id)&&ao.result_id===res.id;
+      const card=el("div","result"+(observed?" observed":""));
+      const top=el("div","result-top");
+      top.appendChild(el("span","lbl",res.label||res.id));
+      if(observed) top.appendChild(Object.assign(el("span","observed-badge"),{textContent:"observed"}));
+      card.appendChild(top);
+      const ct=criteriaText(res,exp.key_reads);if(ct) card.appendChild(el("div","crit",ct));
+      const accs=res.accomplishments||[];
+      if(accs.length){const ab=el("div","acc-badges");accs.forEach(a=>{const b=el("span","acc-badge"+(observed?" done":""));b.textContent=(observed?"\u2691 cleared: ":"\u2691 would clear: ")+(a.label||"(unnamed gate)");ab.appendChild(b);});card.appendChild(ab);}
+      if(res.conclusion){const c=el("div","concl");c.innerHTML=`<b>Conclusion · </b>${esc(res.conclusion)}`;card.appendChild(c);}
+      const nextId=(res.next_experiment_ids||[])[0];
+      if(res.terminal){const nr=el("div","nextrow");nr.appendChild(Object.assign(el("span","arr"),{textContent:"→"}));nr.appendChild(terminalPill(res.terminal,types));card.appendChild(nr);}
+      else if(nextId){const target=t.experiments[nextId];const nr=el("div","nextrow");nr.innerHTML=`<span class="arr">→</span> Next: <span class="mono">${esc(target?target.code:nextId)}</span>`;card.appendChild(nr);}
+      else {const nr=el("div","nextrow");nr.innerHTML=`<span class="arr">→</span> <span class="muted">no next step defined</span>`;card.appendChild(nr);}
+      rwrap.appendChild(card);
+      // nest child experiment under this result
+      if(nextId && t.experiments[nextId]){const child=el("div","child");child.appendChild(renderNode(nextId,reach,types,visited));rwrap.appendChild(child);}
+    });
+    node.appendChild(rwrap);
+  }
+
+  // sentinel outcome's own next path nested
+  if(out&&out.kind==="sentinel"&&out.nextId&&t.experiments[out.nextId]){
+    const child=el("div","child");child.appendChild(renderNode(out.nextId,reach,types,visited));node.appendChild(child);
+  }
+
+  if(exp.notes) node.appendChild(Object.assign(el("div","meta"),{innerHTML:`<span class="lab">Notes</span> ${esc(exp.notes)}`}));
+  return node;
+}
+
+// ---- JSON view ----
+function renderIssues(target,issues,emptyMsg){
+  target.innerHTML="";
+  if(!issues.length){target.appendChild(el("div","issue","✓ "+(emptyMsg||"No issues.")));return;}
+  issues.forEach(i=>{const d=el("div","issue "+i.level);d.innerHTML=`<span class="rule">rule ${i.rule}</span>${esc(i.message)}`;target.appendChild(d);});
+}
+function applyJson(){
+  const target=$("#jsonIssues");
+  let parsed;
+  try{parsed=JSON.parse($("#jsonArea").value);}
+  catch(e){target.innerHTML="";const d=el("div","issue error");d.textContent="JSON parse error: "+e.message;target.appendChild(d);return false;}
+  if(!parsed||typeof parsed!=="object"||!parsed.experiments){target.innerHTML="";const d=el("div","issue error");d.textContent="Document must be an object with an 'experiments' map.";target.appendChild(d);return false;}
+  state.tree=parsed;
+  normalizeTree(state.tree);
+  cacheTree();
+  renderStatus();renderOutline();refreshGraphAndPanel();
+  renderIssues(target,validateTree(state.tree),"Applied. No validation issues.");
+  return true;
+}
+function cacheTree(){lsSet(LS.cache,JSON.stringify(state.tree));}
+
+// ============================================================
+// GRAPH (Cytoscape + dagre)
+// ============================================================
+let cy=null;
+function resolvePalette(){
+  const cs=getComputedStyle(ETB_ROOT);const g=(n)=>cs.getPropertyValue(n).trim();
+  return {ink:g("--ink"),muted:g("--muted"),faint:g("--faint"),line:g("--line"),lineStrong:g("--line-strong"),accent:g("--accent"),surface:g("--surface"),surface2:g("--surface-2"),okFg:g("--ok-fg"),okBg:g("--ok-bg"),amberFg:g("--amber-fg"),amberBg:g("--amber-bg"),planFg:g("--plan-fg"),planBg:g("--plan-bg"),stopFg:g("--stop-fg"),stopBg:g("--stop-bg")};
+}
+function _wrapLines(text,maxPx,charPx){
+  const words=String(text||"").split(/\s+/).filter(Boolean);
+  if(!words.length) return [""];
+  const lines=[];let cur="";
+  for(const w of words){const trial=cur?cur+" "+w:w;if(!cur||trial.length*charPx<=maxPx){cur=trial;}else{lines.push(cur);cur=w;}}
+  if(cur) lines.push(cur);
+  return lines;
+}
+function nodeDims(label,fontPx,maxTextPx){
+  const charPx=fontPx*0.62,lineH=Math.round(fontPx*1.34),padX=12,padY=8;
+  let lines=[];for(const part of String(label||"").split("\n")) lines=lines.concat(_wrapLines(part,maxTextPx,charPx));
+  if(!lines.length) lines=[""];
+  const widest=Math.max(fontPx,...lines.map(l=>l.length*charPx));
+  return {w:Math.max(46,Math.min(maxTextPx,Math.ceil(widest))+padX*2),h:Math.max(30,lines.length*lineH+padY*2)};
+}
+function cyStyle(p){
+  const FF="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+  return [
+    {selector:"node",style:{"label":"data(label)","font-size":11,"font-family":FF,"text-wrap":"wrap","text-max-width":130,"text-valign":"center","text-halign":"center"}},
+    {selector:'node[kind="experiment"]',style:{"shape":"round-rectangle","width":(e)=>nodeDims(e.data("label"),11,130).w,"height":(e)=>nodeDims(e.data("label"),11,130).h,"border-width":1,"border-color":p.lineStrong,"color":p.ink}},
+    {selector:'node[status="complete"]',style:{"background-color":p.okBg,"color":p.okFg}},
+    {selector:'node[status="in_progress"]',style:{"background-color":p.amberBg,"color":p.amberFg}},
+    {selector:'node[status="planned"]',style:{"background-color":p.planBg,"color":p.planFg}},
+    {selector:'node[reach="active"]',style:{"border-color":p.accent,"border-width":2,"opacity":1}},
+    {selector:'node[reach="pending"]',style:{"opacity":0.95}},
+    {selector:'node[reach="not_pursued"]',style:{"border-style":"dashed","opacity":0.5}},
+    {selector:'node[kind="terminal"]',style:{"shape":"round-rectangle","width":(e)=>nodeDims(e.data("label"),10,120).w,"height":(e)=>nodeDims(e.data("label"),10,120).h,"font-size":10,"border-width":1}},
+    {selector:'node[kind="terminal"][termType="target_achieved"]',style:{"background-color":p.okBg,"color":p.okFg,"border-color":p.okFg}},
+    {selector:'node[kind="terminal"][termType="conduct_fmea"]',style:{"background-color":p.amberBg,"color":p.amberFg,"border-color":p.amberFg}},
+    {selector:'node[kind="terminal"][termType="halt"]',style:{"background-color":p.stopBg,"color":p.stopFg,"border-color":p.stopFg}},
+    {selector:'node[kind="terminal"][branchState="not_pursued"]',style:{"opacity":0.5}},
+    {selector:'node[kind="edgelabel"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
+    {selector:'node[kind="edgelabel"][branchState="active"]',style:{"border-color":p.accent,"color":p.ink,"font-weight":600}},
+    {selector:'node[kind="edgelabel"][branchState="pending"]',style:{"color":p.muted}},
+    {selector:'node[kind="edgelabel"][branchState="not_pursued"]',style:{"color":p.faint,"border-style":"dashed","opacity":0.55}},
+    {selector:"edge",style:{"curve-style":"taxi","taxi-direction":"downward","taxi-turn":18,"taxi-turn-min-distance":8,"width":1.5,"line-color":p.lineStrong,"target-arrow-color":p.lineStrong,"target-arrow-shape":"triangle","arrow-scale":0.85}},
+    {selector:'edge[branchState="active"]',style:{"width":2.5,"line-color":p.accent,"target-arrow-color":p.accent}},
+    {selector:'edge[branchState="pending"]',style:{"width":1.5,"line-color":p.muted,"target-arrow-color":p.muted}},
+    {selector:'edge[branchState="not_pursued"]',style:{"width":1,"line-style":"dashed","line-color":p.faint,"target-arrow-color":p.faint}},
+    {selector:'edge[noArrow]',style:{"target-arrow-shape":"none"}},
+    {selector:"node:selected",style:{"border-color":p.accent,"border-width":3}}
+  ];
+}
+const DAGRE_LAYOUT={name:"dagre",rankDir:"TB",nodeSep:34,rankSep:42,edgeSep:12,padding:18,animate:false};
+function renderGraph(){
+  const host=$("#cy");
+  if(typeof cytoscape==="undefined"||!window.cytoscape){host.innerHTML='<div class="cy-msg">Graph library couldn\'t load. Check network or CDN access, or use the Outline tab.</div>';return;}
+  const reach=computeReachability(state.tree);
+  const {nodes,edges}=buildGraphElements(state.tree,reach);
+  const R=toRenderElements(nodes,edges);
+  const p=resolvePalette();
+  if(cy){try{cy.destroy();}catch(e){}cy=null;}
+  cy=cytoscape({container:host,elements:[...R.nodes,...R.edges],style:cyStyle(p),layout:DAGRE_LAYOUT,minZoom:0.2,maxZoom:2.5});
+  cy.on("tap",'node[kind="experiment"]',(evt)=>openPanel(evt.target.id()));
+  cy.ready(()=>cy.fit(undefined,28));
+  if(state.panelExpId){const n=cy.getElementById(state.panelExpId);if(n&&n.length)n.select();}
+}
+function graphFit(){if(cy)cy.fit(undefined,28);}
+function graphZoom(f){if(cy){const z=Math.min(2.5,Math.max(0.2,cy.zoom()*f));cy.zoom({level:z,renderedPosition:{x:cy.width()/2,y:cy.height()/2}});}}
+function graphRelayout(){if(cy){cy.layout(DAGRE_LAYOUT).run();cy.fit(undefined,28);}}
+function refreshGraphAndPanel(){if(cy&&!$("#view-graph").hidden)renderGraph();if(state.panelExpId)renderPanel(state.panelExpId);}
+
+// ============================================================
+// SIDE PANEL
+// ============================================================
+function openPanel(expId){
+  if(!state.tree.experiments[expId]) return;
+  state.panelExpId=expId;renderPanel(expId);
+  const d=$("#drawer");d.classList.add("open");d.setAttribute("aria-hidden","false");
+  if(cy){const n=cy.getElementById(expId);if(n&&n.length)n.select();}
+}
+function closePanel(){
+  state.panelExpId=null;
+  const d=$("#drawer");d.classList.remove("open");d.setAttribute("aria-hidden","true");
+  if(cy)cy.$(":selected").unselect();
+}
+function softRefresh(){syncRepeats(state.tree);cacheTree();renderStatus();renderOutline();if(cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();}
+function fRow(label,inputEl){const w=el("div","p-row");w.appendChild(el("div","p-lab",label));w.appendChild(inputEl);return w;}
+function fText(value,onchange,opts){const i=el("input");i.value=value==null?"":value;if(opts&&opts.type)i.type=opts.type;if(opts&&opts.placeholder)i.placeholder=opts.placeholder;i.addEventListener("change",()=>onchange(i.value));return i;}
+function fArea(value,onchange){const t=el("textarea");t.value=value==null?"":value;t.addEventListener("change",()=>onchange(t.value));return t;}
+function fSelect(value,options,onchange){const s=el("select");options.forEach(o=>{const op=el("option");op.value=o.value;op.textContent=o.label;if(o.value===value)op.selected=true;s.appendChild(op);});s.addEventListener("change",()=>onchange(s.value));return s;}
+function fMini(label,input){const w=el("div","mini-field");w.appendChild(el("span","mini-lab",label));w.appendChild(input);return w;}
+// In-DOM confirmation; native confirm()/alert() are blocked in sandboxed iframes (e.g. Confluence).
+function armConfirm(btn,label,onYes){
+  const wrap=el("span","confirm-inline");
+  wrap.appendChild(el("span","confirm-q",label||"Are you sure?"));
+  const yes=el("button","danger sm","Yes");const no=el("button","sm","Cancel");
+  yes.addEventListener("click",()=>{wrap.replaceWith(btn);onYes();});no.addEventListener("click",()=>wrap.replaceWith(btn));
+  wrap.appendChild(yes);wrap.appendChild(no);btn.replaceWith(wrap);
+}
+// Lightweight inline status (replaces alert()/confirm(), which are blocked in sandboxed iframes).
+function setMsg(sel,text,kind){const e=$(sel);if(!e)return;e.textContent=text||"";e.className="io-msg "+(kind||"muted");}
+
+function renderPanel(expId,opts){
+  opts=opts||{};
+  const t=state.tree;const exp=t.experiments[expId];if(!exp){closePanel();return;}
+  const reach=computeReachability(t);const types=t.terminal_types||{};const rr=reach[expId];const complete=(exp.status==="complete");
+  $("#drawerTitle").innerHTML=`<span class="mono" style="font-weight:600">${esc(exp.code||expId)}</span> <span class="muted" style="font-weight:400">· editing</span>`;
+  const c=$("#drawerContent");c.innerHTML="";
+  if(opts.flash){c.appendChild(el("div","flash",opts.flash));}
+  const meta=el("div","p-meta");meta.appendChild(statusPill(exp.status||"planned"));if(rr)meta.appendChild(reachTag(rr));c.appendChild(meta);
+  const ov=exp.overrides||{};
+  if(exp.repeat_of){
+    const src=t.experiments[exp.repeat_of];
+    const ban=el("div","repeat-banner");
+    ban.appendChild(Object.assign(el("span"),{innerHTML:"\u21BB <b>Repeat</b> of "+esc((src&&src.code)||exp.repeat_of)+" — linked fields track the source unless overridden."}));
+    if(src){const open=el("button","mini2","open source \u2197");open.addEventListener("click",()=>openPanel(exp.repeat_of));ban.appendChild(open);}
+    const relink=el("button","mini2","Re-link all");relink.addEventListener("click",()=>{relinkField(t,expId,"all");syncRepeats(t);softRefresh();renderPanel(expId);});ban.appendChild(relink);
+    c.appendChild(ban);
+  }
+
+  c.appendChild(fRow("Code",fText(exp.code,v=>{setExperimentField(t,expId,"code",v);softRefresh();})));
+  c.appendChild(fRow("Name",fText(exp.name,v=>{setExperimentField(t,expId,"name",v);softRefresh();})));
+  c.appendChild(fRow("Status",fSelect(exp.status||"planned",[{value:"planned",label:"Planned"},{value:"in_progress",label:"In progress"},{value:"complete",label:"Complete"}],v=>{setExperimentField(t,expId,"status",v);softRefresh();renderPanel(expId);})));
+  const hypRow=fRow("Hypothesis",fArea(exp.hypothesis,v=>{setExperimentField(t,expId,"hypothesis",v);softRefresh();}));if(exp.repeat_of)hypRow.querySelector(".p-lab").appendChild(linkMarker(t,expId,"hypothesis",ov.hypothesis));c.appendChild(hypRow);
+  const tog=fText(exp.toggle,v=>{setExperimentField(t,expId,"toggle",v);softRefresh();},{placeholder:"The variable being altered in this experiment"});
+  const togRow=fRow("Toggle",tog);if(exp.repeat_of)togRow.querySelector(".p-lab").appendChild(linkMarker(t,expId,"toggle",ov.toggle));togRow.appendChild(Object.assign(el("div","field-hint"),{textContent:"What you're varying — a thinking aid, not a control."}));c.appendChild(togRow);
+  const expRow=fRow("Experiment",fArea(exp.test,v=>{setExperimentField(t,expId,"test",v);softRefresh();}));if(exp.repeat_of)expRow.querySelector(".p-lab").appendChild(linkMarker(t,expId,"test",ov.test));c.appendChild(expRow);
+  c.appendChild(renderKeyReads(t,expId,exp));
+
+  const rh=el("div","p-lab","Possible results");rh.style.marginTop="14px";if(exp.repeat_of)rh.appendChild(linkMarker(t,expId,"possible_results",ov.possible_results));c.appendChild(rh);
+  const results=exp.possible_results||[];
+  const rwrap=el("div","results");results.forEach(res=>rwrap.appendChild(renderResultEditor(t,expId,exp,res,types,complete)));c.appendChild(rwrap);
+  const addR=el("button","",""); addR.textContent="+ Add result"; addR.style.marginTop="4px"; addR.addEventListener("click",()=>{addResult(t,expId);softRefresh();renderPanel(expId);}); c.appendChild(addR);
+  c.appendChild(renderSentinelRows(t,expId,exp,types));
+
+  c.appendChild(fRow("Notes",fArea(exp.notes,v=>{setExperimentField(t,expId,"notes",v);softRefresh();})));
+
+  if((exp.audit_log||[]).length){const h=el("div","p-lab","Audit log");h.style.marginTop="12px";c.appendChild(h);(exp.audit_log||[]).forEach(a=>{const d=el("div","audit");d.innerHTML=`<span class="mono">${esc((a.timestamp||"").slice(0,19).replace("T"," "))}</span> ${esc(a.user||"—")} — ${esc(a.action||"")} <span class="mono">${esc(a.field||"")}</span>${a.reason?`<br><span class="muted">reason: ${esc(a.reason)}</span>`:""}`;c.appendChild(d);});}
+
+  const danger=el("div","p-danger");const del=el("button","danger","Delete experiment");del.addEventListener("click",()=>armConfirm(del,`Delete ${exp.code||expId}? Inbound links are cleared.`,()=>{deleteExperiment(t,expId);cacheTree();closePanel();renderAll();}));danger.appendChild(del);c.appendChild(danger);
+
+  const det=el("details","scoped");det.open=!!opts.scopedOpen;const sum=el("summary","");sum.textContent="Advanced: edit raw JSON";det.appendChild(sum);
+  const ta=el("textarea");ta.className="scoped-ta";ta.spellcheck=false;ta.value=JSON.stringify(exp,null,2);det.appendChild(ta);
+  const bar=el("div","scoped-bar");const apply=el("button","primary","Apply");const msg=el("span","scoped-msg");bar.appendChild(apply);bar.appendChild(msg);det.appendChild(bar);
+  apply.addEventListener("click",()=>{let p;try{p=JSON.parse(ta.value);}catch(e){msg.textContent="Parse error: "+e.message;msg.style.color="var(--stop-fg)";return;}p.id=expId;t.experiments[expId]=p;normalizeTree(t);softRefresh();renderPanel(expId,{scopedOpen:true,flash:"Applied."});});
+  c.appendChild(det);
+}
+
+function renderAccomplishments(t,expId,exp,res){
+  const box=el("div","acc-box");box.appendChild(el("div","p-lab","Accomplishments"));
+  const realized=isResultObserved(exp,res.id);
+  const accs=res.accomplishments||[];
+  if(!accs.length){box.appendChild(Object.assign(el("div","muted small"),{textContent:"Flag a stage-gate this result would clear."}));}
+  accs.forEach(a=>{
+    const row=el("div","acc-row");
+    const flag=el("span","acc-flag"+(realized?" done":""));flag.textContent=realized?"\u2691\u2713":"\u2691";flag.title=realized?"Cleared — this result was recorded":"Would clear this gate";
+    const lab=fText(a.label,v=>{setAccomplishmentField(t,expId,res.id,a.id,"label",v);softRefresh();},{placeholder:"Stage-gate (e.g. SG-3: Cell design freeze)"});lab.classList.add("acc-in");
+    const rm=el("button","mini","\u2715");rm.title="Remove flag";rm.addEventListener("click",()=>{removeAccomplishment(t,expId,res.id,a.id);softRefresh();renderPanel(expId);});
+    row.appendChild(flag);row.appendChild(lab);row.appendChild(rm);box.appendChild(row);
+  });
+  const add=el("button","mini2","+ stage-gate");add.title="Flag a stage-gate this result would satisfy";add.addEventListener("click",()=>{addAccomplishment(t,expId,res.id);softRefresh();renderPanel(expId);});add.style.marginTop="4px";box.appendChild(add);
+  return box;
+}
+
+function renderResultEditor(t,expId,exp,res,types,complete){
+  const ao=exp.actual_outcome;const observed=ao&&!isSentinel(ao.result_id)&&ao.result_id===res.id;
+  const card=el("div","result"+(observed?" observed":""));
+  const top=el("div","result-top");
+  const radio=el("input");radio.type="radio";radio.name="observed_"+expId;radio.checked=!!observed;radio.className="obs-radio";radio.title="Mark as the observed result";
+  radio.addEventListener("change",()=>{if(radio.checked){recordOutcome(t,expId,{result_id:res.id,recorded_by:state.editor},{user:state.editor});softRefresh();renderPanel(expId);}});
+  top.appendChild(radio);
+  const lblIn=fText(res.label,v=>{setResultField(t,expId,res.id,"label",v,{user:state.editor});softRefresh();});lblIn.style.fontWeight="500";lblIn.style.flex="1";top.appendChild(lblIn);
+  if(observed)top.appendChild(Object.assign(el("span","observed-badge"),{textContent:"observed"}));
+  const rm=el("button","mini","\u2715");rm.title="Remove result";rm.addEventListener("click",()=>armConfirm(rm,"Remove result?",()=>{removeResult(t,expId,res.id);softRefresh();renderPanel(expId);}));top.appendChild(rm);
+  card.appendChild(top);
+  card.appendChild(renderCriteria(t,expId,exp,res));
+  if(complete){
+    if(state.amending===res.id){
+      const ta=fArea(res.conclusion,()=>{});card.appendChild(fRow("Conclusion (amending)",ta));
+      const reason=el("input");reason.placeholder="Reason for amendment (required)";card.appendChild(fRow("Reason",reason));
+      const b=el("div","scoped-bar");const save=el("button","primary","Save amendment");const cancel=el("button","","Cancel");const m=el("span","scoped-msg");
+      save.addEventListener("click",()=>{if(!reason.value.trim()){m.textContent="A reason is required.";m.style.color="var(--stop-fg)";return;}setResultField(t,expId,res.id,"conclusion",ta.value,{user:state.editor,reason:reason.value.trim()});state.amending=null;softRefresh();renderPanel(expId,{flash:"Conclusion amended."});});
+      cancel.addEventListener("click",()=>{state.amending=null;renderPanel(expId);});
+      b.appendChild(save);b.appendChild(cancel);b.appendChild(m);card.appendChild(b);
+    } else {
+      const ro=el("div","p-row");ro.innerHTML=`<div class="p-lab">Conclusion</div><div class="p-val">${esc(res.conclusion||"—")}</div>`;
+      const amend=el("button","mini2","Amend");amend.addEventListener("click",()=>{state.amending=res.id;renderPanel(expId);});ro.appendChild(amend);card.appendChild(ro);
+    }
+  } else {
+    card.appendChild(fRow("Conclusion",fArea(res.conclusion,v=>{setResultField(t,expId,res.id,"conclusion",v,{user:state.editor});softRefresh();})));
+  }
+  card.appendChild(renderAccomplishments(t,expId,exp,res));
+  const linkVal=res.terminal?("term:"+res.terminal.type):((res.next_experiment_ids||[])[0]?("exp:"+res.next_experiment_ids[0]):"none");
+  const lopts=[{value:"none",label:"(no next step)"}];
+  Object.keys(types).forEach(tk=>lopts.push({value:"term:"+tk,label:"Terminal — "+(types[tk].label||tk)}));
+  Object.keys(t.experiments).filter(id=>id!==expId).forEach(id=>lopts.push({value:"exp:"+id,label:"Go to: "+(t.experiments[id].code||id)}));
+  lopts.push({value:"new",label:"+ Create new experiment as next"});
+  lopts.push({value:"repeat",label:"↻ Run repeat (linked copy)"});
+  const lr=el("div","p-row");lr.appendChild(el("div","p-lab","Leads to"));const lw=el("div","link-wrap");
+  lw.appendChild(fSelect(linkVal,lopts,v=>{
+    if(v==="repeat"){const nid=makeRepeat(t,expId);setResultLink(t,expId,res.id,{kind:"next",expId:nid});softRefresh();renderPanel(expId,{flash:"Created repeat "+t.experiments[nid].code+" and linked."});return;}
+    if(v==="new"){const nid=addExperiment(t,{});setResultLink(t,expId,res.id,{kind:"next",expId:nid});softRefresh();renderPanel(expId,{flash:"Created "+t.experiments[nid].code+" and linked."});return;}
+    if(v.indexOf("term:")===0)setResultLink(t,expId,res.id,{kind:"terminal",type:v.slice(5)});
+    else if(v.indexOf("exp:")===0)setResultLink(t,expId,res.id,{kind:"next",expId:v.slice(4)});
+    else setResultLink(t,expId,res.id,{kind:"none"});
+    softRefresh();renderPanel(expId);
+  }));
+  const nextId=(res.next_experiment_ids||[])[0];
+  if(nextId&&t.experiments[nextId]){const go=el("button","mini2","open \u2197");go.addEventListener("click",()=>openPanel(nextId));lw.appendChild(go);}
+  lr.appendChild(lw);card.appendChild(lr);
+  return card;
+}
+
+function renderCriteria(t,expId,exp,res){
+  const box=el("div","crit-box");box.appendChild(el("div","p-lab","Criteria"));
+  const krs=exp.key_reads||[];const arr=Array.isArray(res.criteria)?res.criteria:[];
+  if(!krs.length){box.appendChild(Object.assign(el("div","muted small"),{textContent:"Add key reads above, then mark each hit or missed here."}));}
+  krs.forEach(k=>{
+    const pf=arr.find(c=>c.key_read_id===k.id&&typeof c.status==="string");
+    const row=el("div","hm-row");
+    const lab=el("div","hm-lab");lab.appendChild(Object.assign(el("span","hm-name"),{textContent:k.name||k.id}));
+    lab.appendChild(Object.assign(el("span","hm-tgt"),{textContent:"("+critText(k)+")"}));
+    row.appendChild(lab);
+    const sel=fSelect(pf?pf.status:"",[{value:"",label:"—"},{value:"hit",label:"hit ✓"},{value:"miss",label:"miss ✗"}],v=>{setKeyReadStatus(t,expId,res.id,k.id,v);softRefresh();renderPanel(expId);});sel.classList.add("hm-sel");
+    row.appendChild(sel);box.appendChild(row);
+  });
+  const manual=el("div","crit-manual");
+  arr.forEach((c,idx)=>{
+    if(typeof c.status==="string")return; // pass/fail handled above
+    const row=el("div","crit-row");
+    const krOpts=[{value:"",label:"— key read —"}].concat(krs.map(k=>({value:k.id,label:k.name||k.id})));
+    const krSel=fSelect(c.key_read_id||"",krOpts,v=>{setCriterionField(t,expId,res.id,idx,"key_read_id",v||null);softRefresh();renderPanel(expId);});krSel.classList.add("kr-sel");
+    const opSel=fSelect(c.op||">",OPS,v=>{setCriterionField(t,expId,res.id,idx,"op",v);softRefresh();});opSel.classList.add("op-sel");
+    const k=krs.find(x=>x.id===c.key_read_id);const unit=k&&k.unit?k.unit:"";
+    const val=fText(c.value,v=>{setCriterionField(t,expId,res.id,idx,"value",v);softRefresh();},{placeholder:unit?("value ("+unit+")"):"value"});val.classList.add("val-in");
+    const rm=el("button","mini","\u2715");rm.title="Remove criterion";rm.addEventListener("click",()=>{removeCriterion(t,expId,res.id,idx);softRefresh();renderPanel(expId);});
+    row.appendChild(krSel);row.appendChild(opSel);row.appendChild(val);row.appendChild(rm);manual.appendChild(row);
+  });
+  box.appendChild(manual);
+  const add=el("button","mini2","+ criterion");add.title="Add a manual comparison";add.addEventListener("click",()=>{addCriterion(t,expId,res.id);softRefresh();renderPanel(expId);});add.style.marginTop="4px";box.appendChild(add);
+  return box;
+}
+
+function __etbProjectKpis(){ try{ return (window.hubProjectKpis && window.hubProjectKpis()) || []; }catch(e){ return []; } }
+function __etbKpiById(){ var idx={}; __etbProjectKpis().forEach(function(k){ if(k&&k.gid) idx[k.gid]=k; }); return idx; }
+function refreshLinkedKeyRead(k, kpiById){
+  if(!k || !k.source_kpi_gid) return {custom:true};
+  var kpi = kpiById && kpiById[k.source_kpi_gid];
+  if(kpi){ if(kpi.name!=null && k.name!==kpi.name) k.name=kpi.name; if(kpi.unit!=null && k.unit!==kpi.unit) k.unit=kpi.unit; return {linked:true, label:kpi.label||''}; }
+  return {unlinked:true};
+}
+function addLinkedKeyRead(tree, expId, kpi){
+  var exp=tree.experiments[expId]; if(!exp||!kpi) return null;
+  var id=newKeyReadId(tree,expId);
+  (exp.key_reads||(exp.key_reads=[])).push({id:id, source_kpi_gid:kpi.gid, name:kpi.name||'', unit:kpi.unit||'', critical_value:'', direction:kpi.direction||'>='});
+  markOverride(exp,'key_reads'); return id;
+}
+function closeKeyReadKpiPicker(){ var ov=ETB_ROOT.querySelector('#kr-kpi-overlay'); if(ov){ ov.classList.remove('open'); if(ov.parentNode) ov.parentNode.removeChild(ov); } }
+function openKeyReadKpiPicker(t, expId){
+  closeKeyReadKpiPicker();
+  var kpis=__etbProjectKpis();
+  var ov=el('div','overlay'); ov.id='kr-kpi-overlay';
+  var sheet=el('div','sheet'); sheet.style.maxWidth='520px';
+  sheet.appendChild(el('h3',null,'Link a key read to a project KPI'));
+  var list=el('div'); list.style.cssText='margin-top:10px;max-height:50vh;overflow:auto';
+  if(!kpis.length){ list.appendChild(el('p','muted','No project KPIs yet \u2014 add KPIs to your Key Results in the Quarter / OKR tab first.')); }
+  else { kpis.forEach(function(kpi){
+    var row=el('div'); row.style.cssText='padding:9px 10px;border:1px solid var(--line,#e6e6e2);border-radius:8px;margin:6px 0;cursor:pointer';
+    var nm=el('div',null); var s=el('span',null,(kpi.name||kpi.gid)); s.style.fontWeight='600'; nm.appendChild(s); if(kpi.unit){ nm.appendChild(el('span','muted',' ('+kpi.unit+')')); }
+    row.appendChild(nm); row.appendChild(el('div','muted small',kpi.label||''));
+    row.addEventListener('mouseenter',function(){ row.style.background='var(--hover,#f7f7f5)'; });
+    row.addEventListener('mouseleave',function(){ row.style.background=''; });
+    row.addEventListener('click',function(){ addLinkedKeyRead(t,expId,kpi); softRefresh(); renderPanel(expId); closeKeyReadKpiPicker(); });
+    list.appendChild(row);
+  }); }
+  sheet.appendChild(list);
+  var rrow=el('div','row'); rrow.style.marginTop='12px'; var sp=el('div'); sp.style.flex='1'; rrow.appendChild(sp);
+  var close=el('button',null,'Close'); close.addEventListener('click',closeKeyReadKpiPicker); rrow.appendChild(close); sheet.appendChild(rrow);
+  ov.appendChild(sheet);
+  ov.addEventListener('click',function(e){ if(e.target===ov) closeKeyReadKpiPicker(); });
+  ETB_ROOT.appendChild(ov); ov.classList.add('open');
+}
+function renderKeyReads(t,expId,exp){
+  const wrap=el("div","keyreads");const h=el("div","p-lab","Key reads");h.style.marginTop="14px";wrap.appendChild(h);
+  const repeat=!!exp.repeat_of;const ov=exp.overrides||{};
+  if(repeat)h.appendChild(linkMarker(t,expId,"key_reads",ov.key_reads));
+  const krs=exp.key_reads||[];
+  const __krKpiById=__etbKpiById();
+  if(!krs.length){wrap.appendChild(Object.assign(el("div","muted small"),{textContent:"The readouts this experiment measures — set each one's pass target; criteria point at these."}));}
+  krs.forEach(k=>{
+    const card=el("div","kr-card");
+    const top=el("div","kr-row");
+    const __lk=refreshLinkedKeyRead(k,__krKpiById);
+    let name, unit;
+    if(__lk.linked||__lk.unlinked){
+      name=el("div","kr-name");name.style.cssText="flex:2;display:flex;align-items:center;gap:8px;font-size:13px";
+      const nmtxt=el("span",null,k.name||"(KPI)");nmtxt.style.fontWeight="500";name.appendChild(nmtxt);
+      const tag=el("span",null,__lk.linked?("linked · "+(__lk.label||"KR")):"unlinked");tag.style.cssText="font-size:10px;font-weight:600;color:"+(__lk.unlinked?"#A32D2D":"#185FA5");name.appendChild(tag);
+      name.title=__lk.linked?("Linked to "+(__lk.label||"KPI")+" — name & unit follow the KPI"):"Linked KPI was removed";
+      unit=el("div","kr-unit",k.unit||"");unit.style.cssText="flex:1;min-width:54px;color:#888;font-size:12px";
+    } else {
+      name=fText(k.name,v=>{setKeyReadField(t,expId,k.id,"name",v);softRefresh();},{placeholder:"e.g. Power density @ 1 A/cm²"});name.classList.add("kr-name");
+      unit=fText(k.unit,v=>{setKeyReadField(t,expId,k.id,"unit",v);softRefresh();renderPanel(expId);},{placeholder:"unit"});unit.classList.add("kr-unit");
+    }
+    const rm=el("button","mini","\u2715");rm.title="Remove key read";rm.addEventListener("click",()=>armConfirm(rm,"Remove key read?",()=>{removeKeyRead(t,expId,k.id);softRefresh();renderPanel(expId);}));
+    top.appendChild(name);top.appendChild(unit);top.appendChild(rm);card.appendChild(top);
+    const pass=el("div","kr-pass");pass.appendChild(Object.assign(el("span","kr-pass-lab"),{textContent:"pass when"}));
+    const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
+    const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
+    pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    wrap.appendChild(card);
+  });
+  const add=el("button","mini2","+ Add key read");add.addEventListener("click",()=>{addKeyRead(t,expId);softRefresh();renderPanel(expId);});add.style.marginTop="6px";wrap.appendChild(add);
+  const lnk=el("button","mini2","+ Link KPI");lnk.addEventListener("click",()=>{openKeyReadKpiPicker(t,expId);});lnk.style.marginTop="6px";lnk.style.marginLeft="6px";wrap.appendChild(lnk);
+  return wrap;
+}
+// Linked / overridden indicator for a repeat's linked field; click to re-link.
+function linkMarker(t,expId,field,overridden){
+  const m=el("span","link-tag"+(overridden?" over":""));
+  if(overridden){m.textContent="overridden · re-link";m.title="Re-link this field to the source";m.style.cursor="pointer";m.addEventListener("click",()=>{relinkField(t,expId,field);syncRepeats(t);softRefresh();renderPanel(expId);});}
+  else{m.textContent="linked";m.title="Tracks the source experiment";}
+  return m;
+}
+
+function renderSentinelRows(t,expId,exp,types){
+  const wrap=el("div","sentinels");wrap.appendChild(Object.assign(el("div","p-lab"),{textContent:"Or an unanticipated outcome"}));
+  [["other","Other (unanticipated)"],["inconclusive","Inconclusive"]].forEach(pair=>{
+    const sid=pair[0],label=pair[1];const ao=exp.actual_outcome;const sel=!!(ao&&ao.result_id===sid);
+    const card=el("div","result sentinel"+(sel?" observed":""));
+    const top=el("div","result-top");
+    const radio=el("input");radio.type="radio";radio.name="observed_"+expId;radio.checked=sel;radio.className="obs-radio";radio.title="Mark as the observed outcome";
+    radio.addEventListener("change",()=>{if(radio.checked){recordOutcome(t,expId,{result_id:sid,recorded_by:state.editor},{user:state.editor});softRefresh();renderPanel(expId);}});
+    top.appendChild(radio);top.appendChild(Object.assign(el("span","lbl"),{textContent:label}));
+    card.appendChild(top);
+    if(sel){
+      card.appendChild(fRow("What happened (note)",fArea(ao.note,v=>{recordOutcomePatch(t,expId,{note:v||null});softRefresh();})));
+      card.appendChild(fRow("Conclusion",fArea(ao.conclusion,v=>{recordOutcomePatch(t,expId,{conclusion:v||null});softRefresh();})));
+      const lv=ao.terminal?("term:"+ao.terminal.type):((ao.next_experiment_ids||[])[0]?("exp:"+ao.next_experiment_ids[0]):"none");
+      const lo=[{value:"none",label:"(no next step)"}];
+      Object.keys(types).forEach(tk=>lo.push({value:"term:"+tk,label:"Terminal — "+(types[tk].label||tk)}));
+      Object.keys(t.experiments).filter(id=>id!==expId).forEach(id=>lo.push({value:"exp:"+id,label:"Go to: "+(t.experiments[id].code||id)}));
+      const lr=el("div","p-row");lr.appendChild(el("div","p-lab","Leads to"));
+      lr.appendChild(fSelect(lv,lo,v=>{let patch;if(v.indexOf("term:")===0){const tt=types[v.slice(5)];patch={terminal:{type:v.slice(5),label:(tt&&tt.label)||v.slice(5),note:null},next_experiment_ids:[]};}else if(v.indexOf("exp:")===0)patch={next_experiment_ids:[v.slice(4)],terminal:null};else patch={next_experiment_ids:[],terminal:null};recordOutcomePatch(t,expId,patch);softRefresh();renderPanel(expId);}));
+      card.appendChild(lr);
+    }
+    wrap.appendChild(card);
+  });
+  if(exp.actual_outcome){const none=el("button","mini2","Clear observed");none.addEventListener("click",()=>{clearOutcome(t,expId);softRefresh();renderPanel(expId);});none.style.marginTop="6px";wrap.appendChild(none);}
+  return wrap;
+}
+
+// ============================================================
+// IN-BROWSER TEST SUITE (mirrors core.mjs)
+// ============================================================
+const TESTS=[];
+function test(name,fn){TESTS.push({name,fn});}
+function assert(c,m){if(!c)throw new Error(m||"assertion failed");}
+function assertEq(a,b,m){if(a!==b)throw new Error(`${m||""} expected ${JSON.stringify(b)} got ${JSON.stringify(a)}`);}
+function hasIssue(issues,rule,level){return issues.some(i=>i.rule===rule&&(!level||i.level===level));}
+
+test("edges: results + sentinel nexts enumerated",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome={result_id:"other",recorded_date:"x",recorded_by:"y",note:"n",conclusion:"c",next_experiment_ids:["exp_002a"],terminal:null};assert(enumerateEdges(t).some(x=>x.viaKind==="sentinel"&&x.to==="exp_002a"),"sentinel edge missing");});
+test("root: exactly one for sample",()=>{assertEq(findRoots(sampleTree()).root,"exp_001");});
+test("root: none when all referenced",()=>{const t=sampleTree();t.experiments.exp_003.possible_results[0]={id:"r",label:"l",criteria:"",conclusion:"",next_experiment_ids:["exp_001"],terminal:null};assertEq(findRoots(t).root,null);});
+test("parents: resolved with originating result id",()=>{const {parent}=resolveParents(sampleTree());assertEq(parent.exp_002a.experiment_id,"exp_001");assertEq(parent.exp_002a.result_id,"res_001a");assertEq(parent.exp_001,null);});
+test("reachability: selected active, sibling not_pursued, deeper pending",()=>{const r=computeReachability(sampleTree());assertEq(r.exp_001,"active");assertEq(r.exp_002a,"active");assertEq(r.exp_002b,"not_pursued");assertEq(r.exp_003,"pending");});
+test("reachability: subtree of not_pursued stays not_pursued",()=>{const t=sampleTree();t.experiments.exp_002b.possible_results[0]={id:"rb",label:"lb",criteria:"",conclusion:"",next_experiment_ids:["exp_xx"],terminal:null};t.experiments.exp_xx={id:"exp_xx",code:"EXP-XX",name:"x",hypothesis:"",test:"",status:"planned",possible_results:[],actual_outcome:null,audit_log:[]};const r=computeReachability(t);assertEq(r.exp_002b,"not_pursued");assertEq(r.exp_xx,"not_pursued");});
+test("reachability: sentinel next active, planned results not_pursued",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome={result_id:"inconclusive",recorded_date:"x",recorded_by:"y",note:"n",conclusion:"redo",next_experiment_ids:["exp_003"],terminal:null};const r=computeReachability(t);assertEq(r.exp_003,"active");assertEq(r.exp_002a,"not_pursued");assertEq(r.exp_002b,"not_pursued");});
+test("traversedPath: follows selected result, stops at pending",()=>{const p=traversedPath(sampleTree());assertEq(p.length,2);assertEq(p[0].experimentId,"exp_001");assertEq(p[0].resultLabel,"Meets baseline");assertEq(p[1].experimentId,"exp_002a");assert(p[1].pending===true,"exp_002a should be pending tail");});
+test("traversedPath: stops at terminal",()=>{const t=sampleTree();t.experiments.exp_002a.actual_outcome={result_id:"res_002a_final",recorded_date:"x",recorded_by:"y",note:null,conclusion:null,next_experiment_ids:[],terminal:null};t.experiments.exp_002a.status="complete";const tr=terminalReached(t);assert(tr.reached===true,"terminal should be reached");assertEq(tr.type,"target_achieved");assertEq(tr.atExperimentId,"exp_002a");});
+test("resolveOutcome: real result reads conclusion from result",()=>{const o=resolveOutcome(sampleTree().experiments.exp_001);assertEq(o.kind,"result");assertEq(o.conclusion,"Baseline confirmed, proceed to optimization.");assertEq(o.nextId,"exp_002a");});
+test("validate: clean sample has no errors",()=>{assert(!validateTree(sampleTree()).some(i=>i.level==="error"));});
+test("validate rule 1: multiple roots",()=>{const t=sampleTree();t.experiments.exp_solo={id:"exp_solo",code:"X",name:"x",hypothesis:"",test:"",status:"planned",possible_results:[],actual_outcome:null,audit_log:[]};assert(hasIssue(validateTree(t),1,"error"));});
+test("validate rule 2: two parents",()=>{const t=sampleTree();t.experiments.exp_002b.possible_results[0]={id:"rb",label:"lb",criteria:"",conclusion:"",next_experiment_ids:["exp_003"],terminal:null};assert(hasIssue(validateTree(t),2,"error"));});
+test("validate rule 3: cycle",()=>{const t=sampleTree();t.experiments.exp_003.possible_results[0]={id:"rc",label:"lc",criteria:"",conclusion:"",next_experiment_ids:["exp_002a"],terminal:null};assert(hasIssue(validateTree(t),3,"error"));});
+test("validate rule 4: multiple next",()=>{const t=sampleTree();t.experiments.exp_002a.possible_results[0].next_experiment_ids=["exp_003","exp_002b"];assert(hasIssue(validateTree(t),4,"error"));});
+test("validate rule 5: broken reference",()=>{const t=sampleTree();t.experiments.exp_001.possible_results[0].next_experiment_ids=["nope"];assert(hasIssue(validateTree(t),5,"error"));});
+test("validate rule 6: both next and terminal",()=>{const t=sampleTree();t.experiments.exp_001.possible_results[0].terminal={type:"halt",label:"Halt"};assert(hasIssue(validateTree(t),6,"error"));});
+test("validate rule 6: dangling warns",()=>{const t=sampleTree();t.experiments.exp_002a.possible_results[0].next_experiment_ids=[];assert(hasIssue(validateTree(t),6,"warning"));});
+test("validate rule 7: unknown terminal type",()=>{const t=sampleTree();t.experiments.exp_001.possible_results[2].terminal={type:"explode",label:"?"};assert(hasIssue(validateTree(t),7,"error"));});
+test("validate rule 8: outcome matches no result",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome.result_id="res_nope";assert(hasIssue(validateTree(t),8,"error"));});
+test("validate rule 8: sentinel with empty path warns",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome={result_id:"other",recorded_date:"x",recorded_by:"y",note:"",conclusion:"",next_experiment_ids:[],terminal:null};assert(hasIssue(validateTree(t),8,"warning"));});
+test("validate rule 9: conclusion amend without reason warns",()=>{const t=sampleTree();t.experiments.exp_001.audit_log=[{timestamp:"t",user:"u",field:"possible_results.res_001a.conclusion",action:"amend",from:"a",to:"b",reason:""}];assert(hasIssue(validateTree(t),9,"warning"));});
+test("validate rule 10: complete without outcome warns",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome=null;assert(hasIssue(validateTree(t),10,"warning"));});
+test("validate rule 10: outcome but planned warns",()=>{const t=sampleTree();t.experiments.exp_002b.actual_outcome={result_id:"res_002b_a",recorded_date:"x",recorded_by:"y",note:null,conclusion:null,next_experiment_ids:[],terminal:null};assert(hasIssue(validateTree(t),10,"warning"));});
+
+test("graph: node and edge counts for sample",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));assertEq(g.nodes.length,8,"nodes");assertEq(g.edges.length,7,"edges");});
+test("graph: a terminal node per terminal result",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));const terms=g.nodes.filter(n=>n.data.kind==="terminal");assertEq(terms.length,4);assert(terms.some(n=>n.data.termType==="conduct_fmea"));});
+test("graph: experiment-edge branchState matches target reach",()=>{const t=sampleTree();const reach=computeReachability(t);const g=buildGraphElements(t,reach);const e=g.edges.find(x=>x.data.target==="exp_002a");assertEq(e.data.branchState,"active");assertEq(e.data.branchState,reach.exp_002a);assertEq(g.edges.find(x=>x.data.target==="exp_002b").data.branchState,"not_pursued");});
+test("graph: observed flag on selected result edge",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));assert(g.edges.find(x=>x.data.target==="exp_002a").data.observed===true);assert(g.edges.find(x=>x.data.target==="exp_002b").data.observed===false);});
+test("graph: deeper edge is pending",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));assertEq(g.edges.find(x=>x.data.target==="exp_003").data.branchState,"pending");});
+test("graph: sentinel edge active when parent active",()=>{const t=sampleTree();t.experiments.exp_001.actual_outcome={result_id:"other",recorded_date:"x",recorded_by:"y",note:"n",conclusion:"c",next_experiment_ids:["exp_003"],terminal:null};const g=buildGraphElements(t,computeReachability(t));const e=g.edges.find(x=>x.data.viaKind==="sentinel"&&x.data.target==="exp_003");assert(e&&e.data.branchState==="active");});
+
+test("render: labeled edge becomes a pill node + paired half-edges",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));const R=toRenderElements(g.nodes,g.edges);const pills=R.nodes.filter(n=>n.data.kind==="edgelabel");assert(pills.length>0,"has pills");assertEq(R.edges.filter(e=>e.data.half==="in").length,pills.length);assertEq(R.edges.filter(e=>e.data.half==="out").length,pills.length);});
+test("render: out-half keeps target+branchState; in-half has no arrow",()=>{const t=sampleTree();const reach=computeReachability(t);const g=buildGraphElements(t,reach);const R=toRenderElements(g.nodes,g.edges);const out=R.edges.find(e=>e.data.half==="out"&&e.data.target==="exp_002a");assert(out,"out half to exp_002a");assertEq(out.data.branchState,"active");assert(R.edges.some(e=>e.data.half==="in"&&e.data.noArrow));});
+test("render: all element ids unique after transform",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));const R=toRenderElements(g.nodes,g.edges);const ids=R.nodes.map(n=>n.data.id).concat(R.edges.map(e=>e.data.id));assertEq(new Set(ids).size,ids.length);});
+test("render: labelless edge passes through whole (no pill)",()=>{const R=toRenderElements([{data:{id:"a",kind:"experiment",label:"A"}},{data:{id:"b",kind:"experiment",label:"B"}}],[{data:{id:"e1",source:"a",target:"b",label:"",branchState:"active",viaKind:"result"}}]);assertEq(R.edges.length,1);assertEq(R.edges[0].data.target,"b");assert(!R.nodes.some(n=>n.data.kind==="edgelabel"));});
+
+test("mut: addExperiment makes a planned node with fresh id+code",()=>{const t=sampleTree();const id=addExperiment(t,{});assert(t.experiments[id],"exists");assertEq(t.experiments[id].status,"planned");assert(id!=="exp_001");assertEq(t.experiments[id].code.indexOf("EXP-"),0);});
+test("mut: newExperimentId increments past max",()=>{assertEq(newExperimentId(sampleTree()),"exp_004");});
+test("mut: addResult appends blank result with unique id",()=>{const t=sampleTree();const before=t.experiments.exp_002a.possible_results.length;const id=addResult(t,"exp_002a");assertEq(t.experiments.exp_002a.possible_results.length,before+1);assert(t.experiments.exp_002a.possible_results.some(r=>r.id===id));});
+test("mut: removeResult clears observed outcome",()=>{const t=sampleTree();removeResult(t,"exp_001","res_001a");assertEq(t.experiments.exp_001.actual_outcome,null);assert(!t.experiments.exp_001.possible_results.some(r=>r.id==="res_001a"));});
+test("mut: setResultLink terminal/next are mutually exclusive",()=>{const t=sampleTree();setResultLink(t,"exp_001","res_001a",{kind:"terminal",type:"halt"});assertEq(t.experiments.exp_001.possible_results[0].next_experiment_ids.length,0);assertEq(t.experiments.exp_001.possible_results[0].terminal.type,"halt");setResultLink(t,"exp_001","res_001a",{kind:"next",expId:"exp_002a"});assertEq(t.experiments.exp_001.possible_results[0].terminal,null);assertEq(t.experiments.exp_001.possible_results[0].next_experiment_ids[0],"exp_002a");});
+test("mut: recordOutcome real result nulls inherited fields",()=>{const t=sampleTree();recordOutcome(t,"exp_002a",{result_id:"res_002a_a"},{user:"AK"});const ao=t.experiments.exp_002a.actual_outcome;assertEq(ao.result_id,"res_002a_a");assertEq(ao.conclusion,null);assertEq(ao.next_experiment_ids.length,0);assertEq(ao.terminal,null);});
+test("mut: recordOutcome sentinel keeps own conclusion/next",()=>{const t=sampleTree();recordOutcome(t,"exp_002a",{result_id:"other",conclusion:"weird",next:"exp_003",note:"n"},{user:"AK"});const ao=t.experiments.exp_002a.actual_outcome;assertEq(ao.result_id,"other");assertEq(ao.conclusion,"weird");assertEq(ao.next_experiment_ids[0],"exp_003");});
+test("mut: setResultField conclusion on complete logs audit with reason",()=>{const t=sampleTree();setResultField(t,"exp_001","res_001a","conclusion","new",{user:"AK",reason:"reviewer note"});const log=t.experiments.exp_001.audit_log;assertEq(log.length,1);assert(log[0].field.indexOf("conclusion")>=0);assertEq(log[0].reason,"reviewer note");});
+test("mut: setResultField conclusion on non-complete does not log",()=>{const t=sampleTree();setResultField(t,"exp_002a","res_002a_a","conclusion","x",{user:"AK"});assertEq((t.experiments.exp_002a.audit_log||[]).length,0);});
+test("mut: setExperimentField verdict on complete logs audit",()=>{const t=sampleTree();setExperimentField(t,"exp_001","hypothesis_verdict","refuted",{user:"AK"});assert((t.experiments.exp_001.audit_log||[]).some(a=>a.field==="hypothesis_verdict"));});
+test("mut: deleteExperiment removes node and inbound links",()=>{const t=sampleTree();deleteExperiment(t,"exp_002a");assert(!t.experiments.exp_002a);assert(!(t.experiments.exp_001.possible_results.find(r=>r.id==="res_001a").next_experiment_ids||[]).includes("exp_002a"));});
+test("workflow: build a small valid tree from scratch",()=>{const t={schema_version:"1.0",tree_id:"x",title:"x",root_experiment_id:null,terminal_types:{target_achieved:{label:"Target achieved",kind:"success"},halt:{label:"Halt",kind:"stop"}},metadata:{},experiments:{}};const a=addExperiment(t,{name:"A"});const kr=addKeyRead(t,a);setKeyReadField(t,a,kr,"name","Voltage");const r1=addResult(t,a);addCriterion(t,a,r1);setCriterionField(t,a,r1,0,"key_read_id",kr);setCriterionField(t,a,r1,0,"op",">");setCriterionField(t,a,r1,0,"value","0.6");const b=addExperiment(t,{name:"B"});setResultLink(t,a,r1,{kind:"next",expId:b});const r2=addResult(t,b);setResultLink(t,b,r2,{kind:"terminal",type:"target_achieved"});recordOutcome(t,a,{result_id:r1},{user:"AK"});t.experiments[a].status="complete";assert(!validateTree(t).some(i=>i.level==="error"),"clean");assertEq(t.experiments[a].possible_results[0].criteria.length,1);assertEq(t.experiments[a].possible_results[0].criteria[0].value,"0.6");const reach=computeReachability(t);assertEq(reach[a],"active");assertEq(reach[b],"active");});
+test("norm: legacy string criteria migrates to one structured row",()=>{const t={experiments:{e1:{id:"e1",possible_results:[{id:"r",criteria:"V >= 0.6"}]}}};normalizeTree(t);const c=t.experiments.e1.possible_results[0].criteria;assert(Array.isArray(c));assertEq(c.length,1);assertEq(c[0].value,"V >= 0.6");assertEq(c[0].key_read_id,null);assertEq(t.experiments.e1.toggle,"");assert(Array.isArray(t.experiments.e1.key_reads));});
+test("norm: array criteria untouched; empty string -> []",()=>{const t={experiments:{e1:{id:"e1",possible_results:[{id:"r1",criteria:[{key_read_id:"k",op:">",value:"1"}]},{id:"r2",criteria:""}]}}};normalizeTree(t);assertEq(t.experiments.e1.possible_results[0].criteria.length,1);assertEq(t.experiments.e1.possible_results[1].criteria.length,0);});
+test("keyread: add/set, and remove nulls referencing criteria",()=>{const t=sampleTree();const kr=addKeyRead(t,"exp_003");setKeyReadField(t,"exp_003",kr,"name","Mass");assert(t.experiments.exp_003.key_reads.some(k=>k.id===kr&&k.name==="Mass"));removeKeyRead(t,"exp_001","kr_001_v");assert(!t.experiments.exp_001.key_reads.some(k=>k.id==="kr_001_v"));assertEq(t.experiments.exp_001.possible_results.flatMap(r=>r.criteria).filter(c=>c.key_read_id==="kr_001_v").length,0);});
+test("criterion: add/set/remove",()=>{const t=sampleTree();addCriterion(t,"exp_003","res_003_a");const arr=t.experiments.exp_003.possible_results[0].criteria;const n=arr.length;assert(n>=2);setCriterionField(t,"exp_003","res_003_a",n-1,"value","42");assertEq(arr[n-1].value,"42");removeCriterion(t,"exp_003","res_003_a",n-1);assertEq(t.experiments.exp_003.possible_results[0].criteria.length,n-1);});
+test("criterion: edit on complete experiment logs audit",()=>{const t=sampleTree();setCriterionField(t,"exp_001","res_001a",0,"value","0.7");assert((t.experiments.exp_001.audit_log||[]).some(a=>a.field.indexOf("criteria")>=0));});
+test("criteriaText: formats name/op/value/unit and joins multiples",()=>{const t=sampleTree();const exp=t.experiments.exp_001;const txt=criteriaText(exp.possible_results[1],exp.key_reads);assert(txt.indexOf("Cell voltage")>=0&&txt.indexOf("✗")>=0&&txt.indexOf(">")>=0&&txt.indexOf("·")>=0);});
+test("validate rule 11: criterion without a key read warns",()=>{const t=sampleTree();t.experiments.exp_003.possible_results[0].criteria=[{key_read_id:null,op:">",value:"1"}];assert(hasIssue(validateTree(t),11,"warning"));});
+test("op: labels map <=/>= to glyphs and pass others through",()=>{assertEq(opLabel("<="),"≤");assertEq(opLabel(">="),"≥");assertEq(opLabel("<"),"<");assertEq(opLabel("="),"=");assertEq(opLabel(">"),">");assertEq(opLabel("zz"),"zz");});
+test("criteriaText: renders ≤ for a <= criterion",()=>{assertEq(criteriaText({criteria:[{key_read_id:"k",op:"<=",value:"0.6"}]},[{id:"k",name:"V",unit:"V"}]),"V ≤ 0.6 V");});
+test("emptyTree: no experiments, seeded terminal types, null root",()=>{const t=emptyTree();assertEq(Object.keys(t.experiments).length,0);assertEq(t.root_experiment_id,null);assert(t.terminal_types.target_achieved&&t.terminal_types.halt);assertEq(t.schema_version,SCHEMA_VERSION);});
+test("validate: empty tree has no errors (rule 1 suppressed)",()=>{const issues=validateTree(emptyTree());assertEq(issues.filter(i=>i.level==="error").length,0);assert(!hasIssue(issues,1));});
+test("validate: non-empty tree with no root still errors",()=>{const t=emptyTree();t.experiments.e1={id:"e1",code:"E1",name:"x",possible_results:[{id:"r",criteria:[],conclusion:"",next_experiment_ids:["e1"],terminal:null}],actual_outcome:null,audit_log:[]};assert(hasIssue(validateTree(t),1,"error"));});
+test("reachability: falls back to declared root under multi-root",()=>{const t=sampleTree();t.experiments.exp_solo={id:"exp_solo",code:"X",name:"x",hypothesis:"",hypothesis_verdict:null,test:"",status:"planned",owner:"",planned_date:null,completed_date:null,notes:"",possible_results:[],actual_outcome:null,audit_log:[]};const r=computeReachability(t);assertEq(r.exp_001,"active");assertEq(r.exp_002a,"active");assert(r.exp_solo===undefined,"separate component stays neutral");});
+
+// ---- v14: key-read targets + hit/miss criteria ----
+test("critText: direction glyph + critical + unit",()=>{assertEq(critText({direction:">=",critical_value:"0.6",unit:"V"}),"≥ 0.6 V");assertEq(critText({direction:"<=",critical_value:"",unit:"Ω"}),"≤ ? Ω");});
+test("criteriaText: hit renders ✓ with the read's target",()=>{assertEq(criteriaText({criteria:[{key_read_id:"k",status:"hit"}]},[{id:"k",name:"V",unit:"V",direction:">=",critical_value:"0.6"}]),"V ✓ (≥ 0.6 V)");});
+test("criteriaText: miss renders ✗ with the read's target",()=>{assertEq(criteriaText({criteria:[{key_read_id:"k",status:"miss"}]},[{id:"k",name:"V",unit:"V",direction:"<=",critical_value:"0.1"}]),"V ✗ (≤ 0.1 V)");});
+test("criteriaText: mixed hit + manual on one result",()=>{assertEq(criteriaText({criteria:[{key_read_id:"k",status:"miss"},{key_read_id:"k",op:">",value:"0.4"}]},[{id:"k",name:"V",unit:"V",direction:">=",critical_value:"0.6"}]),"V ✗ (≥ 0.6 V)  ·  V > 0.4 V");});
+test("addKeyRead: new read carries blank critical + ≥ direction",()=>{const t=sampleTree();const id=addKeyRead(t,"exp_003");const k=t.experiments.exp_003.key_reads.find(x=>x.id===id);assertEq(k.critical_value,"");assertEq(k.direction,">=");});
+test("normalizeTree: backfills key-read target + repeat fields",()=>{const t={experiments:{e:{id:"e",key_reads:[{id:"k",name:"V"}],possible_results:[]}}};normalizeTree(t);const k=t.experiments.e.key_reads[0];assertEq(k.critical_value,"");assertEq(k.direction,">=");assertEq(t.experiments.e.repeat_of,null);assert(t.experiments.e.overrides&&typeof t.experiments.e.overrides==="object");});
+test("setKeyReadStatus: add, toggle, and clear a hit/miss criterion",()=>{const t=sampleTree();setKeyReadStatus(t,"exp_002b","res_002b_a","kr_002b_fer","hit");let c=t.experiments.exp_002b.possible_results[0].criteria.find(x=>x.key_read_id==="kr_002b_fer"&&x.status);assertEq(c.status,"hit");setKeyReadStatus(t,"exp_002b","res_002b_a","kr_002b_fer","miss");c=t.experiments.exp_002b.possible_results[0].criteria.find(x=>x.key_read_id==="kr_002b_fer"&&x.status);assertEq(c.status,"miss");setKeyReadStatus(t,"exp_002b","res_002b_a","kr_002b_fer","");c=t.experiments.exp_002b.possible_results[0].criteria.find(x=>x.key_read_id==="kr_002b_fer"&&x.status);assert(!c,"cleared");});
+test("validate rule 12: hit/miss criterion needs a critical value",()=>{const t=sampleTree();t.experiments.exp_002a.key_reads.find(k=>k.id==="kr_002a_dv").critical_value="";assert(hasIssue(validateTree(t),12,"warning"));});
+test("validate: sample has no rule-11 or rule-12 warnings",()=>{const issues=validateTree(sampleTree());assert(!hasIssue(issues,11),"no rule 11");assert(!hasIssue(issues,12),"no rule 12");});
+
+// ---- v14: repeat runs (linked copy, copy-on-write) ----
+test("makeRepeat: linked copy with independent identity + next-steps",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const rep=t.experiments[rid];const src=t.experiments.exp_002a;assertEq(rep.repeat_of,"exp_002a");assertEq(rep.code,"EXP-2A·R1");assertEq(rep.name,src.name+" (repeat)");assertEq(rep.hypothesis,src.hypothesis);assertEq(rep.key_reads.length,src.key_reads.length);assertEq(rep.possible_results.length,src.possible_results.length);assertEq(rep.possible_results[0].source_result_id,src.possible_results[0].id);assertEq(rep.possible_results[0].next_experiment_ids.length,0);assertEq(rep.status,"planned");assert(rep.actual_outcome===null);});
+test("makeRepeat: second repeat increments the suffix",()=>{const t=sampleTree();makeRepeat(t,"exp_002a");const r2=makeRepeat(t,"exp_002a");assertEq(t.experiments[r2].code,"EXP-2A·R2");});
+test("syncRepeats: source hypothesis + key_reads propagate to a clean repeat",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");setExperimentField(t,"exp_002a","hypothesis","SOURCE CHANGED");setKeyReadField(t,"exp_002a","kr_002a_dv","critical_value","7");syncRepeats(t);assertEq(t.experiments[rid].hypothesis,"SOURCE CHANGED");assertEq(t.experiments[rid].key_reads.find(k=>k.id==="kr_002a_dv").critical_value,"7");});
+test("syncRepeats: result definitions propagate but the repeat's next-step is preserved",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const rrid=t.experiments[rid].possible_results[0].id;setResultLink(t,rid,rrid,{kind:"terminal",type:"halt"});assert(!t.experiments[rid].overrides.possible_results,"next-step does not break link");setResultField(t,"exp_002a","res_002a_a","label","Performance held v2");syncRepeats(t);const rr=t.experiments[rid].possible_results.find(x=>x.source_result_id==="res_002a_a");assertEq(rr.label,"Performance held v2");assert(rr.terminal&&rr.terminal.type==="halt","next-step preserved");});
+test("repeat: editing hypothesis breaks only that link",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");setExperimentField(t,rid,"hypothesis","Custom");assert(t.experiments[rid].overrides.hypothesis===true);setExperimentField(t,"exp_002a","hypothesis","SRC");setExperimentField(t,"exp_002a","toggle","SRC TOG");syncRepeats(t);assertEq(t.experiments[rid].hypothesis,"Custom");assertEq(t.experiments[rid].toggle,"SRC TOG");});
+test("repeat: editing a key read breaks the key_reads link",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const kid=t.experiments[rid].key_reads[0].id;setKeyReadField(t,rid,kid,"critical_value","99");assert(t.experiments[rid].overrides.key_reads===true);setKeyReadField(t,"exp_002a",kid,"critical_value","5");syncRepeats(t);assertEq(t.experiments[rid].key_reads[0].critical_value,"99");});
+test("repeat: editing a result definition breaks the possible_results link",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const rrid=t.experiments[rid].possible_results[0].id;setResultField(t,rid,rrid,"label","Repeat-specific");assert(t.experiments[rid].overrides.possible_results===true);setResultField(t,"exp_002a","res_002a_a","label","SRC LABEL");syncRepeats(t);assertEq(t.experiments[rid].possible_results[0].label,"Repeat-specific");});
+test("relinkField: clears an override so the field re-syncs",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");setExperimentField(t,rid,"hypothesis","Custom");setExperimentField(t,"exp_002a","hypothesis","SRC");syncRepeats(t);assertEq(t.experiments[rid].hypothesis,"Custom");relinkField(t,rid,"hypothesis");syncRepeats(t);assertEq(t.experiments[rid].hypothesis,"SRC");});
+test("deleteExperiment: unlinks repeats of the deleted source",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");assertEq(t.experiments[rid].repeat_of,"exp_002a");deleteExperiment(t,"exp_002a");assertEq(t.experiments[rid].repeat_of,null);});
+test("syncRepeats: self-heals a dangling repeat_of",()=>{const t=sampleTree();t.experiments.exp_003.repeat_of="ghost";syncRepeats(t);assertEq(t.experiments.exp_003.repeat_of,null);});
+test("buildGraphElements: repeat node is marked and its connector says 'repeat'",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");setResultLink(t,"exp_002a","res_002a_a",{kind:"next",expId:rid});const g=buildGraphElements(t,computeReachability(t));const node=g.nodes.find(n=>n.data.id===rid);assert(node.data.repeat===true);assert(node.data.label.indexOf("↻ ")===0);const edge=g.edges.find(e=>e.data.target===rid);assertEq(edge.data.label,"repeat");});
+
+// ---- v15: accomplishment flags (stage-gates) ----
+test("accomplishments: normalizeTree defaults to []",()=>{const t={experiments:{e:{id:"e",possible_results:[{id:"r",label:"x"}]}}};normalizeTree(t);assert(Array.isArray(t.experiments.e.possible_results[0].accomplishments));assertEq(t.experiments.e.possible_results[0].accomplishments.length,0);});
+test("addAccomplishment: stage_gate flag, blank label, reserved gate_id",()=>{const t=sampleTree();const id=addAccomplishment(t,"exp_003","res_003_a");const a=t.experiments.exp_003.possible_results[0].accomplishments.find(x=>x.id===id);assertEq(a.type,"stage_gate");assertEq(a.label,"");assertEq(a.gate_id,null);});
+test("setAccomplishmentField + removeAccomplishment",()=>{const t=sampleTree();const id=addAccomplishment(t,"exp_003","res_003_a");setAccomplishmentField(t,"exp_003","res_003_a",id,"label","SG-9");assertEq(t.experiments.exp_003.possible_results[0].accomplishments.find(x=>x.id===id).label,"SG-9");removeAccomplishment(t,"exp_003","res_003_a",id);assert(!t.experiments.exp_003.possible_results[0].accomplishments.some(x=>x.id===id));});
+test("isResultObserved: true only for the recorded result",()=>{const t=sampleTree();assert(isResultObserved(t.experiments.exp_001,"res_001a"));assert(!isResultObserved(t.experiments.exp_001,"res_001b"));assert(!isResultObserved(t.experiments.exp_002a,"res_002a_a"));});
+test("collectAccomplishments: sample shows SG-1 cleared, SG-2 would-clear",()=>{const all=collectAccomplishments(sampleTree());const sg1=all.find(a=>a.label.indexOf("SG-1")===0);const sg2=all.find(a=>a.label.indexOf("SG-2")===0);assert(sg1&&sg1.realized===true,"SG-1 realized");assert(sg2&&sg2.realized===false,"SG-2 potential");});
+test("makeRepeat: clones accomplishments into the repeat's definitions",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const rr=t.experiments[rid].possible_results.find(x=>x.source_result_id==="res_002a_a");assert(rr.accomplishments&&rr.accomplishments.length===1);assertEq(rr.accomplishments[0].label,"SG-2: Catalyst loading validated");});
+test("syncRepeats: source accomplishment change propagates to a clean repeat",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");setAccomplishmentField(t,"exp_002a","res_002a_a",t.experiments.exp_002a.possible_results[0].accomplishments[0].id,"label","SG-2b");syncRepeats(t);const rr=t.experiments[rid].possible_results.find(x=>x.source_result_id==="res_002a_a");assertEq(rr.accomplishments[0].label,"SG-2b");});
+test("repeat: editing an accomplishment breaks the possible_results link",()=>{const t=sampleTree();const rid=makeRepeat(t,"exp_002a");const rrid=t.experiments[rid].possible_results.find(x=>x.source_result_id==="res_002a_a").id;const aid=t.experiments[rid].possible_results.find(x=>x.id===rrid).accomplishments[0].id;setAccomplishmentField(t,rid,rrid,aid,"label","Repeat gate");assert(t.experiments[rid].overrides.possible_results===true);setAccomplishmentField(t,"exp_002a","res_002a_a",t.experiments.exp_002a.possible_results[0].accomplishments[0].id,"label","SRC gate");syncRepeats(t);assertEq(t.experiments[rid].possible_results.find(x=>x.id===rrid).accomplishments[0].label,"Repeat gate");});
+test("buildGraphElements: flagged result edge carries acc data",()=>{const t=sampleTree();const g=buildGraphElements(t,computeReachability(t));const e1=g.edges.find(e=>e.data.source==="exp_001"&&e.data.target==="exp_002a");assertEq(e1.data.acc,true);assertEq(e1.data.accRealized,true);const e2=g.edges.find(e=>e.data.source==="exp_002a"&&e.data.target==="exp_003");assertEq(e2.data.acc,true);assertEq(e2.data.accRealized,false);});
+test("toRenderElements: flagged edge pill is prefixed with ⚑",()=>{const t=sampleTree();const ge=buildGraphElements(t,computeReachability(t));const g=toRenderElements(ge.nodes,ge.edges);const pill=g.nodes.find(n=>n.data.kind==="edgelabel"&&n.data.acc);assert(pill&&pill.data.label.indexOf("\u2691")===0);});
+test("validate rule 13: stage-gate flag needs a label",()=>{const t=sampleTree();addAccomplishment(t,"exp_003","res_003_a");assert(hasIssue(validateTree(t),13,"warning"));});
+test("validate: sample has no rule-13 warnings (flags labelled)",()=>{assert(!hasIssue(validateTree(sampleTree()),13));});
+
+function runTestsUI(){
+  const results=TESTS.map(t=>{try{t.fn();return{name:t.name,pass:true};}catch(e){return{name:t.name,pass:false,error:e.message};}});
+  const passed=results.filter(r=>r.pass).length;
+  $("#testSummary").textContent=`${passed}/${results.length} passed`;
+  $("#testSummary").style.color=passed===results.length?"var(--ok-fg)":"var(--stop-fg)";
+  const box=$("#testResults");box.innerHTML="";
+  results.forEach(r=>{const row=el("div","test "+(r.pass?"pass":"fail"));const mk=el("span","mk",r.pass?"PASS":"FAIL");const body=el("div");body.appendChild(el("span",null,r.name));if(!r.pass)body.appendChild(el("div","err",r.error));row.appendChild(mk);row.appendChild(body);box.appendChild(row);});
+}
+
+// ============================================================
+// WIRING
+// ============================================================
+
+function buildWaterfallModel(tree, today, opts){
+  opts = opts || {};
+  var GAP = opts.gap != null ? opts.gap : 7;
+  var DUR = opts.dur != null ? opts.dur : 21;
+  var exps = (tree && tree.experiments) || {};
+  var ids = Object.keys(exps);
+  function parseDay(s){ if(!s||typeof s!=='string') return null; var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return Date.UTC(+m[1],+m[2]-1,+m[3])/86400000; }
+  var todayDay = parseDay(today); if(todayDay==null) todayDay = Math.floor(Date.now()/86400000);
+  var edges=[], terminals=[], indeg={}, kids={}, parents={};
+  ids.forEach(function(id){ indeg[id]=0; kids[id]=[]; parents[id]=[]; });
+  ids.forEach(function(id){ (exps[id].possible_results||[]).forEach(function(r){
+      (r.next_experiment_ids||[]).forEach(function(nid){ if(exps[nid]){ edges.push({from:id,to:nid,label:r.label||''}); kids[id].push(nid); indeg[nid]++; parents[nid].push(id); } });
+      if(r.terminal){ terminals.push({from:id, label:(r.terminal.label||'Halt'), type:r.terminal.type||'halt', result:r.label||''}); }
+  }); });
+  var indeg2={}; ids.forEach(function(id){ indeg2[id]=indeg[id]; });
+  var q=ids.filter(function(id){ return indeg2[id]===0; }).sort(), topo=[], qi=0;
+  while(qi<q.length){ var id=q[qi++]; topo.push(id); kids[id].slice().sort().forEach(function(c){ if(--indeg2[c]===0) q.push(c); }); }
+  ids.forEach(function(id){ if(topo.indexOf(id)<0) topo.push(id); });
+  var depth={}; topo.forEach(function(id){ depth[id]=0; });
+  topo.forEach(function(id){ kids[id].forEach(function(c){ if(depth[c]<depth[id]+1) depth[c]=depth[id]+1; }); });
+  var seq={}, sidx=0, seen={};
+  function visit(id){ if(seen[id]) return; seen[id]=true; seq[id]=sidx++; kids[id].forEach(visit); }
+  ids.forEach(function(id){ if(indeg[id]===0) visit(id); });
+  ids.forEach(function(id){ if(!seen[id]) visit(id); });
+  var sched={};
+  topo.forEach(function(id){
+    var e=exps[id], st=e.status||'planned';
+    var pd=parseDay(e.planned_date), cd=parseDay(e.completed_date);
+    var start, end, projected=false;
+    if(pd!=null){ start=pd; }
+    else { var pend=null; parents[id].forEach(function(p){ if(sched[p]&&(pend==null||sched[p].endDay>pend)) pend=sched[p].endDay; }); start=(pend!=null)?pend+GAP:todayDay; projected=true; }
+    if(cd!=null){ end=cd; }
+    else if(st==='in_progress'){ end=Math.max(todayDay,start+1); if(pd==null) projected=true; }
+    else { end=start+DUR; if(pd==null) projected=true; }
+    if(end<start) end=start+1;
+    sched[id]={startDay:start,endDay:end,projected:projected};
+  });
+  var inLabel={}; edges.forEach(function(e){ if(!(e.to in inLabel)) inLabel[e.to]=e.label||''; });
+  var expOrder=ids.slice().sort(function(a,b){ if(depth[a]!==depth[b]) return depth[a]-depth[b]; if(seq[a]!==seq[b]) return seq[a]-seq[b]; return a<b?-1:(a>b?1:0); });
+  function expNode(id){ var e=exps[id]; return { id:id, kind:'experiment', code:e.code||id, name:e.name||'', status:e.status||'planned', startDay:sched[id].startDay, endDay:sched[id].endDay, projected:sched[id].projected, depth:depth[id], leadIn:(id in inLabel)?inLabel[id]:null }; }
+  function termNode(tm,gi){ var pe=sched[tm.from]?sched[tm.from].endDay:todayDay; return { id:'__term_'+tm.from+'_'+gi, kind:'terminal', from:tm.from, label:tm.label||'Halt', type:tm.type, result:tm.result, startDay:pe, endDay:pe, projected:sched[tm.from]?sched[tm.from].projected:false, depth:(depth[tm.from]||0)+1 }; }
+  var rows=[];
+  expOrder.forEach(function(id){ rows.push(expNode(id)); terminals.forEach(function(tm,gi){ if(tm.from===id) rows.push(termNode(tm,gi)); }); });
+  terminals.forEach(function(tm,gi){ if(!exps[tm.from]) rows.push(termNode(tm,gi)); });
+  rows.forEach(function(n,i){ n.row=i; });
+  var minDay=null,maxDay=null;
+  rows.forEach(function(r){ if(r.kind!=='experiment') return; if(minDay==null||r.startDay<minDay)minDay=r.startDay; if(maxDay==null||r.endDay>maxDay)maxDay=r.endDay; });
+  if(minDay==null){ minDay=todayDay; maxDay=todayDay+DUR; }
+  if(todayDay<minDay)minDay=todayDay; if(todayDay>maxDay)maxDay=todayDay;
+  return { rows:rows, edges:edges, domain:{minDay:minDay,maxDay:maxDay}, todayDay:todayDay };
+}
+function wfFitLabel(len, barW, opts){
+  opts = opts || {};
+  var maxF = opts.maxF || 12, minF = opts.minF || 8, pad = opts.pad != null ? opts.pad : 9, cw = opts.cw || 0.6;
+  var avail = Math.max(0, barW - 2*pad);
+  var fitF = len ? avail/(len*cw) : maxF;
+  var F = Math.min(maxF, fitF);
+  return { inside: F >= minF, fontSize: Math.max(minF, Math.min(maxF, Math.round(F*10)/10)) };
+}
+function wfLabelLayout(len, dateW, maxExtW, opts){
+  opts = opts || {};
+  var MIN = opts.minF || 8, BASE = opts.maxF || 12, CW = opts.cw || 0.6, PAD = opts.pad != null ? opts.pad : 8;
+  var fit = wfFitLabel(len, dateW, {minF:MIN, maxF:BASE, cw:CW, pad:PAD});
+  if(fit.inside) return { mode:'inside', fontSize:fit.fontSize, labelW:dateW };
+  var needW = Math.round(len*MIN*CW + 2*PAD);
+  if(needW <= maxExtW) return { mode:'extend', fontSize:MIN, labelW:Math.max(dateW, needW) };
+  return { mode:'outside', fontSize:BASE, labelW:dateW };
+}
+function renderWaterfall(){
+  var container=$("#view-waterfall"); if(!container) return;
+  var model=buildWaterfallModel(state.tree, new Date().toISOString().slice(0,10));
+  if(!model.rows.length){ container.innerHTML='<div class="muted small" style="padding:20px">No experiments to chart yet.</div>'; return; }
+  var W=Math.max(container.clientWidth||680, 680);
+  var leftPad=156, rightPad=26, topPad=64, rowH=46, barH=28;
+  var H=topPad + model.rows.length*rowH + 78;
+  var minD=model.domain.minDay, maxD=model.domain.maxDay; if(maxD<=minD) maxD=minD+1;
+  var plotL=leftPad, plotR=W-rightPad;
+  function X(day){ return plotL + (day-minD)/(maxD-minD)*(plotR-plotL); }
+  function barY(i){ return topPad + i*rowH + (rowH-barH)/2; }
+  var PAL={ complete:['#EAF3DE','#639922','#27500A'], in_progress:['#FAEEDA','#BA7517','#633806'], planned:['#F1EFE8','#888780','#444441'] };
+  function fmtDay(d){ var dt=new Date(d*86400000); return dt.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+  var gy0=topPad-8, gy1=topPad+model.rows.length*rowH+6;
+  var rowById={}; model.rows.forEach(function(r){ rowById[r.id]=r; });
+  model.rows.forEach(function(r){ if(r.kind!=='terminal') return; var label=r.label||'Halt'; r._cw=Math.max(40,label.length*7+18); var px=X(r.startDay)+6; if(px>plotR-r._cw) px=plotR-r._cw; if(px<plotL) px=plotL; r._px=px; });
+  var s='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;display:block">';
+  s+='<defs><marker id="wf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+  var d0=new Date(minD*86400000);
+  var cur=Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), 1)/86400000;
+  while(cur<=maxD){
+    if(cur>=minD){ var gx=X(cur); s+='<line x1="'+gx.toFixed(1)+'" y1="'+gy0+'" x2="'+gx.toFixed(1)+'" y2="'+gy1+'" stroke="var(--line)" stroke-width="0.5"/>';
+      var md=new Date(cur*86400000); s+='<text x="'+(gx+4).toFixed(1)+'" y="'+(topPad-14)+'" fill="var(--faint)" font-size="11">'+md.toLocaleDateString(undefined,{month:'short'})+'</text>'; }
+    var nd=new Date(cur*86400000); cur=Date.UTC(nd.getUTCFullYear(), nd.getUTCMonth()+1, 1)/86400000;
+  }
+  var tx=X(model.todayDay);
+  s+='<line x1="'+tx.toFixed(1)+'" y1="'+gy0+'" x2="'+tx.toFixed(1)+'" y2="'+gy1+'" stroke="#888780" stroke-width="1" stroke-dasharray="3 3"/>';
+  s+='<text x="'+tx.toFixed(1)+'" y="'+(gy1+14)+'" fill="var(--muted)" font-size="11" text-anchor="middle">today</text>';
+  model.edges.forEach(function(e){ var p=rowById[e.from], c=rowById[e.to]; if(!p||!c) return;
+    var x1=X(p.endDay), y1=barY(p.row)+barH/2, x2=X(c.startDay), y2=barY(c.row)+barH/2, midx=Math.max(x1+10, x2-10);
+    s+='<path d="M'+x1.toFixed(1)+' '+y1.toFixed(1)+' H'+midx.toFixed(1)+' V'+y2.toFixed(1)+' H'+x2.toFixed(1)+'" fill="none" stroke="var(--line-strong)" stroke-width="1" marker-end="url(#wf-arrow)"/>';
+  });
+  model.rows.forEach(function(r){ if(r.kind!=='terminal') return; var p=rowById[r.from]; if(!p) return;
+    var x1=X(p.endDay), y1=barY(p.row)+barH/2, x2=r._px, y2=barY(r.row)+barH/2, midx=Math.max(x1+10, x2-10);
+    s+='<path d="M'+x1.toFixed(1)+' '+y1.toFixed(1)+' H'+midx.toFixed(1)+' V'+y2.toFixed(1)+' H'+x2.toFixed(1)+'" fill="none" stroke="#A32D2D" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#wf-arrow)"/>';
+  });
+  model.rows.forEach(function(r){
+    var y=barY(r.row);
+    if(r.kind==='terminal'){
+      s+='<text x="14" y="'+(y+barH/2+1).toFixed(1)+'" fill="var(--faint)" font-size="11">'+esc(r.result||'terminal')+'</text>';
+      s+='<rect x="'+r._px.toFixed(1)+'" y="'+y+'" width="'+r._cw+'" height="'+barH+'" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>';
+      s+='<text x="'+(r._px+r._cw/2).toFixed(1)+'" y="'+(y+barH/2).toFixed(1)+'" dominant-baseline="central" text-anchor="middle" fill="#791F1F" font-size="11">'+esc(r.label||'Halt')+'</text>';
+      return;
+    }
+    var pal=PAL[r.status]||PAL.planned, x1=X(r.startDay), x2=X(r.endDay), w=Math.max(x2-x1,18), ly=y+barH/2;
+    var lead=(r.leadIn==null)?'kick-off':(r.leadIn||'result');
+    s+='<text x="14" y="'+(ly-3).toFixed(1)+'" fill="var(--ink)" font-size="12">'+esc(lead)+'</text>';
+    s+='<text x="14" y="'+(ly+11).toFixed(1)+'" fill="var(--faint)" font-size="11">'+esc(r.projected?'projected':(fmtDay(r.startDay)+' \u2013 '+fmtDay(r.endDay)))+'</text>';
+    var blabel=r.code+(r.name?(' '+r.name):'');
+    var maxExt=Math.max(0, Math.min(plotR-x1-4, 240));
+    var lay=wfLabelLayout(blabel.length, w, maxExt), bw=(lay.mode==='extend')?lay.labelW:w;
+    s+='<g class="wf-bar" data-exp="'+esc(r.id)+'" style="cursor:pointer">';
+    s+='<rect x="'+x1.toFixed(1)+'" y="'+y+'" width="'+bw.toFixed(1)+'" height="'+barH+'" rx="4" fill="'+pal[0]+'" stroke="'+pal[1]+'" stroke-width="'+(r.projected?1:0.5)+'"'+(r.projected?' stroke-dasharray="4 3" opacity="0.8"':'')+'/>';
+    if(lay.mode==='extend'){ var tend=(x1+w); s+='<line x1="'+tend.toFixed(1)+'" y1="'+y+'" x2="'+tend.toFixed(1)+'" y2="'+(y+barH)+'" stroke="'+pal[1]+'" stroke-width="0.5" stroke-dasharray="2 2"/>'; }
+    if(lay.mode!=='outside'){ s+='<text x="'+(x1+8).toFixed(1)+'" y="'+(y+barH/2).toFixed(1)+'" dominant-baseline="central" fill="'+pal[2]+'" font-size="'+lay.fontSize+'" font-weight="500">'+esc(blabel)+'</text>'; }
+    s+='</g>';
+    if(lay.mode==='outside'){ if(x2+8+blabel.length*6.6<=plotR){ s+='<text x="'+(x2+8).toFixed(1)+'" y="'+(y+barH/2).toFixed(1)+'" dominant-baseline="central" fill="var(--ink)" font-size="12">'+esc(blabel)+'</text>'; } else { s+='<text x="'+plotR.toFixed(1)+'" y="'+(y+barH/2).toFixed(1)+'" dominant-baseline="central" text-anchor="end" fill="var(--ink)" font-size="12">'+esc(blabel)+'</text>'; } }
+  });
+  var ly2=topPad+model.rows.length*rowH+40;
+  function leg(x,fill,stroke,txt,dash){ return '<rect x="'+x+'" y="'+(ly2-10)+'" width="13" height="13" rx="3" fill="'+fill+'" stroke="'+stroke+'" stroke-width="0.5"'+(dash?' stroke-dasharray="3 2"':'')+'/><text x="'+(x+18)+'" y="'+ly2+'" fill="var(--muted)" font-size="11">'+txt+'</text>'; }
+  s+=leg(14,'#EAF3DE','#639922','Complete')+leg(110,'#FAEEDA','#BA7517','In progress')+leg(218,'#F1EFE8','#888780','Planned')+leg(300,'#F1EFE8','#888780','Projected',true)+leg(396,'#FCEBEB','#A32D2D','Halt / terminal');
+  s+='</svg>';
+  container.innerHTML=s;
+  container.querySelectorAll('.wf-bar').forEach(function(g){ g.addEventListener('click',function(){ openPanel(g.getAttribute('data-exp')); }); });
+}
+
+function showView(v){
+  ETB_ROOT.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===v));
+  $("#view-outline").hidden=v!=="outline";
+  $("#view-graph").hidden=v!=="graph";
+  $("#view-json").hidden=v!=="json";
+  $("#view-tests").hidden=v!=="tests";
+  var __wv=$("#view-waterfall"); if(__wv) __wv.hidden=v!=="waterfall";
+  if(v==="json") $("#jsonArea").value=JSON.stringify(state.tree,null,2);
+  if(v==="graph") renderGraph();
+  if(v==="waterfall") renderWaterfall();
+}
+function openSettings(open){
+  const c=getCreds();
+  if(open&&c){$("#binId").value=c.binId||"";$("#masterKey").value=c.masterKey||"";}
+  if(open)$("#editorName").value=state.editor||"";
+  if(open)setMsg("#credsMsg","","muted");
+  $("#settings").classList.toggle("open",open);
+}
+function clearAllData(){
+  state.tree=emptyTree();
+  state.source="fresh";state.loadedAt=null;state.savedAt=null;state.amending=null;
+  cacheTree();          // persist the blank tree so a reload doesn't restore the sample
+  closePanel();
+  renderAll();
+}
+function wire(){
+  ETB_ROOT.querySelectorAll('.tabs button').forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  $("#btnSettings").addEventListener("click",()=>openSettings(true));
+  $("#btnCloseSettings").addEventListener("click",()=>openSettings(false));
+  $("#settings").addEventListener("click",(e)=>{if(e.target.id==="settings")openSettings(false);});
+  $("#btnSaveCreds").addEventListener("click",()=>{
+    state.editor=$("#editorName").value.trim();lsSet(LS.editor,state.editor);
+    const binId=$("#binId").value.trim(),masterKey=$("#masterKey").value.trim();
+    if(binId||masterKey){
+      if(!binId||!masterKey){setMsg("#credsMsg","Enter both a bin ID and a master key — your name was saved.","warn");return;}
+      const ok=setCreds({binId,masterKey});
+      if(!ok){setMsg("#credsMsg","Saved for this session only (browser blocked local storage).","warn");return;}
+    }
+    openSettings(false);
+  });
+  $("#btnClearCreds").addEventListener("click",()=>{clearCreds();$("#binId").value="";$("#masterKey").value="";setMsg("#credsMsg","Cleared.","muted");});
+  $("#btnClearAll").addEventListener("click",()=>armConfirm($("#btnClearAll"),"Delete the entire logic tree and start fresh? This cannot be undone.",()=>{clearAllData();setMsg("#clearAllMsg","Cleared — blank tree ready.","ok");}));
+
+  $("#btnLoad").addEventListener("click",async()=>{
+    const btn=$("#btnLoad");const old=btn.textContent;btn.textContent="Loading…";btn.disabled=true;setMsg("#ioMsg","","muted");
+    try{
+      const data=await loadFromBin();
+      if(!data||typeof data!=="object") throw new Error("The bin didn't return a valid document.");
+      state.doc=migrateEtbDoc(data);var __pid=state.activeProjectId;var __t=(__pid!=null)?selectTreeForProject(state.doc,__pid):null;if(!__t){__t=emptyTree();if(__pid!=null)__t.project_id=__pid;}state.tree=__t;state.source="bin";state.loadedAt=new Date().toLocaleTimeString();state.savedAt=null;
+      normalizeTree(state.tree);
+      cacheTree();renderAll();if(typeof renderHome==="function"){try{renderHome();}catch(__e){}}setMsg("#ioMsg","Loaded "+state.loadedAt+(state.activeProjectId?(" \u00b7 "+state.activeProjectId):"")+".","ok");
+    }catch(e){setMsg("#ioMsg",e.message,"error");}
+    finally{btn.textContent=old;btn.disabled=false;}
+  });
+  function performSave(){
+    const b=$("#btnSave");if(b)b.disabled=true;setMsg("#ioMsg","Saving…","muted");
+    loadFromBin().catch(function(){return state.doc;}).then(function(raw){var doc=migrateEtbDoc(raw);var pid=state.activeProjectId||state.tree.project_id||"__unassigned__";state.tree.project_id=pid;doc.trees[pid]=state.tree;doc.meta={updated_at:new Date().toISOString(),updated_by:state.editor||""};state.doc=doc;return saveToBin(doc);}).then(()=>{state.source="bin";state.savedAt=new Date().toLocaleTimeString();cacheTree();renderStatus();if(typeof renderHome==="function"){try{renderHome();}catch(__e){}}setMsg("#ioMsg","Saved "+state.savedAt+".","ok");})
+      .catch(e=>setMsg("#ioMsg",e.message,"error"))
+      .finally(()=>{const x=$("#btnSave");if(x)x.disabled=false;});
+  }
+  $("#btnSave").addEventListener("click",()=>{
+    const errs=validateTree(state.tree).filter(i=>i.level==="error");
+    if(errs.length){armConfirm($("#btnSave"),`${errs.length} validation error(s) present. Save anyway?`,performSave);return;}
+    performSave();
+  });
+
+  $("#btnFormat").addEventListener("click",()=>{try{$("#jsonArea").value=JSON.stringify(JSON.parse($("#jsonArea").value),null,2);setMsg("#jsonMsg","Formatted.","ok");}catch(e){setMsg("#jsonMsg","Invalid JSON — "+e.message,"error");}});
+  $("#btnValidate").addEventListener("click",()=>{let p;try{p=JSON.parse($("#jsonArea").value);}catch(e){const t=$("#jsonIssues");t.innerHTML="";const d=el("div","issue error");d.textContent="JSON parse error: "+e.message;t.appendChild(d);return;}renderIssues($("#jsonIssues"),validateTree(p),"No validation issues.");});
+  $("#btnApply").addEventListener("click",applyJson);
+  $("#btnRevert").addEventListener("click",()=>{$("#jsonArea").value=JSON.stringify(state.tree,null,2);$("#jsonIssues").innerHTML="";});
+
+  $("#btnRunTests").addEventListener("click",runTestsUI);
+
+  $("#btnFit").addEventListener("click",graphFit);
+  $("#btnZoomIn").addEventListener("click",()=>graphZoom(1.2));
+  $("#btnZoomOut").addEventListener("click",()=>graphZoom(1/1.2));
+  $("#btnRelayout").addEventListener("click",graphRelayout);
+  ETB_ROOT.querySelectorAll("#drawer [data-close]").forEach(b=>b.addEventListener("click",closePanel));
+  document.addEventListener("keydown",(e)=>{if(e.key==="Escape"){if($("#drawer").classList.contains("open"))closePanel();else if($("#settings").classList.contains("open"))openSettings(false);}});
+  window.addEventListener("resize",()=>{if(cy&&!$("#view-graph").hidden)cy.resize();});
+  $("#btnAddExp").addEventListener("click",()=>{const id=addExperiment(state.tree,{});softRefresh();openPanel(id);});
+}
+
+
+// ===== BRIDGE (read-only): experiment outcome -> KR status ==============
+function __etbResolveOutcomeStatus(tree, link){
+  var EMPTY = {status:'unresolved', terminalLabel:null, recordedDate:null, code:null, name:null};
+  if(!tree || !link || !link.experiment_id) return Object.assign({}, EMPTY);
+  if(link.tree_id && tree.tree_id && link.tree_id !== tree.tree_id)
+    return Object.assign({}, EMPTY, {reason:'tree-mismatch'});
+  var exp = (tree.experiments || {})[link.experiment_id];
+  if(!exp) return Object.assign({}, EMPTY, {reason:'missing'});
+  var base = {code: exp.code || null, name: exp.name || null};
+  var ao = exp.actual_outcome;
+  if(!ao) return Object.assign({}, base, {status:'pending', terminalLabel:null, recordedDate:null});
+  var terminal = ao.terminal || null;
+  if(!terminal && ao.result_id){
+    var r = (exp.possible_results || []).find(function(x){ return x.id === ao.result_id; });
+    if(r) terminal = r.terminal || null;
+  }
+  var recordedDate = ao.recorded_date || exp.completed_date || null;
+  if(!terminal) return Object.assign({}, base, {status:'pending', terminalLabel:null, recordedDate:recordedDate});
+  var tt = (tree.terminal_types || {})[terminal.type];
+  var kind = tt ? tt.kind : null;
+  var terminalLabel = terminal.label || (tt && tt.label) || terminal.type || null;
+  var status;
+  if(kind === 'success') status = 'met';
+  else if(kind === 'stop' || kind === 'pause') status = 'not_met';
+  else status = 'pending';
+  return Object.assign({}, base, {status:status, terminalLabel:terminalLabel, recordedDate:recordedDate});
+}
+function __etbListExperiments(tree){
+  var exps = (tree && tree.experiments) || {};
+  return Object.keys(exps).map(function(id){
+    var e = exps[id];
+    return {id:id, code: e.code || id, name: e.name || '', status: e.status || ''};
+  });
+}
+
+// ===== HUB pure logic (keyed doc, project select, current exp, focused subgraph) =====
+function emptyEtbDoc(){ return { schema_version:"2.0", trees:{}, meta:{updated_at:null, updated_by:""} }; }
+function migrateEtbDoc(raw){
+  if(!raw || typeof raw !== 'object') return emptyEtbDoc();
+  if(raw.trees && typeof raw.trees === 'object'){
+    return { schema_version: raw.schema_version || "2.0", trees: raw.trees, meta: raw.meta || {updated_at:null, updated_by:""} };
+  }
+  if(raw.experiments && typeof raw.experiments === 'object'){
+    var pid = raw.project_id || "__unassigned__";
+    var doc = emptyEtbDoc(); raw.project_id = pid; doc.trees[pid] = raw; return doc;
+  }
+  return emptyEtbDoc();
+}
+function selectTreeForProject(doc, pid){
+  if(!doc || !doc.trees || pid == null) return null;
+  return doc.trees[pid] || null;
+}
+function __lastAuditTs(exp){ var a=(exp&&exp.audit_log)||[],m=''; for(var i=0;i<a.length;i++){ if(a[i].timestamp&&a[i].timestamp>m) m=a[i].timestamp; } return m; }
+function currentExperiments(tree, reach){
+  var exps=(tree&&tree.experiments)||{}; reach=reach||{};
+  var ids=Object.keys(exps);
+  var active=ids.filter(function(id){ return (reach[id]||'pending')==='active'; });
+  var inProg=active.filter(function(id){ return (exps[id].status||'')==='in_progress'; });
+  if(inProg.length){ return inProg.sort(function(a,b){ return __lastAuditTs(exps[b]).localeCompare(__lastAuditTs(exps[a])); }); }
+  var upNext=active.filter(function(id){ return !exps[id].actual_outcome; });
+  if(!upNext.length) return [];
+  upNext.sort(function(a,b){ var ta=__lastAuditTs(exps[a])||'~',tb=__lastAuditTs(exps[b])||'~'; if(ta!==tb) return ta.localeCompare(tb); return ids.indexOf(a)-ids.indexOf(b); });
+  return [upNext[0]];
+}
+function focusedSubgraph(tree, expIds){
+  var exps=(tree&&tree.experiments)||{}, focus={}; (expIds||[]).forEach(function(id){ if(exps[id]) focus[id]=1; });
+  var nextExps={};
+  Object.keys(focus).forEach(function(eid){
+    var e=exps[eid];
+    (e.possible_results||[]).forEach(function(r){ (r.next_experiment_ids||[]).forEach(function(nx){ if(exps[nx]&&!focus[nx]) nextExps[nx]=1; }); });
+    var ao=e.actual_outcome; if(ao&&ao.next_experiment_ids) ao.next_experiment_ids.forEach(function(nx){ if(exps[nx]&&!focus[nx]) nextExps[nx]=1; });
+  });
+  var focusIds=Object.keys(focus), nextIds=Object.keys(nextExps), seen={}, allIds=[];
+  focusIds.concat(nextIds).forEach(function(id){ if(!seen[id]){ seen[id]=1; allIds.push(id); } });
+  return { focusIds:focusIds, nextIds:nextIds, allIds:allIds };
+}
+function buildFocusedTree(tree, expIds){
+  var sub=focusedSubgraph(tree, expIds), exps={};
+  sub.focusIds.forEach(function(id){ if(tree.experiments[id]) exps[id]=tree.experiments[id]; });
+  sub.nextIds.forEach(function(id){ if(!exps[id]){ var e=tree.experiments[id]; exps[id]=Object.assign({},e,{possible_results:[],actual_outcome:null}); } });
+  var out=Object.assign({},tree); out.experiments=exps; return out;
+}
+var __focusCy=null;
+function __etbRenderFocused(container, expIds){
+  if(!container) return;
+  if(typeof cytoscape==="undefined" || !window.cytoscape){ container.innerHTML='<div class="cy-msg">Graph library couldn\'t load (CDN/sandbox).</div>'; return; }
+  if(!expIds || !expIds.length){ container.innerHTML='<div class="cy-msg">No current experiment to graph.</div>'; return; }
+  var ftree=buildFocusedTree(state.tree, expIds);
+  var reach=computeReachability(state.tree);
+  var sem=buildGraphElements(ftree, reach);
+  var R=toRenderElements(sem.nodes, sem.edges);
+  var p=resolvePalette();
+  if(__focusCy){ try{ __focusCy.destroy(); }catch(e){} __focusCy=null; }
+  container.innerHTML='';
+  __focusCy=cytoscape({container:container, elements:[].concat(R.nodes, R.edges), style:cyStyle(p), layout:DAGRE_LAYOUT, minZoom:0.2, maxZoom:2.5, userZoomingEnabled:false, userPanningEnabled:false, boxSelectionEnabled:false, autoungrabify:true});
+  __focusCy.on("tap", 'node[kind="experiment"]', function(evt){ if(window.__hubOpenExp) window.__hubOpenExp(evt.target.id()); });
+  __focusCy.ready(function(){ try{ __focusCy.fit(undefined, 24); }catch(e){} });
+}
+
+window.ETB = {
+  getTree: function(){ return state.tree; },
+  listExperiments: function(){ return __etbListExperiments(state.tree); },
+  resolveOutcomeStatus: function(link){ return __etbResolveOutcomeStatus(state.tree, link); },
+  onShow: function(){
+    try{
+      var gv = ETB_ROOT.querySelector('#view-graph');
+      if(gv && !gv.hidden){ if(typeof renderGraph==='function') renderGraph(); }
+      else if(typeof cy!=='undefined' && cy){ cy.resize(); }
+    }catch(e){}
+  },
+  // ----- hub additions -----
+  setActiveProject: function(pid){
+    state.activeProjectId = pid;
+    if(state.doc){ var t=selectTreeForProject(state.doc, pid); if(!t){ t=emptyTree(); if(pid!=null) t.project_id=pid; } state.tree=t; try{ normalizeTree(state.tree); renderAll(); }catch(e){} }
+    else if(state.tree && pid!=null && state.tree.project_id==null){ state.tree.project_id=pid; }
+  },
+  getActiveProjectId: function(){ return state.activeProjectId; },
+  getDoc: function(){ return state.doc; },
+  hasCreds: function(){ try{ var c=getCreds(); return !!(c&&c.binId&&c.masterKey); }catch(e){ return false; } },
+  loadForHub: function(){
+    return loadFromBin().then(function(raw){
+      state.doc=migrateEtbDoc(raw);
+      var pid=state.activeProjectId; var t=(pid!=null)?selectTreeForProject(state.doc,pid):null;
+      if(!t){ t=emptyTree(); if(pid!=null) t.project_id=pid; }
+      state.tree=t; normalizeTree(state.tree); state.source="bin"; cacheTree(); renderAll(); return true;
+    }).catch(function(){ return false; });
+  },
+  currentExperiments: function(){ try{ var reach=computeReachability(state.tree); return currentExperiments(state.tree, reach).map(function(id){ return state.tree.experiments[id]; }); }catch(e){ return []; } },
+  experimentById: function(id){ return (state.tree&&state.tree.experiments&&state.tree.experiments[id])||null; },
+  recordOutcomeFor: function(expId, payload){ try{ recordOutcome(state.tree, expId, payload, {user:state.editor}); if(payload && payload.key_read_values && typeof recordOutcomePatch==='function'){ try{ recordOutcomePatch(state.tree, expId, {key_read_values:payload.key_read_values}); }catch(__e){} } var e=state.tree.experiments[expId]; if(e) e.status='complete'; softRefresh(); return true; }catch(err){ return false; } },
+  saveActive: function(){
+    try{ if(!getCreds()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+    return loadFromBin().catch(function(){ return state.doc; }).then(function(raw){
+      var doc=migrateEtbDoc(raw); var pid=state.activeProjectId||state.tree.project_id||"__unassigned__";
+      state.tree.project_id=pid; doc.trees[pid]=state.tree; doc.meta={updated_at:new Date().toISOString(), updated_by:state.editor||""};
+      state.doc=doc; return saveToBin(doc);
+    }).then(function(){ state.source="bin"; state.savedAt=new Date().toLocaleTimeString(); try{ cacheTree(); renderStatus(); }catch(e){} return true; })
+      .catch(function(){ return false; });
+  },
+  openSettings: function(){ try{ openSettings(true); }catch(e){} },
+  renderFocusedGraph: function(container, expIds){ try{ __etbRenderFocused(container, expIds); }catch(e){ if(container) container.innerHTML='<div class="cy-msg">Graph unavailable.</div>'; } }
+};
+
+init();
+
+})();
 </script>
 </body>
 </html>
