@@ -1775,7 +1775,7 @@ window.hubProjectKpis = function(){
     if(!selectedObj) return [];
     var AK=allKpisPool(), out=[], seen={};
     AK.forEach(function(k){
-      if(k.objectiveId!==selectedObj || seen[k.id]) return; seen[k.id]=1;
+      if(k.objectiveId!==selectedObj || k.hostType==='task' || seen[k.id]) return; seen[k.id]=1;
       var dir=RD.kpiDirection(k,AK);
       out.push({ gid:k.id, name:(RD.kpiName(k,AK)||k.id), unit:(RD.kpiUnit(k,AK)||''), direction:((dir==='down'||dir==='decrease')?'<=':'>='), label:hubKpiLabel(k) });
     });
@@ -1785,7 +1785,7 @@ window.hubProjectKpis = function(){
 function writeKpiUpdatesFromReads(expId, readings){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return 0;
   var byId={}; (exp.key_reads||[]).forEach(function(k){ byId[k.id]=k; });
-  var valid={}; try{ allKpisPool().forEach(function(k){ if(k.objectiveId===selectedObj) valid[k.id]=1; }); }catch(e){}
+  var valid={}; try{ allKpisPool().forEach(function(k){ if(k.objectiveId===selectedObj && k.hostType!=='task') valid[k.id]=1; }); }catch(e){}
   if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
   var ts=Date.now(), wrote=0;
   Object.keys(readings||{}).forEach(function(krId){
@@ -2119,7 +2119,7 @@ function renderAll(){
     ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
-  renderKRs(); renderGates(); renderTasks(); renderRisks(); renderModal(); renderExpSummary();
+  renderKRs(); renderGates(); renderRisks(); renderModal(); renderExpSummary();
   if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
 function clearSubs(){ ["KR","SG","TASK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); document.getElementById("initPanel").innerHTML=""; }
@@ -2157,7 +2157,6 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
-    <div class="mc"><div class="mc-label">Tasks</div><div class="mc-val">${tAvg==null?"—":tAvg+"%"}</div><div class="mc-sub">${tasks.length} task${tasks.length===1?"":"s"}</div></div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
