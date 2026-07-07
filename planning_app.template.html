@@ -238,6 +238,7 @@
   .tacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
   details.tnode > summary:hover .tacts, .tleaf:hover .tacts{display:inline-flex}
   .pf-grouped .tleaf .tacts{display:inline-flex}   /* grouped Structure view: keep edit visible, not hover-only */
+  .pfgrp-acts{display:inline-flex;gap:4px;margin-left:8px;flex:none}   /* per-group add buttons, inline with the group label */
   .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
   .tact:hover{color:var(--ink);border-color:var(--accent)}
   .mdia{color:var(--accent2);font-size:11px;text-align:center}
@@ -643,6 +644,7 @@ function renderPortfolio(){
     const host=document.getElementById("structTables");
     if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host);
       host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
+      host.querySelectorAll("[data-gnew]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const d=JSON.parse(b.dataset.gnew); armedDelete=null; openEditor(null, d.e, d.p); });
     }
   } else renderStructTables();                                 // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
@@ -1163,22 +1165,43 @@ function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; re
 function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id && initHasMatch(i)) || portfolio.products.some(p=>p.divisionId===d.id && productShows(p)); }
 function groupedTreeHtml(){
   const objs = portfolio.objectives.filter(objMatches);
-  const bar = RO ? "" : `<div class="pf-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">`+
-    [["division","+ New division"],["product","+ New product"],["initiative","+ New initiative"],["objective","+ New objective"]]
-      .map(e=>`<button class="act" data-addnew="${e[0]}">${e[1]}</button>`).join("")+`</div>`;
-  if(!objs.length) return bar+'<p class="hint">No objectives match the current filters.</p>';
+  const flat = !pfGroupDims.length;   // no grouping dimensions → flat list, no headers to hang add buttons on
+  const topBar = (RO || !flat) ? "" : `<div class="pf-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">`+
+    [["objective","+ New objective"],["initiative","+ New initiative"]].map(e=>`<button class="act" data-addnew="${e[0]}">${e[1]}</button>`).join("")+`</div>`;
+  if(!objs.length) return topBar+'<p class="hint">No objectives match the current filters.</p>';
   const em=pfMap();
   const nodes = RD.groupObjectives(objs, pfGroupDims, portfolio);
-  return bar+`<div class="tree pf-grouped">`+renderGroupNodes(nodes, em, 0)+`</div>`;
+  return topBar+`<div class="tree pf-grouped">`+renderGroupNodes(nodes, em, 0, [])+`</div>`;
 }
-function renderGroupNodes(nodes, em, depth){
+// build a prefill object from a group path so a new record lands in that group
+function groupPrefill(pathPairs){
+  const pre={};
+  pathPairs.forEach(p=>{ const dim=p[0], key=p[1]; if(key===""||key==="__all__") return;
+    if(dim==="division") pre.divisionId=key; else if(dim==="product") pre.productId=key;
+    else if(dim==="model") pre.modelId=key; else if(dim==="quarter") pre.quarter=key;
+    else if(dim==="owner") pre.owner=key; else if(dim==="initiative") pre.initiativeId=key; });
+  return pre;
+}
+function gnewBtn(entity, pre, label){ return `<button class="tact" title="${esc(label)}" data-gnew="${esc(JSON.stringify({e:entity,p:pre}))}">${esc(label)}</button>`; }
+// add buttons for a group header: always the leaf entity (objective) landing in this group,
+// plus the natural structural child when the group's dimension is a container.
+function groupAddButtons(dim, pre){
+  if(RO) return "";
+  let b = gnewBtn("objective", pre, "+ obj");
+  if(dim==="division")        b += gnewBtn("initiative", pre, "+ init");
+  else if(dim==="product")    b += gnewBtn("model", pre, "+ model");
+  else if(dim==="initiative") b += gnewBtn("milestone", pre, "+ ms");
+  return `<span class="pfgrp-acts">${b}</span>`;
+}
+function renderGroupNodes(nodes, em, depth, path){
   if(nodes.length===1 && nodes[0].dim==null){ return nodes[0].objs.map(o=>objLeafHtml(o,0)).join(""); }   // no dims → flat, no header
   let h="";
   nodes.forEach(n=>{
+    const nodePath=path.concat([[n.dim,n.key]]), pre=groupPrefill(nodePath);
     const under=collectObjs(n);
     const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
-    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))} <span class="tsub">${under.length} obj</span></div>`;
-    if(n.children) h+=renderGroupNodes(n.children, em, depth+1);
+    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
+    if(n.children) h+=renderGroupNodes(n.children, em, depth+1, nodePath);
     else h+=n.objs.map(o=>objLeafHtml(o,depth+1)).join("");
     h+=`</div>`;
   });
