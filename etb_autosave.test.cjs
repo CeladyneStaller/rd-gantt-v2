@@ -1,47 +1,33 @@
-const fs=require('fs');
-let saveCount=0, saveStarts=[], saveDelay=0, t0=Date.now();
-const now=()=>Date.now()-t0;
-const winL={}, docL={};
-global.ETB={ saveActive:function(){ saveCount++; saveStarts.push(now()); if(saveDelay>0) return new Promise(r=>setTimeout(()=>r(true),saveDelay)); return Promise.resolve(true); } };
-global.window={ ETB:global.ETB, addEventListener:function(ev,fn){ (winL[ev]=winL[ev]||[]).push(fn); } };
-global.document={ addEventListener:function(ev,fn){ (docL[ev]=docL[ev]||[]).push(fn); }, visibilityState:"visible" };
+// Focused unit test for the ETB -> divisional-exec-doc write-through wiring (__etbOnChange).
+// The ETB no longer owns a broker debounce; it syncs the active tree into exec.etbTrees and
+// lets the host's persist() flush EXEC-<div>. This asserts that contract.
+const fs=require("fs");
 const block=fs.readFileSync('/tmp/etb_plumbing.js','utf8');
-eval(block+"\n; global.__P={ onChange:window.__etbOnChange, flush:etbFlushSave, setSuppress:function(v){__etbSuppressSave=v;} };");
-const P=global.__P;
-P.setSuppress(false);   // block now starts suppressed until the initial load; arm saves for the plumbing tests
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; console.error('FAIL:',m);}};
+let persistCalls=0; global.persist=function(){persistCalls++;};
+global.exec={etbTrees:{}};
+let activeTree={experiments:{X:1}}; let activePid="O1";
+global.window={ ETB:{ exportActive:function(){ return {pid:activePid, tree:activeTree?JSON.parse(JSON.stringify(activeTree)):null}; } }, addEventListener:function(){} };
+global.document={ addEventListener:function(){}, visibilityState:"visible" };
+global.ETB=global.window.ETB;   // in a browser, bareword ETB === window.ETB (shared global)
+eval(block + "\n; global.__setSuppress=function(v){__etbSuppressSave=v;};");   // block starts suppressed
+let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++;console.error('FAIL:',m);} else console.log('ok:',m);};
 
-(async()=>{
-  // 1) debounce coalescing: 5 rapid changes → one save
-  saveCount=0; for(let i=0;i<5;i++){ P.onChange(); await sleep(50); } await sleep(900);
-  ok(saveCount===1,'debounce: 5 rapid actions coalesce to 1 save (got '+saveCount+')');
+global.__setSuppress(false);
+// 1) a change syncs the active tree into the divisional exec doc, keyed by objective
+persistCalls=0; global.exec.etbTrees={}; global.window.__etbOnChange();
+ok(global.exec.etbTrees.O1 && global.exec.etbTrees.O1.experiments && global.exec.etbTrees.O1.experiments.X===1, "onChange writes active tree into exec.etbTrees[pid]");
+// 2) ...and triggers the host persist() (which owns the EXEC-<div> write + flush)
+ok(persistCalls>=1, "onChange calls host persist()");
+// 3) suppressed (initial load): no write, no persist -> can't clobber the loaded tree
+global.__setSuppress(true); persistCalls=0; global.exec.etbTrees={}; global.window.__etbOnChange();
+ok(Object.keys(global.exec.etbTrees).length===0 && persistCalls===0, "suppressed onChange neither writes nor persists");
+global.__setSuppress(false);
+// 4) no active objective -> nothing keyed in (still safe)
+activePid=null; persistCalls=0; global.exec.etbTrees={}; global.window.__etbOnChange(); activePid="O1";
+ok(Object.keys(global.exec.etbTrees).length===0, "onChange with no active objective writes nothing");
+// 5) a fresh objective id keys a second tree without dropping the first
+global.exec.etbTrees={O1:{experiments:{X:1}}}; activePid="O2"; activeTree={experiments:{Y:2}}; global.window.__etbOnChange();
+ok(global.exec.etbTrees.O1 && global.exec.etbTrees.O2 && global.exec.etbTrees.O2.experiments.Y===2, "second objective tree coexists in exec.etbTrees");
 
-  // 2) suppress: no save while suppressed
-  saveCount=0; P.setSuppress(true); P.onChange(); await sleep(900); ok(saveCount===0,'suppress: no save while loading'); P.setSuppress(false);
-
-  // 3) visibilitychange flush: a pending change flushes immediately (well before the 700ms debounce)
-  saveCount=0; P.onChange(); global.document.visibilityState="hidden"; (docL.visibilitychange||[]).forEach(fn=>fn()); await sleep(50);
-  ok(saveCount===1,'tab-hide flush: pending change saved immediately (got '+saveCount+' at ~'+ (saveStarts[saveStarts.length-1]||'-') +'ms)');
-  global.document.visibilityState="visible";
-
-  // 4) flush no-op when nothing pending
-  saveCount=0; (docL.visibilitychange||[]).forEach(fn=>fn()); await sleep(50); ok(saveCount===0,'flush is a no-op when no change is pending');
-
-  // 5) max-wait cap: continuous editing still forces a save by ~2500ms
-  saveCount=0; let stop=false; (async()=>{ while(!stop){ P.onChange(); await sleep(200); } })();
-  await sleep(2700); const savedDuringContinuous=saveCount; stop=true; await sleep(50);
-  ok(savedDuringContinuous>=1,'max-wait: a save fires during continuous editing (got '+savedDuringContinuous+' by ~2700ms)');
-
-  // 6) serialization: overlapping flushes do not run saveActive concurrently
-  saveDelay=300; saveCount=0; saveStarts=[];
-  P.onChange(); await P.flush?0:0; const A=P.flush();   // save A (~300ms)
-  P.onChange(); const B=P.flush();                      // save B — must wait for A
-  await Promise.all([A,B]); await sleep(50);
-  const gap = saveStarts.length>=2 ? (saveStarts[1]-saveStarts[0]) : 0;
-  ok(saveStarts.length>=2 && gap>=250,'serialization: 2nd save starts only after the 1st resolves (gap '+gap+'ms)');
-  saveDelay=0;
-
-  console.log(f?('\n'+f+' / '+n+' FAILED'):('PASS — '+n+' ETB-autosave plumbing assertions green'));
-  process.exit(f?1:0);
-})();
+console.log(f?('\n'+f+' / '+n+' FAILED'):('\nPASS — '+n+' ETB write-through plumbing assertions green'));
+process.exit(f?1:0);

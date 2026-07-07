@@ -1789,7 +1789,14 @@ function etbScheduleSave(){
 function etbFlushSave(){ if(__etbSaveTimer || __etbMaxTimer) return __etbRunSave(); return __etbSaveChain; }
 window.__etbOnChange = function(){
   try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}   // keep the host current-step panel in sync
-  etbScheduleSave();
+  if(__etbSuppressSave) return;                                                    // don't write during the initial load (else the empty tree clobbers the saved one)
+  try{
+    if(window.ETB && ETB.exportActive){
+      var __s = ETB.exportActive();
+      if(__s && __s.pid!=null && __s.tree){ if(!exec.etbTrees) exec.etbTrees={}; exec.etbTrees[__s.pid] = __s.tree; }   // active tree → divisional exec doc (in memory, always current)
+    }
+  }catch(e){}
+  try{ if(typeof persist==="function") persist(); }catch(e){}          // debounced EXEC-<div> write; host owns flush / beforeunload / serialize
 };
 function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
 function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ __etbSuppressSave=true; return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }).finally(function(){ __etbSuppressSave=false; }); } }catch(e){ __etbSuppressSave=false; } return Promise.resolve(); }
@@ -1912,7 +1919,7 @@ let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "
 let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[] }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -3569,13 +3576,14 @@ function getCreds(){ try{ return (typeof tok==="function"&&tok())?{binId:"broker
 function setCreds(c){ return true; }
 function clearCreds(){}
 async function loadFromBin(){
-  var r=await apiGet(etbDocId());
-  if(r){ __etbEtag=r.etag||"0"; return r.doc||{}; }
-  __etbEtag="0"; return {};
+  // ETB trees live INSIDE the divisional exec doc (exec.etbTrees); the host persists it to EXEC-<div>.
+  var t = (typeof exec!=="undefined" && exec && exec.etbTrees && typeof exec.etbTrees==="object") ? JSON.parse(JSON.stringify(exec.etbTrees)) : {};
+  return { schema_version:"2.0", trees:t, meta:{} };
 }
 async function saveToBin(doc){
-  var r=await apiPut(etbDocId(), doc, __etbEtag);
-  if(r){ if(r.etag) __etbEtag=r.etag; else if(r.version!=null) __etbEtag=String(r.version); }
+  // persist trees THROUGH the divisional exec doc — no separate ETB bin exists on the broker
+  try{ if(typeof exec!=="undefined" && exec){ exec.etbTrees = (doc && doc.trees && typeof doc.trees==="object") ? doc.trees : {}; } }catch(e){}
+  try{ if(typeof persist==="function") persist(); }catch(e){}
   return true;
 }
 
@@ -4602,6 +4610,7 @@ window.ETB = {
   currentExperiments: function(){ try{ var reach=computeReachability(state.tree); return currentExperiments(state.tree, reach).map(function(id){ return state.tree.experiments[id]; }); }catch(e){ return []; } },
   experimentById: function(id){ return (state.tree&&state.tree.experiments&&state.tree.experiments[id])||null; },
   recordOutcomeFor: function(expId, payload){ try{ recordOutcome(state.tree, expId, payload, {user:state.editor}); if(payload && payload.key_read_values && typeof recordOutcomePatch==='function'){ try{ recordOutcomePatch(state.tree, expId, {key_read_values:payload.key_read_values}); }catch(__e){} } var e=state.tree.experiments[expId]; if(e) e.status='complete'; softRefresh(); return true; }catch(err){ return false; } },
+  exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },
   saveActive: function(){
     try{ if(!getCreds()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
     var snapPid=state.activeProjectId||(state.tree&&state.tree.project_id)||"__unassigned__";
