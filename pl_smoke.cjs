@@ -13,7 +13,8 @@ const hook=`\n;window.__t={setP:function(p){portfolio=p;},blank:function(){retur
   `gbc:function(){return groupByControlHtml();},dimLabel:function(a,b){return dimLabel(a,b);},`+
   `setG:function(m,d){pfGroupMode=m;pfGroupDims=d;},renderG:function(){try{renderGantt();return document.getElementById('ganttWrap').innerHTML;}catch(e){return 'ERR:'+e.message;}},`+
   `openObj:function(id){try{openEditor(id,'objective');return document.getElementById('pfModalBody').innerHTML;}catch(e){return 'ERR:'+e.message;}},`+
-  `infill:function(q){var qs=document.querySelector('#pfModalBody [data-f=\"quarter\"]');qs.value=q;qs.dispatchEvent(new Event('change'));var st=document.querySelector('#pfModalBody [data-f=\"plannedStart\"]'),en=document.querySelector('#pfModalBody [data-f=\"plannedEnd\"]');return st.value+'|'+en.value;}};`;
+  `infill:function(q){var qs=document.querySelector('#pfModalBody [data-f=\"quarter\"]');qs.value=q;qs.dispatchEvent(new Event('change'));var st=document.querySelector('#pfModalBody [data-f=\"plannedStart\"]'),en=document.querySelector('#pfModalBody [data-f=\"plannedEnd\"]');return st.value+'|'+en.value;},`+
+  `renderP:function(){try{renderPortfolio();return document.getElementById('structTables').innerHTML;}catch(e){return 'ERR:'+e.message;}}};`;
 
 const scripts=[...w.document.querySelectorAll('script:not([src])')];
 for(const sc of scripts){
@@ -72,6 +73,17 @@ const ctrl=T.gbc();
 ok(ctrl.includes('data-gb="mode"')&&ctrl.includes('data-gb="dim"')&&ctrl.includes('data-gb="add"'),'builder: mode + dim chain + add present');
 T.setG('hierarchy',[]);
 ok(!T.gbc().includes('data-gb="dim"'),'builder: hierarchy mode shows no dim chain');
+
+// ---- the ACTUAL Structure tab dispatch (renderPortfolio -> #structTables) ----
+T.setG('dims',['division','product','model']);
+const sp1=T.renderP();
+ok(!sp1.startsWith('ERR:'),'structure tab: renderPortfolio no error ('+(sp1.startsWith('ERR:')?sp1:'ok')+')');
+ok(sp1.includes('pfgrp-head')&&sp1.includes('StackA')&&sp1.includes('ModelX'),'structure tab: custom grouping renders the nested grouped tree');
+ok(sp1.includes('obj one'),'structure tab: objective leaves present under groups');
+T.setG('hierarchy',[]);
+const sp2=T.renderP();
+ok(sp2.includes('struct-section')&&sp2.includes('Divisions')&&sp2.includes('Initiatives'),'structure tab: Hierarchy renders the full structure tables');
+ok(!sp2.includes('pfgrp-head'),'structure tab: Hierarchy is NOT the grouped tree');
 
 console.log(f?('\n'+f+' / '+n+' FAILED'):('PASS - '+n+' planning-app assertions green'));
 process.exit(f?1:0);

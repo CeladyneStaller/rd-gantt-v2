@@ -637,7 +637,10 @@ const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.q
 
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
-  renderStructTables();
+  if(pfGroupMode==="dims"){                                    // custom grouping → objectives nested under the chosen dimensions
+    const host=document.getElementById("structTables");
+    if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); }
+  } else renderStructTables();                                 // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
