@@ -237,6 +237,7 @@
   .tname:hover{color:var(--accent);text-decoration:underline}
   .tacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
   details.tnode > summary:hover .tacts, .tleaf:hover .tacts{display:inline-flex}
+  .pf-grouped .tleaf .tacts{display:inline-flex}   /* grouped Structure view: keep edit visible, not hover-only */
   .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
   .tact:hover{color:var(--ink);border-color:var(--accent)}
   .mdia{color:var(--accent2);font-size:11px;text-align:center}
@@ -1697,8 +1698,11 @@ const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.q
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
   if(pfGroupMode==="dims"){                                    // custom grouping → objectives nested under the chosen dimensions
+    treeCtx="portfolio";                                        // ensure treeActs renders editable row actions (not the read-only lineage mode)
     const host=document.getElementById("structTables");
-    if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host); }
+    if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host);
+      host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
+    }
   } else renderStructTables();                                 // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
 function openEditor(id, entityOverride, prefill){
@@ -2218,10 +2222,13 @@ function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; re
 function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id && initHasMatch(i)) || portfolio.products.some(p=>p.divisionId===d.id && productShows(p)); }
 function groupedTreeHtml(){
   const objs = portfolio.objectives.filter(objMatches);
-  if(!objs.length) return '<p class="hint">No objectives match the current filters.</p>';
+  const bar = RO ? "" : `<div class="pf-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">`+
+    [["division","+ New division"],["product","+ New product"],["initiative","+ New initiative"],["objective","+ New objective"]]
+      .map(e=>`<button class="act" data-addnew="${e[0]}">${e[1]}</button>`).join("")+`</div>`;
+  if(!objs.length) return bar+'<p class="hint">No objectives match the current filters.</p>';
   const em=pfMap();
   const nodes = RD.groupObjectives(objs, pfGroupDims, portfolio);
-  return `<div class="tree">`+renderGroupNodes(nodes, em, 0)+`</div>`;
+  return bar+`<div class="tree pf-grouped">`+renderGroupNodes(nodes, em, 0)+`</div>`;
 }
 function renderGroupNodes(nodes, em, depth){
   if(nodes.length===1 && nodes[0].dim==null){ return nodes[0].objs.map(o=>objLeafHtml(o,0)).join(""); }   // no dims → flat, no header
