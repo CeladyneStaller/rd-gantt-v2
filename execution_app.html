@@ -1682,9 +1682,17 @@ let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 /* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
-window.__etbOnChange = function(){ try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){} };
+var __etbSaveTimer=null, __etbSuppressSave=false;
+function etbFlushSave(){ if(__etbSaveTimer){ clearTimeout(__etbSaveTimer); __etbSaveTimer=null; } try{ if(window.ETB && ETB.saveActive) return ETB.saveActive(); }catch(e){} return Promise.resolve(false); }
+window.__etbOnChange = function(){
+  try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){}
+  if(__etbSuppressSave) return;
+  if(__etbSaveTimer) clearTimeout(__etbSaveTimer);
+  __etbSaveTimer=setTimeout(function(){ __etbSaveTimer=null; try{ if(window.ETB && ETB.saveActive) ETB.saveActive(); }catch(e){} }, 700);
+};
 function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
-function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }); } }catch(e){} return Promise.resolve(); }
+function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ __etbSuppressSave=true; return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }).finally(function(){ __etbSuppressSave=false; }); } }catch(e){ __etbSuppressSave=false; } return Promise.resolve(); }
+if(typeof window!=="undefined"){ window.addEventListener("beforeunload",function(){ if(__etbSaveTimer){ try{ etbFlushSave(); }catch(e){} } }); }
 
 /* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
 function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
@@ -1993,7 +2001,7 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=()=>{ selectedObj=s.value; etbSyncObjective(); renderAll(); };
+  s.onchange=()=>{ etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); __etbSuppressSave=false; renderAll(); };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
@@ -4320,16 +4328,15 @@ function wire(){
     }catch(e){setMsg("#ioMsg",e.message,"error");}
     finally{btn.textContent=old;btn.disabled=false;}
   });
-  function performSave(){
+  function performSave(nErr){
     const b=$("#btnSave");if(b)b.disabled=true;setMsg("#ioMsg","Saving…","muted");
-    loadFromBin().catch(function(){return state.doc;}).then(function(raw){var doc=migrateEtbDoc(raw);var pid=state.activeProjectId||state.tree.project_id||"__unassigned__";state.tree.project_id=pid;doc.trees[pid]=state.tree;doc.meta={updated_at:new Date().toISOString(),updated_by:state.editor||""};state.doc=doc;return saveToBin(doc);}).then(()=>{state.source="bin";state.savedAt=new Date().toLocaleTimeString();cacheTree();renderStatus();if(typeof renderHome==="function"){try{renderHome();}catch(__e){}}setMsg("#ioMsg","Saved "+state.savedAt+".","ok");})
+    loadFromBin().catch(function(){return state.doc;}).then(function(raw){var doc=migrateEtbDoc(raw);var pid=state.activeProjectId||state.tree.project_id||"__unassigned__";state.tree.project_id=pid;doc.trees[pid]=state.tree;doc.meta={updated_at:new Date().toISOString(),updated_by:state.editor||""};state.doc=doc;return saveToBin(doc);}).then(()=>{state.source="bin";state.savedAt=new Date().toLocaleTimeString();cacheTree();renderStatus();if(typeof renderHome==="function"){try{renderHome();}catch(__e){}}setMsg("#ioMsg","Saved "+state.savedAt+(nErr?" \u2014 "+nErr+" validation issue"+(nErr>1?"s":""):"")+".",nErr?"muted":"ok");})
       .catch(e=>setMsg("#ioMsg",e.message,"error"))
       .finally(()=>{const x=$("#btnSave");if(x)x.disabled=false;});
   }
   $("#btnSave").addEventListener("click",()=>{
-    const errs=validateTree(state.tree).filter(i=>i.level==="error");
-    if(errs.length){armConfirm($("#btnSave"),`${errs.length} validation error(s) present. Save anyway?`,performSave);return;}
-    performSave();
+    const nErr=validateTree(state.tree).filter(i=>i.level==="error").length;
+    performSave(nErr);
   });
 
   $("#btnFormat").addEventListener("click",()=>{try{$("#jsonArea").value=JSON.stringify(JSON.parse($("#jsonArea").value),null,2);setMsg("#jsonMsg","Formatted.","ok");}catch(e){setMsg("#jsonMsg","Invalid JSON — "+e.message,"error");}});
@@ -4482,11 +4489,12 @@ window.ETB = {
   recordOutcomeFor: function(expId, payload){ try{ recordOutcome(state.tree, expId, payload, {user:state.editor}); if(payload && payload.key_read_values && typeof recordOutcomePatch==='function'){ try{ recordOutcomePatch(state.tree, expId, {key_read_values:payload.key_read_values}); }catch(__e){} } var e=state.tree.experiments[expId]; if(e) e.status='complete'; softRefresh(); return true; }catch(err){ return false; } },
   saveActive: function(){
     try{ if(!getCreds()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+    var snapPid=state.activeProjectId||(state.tree&&state.tree.project_id)||"__unassigned__";
+    var snapTree=state.tree?JSON.parse(JSON.stringify(state.tree)):emptyTree(); snapTree.project_id=snapPid;
     return loadFromBin().catch(function(){ return state.doc; }).then(function(raw){
-      var doc=migrateEtbDoc(raw); var pid=state.activeProjectId||state.tree.project_id||"__unassigned__";
-      state.tree.project_id=pid; doc.trees[pid]=state.tree; doc.meta={updated_at:new Date().toISOString(), updated_by:state.editor||""};
-      state.doc=doc; return saveToBin(doc);
-    }).then(function(){ state.source="bin"; state.savedAt=new Date().toLocaleTimeString(); try{ cacheTree(); renderStatus(); }catch(e){} return true; })
+      var doc=migrateEtbDoc(raw); doc.trees[snapPid]=snapTree; doc.meta={updated_at:new Date().toISOString(), updated_by:state.editor||""};
+      if(state.activeProjectId===snapPid) state.doc=doc; return saveToBin(doc);
+    }).then(function(){ state.savedAt=new Date().toLocaleTimeString(); try{ if(state.activeProjectId===snapPid){ state.source="bin"; cacheTree(); renderStatus(); } }catch(e){} return true; })
       .catch(function(){ return false; });
   },
   openSettings: function(){ try{ openSettings(true); }catch(e){} },
