@@ -681,6 +681,7 @@ let divisionId = null;
 let execEtag = "0", execVersion = 0, portfolioVersion = 0;
 let selectedObj = null;
 /* ---- ETB (experiment tree) integration: per-objective trees over the broker ---- */
+window.__etbOnChange = function(){ try{ if(typeof renderExpSummary==="function") renderExpSummary(); }catch(e){} };
 function etbSyncObjective(){ try{ if(window.ETB && ETB.setActiveProject) ETB.setActiveProject(selectedObj||null); }catch(e){} }
 function etbLoadForDivision(){ try{ if(window.ETB && ETB.hasCreds && ETB.hasCreds() && ETB.loadForHub){ return ETB.loadForHub().then(function(){ etbSyncObjective(); try{renderExpSummary();}catch(e){} }); } }catch(e){} return Promise.resolve(); }
 
@@ -2473,7 +2474,7 @@ function init(){
   renderAll();
 }
 
-function renderAll(){syncRepeats(state.tree);renderStatus();renderOutline();$("#jsonArea").value=JSON.stringify(state.tree,null,2);if(typeof cy!=="undefined"&&cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(state.panelExpId&&state.tree.experiments[state.panelExpId])renderPanel(state.panelExpId);else if(state.panelExpId)closePanel();}
+function renderAll(){syncRepeats(state.tree);renderStatus();renderOutline();$("#jsonArea").value=JSON.stringify(state.tree,null,2);if(typeof cy!=="undefined"&&cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(state.panelExpId&&state.tree.experiments[state.panelExpId])renderPanel(state.panelExpId);else if(state.panelExpId)closePanel();if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}}
 
 function renderStatus(){
   const t=state.tree;const counts={active:0,pending:0,not_pursued:0};
@@ -2741,7 +2742,7 @@ function closePanel(){
   const d=$("#drawer");d.classList.remove("open");d.setAttribute("aria-hidden","true");
   if(cy)cy.$(":selected").unselect();
 }
-function softRefresh(){syncRepeats(state.tree);cacheTree();renderStatus();renderOutline();if(cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();}
+function softRefresh(){syncRepeats(state.tree);cacheTree();renderStatus();renderOutline();if(cy&&!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}}
 function fRow(label,inputEl){const w=el("div","p-row");w.appendChild(el("div","p-lab",label));w.appendChild(inputEl);return w;}
 function fText(value,onchange,opts){const i=el("input");i.value=value==null?"":value;if(opts&&opts.type)i.type=opts.type;if(opts&&opts.placeholder)i.placeholder=opts.placeholder;i.addEventListener("change",()=>onchange(i.value));return i;}
 function fArea(value,onchange){const t=el("textarea");t.value=value==null?"":value;t.addEventListener("change",()=>onchange(t.value));return t;}
