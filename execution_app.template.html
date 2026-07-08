@@ -1573,29 +1573,31 @@ function saveSubKrModal(){
 }
 
 /* ---------------- stage-gate target editor (matches KR KPI form) ---------------- */
-let draftTgt=null, draftTgtGate=null, draftTgtId=null;
+let draftTgt=null, draftTgtHost=null, draftTgtId=null;
 function parseNums(str){ return String(str||"").split(/[\s,;]+/).map(x=>Number(x)).filter(x=>!isNaN(x)); }
 function statPreview(d){ const nums=parseNums(d.readings); if(!nums.length) return "no readings yet"; const v=RD.computeStat(d.statistic||"average", nums); return "→ "+(d.statistic||"average")+": "+(v==null?"—":(Math.round(v*1000)/1000))+" ("+nums.length+" reads)"; }
-function openTgtModal(gateId, kpiId){
-  draftTgtGate=gateId; draftTgtId=kpiId||null;
+function openTgtModal(gateId, kpiId){ openKpiTgtModal("stageGate", gateId, kpiId); }   // stage-gate target (back-compat)
+function openKpiTgtModal(hostType, hostId, kpiId){
+  draftTgtHost={hostType:hostType, hostId:hostId}; draftTgtId=kpiId||null;
   const pk=kpiId?exec.kpis.find(k=>k.id===kpiId):null;
   draftTgt={
     name:pk?(pk.name||""):"",
     type:pk?(pk.targetType||"demonstration"):"demonstration",
     dir:(pk&&pk.direction==="down")?"decrease":"increase",
-    target:(pk&&pk.target!=null)?pk.target:"",
+    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",   // range objects don't fit this modal
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
     readCount:(pk&&pk.readCount!=null)?pk.readCount:""
   };
-  document.getElementById("kpiTgtTitle").textContent=kpiId?"Edit gate target":"Add gate target";
+  const isGate=hostType==="stageGate";
+  document.getElementById("kpiTgtTitle").textContent=kpiId?(isGate?"Edit gate target":"Edit KPI"):(isGate?"Add gate target":"Add KPI");
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
   wireTgtModal();
 }
-function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtGate=null; draftTgtId=null; }
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; }
 function tgtModalBody(){
-  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary";
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   return `
     <div class="modal-field"><span class="lbl">Target name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Power density"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
@@ -1604,7 +1606,7 @@ function tgtModalBody(){
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
-    <div class="hint" style="margin:0 0 12px">readings are posted from the gate's target table; statistical targets aggregate the latest reads</div>
+    <div class="hint" style="margin:0 0 12px">readings are posted from ${isGate?"the gate\'s target table":"this key result\'s KPI table"}; statistical targets aggregate the latest reads</div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update target":"Save target"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
 function wireTgtModal(){
@@ -1620,13 +1622,14 @@ function saveTgtModal(){
   body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
   const d=draftTgt;
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
+  const isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   let pk=draftTgtId?exec.kpis.find(k=>k.id===draftTgtId):null;
-  if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:"stageGate", hostId:draftTgtGate, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
+  if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:draftTgtHost.hostType, hostId:draftTgtHost.hostId, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg("Gate target saved","ok");
+  closeTgtModal(); renderAll(); setMsg((isGate?"Gate target":"KPI")+" saved","ok");
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -1912,7 +1915,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
-  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else subOpenAdd("kpi",ht,hid); });
+  host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else if(ht==="keyResult") openKpiTgtModal("keyResult", hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
   host.querySelectorAll("[data-linkdef]").forEach(sel=>sel.onchange=()=>{
     const opt=sel.options[sel.selectedIndex], isT=!!(opt&&opt.dataset.showrel==="1");
@@ -1922,7 +1925,7 @@ function wireExec(host){
   });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
-  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } } subOpenEdit(t,id); });
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } if(k&&k.hostType==="keyResult" && !isMemberKpi(k)){ openKpiTgtModal("keyResult", k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
