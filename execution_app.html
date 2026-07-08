@@ -1941,7 +1941,13 @@ function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product
 function modelName(mid){ const m=modelById(mid); return m?(m.name||m.id):mid; }
 function divOfProduct(pid){ const p=productById(pid); return p?p.divisionId:null; }
 function divOfModel(mid){ const m=modelById(mid); return m?divOfProduct(m.productId):null; }
-function targetsInScope(){ return portfolio ? RD.classifiedTargets(portfolio, portfolio.composition||[], divisionId) : {products:[],models:[]}; }
+function targetsInScope(){
+  if(!portfolio) return {products:[],models:[]};
+  const base=RD.classifiedTargets(portfolio, portfolio.composition||[], divisionId);
+  const models=new Set(base.models), products=new Set(base.products);
+  base.models.forEach(mid=>{ ancestorModels(mid).forEach(a=>{ models.add(a); const m=modelById(a); if(m&&m.productId) products.add(m.productId); }); });   // load super-product specs
+  return {products:[...products], models:[...models]};
+}
 function specDivsInScope(){ const t=targetsInScope(), s=new Set();
   t.products.forEach(p=>{ const d=divOfProduct(p); if(d) s.add(d); });
   t.models.forEach(m=>{ const d=divOfModel(m); if(d) s.add(d); });
@@ -1967,6 +1973,34 @@ function rankOf(hostType, objectiveId){
   return 0;                                                            // task / unknown -> never a link target
 }
 function linkRank(k){ return k ? rankOf(k.hostType, k.objectiveId) : 0; }
+// ---- familial scope: an objective's KRs/gates see only their own product/model LINEAGE -----------
+// Family of a model = transitive composition ancestors (super-products it is a sub-product of) + itself
+// + transitive descendants (sub-products/components), plus those models' products. Excludes siblings
+// (e.g. stack A never sees stack B) and other families (electrolyzer never sees fuel cell).
+function ancestorModels(mid){ const comp=portfolio.composition||[]; const out={}, stack=[mid];
+  while(stack.length){ const ps=RD.compositionParents(stack.pop(), comp); for(let i=0;i<ps.length;i++){ if(!out[ps[i]]){ out[ps[i]]=1; stack.push(ps[i]); } } }
+  return Object.keys(out); }
+function familyModelsOf(mid){ const comp=portfolio.composition||[]; const s=new Set([mid]);
+  ancestorModels(mid).forEach(m=>s.add(m)); RD.descendantModels(mid, comp).forEach(m=>s.add(m)); return s; }
+function familyOfObjective(objId){
+  const o=objById(objId), models=new Set(), products=new Set();
+  if(!o) return {models, products};
+  const c=RD.effClass(o, portfolio); let seeds=[];
+  if(c.kind==="model") seeds=[c.modelId];
+  else if(c.kind==="product"){ products.add(c.productId); seeds=(portfolio.models||[]).filter(m=>m.productId===c.productId).map(m=>m.id); }
+  seeds.forEach(mid=>familyModelsOf(mid).forEach(m=>models.add(m)));
+  models.forEach(mid=>{ const m=modelById(mid); if(m&&m.productId) products.add(m.productId); });
+  return {models, products};
+}
+function isFamilialKpi(k, fam){
+  if(k.hostType==="product") return fam.products.has(k.hostId);
+  if(k.hostType==="keyResult" && modelById(k.objectiveId)) return fam.models.has(k.objectiveId);
+  if(k.hostType==="component") return fam.models.has(k.objectiveId);
+  return false;
+}
+function componentNameOf(cid){ try{ for(const id in refDocs){ const sgs=refDocs[id]&&refDocs[id].doc&&refDocs[id].doc.stageGates; if(sgs){ const c=sgs.find(g=>g.id===cid); if(c) return c.name||c.id; } } }catch(e){} return cid; }
+function krTreeLabel(krId, objId){ const krs=exec.keyResults.filter(x=>x.objectiveId===objId); const i=krs.findIndex(x=>x.id===krId); const kr=krs[i]||exec.keyResults.find(x=>x.id===krId); return "KR"+(i>=0?(i+1):"")+" \u2014 "+(kr?String(kr.statement||kr.id).slice(0,40):krId); }
+function sgTreeLabel(gid, objId){ const gs=exec.stageGates.filter(x=>x.objectiveId===objId); const i=gs.findIndex(x=>x.id===gid); const g=gs[i]||exec.stageGates.find(x=>x.id===gid); return "SG"+(i>=0?(i+1):"")+" \u2014 "+(g?String(g.name||g.id).slice(0,40):gid); }
 function linkGroupLabel(rank){ return ({5:"Initiative",4:"Product",3:"Component",2:"Key results",1:"Stage-gates"})[rank] || "Other"; }
 function componentLabel(k){   // resolve the component (a stageGate in the cached spec doc) name; fall back to the model
   try{ for(const id in refDocs){ const sgs=refDocs[id]&&refDocs[id].doc&&refDocs[id].doc.stageGates; if(sgs){ const c=sgs.find(g=>g.id===k.hostId); if(c) return (c.name||c.id)+(modelById(k.objectiveId)?(" \u00b7 "+modelName(k.objectiveId)):""); } } }catch(e){}
@@ -2727,14 +2761,15 @@ function linkCandidates(hostType, hostId){
   const here = LEVEL[hostType];
   const srcRank = rankOf(hostType, O);                                   // strict up-only: only levels ABOVE the source are linkable
   const pool = allKpisPool();
+  const fam = familyOfObjective(O);                                       // this objective's product/model lineage
   // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
   const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
   const seen=new Set(), out=[];
   pool.forEach(k=>{
-    const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || (k.hostType==="milestone" && msIds.has(k.hostId)) || isTargetKpi(k);
-    if(!inScope) return;
-    const def = RD.definerOf(k, pool);
-    if(linkRank(def) <= srcRank) return;                                  // exclude same-level and below (e.g. KR never sees stage-gates)
+    const def = RD.definerOf(k, pool);                                    // the link TARGET is the group's definer
+    const inScope = (def.objectiveId===O) || (def.hostType==="initiative" && def.hostId===initId) || (def.hostType==="milestone" && msIds.has(def.hostId)) || isFamilialKpi(def, fam);
+    if(!inScope) return;                                                  // familial: this objective's own / its initiative's / its product-lineage's metrics only
+    if(linkRank(def) <= srcRank) return;                                  // up-only: exclude same-level and below
     if(seen.has(def.id) || occupied.has(def.id)) return;
     seen.add(def.id); out.push(def);
   });
@@ -2773,28 +2808,74 @@ function unlinkKpi(id){
 }
 function renderLinkEditor(hostType, hostId){
   const cands = linkCandidates(hostType, hostId);
-  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope — define a KPI here, one at the initiative or milestone level, or one on a product/model this objective is classified to.</p></div>
+  if(!cands.length) return `<div class="ed"><p class="hint" style="margin:0;grid-column:1/-1">No linkable metric in scope \u2014 define a KPI here, one at the initiative or milestone level, or one on a product/model in this objective's family.</p></div>
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const pool = allKpisPool();
-  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent → relationship applies
-  const byRank={}; cands.forEach(d=>{ const r=linkRank(d); (byRank[r]||(byRank[r]=[])).push(d); });
-  const ranks=[5,4,3,2,1].filter(r=>byRank[r]&&byRank[r].length);
-  const ordered=ranks.reduce((a,r)=>a.concat(byRank[r]),[]);
-  const opt1=d=>{ const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; };
-  const opts = ranks.map(r=>`<optgroup label="${linkGroupLabel(r)}">`+byRank[r].map(opt1).join("")+`</optgroup>`).join("");
-  const first = ordered[0], firstShow = showRel(first);
-  const firstRel = firstShow ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
+  const O = hostType==="initiative" ? null : selectedObj;
+  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent -> relationship applies
+  const IND = String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160);
+  const pad = n => { let z=""; for(let x=0;x<Math.max(0,n);x++) z+=IND; return z; };
+  const kpiText = d => { const u=RD.kpiUnit(d,pool); return (RD.kpiName(d,pool)||d.id)+(u?(" ("+u+")"):""); };
+  const ordered=[];
+  const optKpi = (d,depth) => { ordered.push(d); const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${pad(depth)}${esc(kpiText(d))}</option>`; };
+  const hdr = (depth,label) => `<option disabled>${pad(depth)}${esc(label)}</option>`;
+
+  // bucket the (already up-only + familial filtered) candidates by their host entity
+  const byInit=[], byProd={}, byModel={}, byComp={}, byKr={}, bySg={};
+  cands.forEach(d=>{
+    if(d.hostType==="initiative"||d.hostType==="milestone") byInit.push(d);
+    else if(d.hostType==="product"){ (byProd[d.hostId]||(byProd[d.hostId]=[])).push(d); }
+    else if(d.hostType==="keyResult" && modelById(d.objectiveId)){ (byModel[d.objectiveId]||(byModel[d.objectiveId]=[])).push(d); }
+    else if(d.hostType==="component"){ const m=d.objectiveId; if(!byComp[m]) byComp[m]={}; (byComp[m][d.hostId]||(byComp[m][d.hostId]=[])).push(d); }
+    else if(d.hostType==="keyResult"){ (byKr[d.hostId]||(byKr[d.hostId]=[])).push(d); }
+    else if(d.hostType==="stageGate"){ (bySg[d.hostId]||(bySg[d.hostId]=[])).push(d); }
+  });
+  // group models (from spec + component buckets) under their product
+  const modelIds=new Set([...Object.keys(byModel), ...Object.keys(byComp)]);
+  const prodModels={}, looseModels=[];
+  modelIds.forEach(mid=>{ const m=modelById(mid), p=m&&m.productId; if(p){ (prodModels[p]||(prodModels[p]=[])).push(mid); } else looseModels.push(mid); });
+  const productIds=[...new Set([...Object.keys(byProd), ...Object.keys(prodModels)])];
+
+  const renderModel = (mid,depth) => {
+    let z = hdr(depth, "Model: "+modelName(mid));
+    (byModel[mid]||[]).forEach(d=> z += optKpi(d, depth+1));
+    const comps = byComp[mid]||{};
+    Object.keys(comps).forEach(cid=>{ z += hdr(depth+1, "Component: "+componentNameOf(cid)); comps[cid].forEach(d=> z += optKpi(d, depth+2)); });
+    return z;
+  };
+
+  let opts="";
+  const initId = O ? initiativeIdOf(O) : null;
+  const hasAny = byInit.length || productIds.length || looseModels.length || Object.keys(byKr).length || Object.keys(bySg).length;
+  let base = 0;
+  if(initId && hasAny){ opts += hdr(0, "Initiative: "+initName(initId)); base = 1; }
+  byInit.forEach(d=> opts += optKpi(d, base));
+  productIds.forEach(pid=>{
+    opts += hdr(base, "Product: "+productName(pid));
+    (byProd[pid]||[]).forEach(d=> opts += optKpi(d, base+1));
+    (prodModels[pid]||[]).forEach(mid=> opts += renderModel(mid, base+1));
+  });
+  looseModels.forEach(mid=> opts += renderModel(mid, base));
+  if(Object.keys(byKr).length || Object.keys(bySg).length){
+    const o=objById(O); opts += hdr(base, "Objective: "+(o?String(o.statement||O).slice(0,44):(O||"\u2014")));
+    Object.keys(byKr).forEach(krId=>{ opts += hdr(base+1, krTreeLabel(krId, O)); byKr[krId].forEach(d=> opts += optKpi(d, base+2)); });
+    Object.keys(bySg).forEach(gid=>{ opts += hdr(base+1, sgTreeLabel(gid, O)); bySg[gid].forEach(d=> opts += optKpi(d, base+2)); });
+  }
+
+  const first = ordered[0], firstShow = first?showRel(first):false;
+  const firstRel = (first&&firstShow) ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
   const relOpts = ['contribute','direct','specification'].map(t=>`<option value="${t}"${t===firstRel?" selected":""}>${t}</option>`).join("");
   return `<div class="ed">
     <label style="grid-column:1/-1">Link to existing metric (define-down target, status-up value)
       <select data-linkdef>${opts}</select></label>
     <label data-relwrap style="grid-column:1/-1;display:${firstShow?'block':'none'}">Relationship to the target metric
       <select data-linkrel>${relOpts}</select></label>
-    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstShow?'block':'none'}">contribute rolls this reading up into the target · direct mirrors it · specification measures against it without rolling up</p>
+    <p class="hint" data-relhint style="grid-column:1/-1;margin:2px 0 0;display:${firstShow?'block':'none'}">contribute rolls this reading up into the target \u00b7 direct mirrors it \u00b7 specification measures against it without rolling up</p>
     </div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-savelink="${hostType}:${hostId}">Link</button>
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
 }
+
 function renderKpiOverrideEditor(rec){
   const pool = allKpisPool();
   const dir = RD.kpiDirection(rec, pool), unit = RD.kpiUnit(rec, pool);
