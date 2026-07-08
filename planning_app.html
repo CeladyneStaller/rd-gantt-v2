@@ -106,6 +106,7 @@
   .ap-score{font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
   .ap-mini{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px}
   .ap-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-left:4px}
+  .ap-health{font-family:var(--mono);font-size:11px;font-weight:700;margin-left:3px}
   .filterbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .fb-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
   .fbf{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
@@ -233,6 +234,7 @@
   .ttag{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px;flex:none}
   .ttag.exec{color:var(--accent2);border-color:var(--pill-active-bd);background:var(--pill-active-bg)}
   .texlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex:none;margin-right:9px;opacity:.75}
+  .tsethead{margin-top:3px}
   .tname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tname:hover{color:var(--accent);text-decoration:underline}
   .tacts{display:none;gap:4px;margin-left:8px;flex:none;align-items:center}
@@ -265,11 +267,13 @@
   .gname.dim:hover{color:var(--accent)}
   .gname.static{color:var(--muted);cursor:default}
   .gname.static:hover{color:var(--muted);text-decoration:none}
+  .gsetnum{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-right:4px}
   .gtrack{position:relative;width:720px;flex:none;height:100%}
   .gaxis{display:flex;align-items:flex-end;height:22px}
   .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
   .ggrid{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);opacity:.5;pointer-events:none}
   .gbar{position:absolute;top:9px;height:12px;border-radius:3px;border:1px solid var(--none);box-sizing:border-box;overflow:hidden}
+  .gbar.gsetbar{top:11px;height:9px;opacity:.68;border-style:dashed}
   .gbarfill{position:absolute;inset:0;opacity:.28}
   .gbar.derived{border-style:dashed}
   .gbar.derived .gbarfill{opacity:.16}
@@ -454,7 +458,7 @@
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
-    product: 'PRD', model: 'MDL'
+    product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -831,6 +835,15 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+
+  // ---- stage-gate SETS (parallel workstreams within an objective) -----------
+  // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
+  function gatesForSet(setId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var gs=execDocs[d].stageGates||[]; for(var i=0;i<gs.length;i++) if(gs[i].setId===setId) out.push(gs[i]); } return out; }
+  function setsForObjective(objId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var ss=execDocs[d].stageGateSets||[]; for(var i=0;i<ss.length;i++) if(ss[i].objectiveId===objId) out.push(ss[i]); } return out; }
+  // set score = % of the set's gates that are passed (date-based classifyGate). null when the set has no gates.
+  function setScore(setId, execDocs, today){ var gs=gatesForSet(setId, execDocs); if(!gs.length) return null; var p=0; for(var i=0;i<gs.length;i++){ var st=classifyGate(gs[i], today); if(st==='passed'||st==='passed-late') p++; } return 100*p/gs.length; }
+  // objective gate readiness = MIN over the objective's sets of setScore (weakest workstream wins). null if no scorable sets.
+  function objectiveGateReadiness(objId, execDocs, today){ var ss=setsForObjective(objId, execDocs), m=null; for(var i=0;i<ss.length;i++){ var sc=setScore(ss[i].id, execDocs, today); if(sc==null) continue; if(m==null||sc<m) m=sc; } return m; }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
@@ -1138,12 +1151,19 @@
       (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
     }
     objs.forEach(function (o) {
-      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
-      if (!o.chainGatesByDate && !exChain) return;
-      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
-        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-      for (var i = 1; i < seq.length; i++) {
-        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      var exf = execFor(o.divisionId);
+      var sets = (exf.stageGateSets || []).filter(function (st) { return st.objectiveId === o.id; });
+      var gs = childCache[o.id].sgs;
+      function chainSeq(list) {
+        var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+      if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
+        sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
+      } else {                                             // legacy per-objective chain (pre-sets docs)
+        var exChain = (exf.chainGatesByDate || {})[o.id];
+        if (!o.chainGatesByDate && !exChain) return;
+        chainSeq(gs);
       }
     });
 
@@ -1418,6 +1438,10 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    setScore: setScore,
+    objectiveGateReadiness: objectiveGateReadiness,
+    gatesForSet: gatesForSet,
+    setsForObjective: setsForObjective,
     hostScore: hostScore,
     milestoneScore: milestoneScore,
     milestoneAchieved: milestoneAchieved,
@@ -2027,7 +2051,7 @@ function subCount(entity,r){
   if(entity==="model")    return `${P.objectives.filter(o=>o.modelId===r.id).length} obj`;
   if(entity==="initiative") return `${P.milestones.filter(m=>m.initiativeId===r.id).length} ms · ${P.objectives.filter(o=>o.initiativeId===r.id).length} obj`;
   if(entity==="milestone")  return `${P.objectives.filter(o=>(o.milestoneIds||[]).indexOf(r.id)>=0).length} obj`;
-  if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; if(doc){ const k=(doc.keyResults||[]).filter(x=>x.objectiveId===r.id).length; const g=(doc.stageGates||[]).filter(x=>x.objectiveId===r.id).length; return `${k} KR · ${g} gates`; } return r.quarter||""; }
+  if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; if(doc){ const k=(doc.keyResults||[]).filter(x=>x.objectiveId===r.id).length; const g=(doc.stageGates||[]).filter(x=>x.objectiveId===r.id).length; const ns=planSetsForObj(doc, r.id).length; return `${k} KR · ${g} gates${ns>1?` · ${ns} sets`:""}`; } return r.quarter||""; }
   return "";
 }
 
@@ -2070,13 +2094,14 @@ function hasArchChildren(entity,id){
 /* ---- health band → colour (shared by tree + gantt) ---- */
 function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
 function nodeBand(entity,id,em){ em=em||pfMap();
+  if(entity==="stagegateset") return RD.band(RD.setScore(id, em, todayDay()));
   if(entity==="milestone"){ const ms=(portfolio.milestones||[]).find(m=>m.id===id); if(ms && RD.milestoneAchieved(ms,em)) return "on-track"; return RD.band(RD.milestoneScore(id,em)); }
   let s=null;
   if(entity==="division") s=RD.rollupDivision(id,portfolio,em);
   else if(entity==="initiative") s=RD.rollupInitiative(id,portfolio,em);
   else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
   return RD.band(s); }
-const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1};
+const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegateset:1};
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
@@ -2119,6 +2144,19 @@ function modelLeaf(m){
   return `<div class="tleaf">${dot}${rowName("model",m)}${sub}${treeActs("model",m.id)}</div>`;
 }
 function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${esc(tag)}</span><span class="tstatic">${esc(label)}</span></div>`; }
+/* ---- stage-gate SETS (read from the exec doc; the exec app owns them) ---- */
+function planSetsForObj(doc, objId){ return ((doc&&doc.stageGateSets)||[]).filter(s=>s.objectiveId===objId).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
+function planGroupGates(doc, objId){
+  const gates=((doc&&doc.stageGates)||[]).filter(g=>g.objectiveId===objId);
+  const sets=planSetsForObj(doc, objId);
+  const groups=sets.map(st=>({set:st, gates:gates.filter(g=>g.setId===st.id)}));
+  const valid=new Set(sets.map(st=>st.id));
+  const orphans=gates.filter(g=>!valid.has(g.setId));
+  if(orphans.length) groups.push({set:{id:"__ung__:"+objId, name:"Ungrouped"}, gates:orphans});
+  return groups;
+}
+function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(const grp of groups){ const i=grp.gates.findIndex(x=>x.id===g.id); if(i>=0) return (grp.set.name||"Set")+"-"+(i+1); } return g.name||g.id; }
+function ganttGateLabel(g){ const o=byId("objective", g.objectiveId); const doc=o&&execDocs["EXEC-"+o.divisionId]; return doc?planGateLabel(doc,g):(g.name||g.id); }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
   return `<details open class="tnode"><summary>${treeRow(entity,r)}</summary><div class="tchildren">${treeChildrenHtml(entity,r.id)}</div></details>`;
@@ -2128,7 +2166,11 @@ function objectiveExecHtml(objId){
   if(!doc) return `<div class="tleaf"><span class="tstatic">no exec doc loaded for this division</span></div>`;
   let h="";
   (doc.keyResults||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KR", k.statement||k.id));
-  (doc.stageGates||[]).filter(g=>g.objectiveId===objId).forEach(g=> h+=execLeaf("Gate", g.name||g.id));
+  planGroupGates(doc, objId).forEach(grp=>{
+    if(!grp.gates.length) return;
+    h+=`<div class="tleaf tsethead"><span class="texlab">set</span><span class="tstatic"><b>${esc(grp.set.name||"Set")}</b></span></div>`;
+    grp.gates.forEach((g,i)=> h+=execLeaf((grp.set.name||"Set")+"-"+(i+1), g.name||g.id));
+  });
   return h || `<div class="tleaf"><span class="tstatic">no key results or stage-gates yet</span></div>`;
 }
 function treeChildrenHtml(entity,id){
@@ -2736,6 +2778,7 @@ function renderGantt(){
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
   function geom(entity, r){
     if(entity==="stagegate"){ const ge=casc.gateEffective[r.id]; return {kind:"diamond", gate:true, planned:r.plannedDate, eff:(ge!=null?ge:(r.plannedDate==null?null:pfGate(r))), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
+    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(g=>{ const ge=casc.gateEffective[g.id]; return ge!=null?ge:(g.plannedDate==null?null:pfGate(g)); }).filter(v=>v!=null); const ds=planned.length?Math.min.apply(null,planned):null; const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
     if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
@@ -2764,7 +2807,8 @@ function renderGantt(){
     if(entity==="division") return P.initiatives.filter(i=>i.divisionId===r.id).map(i=>({entity:"initiative",rec:i}));
     if(entity==="initiative") return P.milestones.filter(m=>m.initiativeId===r.id).map(m=>({entity:"milestone",rec:m}))
       .concat(P.objectives.filter(o=>o.initiativeId===r.id).map(o=>({entity:"objective",rec:o})));
-    if(entity==="objective") return gatesOf(r).map(g=>({entity:"stagegate",rec:g}));
+    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; return planGroupGates(doc, r.id).filter(grp=>grp.gates.length).map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
+    if(entity==="stagegateset") return (r.__gates||[]).map(g=>({entity:"stagegate",rec:g}));
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
@@ -2826,7 +2870,7 @@ function renderGantt(){
   const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
   const hasGates = rows.some(n=>n.entity==="stagegate");
   const NAV={division:1,initiative:1,objective:1,milestone:1};
-  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegate:"font-size:12.5px;font-weight:400"};
+  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegateset:"font-size:12.5px;font-weight:500;font-style:italic",stagegate:"font-size:12.5px;font-weight:400"};
   let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
   // quarter gridlines + today, spanning the full chart height behind the rows
   ticks.forEach(t=>{ if(t.day>=lo&&t.day<=hi){ html+=`<div class="ggrid" style="left:${LABELW+x(t.day)}px"></div>`; } });
@@ -2848,13 +2892,13 @@ function renderGantt(){
     const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
-    if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}">${name}</span>`;
+    if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
-      html+=`<div class="gbar${g.derived?' derived':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
+      html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
@@ -2927,6 +2971,8 @@ function activeKrDots(o, em){
   let s="";
   if(krs.length) s+=`<span class="ap-lbl">KR</span>${krs.map(k=>dot(RD.band(RD.keyResultScore(k.id,em)))).join("")}`;
   if(gates.length) s+=`<span class="ap-lbl">gate</span>${gates.map(g=>dot(RD.band(RD.stageGateScore(g.id,em)))).join("")}`;
+  const gh=RD.objectiveGateReadiness(o.id, em, todayDay());
+  if(gh!=null) s+=`<span class="ap-lbl">health</span><span class="ap-health" style="color:${bandColor(RD.band(gh))}" title="weakest set — % of gates passed">${Math.round(gh)}%</span>`;
   if(!krs.length && !gates.length) s=`<span>no KRs or gates yet</span>`;
   return s;
 }
