@@ -1062,6 +1062,59 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   })();
 })();
 
+/* ---- stage-gate SETS: setScore (% passed), objectiveGateReadiness (min), per-set chaining --- */
+(function () {
+  var today = 100;
+  var execS = { 'D': {
+    stageGates: [
+      { id: 'g1', objectiveId: 'O1', setId: 'setP', actualDate: 50, plannedDate: 60 },
+      { id: 'g2', objectiveId: 'O1', setId: 'setP', actualDate: 55, plannedDate: 60 },
+      { id: 'g3', objectiveId: 'O1', setId: 'setP', plannedDate: 200 },
+      { id: 'g4', objectiveId: 'O1', setId: 'setP', plannedDate: 200 },
+      { id: 'g5', objectiveId: 'O1', setId: 'setQ', actualDate: 40, plannedDate: 50 },
+      { id: 'g6', objectiveId: 'O1', setId: 'setQ', actualDate: 45, plannedDate: 50 }
+    ],
+    stageGateSets: [
+      { id: 'setP', objectiveId: 'O1', name: 'P', chained: true },
+      { id: 'setQ', objectiveId: 'O1', name: 'Q', chained: true }
+    ]
+  } };
+  approx(C.setScore('setP', execS, today), 50, 'setScore = % passed (2 of 4 -> 50)');
+  approx(C.setScore('setQ', execS, today), 100, 'setScore all passed -> 100');
+  ok(C.setScore('nope', execS, today) === null, 'setScore of an empty/unknown set -> null');
+  approx(C.objectiveGateReadiness('O1', execS, today), 50, 'objective gate readiness = MIN set score (min(50,100)=50)');
+  ok(C.objectiveGateReadiness('OX', execS, today) === null, 'objective with no sets -> null');
+  ok(C.gatesForSet('setQ', execS).length === 2 && C.setsForObjective('O1', execS).length === 2, 'set helpers list gates + sets');
+
+  // per-set date-chain: a slipped gate pushes its OWN set's successor, not a parallel set's gate
+  var portfolio = { divisions: [{ id: 'D' }], objectives: [{ id: 'O1', divisionId: 'D', plannedStart: 0, plannedEnd: 300 }], initiatives: [], models: [], products: [], composition: [], milestones: [], stageGateEdges: [] };
+  var execC = { 'D': {
+    stageGates: [
+      { id: 'A1', objectiveId: 'O1', setId: 'setA', plannedDate: 5, actualDate: 200 },   // done late (day 200)
+      { id: 'A2', objectiveId: 'O1', setId: 'setA', plannedDate: 100 },                   // same set, later
+      { id: 'B1', objectiveId: 'O1', setId: 'setB', plannedDate: 50 }                     // parallel set
+    ],
+    stageGateSets: [ { id: 'setA', objectiveId: 'O1', chained: true }, { id: 'setB', objectiveId: 'O1', chained: true } ]
+  } };
+  var r = C.cascade(portfolio, execC, 10);
+  approx(r.gateEffective['A2'], 200, 'per-set chain: A2 pushed to 200 by same-set A1');
+  approx(r.gateEffective['B1'], 50, 'per-set chain: parallel B1 is NOT pushed by A1 (stays 50)');
+
+  // a set with chained:false does NOT date-chain its own gates
+  var execN = { 'D': {
+    stageGates: [ { id: 'A1', objectiveId: 'O1', setId: 'setA', plannedDate: 5, actualDate: 200 }, { id: 'A2', objectiveId: 'O1', setId: 'setA', plannedDate: 100 } ],
+    stageGateSets: [ { id: 'setA', objectiveId: 'O1', chained: false } ]
+  } };
+  approx(C.cascade(portfolio, execN, 10).gateEffective['A2'], 100, 'chained:false set does not push A2 (stays 100)');
+
+  // legacy fallback: no sets + chainGatesByDate -> per-objective chain (B1 IS pushed) -- back-compat
+  var execL = { 'D': {
+    stageGates: [ { id: 'A1', objectiveId: 'O1', plannedDate: 5, actualDate: 200 }, { id: 'A2', objectiveId: 'O1', plannedDate: 100 }, { id: 'B1', objectiveId: 'O1', plannedDate: 50 } ],
+    chainGatesByDate: { O1: true }
+  } };
+  approx(C.cascade(portfolio, execL, 10).gateEffective['B1'], 200, 'legacy per-objective chain: B1 pushed to 200 (back-compat preserved)');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');

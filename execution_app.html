@@ -110,6 +110,15 @@
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
+  .sgset{border:1px solid var(--line);border-radius:9px;padding:8px 10px 4px;margin:0 0 12px;background:var(--panel2)}
+  .sgset-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .setname{font-weight:700;font-size:13px;color:var(--ink);cursor:pointer;border-bottom:1px dashed transparent}
+  .setname:hover{border-bottom-color:var(--line-strong)}
+  .setname-inp{font-size:13px;padding:3px 7px;border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--ink);min-width:150px}
+  .sgset-score{font-family:var(--mono);font-size:12px;font-weight:700}
+  .chain-toggle.mini{margin-left:0;font-size:10px}
+  .sgset-acts{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .setmove{font-family:var(--mono);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--muted)}
   .chain-toggle input{width:auto;padding:0;margin:0}
   /* dashboard layout (tracker QT pattern, dark theme) */
   .obj-title{font-size:14px;color:var(--ink);margin:14px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -721,7 +730,7 @@ html[data-theme="dark"] #etb-view{
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
-    product: 'PRD', model: 'MDL'
+    product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -1098,6 +1107,15 @@ html[data-theme="dark"] #etb-view{
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+
+  // ---- stage-gate SETS (parallel workstreams within an objective) -----------
+  // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
+  function gatesForSet(setId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var gs=execDocs[d].stageGates||[]; for(var i=0;i<gs.length;i++) if(gs[i].setId===setId) out.push(gs[i]); } return out; }
+  function setsForObjective(objId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var ss=execDocs[d].stageGateSets||[]; for(var i=0;i<ss.length;i++) if(ss[i].objectiveId===objId) out.push(ss[i]); } return out; }
+  // set score = % of the set's gates that are passed (date-based classifyGate). null when the set has no gates.
+  function setScore(setId, execDocs, today){ var gs=gatesForSet(setId, execDocs); if(!gs.length) return null; var p=0; for(var i=0;i<gs.length;i++){ var st=classifyGate(gs[i], today); if(st==='passed'||st==='passed-late') p++; } return 100*p/gs.length; }
+  // objective gate readiness = MIN over the objective's sets of setScore (weakest workstream wins). null if no scorable sets.
+  function objectiveGateReadiness(objId, execDocs, today){ var ss=setsForObjective(objId, execDocs), m=null; for(var i=0;i<ss.length;i++){ var sc=setScore(ss[i].id, execDocs, today); if(sc==null) continue; if(m==null||sc<m) m=sc; } return m; }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
@@ -1405,12 +1423,19 @@ html[data-theme="dark"] #etb-view{
       (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
     }
     objs.forEach(function (o) {
-      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
-      if (!o.chainGatesByDate && !exChain) return;
-      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
-        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-      for (var i = 1; i < seq.length; i++) {
-        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      var exf = execFor(o.divisionId);
+      var sets = (exf.stageGateSets || []).filter(function (st) { return st.objectiveId === o.id; });
+      var gs = childCache[o.id].sgs;
+      function chainSeq(list) {
+        var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+      if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
+        sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
+      } else {                                             // legacy per-objective chain (pre-sets docs)
+        var exChain = (exf.chainGatesByDate || {})[o.id];
+        if (!o.chainGatesByDate && !exChain) return;
+        chainSeq(gs);
       }
     });
 
@@ -1685,6 +1710,10 @@ html[data-theme="dark"] #etb-view{
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    setScore: setScore,
+    objectiveGateReadiness: objectiveGateReadiness,
+    gatesForSet: gatesForSet,
+    setsForObjective: setsForObjective,
     hostScore: hostScore,
     milestoneScore: milestoneScore,
     milestoneAchieved: milestoneAchieved,
@@ -1919,7 +1948,7 @@ let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "
 let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],etbTrees:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -2039,7 +2068,20 @@ function resolveDivision(){
 
 /* ---------------- load / save ---------------- */
 // single adopt path: whole-doc replace + risks shape-normalize, so no load site can drift
-function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
+function migrateStageGateSets(x){
+  if(!x) return;
+  if(!Array.isArray(x.stageGateSets)) x.stageGateSets=[];
+  const gates=x.stageGates||[];
+  const objIds=[]; gates.forEach(g=>{ if(objIds.indexOf(g.objectiveId)<0) objIds.push(g.objectiveId); });
+  objIds.forEach(objId=>{
+    let sets=x.stageGateSets.filter(s=>s.objectiveId===objId);
+    if(!sets.length){ const set={ id:RD.allocId("stageGateSet", objId, x.stageGateSets.map(s=>s.id)), objectiveId:objId, name:"General", order:0, chained:true }; x.stageGateSets.push(set); sets=[set]; }
+    const ids=new Set(sets.map(s=>s.id)), defId=sets[0].id;
+    gates.filter(g=>g.objectiveId===objId).forEach(g=>{ if(!g.setId || !ids.has(g.setId)) g.setId=defId; });
+  });
+  x.stageGateSets.forEach(s=>{ s.chained=true; });   // force chaining ON for every workstream
+}
+function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); migrateStageGateSets(exec); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
 async function loadAll(){
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
   try{
@@ -2185,13 +2227,14 @@ const SUB = {
 };
 // addingFor: null | {type, hostType?, hostId?}   editingSub: null | {type, id}
 let addingFor = null, editingSub = null, armedDel = null;
+let armedDelSet = null, sgSetEditor = null, pendingGateSet = null;   // stage-gate SET (parallel workstream) management state
 let subReturn = null;  // when a KPI/link editor is launched from inside the gate modal, return here on close
 function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
 function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
 
 function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
 function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; pendingGateSet = null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -2250,6 +2293,7 @@ function saveSub(thenLink){
     const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id)); newId=id;
     const base = { id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
+    if(type==="stageGate"){ base.setId = pendingGateSet || ensureDefaultSet(); pendingGateSet=null; }
     arr.push(Object.assign(base, data));
   }
   addingFor=null; editingSub=null;
@@ -2315,6 +2359,9 @@ function objMetricStrip(o){
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const gSt=gates.map(g=>RD.classifyGate(g, td));
   const gPass=gSt.filter(s=>s==="passed"||s==="passed-late").length, gOver=gSt.filter(s=>s==="overdue").length;
+  const gateHealth=RD.objectiveGateReadiness(selectedObj, em, td);
+  const ghTxt=gateHealth==null?"—":Math.round(gateHealth)+"%", ghCol=gateHealth==null?"var(--muted)":col(RD.band(gateHealth));
+  const nSets=(exec.stageGateSets||[]).filter(x=>x.objectiveId===selectedObj).length;
   let projEnd=null, slip=null;
   try{ const casc=RD.cascade(portfolio, em, td); projEnd=casc.objectiveProjectedEnd[selectedObj];
     if(o.plannedEnd!=null && projEnd!=null) slip=projEnd-o.plannedEnd; }catch(e){}
@@ -2331,6 +2378,7 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
+    <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
     <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
@@ -2995,10 +3043,10 @@ function gateSchedRow(g){
   else h+=`<button class="ghost mini" data-commit="${g.id}"${g.plannedDate==null?' disabled title="set a planned date first"':''}>commit baseline</button>`;
   h+=`<span class="sched-sep">|</span><span class="lbl">after</span>`;
   if(!preds.length) h+=`<span class="hint" style="margin:0">—</span>`;
-  preds.forEach(e=>{ h+=`<span class="dep-chip">${esc(gateName(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
+  preds.forEach(e=>{ h+=`<span class="dep-chip" title="${esc(gateName(e.fromGate))}">${esc(gateLabel(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
   if(cand.length){
     h+=`<select class="edgepick" data-edgepick="${g.id}"><option value="">+ predecessor…</option>`+
-       cand.map(x=>`<option value="${x.id}">${esc(x.name||x.id)}</option>`).join('')+`</select>`+
+       cand.map(x=>`<option value="${x.id}">${esc(gateLabel(x.id))} — ${esc(x.name||x.id)}</option>`).join('')+`</select>`+
        `<input class="laginp" type="number" min="0" placeholder="lag d" data-edgelag="${g.id}"/>`+
        `<button class="ghost mini" data-addedge="${g.id}">add</button>`;
   }
@@ -3007,27 +3055,48 @@ function gateSchedRow(g){
 }
 function renderGates(){
   const host=document.getElementById("subSG");
-  const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
-  const td=todayDay();
+  const sets=objSetsOrdered();
+  const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
+  const td=todayDay(), ed=sgSetEditor, multi=sets.length>1;
   let inner="";
-  if(!gates.length) inner+=`<p class="hint">none yet</p>`;
-  gates.forEach((g,idx)=>{
-    const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
-    const cmt = g.baselineDate!=null?`<span class="committed-badge" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
-    inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">G${idx+1}</span>
-      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
-      <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
-      <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-      <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
-        <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
-        <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
-        <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+  sets.forEach(set=>{
+    const gates=gatesOfSet(set.id);
+    const pct=setScorePct(set.id);
+    const pctTxt=pct==null?'—':Math.round(pct)+'%';
+    const pctCol=pct==null?'var(--muted)':col(RD.band(pct));
+    const chained=set.chained!==false;
+    const renaming=ed&&ed.mode==="rename"&&ed.setId===set.id;
+    const nameCell=renaming
+      ? `<input class="setname-inp" data-setname value="${esc(set.name||'')}" placeholder="set name"/><button class="ghost mini" data-setsave>save</button><button class="ghost mini" data-setcancel>cancel</button>`
+      : `<span class="setname click" data-setrename="${set.id}" title="rename set">${esc(set.name||'(unnamed set)')}</span>`;
+    inner+=`<div class="sgset"><div class="sgset-head">${nameCell}
+      <span class="sgset-score" style="color:${pctCol}" title="% of this set's gates passed">${pctTxt}</span>
+      <label class="chain-toggle mini" title="Chain this set's gates by planned date — a slip pushes the next in the set."><input type="checkbox" data-setchain="${set.id}" ${chained?'checked':''}/> chain</label>
+      <span class="sgset-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini danger ${armedDelSet===set.id?'armed':''}" data-setdel="${set.id}">${armedDelSet===set.id?'confirm':'del set'}</button></span></div>`;
+    if(!gates.length) inner+=`<p class="hint" style="margin:2px 0 8px 10px">no gates in this set</p>`;
+    gates.forEach(g=>{
+      const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
+      const cmt=g.baselineDate!=null?`<span class="committed-badge" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
+      const moveSel=multi?`<select class="setmove" data-setmove="${g.id}" title="move to another set">${sets.map(s2=>`<option value="${s2.id}"${s2.id===set.id?' selected':''}>${esc(s2.name||'set')}</option>`).join('')}</select>`:'';
+      inner+=`<div class="icard"><div class="icard-top">
+        <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span>
+        <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
+        <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
+        <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
+        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
+          ${moveSel}
+          <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
+          <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
+          <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
+        </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+    });
+    inner+=`</div>`;
   });
-  const chainOn=(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':'';
-  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${chainOn}/> chain by date</label>`;
-  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",gates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  if(!sets.length) inner+=`<p class="hint">no stage-gate sets yet — add a gate to start one, or add a named set for a parallel workstream</p>`;
+  let acts;
+  if(ed&&ed.mode==="add") acts=`<input class="setname-inp" data-setname placeholder="new set name"/><button class="ghost mini" data-setsave>add</button><button class="ghost mini" data-setcancel>cancel</button>`;
+  else acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ add set</button>`;
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
 function renderTasks(){
@@ -3053,7 +3122,7 @@ function renderTasks(){
 }
 function wireExec(host){
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
-  host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
+  host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else if(ht==="keyResult") openKpiTgtModal("keyResult", hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
@@ -3071,7 +3140,15 @@ function wireExec(host){
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
   host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; persist(); setMsg("Gate updated","ok"); });
-  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective","ok"); });
+  host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
+  host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"add"}; armedDelSet=null; renderAll(); });
+  host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
+  host.querySelectorAll("[data-setsave]").forEach(b=>b.onclick=()=>{ const inp=host.querySelector("[data-setname]"); const nm=(inp?inp.value:"").trim(); if(!nm){ setMsg("Set name required","err"); return; } if(sgSetEditor&&sgSetEditor.mode==="add") addSet(nm); else if(sgSetEditor&&sgSetEditor.mode==="rename") renameSet(sgSetEditor.setId, nm); sgSetEditor=null; renderAll(); });
+  host.querySelectorAll("[data-setcancel]").forEach(b=>b.onclick=()=>{ sgSetEditor=null; renderAll(); });
+  host.querySelectorAll("[data-setname]").forEach(el=>{ el.onkeydown=(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); const sb=host.querySelector("[data-setsave]"); if(sb) sb.click(); } else if(ev.key==="Escape"){ sgSetEditor=null; renderAll(); } }; if(document.activeElement!==el){ el.focus(); const v=el.value; el.value=""; el.value=v; } });
+  host.querySelectorAll("[data-setchain]").forEach(el=>el.onchange=()=>{ const st=(exec.stageGateSets||[]).find(x=>x.id===el.dataset.setchain); if(st) st.chained=el.checked; renderAll(); setMsg("Set chaining "+(el.checked?"on":"off"),"ok"); });
+  host.querySelectorAll("[data-setmove]").forEach(el=>el.onchange=()=>{ const g=exec.stageGates.find(x=>x.id===el.dataset.setmove); if(g) g.setId=el.value; renderAll(); setMsg("Gate moved to "+setLabelOf(g&&setOfGate(g)),"ok"); });
+  host.querySelectorAll("[data-setdel]").forEach(b=>b.onclick=()=>delSet(b.dataset.setdel));
   host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+"","ok"); });
   host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released","ok"); });
   host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added","ok"); });
@@ -3089,10 +3166,21 @@ let draftRisk = null, editingRiskId = null, armedDelRisk = null;
 
 function execGatePassed(gateId){ if(!gateId) return false; const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return false; const s=RD.classifyGate(g, todayDay()); return s==="passed"||s==="passed-late"; }
 function objGatesOrdered(){ return exec.stageGates.filter(r=>r.objectiveId===selectedObj); }
+/* ---- stage-gate SETS: helpers ---- */
+function objSetsOrdered(){ return (exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
+function setOfGate(g){ return (exec.stageGateSets||[]).find(s=>s.id===(g&&g.setId))||null; }
+function gatesOfSet(setId){ return exec.stageGates.filter(g=>g.objectiveId===selectedObj && g.setId===setId); }
+function setLabelOf(set){ return set?(set.name||'Set'):'?'; }
+function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=exec.stageGates.filter(x=>x.setId===g.setId); const n=peers.findIndex(x=>x.id===gateId)+1; return setLabelOf(setOfGate(g))+'-'+n; }
+function setScorePct(setId){ return RD.setScore(setId, emForCore(), todayDay()); }
+function ensureDefaultSet(){ let sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj); if(!sets.length){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:"General", order:0, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); sets=[set]; } return sets[0].id; }
+function addSet(name){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:name, order:objSetsOrdered().length, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); setMsg("Set added","ok"); }
+function renameSet(setId,name){ const s2=(exec.stageGateSets||[]).find(x=>x.id===setId); if(s2){ s2.name=name; setMsg("Set renamed","ok"); } }
+function delSet(setId){ const sets=objSetsOrdered(); const set=sets.find(s=>s.id===setId); if(!set) return; const gates=gatesOfSet(setId), others=sets.filter(s=>s.id!==setId); if(gates.length && !others.length){ setMsg("Can't delete the only set while it holds gates — add another set first.","err"); armedDelSet=null; renderAll(); return; } if(armedDelSet!==setId){ armedDelSet=setId; renderAll(); return; } armedDelSet=null; if(gates.length){ const tgt=others[0].id; gates.forEach(g=>{ g.setId=tgt; }); } exec.stageGateSets=(exec.stageGateSets||[]).filter(s=>s.id!==setId); renderAll(); setMsg("Set deleted"+(gates.length?" — gates moved to "+setLabelOf(others[0]):""),"ok"); }
 function gateNumFor(gateId){ const gs=objGatesOrdered(); for(let i=0;i<gs.length;i++) if(gs[i].id===gateId) return i+1; return null; }
 const rpnCls = r => 'rpn-'+RD.rpnBand(r);
 function sodOptions(field, selected){ return RD.FMEA_SCALES[field].map((lbl,i)=>{ const v=i+1; return `<option value="${v}"${v===Number(selected)?' selected':''}>${v} — ${esc(lbl)}</option>`; }).join(''); }
-function populateGateSelect(selectedGid){ const sel=document.getElementById('f-gate'); sel.innerHTML='<option value="">— No gate association —</option>'+objGatesOrdered().map((g,n)=>`<option value="${esc(g.id)}"${g.id===selectedGid?' selected':''}>G${n+1} — ${esc(g.name||g.id)}</option>`).join(''); }
+function populateGateSelect(selectedGid){ const sel=document.getElementById('f-gate'); sel.innerHTML='<option value="">— No gate association —</option>'+objGatesOrdered().map(g=>`<option value="${esc(g.id)}"${g.id===selectedGid?' selected':''}>${esc(gateLabel(g.id))} — ${esc(g.name||g.id)}</option>`).join(''); }
 
 /* ---- add/edit modal (draft is a self-contained copy → index addressing is safe here) ---- */
 function fmeaModalShell(){
@@ -3218,7 +3306,7 @@ function renderRisks(){
   inner += sorted.map(entry=>{
     const r=entry.p, rid=r.rid, probResolved=r.status==='resolved';
     const topRpn = entry.u>0 ? entry.u : (probResolved?0:RD.worstRpn(r));
-    const gNum=r.gateId?gateNumFor(r.gateId):null, gTag=gNum?`<span class="gate-tag" title="linked to gate G${gNum}">G${gNum}</span>`:'';
+    const gTag=r.gateId?`<span class="gate-tag" title="linked to gate ${esc(gateLabel(r.gateId))}">${esc(gateLabel(r.gateId))}</span>`:'';
     const rows=[];
     (r.modes||[]).forEach(mode=>{
       const modeResolved=mode.status==='resolved';

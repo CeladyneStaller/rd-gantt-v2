@@ -41,7 +41,7 @@
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
-    product: 'PRD', model: 'MDL'
+    product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -418,6 +418,15 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+
+  // ---- stage-gate SETS (parallel workstreams within an objective) -----------
+  // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
+  function gatesForSet(setId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var gs=execDocs[d].stageGates||[]; for(var i=0;i<gs.length;i++) if(gs[i].setId===setId) out.push(gs[i]); } return out; }
+  function setsForObjective(objId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var ss=execDocs[d].stageGateSets||[]; for(var i=0;i<ss.length;i++) if(ss[i].objectiveId===objId) out.push(ss[i]); } return out; }
+  // set score = % of the set's gates that are passed (date-based classifyGate). null when the set has no gates.
+  function setScore(setId, execDocs, today){ var gs=gatesForSet(setId, execDocs); if(!gs.length) return null; var p=0; for(var i=0;i<gs.length;i++){ var st=classifyGate(gs[i], today); if(st==='passed'||st==='passed-late') p++; } return 100*p/gs.length; }
+  // objective gate readiness = MIN over the objective's sets of setScore (weakest workstream wins). null if no scorable sets.
+  function objectiveGateReadiness(objId, execDocs, today){ var ss=setsForObjective(objId, execDocs), m=null; for(var i=0;i<ss.length;i++){ var sc=setScore(ss[i].id, execDocs, today); if(sc==null) continue; if(m==null||sc<m) m=sc; } return m; }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
@@ -725,12 +734,19 @@
       (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
     }
     objs.forEach(function (o) {
-      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
-      if (!o.chainGatesByDate && !exChain) return;
-      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
-        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-      for (var i = 1; i < seq.length; i++) {
-        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      var exf = execFor(o.divisionId);
+      var sets = (exf.stageGateSets || []).filter(function (st) { return st.objectiveId === o.id; });
+      var gs = childCache[o.id].sgs;
+      function chainSeq(list) {
+        var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      }
+      if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
+        sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
+      } else {                                             // legacy per-objective chain (pre-sets docs)
+        var exChain = (exf.chainGatesByDate || {})[o.id];
+        if (!o.chainGatesByDate && !exChain) return;
+        chainSeq(gs);
       }
     });
 
@@ -1005,6 +1021,10 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    setScore: setScore,
+    objectiveGateReadiness: objectiveGateReadiness,
+    gatesForSet: gatesForSet,
+    setsForObjective: setsForObjective,
     hostScore: hostScore,
     milestoneScore: milestoneScore,
     milestoneAchieved: milestoneAchieved,
