@@ -306,6 +306,89 @@
   code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
   .settings label{display:block;margin-bottom:10px;max-width:520px}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  /* ===== Overall tab — tiled active view (scoped under .ovwrap) ===== */
+  .ovwrap .seclbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:var(--mono);margin:0 0 11px}
+  .ovwrap .cards{margin-bottom:26px}
+  .ovwrap .card{cursor:pointer;transition:box-shadow .15s,transform .1s}
+  .ovwrap .card:hover{box-shadow:0 3px 16px rgba(0,0,0,.22);transform:translateY(-1px)}
+  .ovwrap .dmeta{margin-top:11px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .ovwrap .divgroup{margin-bottom:28px}
+  .ovwrap .divlabel{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .ovwrap .divlabel .ldot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0}
+  .ovwrap .divlabel .nm{font-size:15px;font-weight:700}
+  .ovwrap .divlabel .rule{flex:1;height:1px;background:var(--line)}
+  .ovwrap .prodblock{padding-left:20px;margin-bottom:22px}
+  .ovwrap .prodlabel{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px}
+  .ovwrap .prodlabel .pdot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.55;flex-shrink:0}
+  .ovwrap .rowsec{margin-bottom:14px}
+  .ovwrap .kidlbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-family:var(--mono);margin:0 0 8px}
+  .ovwrap .tilerow{display:flex;gap:11px;flex-wrap:wrap}
+  .ovwrap .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .1s;flex-shrink:0}
+  .ovwrap .tcard:hover{box-shadow:0 2px 14px rgba(0,0,0,.22);transform:translateY(-1px)}
+  .ovwrap .cbar{height:3px}
+  .ovwrap .cbody{padding:11px 13px}
+  .ovwrap .chead{display:flex;align-items:flex-start;gap:6px;margin-bottom:8px}
+  .ovwrap .cname{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ovwrap .csub{font-size:10.5px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+  .ovwrap .cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+  .ovwrap .kpit{display:grid;grid-template-columns:12px 1fr auto auto;gap:2px 8px;font-size:10.8px;align-items:center;margin-bottom:8px}
+  .ovwrap .kh{color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);padding-bottom:3px;border-bottom:1px solid var(--line)}
+  .ovwrap .kdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin:0 auto}
+  .ovwrap .kname{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ovwrap .ktgt{color:var(--muted);text-align:right;white-space:nowrap;font-family:var(--mono);font-size:10px}
+  .ovwrap .kcur{font-weight:600;text-align:right;white-space:nowrap;font-family:var(--mono);font-size:10px}
+  .ovwrap .prog{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+  .ovwrap .ptrack{flex:1;height:5px;background:var(--panel2);border-radius:3px;position:relative;overflow:hidden}
+  .ovwrap .pfill{position:absolute;left:0;top:0;height:100%;border-radius:3px}
+  .ovwrap .ppct{font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0;font-family:var(--mono)}
+  .ovwrap .gates{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  .ovwrap .gatehd{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+  .ovwrap .gt{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-family:var(--mono)}
+  .ovwrap .behind{font-size:9px;font-weight:700;color:var(--pill-bad-fg);background:var(--pill-bad-bg);padding:1px 6px;border-radius:8px}
+  .ovwrap .gdots{display:flex;align-items:center;gap:0}
+  .ovwrap .gdot{width:15px;height:15px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;border:1.5px solid;font-family:var(--mono)}
+  .ovwrap .gconn{flex:1;height:2px;background:var(--line);min-width:5px;max-width:20px}
+  .ovwrap .mtile{width:290px;flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .1s;align-self:flex-start}
+  .ovwrap .mtile:hover{box-shadow:0 2px 16px rgba(0,0,0,.22);transform:translateY(-1px)}
+  .ovwrap .mbar{height:3px}
+  .ovwrap .mbody{padding:13px 15px}
+  .ovwrap .mtop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+  .ovwrap .mprod{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono)}
+  .ovwrap .mname{font-size:15px;font-weight:700;margin-top:2px;color:var(--ink)}
+  .ovwrap .mmat{display:inline-block;font-size:9px;font-weight:600;padding:1px 7px;border-radius:8px;background:var(--pill-neutral-bg);color:var(--pill-neutral-fg);margin-top:6px;text-transform:uppercase;letter-spacing:.03em}
+  .ovwrap .mconf{text-align:right;flex-shrink:0}
+  .ovwrap .mconf .cv{font-size:26px;font-weight:800;line-height:1}
+  .ovwrap .mconf .cl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700;font-family:var(--mono)}
+  .ovwrap .mseclbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:var(--mono);margin:12px 0 6px}
+  .ovwrap .spectbl{display:grid;grid-template-columns:11px 1fr auto;gap:3px 8px;font-size:10.8px;align-items:center}
+  .ovwrap .rollrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .ovwrap .rollq{font-size:11px;color:var(--muted);font-family:var(--mono)} .ovwrap .rollq b{font-weight:700}
+  .ovwrap .rolloverall{font-size:11px;font-weight:700;padding:2px 9px;border-radius:9px;background:var(--panel2);font-family:var(--mono)}
+  .ovwrap .msub{font-size:10px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+  .ovwrap .pbad{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
+  .ovwrap .pn{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
+  /* modal body */
+  .ovwrap .mbadges{display:flex;gap:7px;flex-wrap:wrap;padding:11px 18px 0}
+  .ovwrap .ovdet-body{padding:14px 18px 20px}
+  .ovwrap .mblk{margin-bottom:18px} .ovwrap .mblk:last-child{margin-bottom:0}
+  .ovwrap .mblkh{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:var(--mono);margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .ovwrap .krline{display:grid;grid-template-columns:9px 1fr auto auto;gap:4px 12px;font-size:12.5px;align-items:center;padding:6px 0}
+  .ovwrap .krline+.krline{border-top:1px solid var(--line)}
+  .ovwrap .krline .kv{font-family:var(--mono);font-weight:600;text-align:right}
+  .ovwrap .krline .kt{color:var(--muted);font-family:var(--mono);font-size:11.5px}
+  .ovwrap .gaterow{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:7px 0}
+  .ovwrap .gaterow+.gaterow{border-top:1px solid var(--line)}
+  .ovwrap .gstat{font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+  .ovwrap .datagrid{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:12.5px}
+  .ovwrap .datagrid .dk{color:var(--muted)} .ovwrap .datagrid .dv{font-family:var(--mono)}
+  .ovwrap .modelobjline{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:6px 0}
+  .ovwrap .modelobjline+.modelobjline{border-top:1px solid var(--line)}
+  .ovwrap .rpntbl{display:grid;grid-template-columns:9px 1fr 24px 24px 24px auto;gap:5px 10px;font-size:12px;align-items:center}
+  .ovwrap .sod{text-align:center;color:var(--muted);font-family:var(--mono)}
+  .ovwrap .rpnbadge{font-family:var(--mono);font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;text-align:center}
+  .ovwrap .comptbl{display:grid;grid-template-columns:9px 1fr 1fr auto;gap:5px 10px;font-size:12px;align-items:center}
+  .ovwrap .comptbl .cv{font-family:var(--mono);font-weight:600}
 </style>
 </head>
 <body>
@@ -330,13 +413,6 @@
   <div class="msg" id="msg"></div>
 
   <section class="tabsec active" id="tab-overview">
-    <div class="ov-controls">
-      <div class="ov-ctl"><span class="ov-lab">View</span>
-        <div class="toggle" id="lensToggle">
-          <button data-lens="division" class="active">By division</button>
-          <button data-lens="product">By product / model</button>
-        </div></div>
-    </div>
     <div id="ovBody"></div>
   </section>
   <section class="tabsec" id="tab-portfolio">
@@ -372,6 +448,14 @@
         <button class="modal-x" id="pfModalClose" aria-label="Close">&#10005;</button></div>
       <div id="pfModalErr" class="modal-err" hidden></div>
       <div id="pfModalBody"></div>
+    </div>
+  </div>
+  <div id="ovDetModal" class="modal-overlay ovwrap" hidden style="z-index:70">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="ovDetTitle">
+      <div class="modal-head"><span id="ovDetTitle">Detail</span>
+        <button class="modal-x" id="ovDetClose" aria-label="Close">&#10005;</button></div>
+      <div class="mbadges" id="ovDetBadges"></div>
+      <div id="ovDetBody" class="ovdet-body"></div>
     </div>
   </div>
   <div id="pfKpiModal" class="modal-overlay" hidden style="z-index:80">
@@ -3012,10 +3096,188 @@ function activePanelHtml(){
   return h+`</div>`;
 }
 function renderOverview(){ const el=document.getElementById("ovBody"); if(!el) return;
-  el.innerHTML = ((lens==="division") ? companyHtml() : slicesHtml()) + activePanelHtml();
-  const ap=el.querySelector("#apWrap"); if(ap) wireTreeLinks(ap); }
+  el.innerHTML = '<div class="ovwrap">'+overviewTilesHtml()+'</div>'; }
 function renderBrokerStatus(){ const el=document.getElementById("brokerStatus");
   el.textContent = tok() ? "Token set. Live sync active." : "No token set — running on local scratch data."; }
+
+/* ================= Overall tab — tiled active view ================= */
+function ovNum(v){ if(v==null||v==="") return ""; const n=Number(v); if(!isFinite(n)) return String(v); return (Math.abs(n)>=100||Number.isInteger(n))?String(Math.round(n)):String(Math.round(n*100)/100); }
+function ovInit(x){ return byId("initiative", x.initiativeId); }
+function ovObjModelId(o){ const c=RD.effClass(o,portfolio); if(c.kind==="model") return c.modelId; const i=ovInit(o); return (i&&i.modelId)||null; }
+function ovObjProdId(o){ const mid=ovObjModelId(o); if(mid){ const m=byId("model",mid); if(m) return m.productId; } const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; const i=ovInit(o); return (i&&i.productId)||null; }
+function ovMsProdId(ms){ const i=ovInit(ms); if(i&&i.modelId){ const m=byId("model",i.modelId); if(m) return m.productId; } return (i&&i.productId)||null; }
+function ovMsDiv(ms){ const i=ovInit(ms); return (i&&i.divisionId)||null; }
+function ovBadge(v){ const b=RD.band(v); return '<span class="band '+b+'">'+b.replace("-"," ")+'</span>'; }
+function ovProg(pct,color){ pct=Math.max(0,Math.min(100,Math.round(pct||0))); return '<div class="prog"><div class="ptrack"><div class="pfill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="ppct">'+pct+'%</span></div>'; }
+function ovKpiTbl(label, rows){ if(!rows.length) return ""; const head='<div class="kh"></div><div class="kh">'+label+'</div><div class="kh" style="text-align:right">Target</div><div class="kh" style="text-align:right">Now</div>'; const body=rows.map(function(r){ return '<div><div class="kdot" style="background:'+r.c+'"></div></div><span class="kname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="ktgt">'+esc(r.tgt)+'</span><span class="kcur" style="color:'+r.c+'">'+esc(r.cur)+'</span>'; }).join(""); return '<div class="kpit">'+head+body+'</div>'; }
+function ovKpiRowsFor(hostType, hostId, doc, pool, em){ return (doc.kpis||[]).filter(function(k){return k.hostType===hostType && k.hostId===hostId;}).map(function(k){ const sc=RD.kpiScoreResolved(k,pool,em), c=scoreColor(sc); const u=(RD.kpiUnit(k,pool)||k.unit); const unit=u?(" "+u):""; const dir=k.direction==="down"?"\u2264":"\u2265"; const tv=RD.effTarget(k,pool,em), cv=RD.effValue(k,pool,em); return { name:k.name||k.id, tgt:(tv!=null?dir+" "+ovNum(tv)+unit:"\u2014"), cur:(cv!=null?ovNum(cv)+unit:"\u2014"), c:c, score:sc }; }); }
+function ovKrRows(objId, doc, pool, em){ return (doc.keyResults||[]).filter(function(k){return k.objectiveId===objId;}).map(function(kr){ const sc=RD.keyResultScore(kr.id, em), c=scoreColor(sc); const kk=(doc.kpis||[]).filter(function(k){return k.hostType==="keyResult"&&k.hostId===kr.id;})[0]; let tgt="\u2014", cur="\u2014"; if(kk){ const u=(RD.kpiUnit(kk,pool)||kk.unit); const unit=u?(" "+u):""; const dir=kk.direction==="down"?"\u2264":"\u2265"; const tv=RD.effTarget(kk,pool,em), cv=RD.effValue(kk,pool,em); tgt=(tv!=null?dir+" "+ovNum(tv)+unit:"\u2014"); cur=(cv!=null?ovNum(cv)+unit:"\u2014"); } return { name:kr.statement||kr.id, tgt:tgt, cur:cur, c:c }; }); }
+var OV_GST = { "passed":["ok","passed"], "passed-late":["warn","passed late"], "overdue":["bad","overdue"], "pending":["neutral","pending"] };
+function ovGState(g){ const st=RD.classifyGate(g,todayDay()); return (st==="passed"||st==="passed-late")?st:(st==="overdue"?"overdue":"pending"); }
+function ovGColor(kind){ return {ok:["--pill-ok-bg","--pill-ok-bd","--pill-ok-fg"],warn:["--pill-warn-bg","--pill-warn-bd","--pill-warn-fg"],bad:["--pill-bad-bg","--pill-bad-bd","--pill-bad-fg"],neutral:["--pill-neutral-bg","--line","--pill-neutral-fg"]}[kind]; }
+function ovGateDots(gates){ return gates.map(function(g,i){ const st=ovGState(g), v=ovGColor(OV_GST[st][0]), inner=(st==="passed"||st==="passed-late")?"\u2713":(i+1); return '<div class="gdot" style="background:var('+v[0]+');border-color:var('+v[1]+');color:var('+v[2]+')" title="'+esc(g.name||g.id)+' \u2014 '+OV_GST[st][1]+'">'+inner+'</div>'; }).join('<div class="gconn"></div>'); }
+function ovSpecDoc(modelId){ return specDocs["SPEC-"+divOfModel(modelId)]||null; }
+function ovModelSpecs(modelId){ const sd=ovSpecDoc(modelId); if(!sd) return []; const pm=specMap(); return (sd.keyResults||[]).filter(function(k){return k.objectiveId===modelId;}).map(function(sp){ const sc=RD.keyResultScore(sp.id, pm); return { name:sp.statement||sp.id, score:sc, c:scoreColor(sc) }; }); }
+function ovModelComps(modelId){ const sd=ovSpecDoc(modelId); if(!sd) return {comps:[],subs:[]}; const pm=specMap(); const comps=[], subs=[]; (sd.stageGates||[]).filter(function(g){return g.objectiveId===modelId;}).forEach(function(g){ const sc=RD.stageGateScore(g.id, pm); if(g.refModel){ const rc=modelConformance(g.refModel); subs.push({ name:(g.name||modelName(g.refModel)||g.id), score:rc, c:scoreColor(rc) }); } else { comps.push({ name:g.name||g.id, score:sc, c:scoreColor(sc) }); } }); return {comps:comps, subs:subs}; }
+function ovObjRisks(objId, doc){ const rows=[]; (doc.risks||[]).filter(function(r){return r.objectiveId===objId;}).forEach(function(r){ (r.modes||[]).forEach(function(m){ (m.effects||[]).forEach(function(e){ (e.causes||[]).forEach(function(c){ const rpn=(Number(c.severity)||0)*(Number(c.occurrence)||0)*(Number(c.detection)||0); rows.push({ mode:m.mode||r.problem||"\u2014", s:Number(c.severity)||0, o:Number(c.occurrence)||0, d:Number(c.detection)||0, rpn:rpn }); }); }); }); }); return rows.sort(function(a,b){return b.rpn-a.rpn;}); }
+function ovRpnColor(r){ const b=RD.rpnBand(r); return b==="high"?"var(--bad)":b==="med"?"var(--warn)":"var(--ok)"; }
+function ovRpnPill(r){ const b=RD.rpnBand(r); return b==="high"?"bad":b==="med"?"warn":"ok"; }
+
+function overviewTilesHtml(){
+  const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
+  let cards='<div class="cards">';
+  for(const d of portfolio.divisions){ cards+=ovDivCard(d, em, casc); }
+  cards+='</div>';
+  if(!portfolio.divisions.length) cards='<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>';
+  const activeObjs=portfolio.objectives.filter(function(o){return isActiveObjective(o,em);});
+  const activeMs=portfolio.milestones.filter(function(m){return isActiveMilestone(m,em);});
+  let groups="";
+  for(const d of portfolio.divisions){
+    const dObjs=activeObjs.filter(function(o){return o.divisionId===d.id;});
+    const dMs=activeMs.filter(function(m){return ovMsDiv(m)===d.id;});
+    if(!dObjs.length && !dMs.length) continue;
+    let prodIds=Array.from(new Set(dObjs.map(ovObjProdId).concat(dMs.map(ovMsProdId))));
+    prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1; return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
+    groups+='<div class="divgroup"><div class="divlabel"><div class="ldot"></div><div class="nm">'+esc(d.name)+'</div><div class="rule"></div></div>';
+    for(const pid of prodIds){
+      const objs=dObjs.filter(function(o){return ovObjProdId(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
+      const mss=dMs.filter(function(m){return ovMsProdId(m)===pid;});
+      if(!objs.length && !mss.length) continue;
+      const models = pid ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];
+      const plabel = pid ? esc(productName(pid)||pid) : "\u2014 unclassified \u2014";
+      groups+='<div class="prodblock"><div class="prodlabel"><span class="pdot"></span>'+plabel+'</div>';
+      if(models.length) groups+='<div class="rowsec"><div class="kidlbl">Models</div><div class="tilerow">'+models.map(function(m){return ovModelTile(m,em);}).join("")+'</div></div>';
+      if(objs.length) groups+='<div class="rowsec"><div class="kidlbl">Objectives</div><div class="tilerow">'+objs.map(function(o){return ovObjTile(o,em,pool,casc);}).join("")+'</div></div>';
+      if(mss.length) groups+='<div class="rowsec"><div class="kidlbl">Milestones</div><div class="tilerow">'+mss.map(function(m){return ovMsTile(m,em,pool);}).join("")+'</div></div>';
+      groups+='</div>';
+    }
+    groups+='</div>';
+  }
+  if(!groups) groups='<p class="hint" style="margin-top:18px">No active objectives or milestones this quarter.</p>';
+  return '<div class="seclbl">Divisions</div>'+cards+groups;
+}
+function ovDivCard(d, em, casc){
+  const overall=RD.rollupDivision(d.id, portfolio, em);
+  const counts=statusCounts("division", d.id, em);
+  const worst=worstSlip(d.id, casc);
+  const qCells=RD.boundsOf("division", d.id, portfolio).map(function(q){return [q, RD.score("division",d.id,portfolio,em,q)];});
+  const nObj=portfolio.objectives.filter(function(o){return o.divisionId===d.id;}).length;
+  const nMs=portfolio.milestones.filter(function(m){return ovMsDiv(m)===d.id;}).length;
+  const q = qCells.length ? '<div class="ovq"><span class="ovq-lbl">per quarter</span>'+qCells.map(function(c){return '<span class="ovq-cell"><b style="color:'+scoreColor(c[1])+'">'+fmtScore(c[1])+'</b> <span class="pill">'+esc(c[0])+'</span></span>';}).join("")+'</div>' : "";
+  const slipTxt = worst==null ? '<span>no schedule data</span>' : 'worst initiative slip <b class="'+(worst<=0?'zero':'')+'">'+(worst<=0?'0':'+'+worst)+'d</b>';
+  return '<div class="card" onclick="openOvDetail(\'division\',\''+d.id+'\')">'
+    +'<h3>'+esc(d.name)+'</h3><div class="sub">'+d.id+'</div>'
+    +'<div class="ovoverall"><span class="score" style="font-size:26px;color:'+scoreColor(overall)+'">'+fmtScore(overall)+'</span> <span class="pill">overall</span></div>'
+    +q
+    +'<div class="dmeta">'+nObj+' objectives \u00b7 '+nMs+' milestones</div>'
+    +'<div class="counts"><span><i class="pip" style="background:var(--ok)"></i>'+counts["on-track"]+'</span><span><i class="pip" style="background:var(--warn)"></i>'+counts["at-risk"]+'</span><span><i class="pip" style="background:var(--bad)"></i>'+counts["off-track"]+'</span><span><i class="pip" style="background:var(--none)"></i>'+counts["no-band"]+'</span></div>'
+    +'<div class="slip">'+slipTxt+'</div></div>';
+}
+function ovModelTile(m, em){
+  const conf=modelConformance(m.id);
+  const specs=ovModelSpecs(m.id);
+  const cs=ovModelComps(m.id);
+  const rollup=RD.sliceScore("model", m.id, portfolio, em, null);
+  const meta=specMetaOf(m.id), mat=(meta&&meta.maturity)?meta.maturity:"";
+  const qs=quartersAll().map(function(q){return [q, RD.sliceScore("model",m.id,portfolio,em,q)];}).filter(function(x){return x[1]!=null;});
+  const specHead='<div class="kh"></div><div class="kh">Spec</div><div class="kh" style="text-align:right">Score</div>';
+  const specRows=specs.length?specs.map(function(sp){return '<div><div class="kdot" style="background:'+sp.c+'"></div></div><span class="kname" title="'+esc(sp.name)+'">'+esc(sp.name)+'</span><span class="kcur" style="color:'+sp.c+'">'+fmtScore(sp.score)+'</span>';}).join(""):'<div></div><div class="hint" style="grid-column:2 / span 2">no specs yet</div>';
+  const qHtml=qs.length?qs.map(function(x){return '<span class="rollq">'+esc(x[0])+' <b style="color:'+scoreColor(x[1])+'">'+fmtScore(x[1])+'</b></span>';}).join('<span style="color:var(--muted)">\u00b7</span>'):'';
+  return '<div class="mtile" onclick="openOvDetail(\'model\',\''+m.id+'\')">'
+    +'<div class="mbar" style="background:'+scoreColor(conf)+'"></div>'
+    +'<div class="mbody">'
+    +'<div class="mtop"><div><div class="mprod">'+esc(productName(m.productId)||"")+'</div><div class="mname">'+esc(m.name)+'</div>'+(mat?'<div class="mmat">'+esc(mat)+'</div>':'')+'</div>'
+    +'<div class="mconf"><div class="cv" style="color:'+scoreColor(conf)+'">'+fmtScore(conf)+(conf!=null?'%':'')+'</div><div class="cl">conformance</div></div></div>'
+    +'<div class="mseclbl">Product specs</div><div class="spectbl">'+specHead+specRows+'</div>'
+    +'<div class="msub">'+cs.comps.length+' components \u00b7 '+cs.subs.length+' sub-products</div>'
+    +'<div class="mseclbl">Objective rollup</div><div class="rollrow"><span class="rolloverall" style="color:'+scoreColor(rollup)+'">Overall '+fmtScore(rollup)+'</span>'+qHtml+'</div>'
+    +'</div></div>';
+}
+function ovObjTile(o, em, pool, casc){
+  const doc=execDocs["EXEC-"+o.divisionId]||{keyResults:[],kpis:[],stageGates:[]};
+  const score=RD.rollupObjective(o.id, portfolio, em);
+  const krRows=ovKrRows(o.id, doc, pool, em);
+  const gates=(doc.stageGates||[]).filter(function(g){return g.objectiveId===o.id;});
+  const gp=gates.filter(function(g){var st=RD.classifyGate(g,todayDay());return st==="passed"||st==="passed-late";}).length;
+  const behind=gates.filter(function(g){return RD.classifyGate(g,todayDay())==="overdue";}).length;
+  const end=(o.plannedEnd!=null)?(casc.objectiveProjectedEnd[o.id]!=null?casc.objectiveProjectedEnd[o.id]:o.plannedEnd):casc.objectiveProjectedEnd[o.id];
+  const dl=end!=null?end-todayDay():null;
+  const daysStr=dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left");
+  const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
+  return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
+    +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +ovKpiTbl("Key result", krRows)
+    +ovProg(score, scoreColor(score))
+    +gatesBlock
+    +'</div></div>';
+}
+function ovMsTile(m, em, pool){
+  const div=ovMsDiv(m); const doc=execDocs["EXEC-"+div]||{kpis:[]};
+  const achieved=RD.milestoneAchieved(m,em); const score=achieved?100:RD.milestoneScore(m.id, em);
+  const kpiRows=ovKpiRowsFor("milestone", m.id, doc, pool, em);
+  const dueStr = m.plannedDate!=null?dayToIso(m.plannedDate):"";
+  return '<div class="tcard" style="width:234px" onclick="openOvDetail(\'milestone\',\''+m.id+'\')">'
+    +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(m.name||m.id)+'">'+esc(m.name||m.id)+'</div><div class="csub">'+(dueStr?("Due "+dueStr):"")+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +ovKpiTbl("KPI", kpiRows)
+    +ovProg(score, scoreColor(score))
+    +'</div></div>';
+}
+
+function openOvDetail(kind, id){
+  const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
+  let title="", badges="", body="";
+  if(kind==="objective"){
+    const o=byId("objective",id); if(!o) return; const doc=execDocs["EXEC-"+o.divisionId]||{keyResults:[],kpis:[],stageGates:[],risks:[]};
+    const score=RD.rollupObjective(o.id, portfolio, em);
+    title=o.statement||o.id; badges=ovBadge(score)+' <span class="pn">'+esc(productName(ovObjProdId(o))||"\u2014")+'</span>';
+    const krRows=ovKrRows(o.id, doc, pool, em);
+    const krBlk=krRows.length?'<div class="mblk"><div class="mblkh">Key results</div>'+krRows.map(function(r){return '<div class="krline"><div class="kdot" style="background:'+r.c+'"></div><span>'+esc(r.name)+'</span><span class="kt">'+esc(r.tgt)+'</span><span class="kv" style="color:'+r.c+'">'+esc(r.cur)+'</span></div>';}).join("")+'</div>':"";
+    const gates=(doc.stageGates||[]).filter(function(g){return g.objectiveId===o.id;});
+    const gp=gates.filter(function(g){var st=RD.classifyGate(g,todayDay());return st==="passed"||st==="passed-late";}).length;
+    const gBlk=gates.length?'<div class="mblk"><div class="mblkh">Stage-gates \u00b7 '+gp+'/'+gates.length+' passed</div>'+gates.map(function(g,i){ const st=ovGState(g), v=ovGColor(OV_GST[st][0]), inner=(st==="passed"||st==="passed-late")?"\u2713":(i+1); const kk=(doc.kpis||[]).filter(function(x){return x.hostType==="stageGate"&&x.hostId===g.id;})[0]; let kpiTxt=""; if(kk){ const sc=RD.kpiScoreResolved(kk,pool,em), cc=scoreColor(sc), u=(RD.kpiUnit(kk,pool)||kk.unit), unit=u?(" "+u):"", dir=kk.direction==="down"?"\u2264":"\u2265", tv=RD.effTarget(kk,pool,em), cv=RD.effValue(kk,pool,em); kpiTxt='<div style="font-size:11px;color:var(--muted);margin-top:1px;font-family:var(--mono)">'+esc(kk.name||"")+': <span style="color:'+cc+';font-weight:600">'+(cv!=null?ovNum(cv)+unit:"\u2014")+'</span> / '+(tv!=null?dir+" "+ovNum(tv)+unit:"\u2014")+'</div>'; } const date=g.plannedDate!=null?dayToIso(g.plannedDate):""; return '<div class="gaterow"><div class="gdot" style="background:var('+v[0]+');border-color:var('+v[1]+');color:var('+v[2]+')">'+inner+'</div><div style="flex:1;min-width:0"><div>'+esc(g.name||g.id)+'</div>'+kpiTxt+'</div><span class="gstat" style="background:var('+v[0]+');color:var('+v[2]+')">'+OV_GST[st][1]+'</span><span style="color:var(--muted);min-width:74px;text-align:right;font-family:var(--mono);font-size:11px">'+date+'</span></div>'; }).join("")+'</div>':"";
+    const rrows=ovObjRisks(o.id, doc);
+    const nHigh=rrows.filter(function(x){return x.rpn>=200;}).length, nMed=rrows.filter(function(x){return x.rpn>=100&&x.rpn<200;}).length, maxR=rrows.length?rrows[0].rpn:0;
+    const rBlk=rrows.length?'<div class="mblk"><div class="mblkh">FMEA \u00b7 RPN summary</div><div style="font-size:12px;color:var(--muted);margin-bottom:9px">'+rrows.length+' risk'+(rrows.length!==1?'s':'')+' \u00b7 max RPN <b style="color:'+ovRpnColor(maxR)+'">'+maxR+'</b>'+(nHigh?' \u00b7 <b style="color:var(--bad)">'+nHigh+' high</b>':'')+(nMed?' \u00b7 <b style="color:var(--warn)">'+nMed+' med</b>':'')+'</div><div class="rpntbl"><div class="kh"></div><div class="kh">Failure mode</div><div class="kh" style="text-align:center">S</div><div class="kh" style="text-align:center">O</div><div class="kh" style="text-align:center">D</div><div class="kh" style="text-align:right">RPN</div>'+rrows.slice(0,8).map(function(x){return '<div><div class="kdot" style="background:'+ovRpnColor(x.rpn)+'"></div></div><span title="'+esc(x.mode)+'">'+esc(x.mode||"\u2014")+'</span><span class="sod">'+x.s+'</span><span class="sod">'+x.o+'</span><span class="sod">'+x.d+'</span><span class="rpnbadge" style="background:var(--pill-'+ovRpnPill(x.rpn)+'-bg);color:'+ovRpnColor(x.rpn)+'">'+x.rpn+'</span>';}).join("")+'</div></div>':"";
+    const pe=(o.plannedEnd!=null)?(casc.objectiveProjectedEnd[o.id]!=null?casc.objectiveProjectedEnd[o.id]:o.plannedEnd):casc.objectiveProjectedEnd[o.id];
+    const schBlk='<div class="mblk"><div class="mblkh">Schedule</div><div class="datagrid"><span class="dk">Planned end</span><span class="dv">'+(o.plannedEnd!=null?dayToIso(o.plannedEnd):"\u2014")+'</span><span class="dk">Projected end</span><span class="dv" style="color:'+((pe!=null&&o.plannedEnd!=null&&pe>o.plannedEnd)?'var(--bad)':'inherit')+'">'+(pe!=null?dayToIso(pe):"\u2014")+'</span><span class="dk">Score</span><span class="dv">'+fmtScore(score)+'</span></div></div>';
+    body=krBlk+gBlk+rBlk+schBlk;
+  } else if(kind==="milestone"){
+    const m=byId("milestone",id); if(!m) return; const div=ovMsDiv(m); const doc=execDocs["EXEC-"+div]||{kpis:[]};
+    const achieved=RD.milestoneAchieved(m,em); const score=achieved?100:RD.milestoneScore(m.id, em);
+    title=m.name||m.id; badges=ovBadge(score)+' <span class="pn">'+esc(productName(ovMsProdId(m))||"\u2014")+'</span>';
+    const kpiRows=ovKpiRowsFor("milestone", m.id, doc, pool, em);
+    const kBlk=kpiRows.length?'<div class="mblk"><div class="mblkh">KPIs</div>'+kpiRows.map(function(r){return '<div class="krline"><div class="kdot" style="background:'+r.c+'"></div><span>'+esc(r.name)+'</span><span class="kt">'+esc(r.tgt)+'</span><span class="kv" style="color:'+r.c+'">'+esc(r.cur)+'</span></div>';}).join("")+'</div>':'<div class="mblk"><p class="hint" style="margin:0">No KPIs on this milestone.</p></div>';
+    const meff=casc.milestoneEffective[m.id];
+    const schBlk='<div class="mblk"><div class="mblkh">Schedule</div><div class="datagrid"><span class="dk">Planned</span><span class="dv">'+(m.plannedDate!=null?dayToIso(m.plannedDate):"\u2014")+'</span><span class="dk">Projected</span><span class="dv">'+(meff!=null?dayToIso(meff):"\u2014")+'</span><span class="dk">Status</span><span class="dv">'+(achieved?"achieved":RD.band(score).replace("-"," "))+'</span></div></div>';
+    body=kBlk+schBlk;
+  } else if(kind==="model"){
+    const m=byId("model",id); if(!m) return; const conf=modelConformance(m.id); const meta=specMetaOf(m.id);
+    title=m.name||m.id; badges='<span class="pn">'+esc(productName(m.productId)||"\u2014")+'</span>'+((meta&&meta.maturity)?' <span class="pn">'+esc(meta.maturity)+'</span>':'');
+    const specs=ovModelSpecs(m.id); const cs=ovModelComps(m.id); const rollup=RD.sliceScore("model",m.id,portfolio,em,null);
+    const qs=quartersAll().map(function(q){return [q,RD.sliceScore("model",m.id,portfolio,em,q)];}).filter(function(x){return x[1]!=null;});
+    const specBlk='<div class="mblk"><div class="mblkh">Product specifications \u00b7 '+fmtScore(conf)+(conf!=null?'%':'')+' conformance</div>'+(specs.length?specs.map(function(sp){return '<div class="krline"><div class="kdot" style="background:'+sp.c+'"></div><span>'+esc(sp.name)+'</span><span></span><span class="kv" style="color:'+sp.c+'">'+fmtScore(sp.score)+'</span></div>';}).join(""):'<p class="hint" style="margin:0">No specifications defined.</p>')+'</div>';
+    const compBlk=cs.comps.length?'<div class="mblk"><div class="mblkh">Components \u00b7 readiness</div><div class="comptbl"><div class="kh"></div><div class="kh">Component</div><div class="kh"></div><div class="kh" style="text-align:right">Ready</div>'+cs.comps.map(function(c){return '<div><div class="kdot" style="background:'+c.c+'"></div></div><span>'+esc(c.name)+'</span><span></span><span class="cv" style="color:'+c.c+';text-align:right">'+fmtScore(c.score)+'</span>';}).join("")+'</div></div>':"";
+    const subBlk=cs.subs.length?'<div class="mblk"><div class="mblkh">Sub-products</div>'+cs.subs.map(function(sp){return '<div class="modelobjline"><span>'+esc(sp.name)+'</span><span class="cv" style="color:'+sp.c+';font-weight:600">'+fmtScore(sp.score)+'%</span></div>';}).join("")+'</div>':"";
+    const rollBlk='<div class="mblk"><div class="mblkh">Objective rollup</div><div class="rollrow"><span class="rolloverall" style="color:'+scoreColor(rollup)+'">Overall '+fmtScore(rollup)+'</span>'+qs.map(function(x){return '<span class="rollq">'+esc(x[0])+' <b style="color:'+scoreColor(x[1])+'">'+fmtScore(x[1])+'</b></span>';}).join('<span style="color:var(--muted)">\u00b7</span>')+'</div></div>';
+    body=specBlk+compBlk+subBlk+rollBlk;
+  } else if(kind==="division"){
+    const d=byId("division",id); if(!d) return; const overall=RD.rollupDivision(d.id,portfolio,em); const counts=statusCounts("division",d.id,em); const worst=worstSlip(d.id,casc);
+    title=d.name||d.id; badges=ovBadge(overall);
+    const nObj=portfolio.objectives.filter(function(o){return o.divisionId===d.id;}).length, nMs=portfolio.milestones.filter(function(m){return ovMsDiv(m)===d.id;}).length;
+    const sumBlk='<div class="mblk"><div class="mblkh">Summary</div><div class="datagrid"><span class="dk">Overall</span><span class="dv" style="color:'+scoreColor(overall)+';font-weight:700">'+fmtScore(overall)+' \u00b7 '+RD.band(overall).replace("-"," ")+'</span><span class="dk">Active</span><span class="dv">'+nObj+' objectives \u00b7 '+nMs+' milestones</span><span class="dk">Status mix</span><span class="dv">'+counts["on-track"]+' on track \u00b7 '+counts["at-risk"]+' at risk \u00b7 '+counts["off-track"]+' off track</span><span class="dk">Worst slip</span><span class="dv">'+(worst==null?"\u2014":(worst<=0?"0":"+"+worst)+"d")+'</span></div></div>';
+    const models=portfolio.models.filter(function(m){return divOfModel(m.id)===d.id;});
+    const mBlk=models.length?'<div class="mblk"><div class="mblkh">Models</div>'+models.map(function(m){var r=RD.sliceScore("model",m.id,portfolio,em,null),c=modelConformance(m.id);return '<div class="modelobjline"><span>'+esc(productName(m.productId)||"")+' <span style="color:var(--muted)">/ '+esc(m.name)+'</span></span><span class="cv" style="color:'+scoreColor(r)+';font-weight:600">rollup '+fmtScore(r)+' \u00b7 conf '+fmtScore(c)+(c!=null?'%':'')+'</span></div>';}).join("")+'</div>':"";
+    body=sumBlk+mBlk;
+  }
+  document.getElementById("ovDetTitle").textContent=title;
+  document.getElementById("ovDetBadges").innerHTML=badges;
+  document.getElementById("ovDetBody").innerHTML=body;
+  document.getElementById("ovDetModal").hidden=false;
+}
+(function(){ const m=document.getElementById("ovDetModal"); if(m){ const cb=document.getElementById("ovDetClose"); if(cb) cb.onclick=function(){ m.hidden=true; }; m.addEventListener("click",function(e){ if(e.target===m) m.hidden=true; }); document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !m.hidden) m.hidden=true; }); } })();
+
 
 /* ---------------- nav + wiring ---------------- */
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
@@ -3024,10 +3286,6 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   b.classList.add("active");
   document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
   document.getElementById("tab-"+b.dataset.tab).classList.add("active");
-});
-document.querySelectorAll("#lensToggle button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("#lensToggle button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active"); lens=b.dataset.lens; renderOverview();
 });
 
 document.getElementById("saveBtn").onclick = saveAll;
