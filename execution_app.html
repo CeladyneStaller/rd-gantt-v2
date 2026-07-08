@@ -1897,7 +1897,7 @@ window.hubProjectKpis = function(){
     AK.forEach(function(k){
       if(k.objectiveId!==selectedObj || k.hostType==='task' || seen[k.id]) return; seen[k.id]=1;
       var dir=RD.kpiDirection(k,AK);
-      out.push({ gid:k.id, name:(RD.kpiName(k,AK)||k.id), unit:(RD.kpiUnit(k,AK)||''), direction:((dir==='down'||dir==='decrease')?'<=':'>='), label:hubKpiLabel(k) });
+      out.push({ gid:k.id, name:(RD.kpiName(k,AK)||k.id), unit:(RD.kpiUnit(k,AK)||''), direction:((dir==='down'||dir==='decrease')?'<=':'>='), label:hubKpiLabel(k), group:linkGroupLabel(linkRank(k)) });
     });
     return out;
   }catch(e){ return []; }
@@ -1947,11 +1947,30 @@ function specDivsInScope(){ const t=targetsInScope(), s=new Set();
   t.models.forEach(m=>{ const d=divOfModel(m); if(d) s.add(d); });
   return [...s]; }
 function allRefKpis(){ let out=[]; for(const id in refDocs){ const rd=refDocs[id]; if(rd&&rd.doc&&rd.doc.kpis) out=out.concat(rd.doc.kpis); } return out; }
-function linkTargetKpis(){ return RD.targetKpisInScope(targetsInScope(), allRefKpis()); }
+function componentTargetsInScope(t){ const ms=new Set((t||targetsInScope()).models||[]); return allRefKpis().filter(k=>k && k.hostType==="component" && ms.has(k.objectiveId)); }
+function linkTargetKpis(){ const t=targetsInScope(); const base=RD.targetKpisInScope(t, allRefKpis()); const seen=new Set(base.map(k=>k.id)); return base.concat(componentTargetsInScope(t).filter(k=>!seen.has(k.id))); }
 let _targetIds=new Set();
 function refreshTargetIds(){ _targetIds=new Set(linkTargetKpis().map(k=>k.id)); }
 function isTargetKpi(k){ return k && _targetIds.has(k.id); }
 function parentLevelOf(k){ return k.hostType==="product" ? "product" : (modelById(k.objectiveId) ? "model" : k.hostType); }
+// ---- KPI link hierarchy: 5 levels (Initiative > Product > Component > KR > Stage-gate) ----
+// Ranks drive the optgroup order AND the strict up-only link filter. A per-model Product
+// Specification is hostType 'keyResult' hosted on a MODEL, so it ranks as Product; an execution
+// key result is 'keyResult' hosted on the objective, so it ranks as KR (same modelById test as parentLevelOf).
+function rankOf(hostType, objectiveId){
+  if(hostType==="initiative" || hostType==="milestone") return 5;      // Initiative
+  if(hostType==="product") return 4;                                   // Product (family)
+  if(hostType==="keyResult" && modelById(objectiveId)) return 4;       // per-model Product Specification -> Product
+  if(hostType==="component") return 3;                                 // Component
+  if(hostType==="keyResult") return 2;                                 // execution Key Result
+  if(hostType==="stageGate") return 1;                                 // Stage-gate
+  return 0;                                                            // task / unknown -> never a link target
+}
+function linkRank(k){ return k ? rankOf(k.hostType, k.objectiveId) : 0; }
+function linkGroupLabel(rank){ return ({5:"Initiative",4:"Product",3:"Component",2:"Key results",1:"Stage-gates"})[rank] || "Other"; }
+function componentLabel(k){   // resolve the component (a stageGate in the cached spec doc) name; fall back to the model
+  try{ for(const id in refDocs){ const sgs=refDocs[id]&&refDocs[id].doc&&refDocs[id].doc.stageGates; if(sgs){ const c=sgs.find(g=>g.id===k.hostId); if(c) return (c.name||c.id)+(modelById(k.objectiveId)?(" \u00b7 "+modelName(k.objectiveId)):""); } } }catch(e){}
+  return modelById(k.objectiveId)?modelName(k.objectiveId):(k.objectiveId||k.hostId||""); }
 async function fetchSpecDoc(div){
   if(!div || !tok()) return null; const id="SPEC-"+div;
   try{ const s=await apiGet(id); const d=s?s.doc:{}; d.kpis=d.kpis||[]; RD.migrateKpiLinks(d.kpis);
@@ -2688,6 +2707,7 @@ function hostLabel(k){
   if(k.hostType==="milestone")  return "milestone: "+esc(msName(k.hostId));
   if(k.hostType==="keyResult")  return "KR: "+esc(krName(k.hostId));
   if(k.hostType==="stageGate")  return "gate: "+esc(gateName(k.hostId));
+  if(k.hostType==="component") return "component: "+esc(componentLabel(k));
   return "task: "+esc(taskName(k.hostId));
 }
 function groupOf(k){ return k.groupId||k.id; }
@@ -2702,6 +2722,7 @@ function linkCandidates(hostType, hostId){
   const initId = O ? initiativeIdOf(O) : null;
   const msIds = new Set((portfolio.milestones||[]).filter(m=>m.initiativeId===initId).map(m=>m.id));
   const here = LEVEL[hostType];
+  const srcRank = rankOf(hostType, O);                                   // strict up-only: only levels ABOVE the source are linkable
   const pool = allKpisPool();
   // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
   const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
@@ -2710,6 +2731,7 @@ function linkCandidates(hostType, hostId){
     const inScope = (k.objectiveId===O) || (k.hostType==="initiative" && k.hostId===initId) || (k.hostType==="milestone" && msIds.has(k.hostId)) || isTargetKpi(k);
     if(!inScope) return;
     const def = RD.definerOf(k, pool);
+    if(linkRank(def) <= srcRank) return;                                  // exclude same-level and below (e.g. KR never sees stage-gates)
     if(seen.has(def.id) || occupied.has(def.id)) return;
     seen.add(def.id); out.push(def);
   });
@@ -2752,8 +2774,12 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const pool = allKpisPool();
   const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent → relationship applies
-  const opts = cands.map(d=>{ const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; }).join("");
-  const first = cands[0], firstShow = showRel(first);
+  const byRank={}; cands.forEach(d=>{ const r=linkRank(d); (byRank[r]||(byRank[r]=[])).push(d); });
+  const ranks=[5,4,3,2,1].filter(r=>byRank[r]&&byRank[r].length);
+  const ordered=ranks.reduce((a,r)=>a.concat(byRank[r]),[]);
+  const opt1=d=>{ const sr=showRel(d); return `<option value="${d.id}" data-showrel="${sr?1:0}" data-ptype="${sr?parentLevelOf(d):''}">${esc(RD.kpiName(d, pool)||d.id)} · ${hostLabel(d)}</option>`; };
+  const opts = ranks.map(r=>`<optgroup label="${linkGroupLabel(r)}">`+byRank[r].map(opt1).join("")+`</optgroup>`).join("");
+  const first = ordered[0], firstShow = showRel(first);
   const firstRel = firstShow ? defaultLinkType(parentLevelOf(first), hostType) : "contribute";
   const relOpts = ['contribute','direct','specification'].map(t=>`<option value="${t}"${t===firstRel?" selected":""}>${t}</option>`).join("");
   return `<div class="ed">
@@ -4056,15 +4082,23 @@ function openKeyReadKpiPicker(t, expId){
   sheet.appendChild(el('h3',null,'Link a key read to a project KPI'));
   var list=el('div'); list.style.cssText='margin-top:10px;max-height:50vh;overflow:auto';
   if(!kpis.length){ list.appendChild(el('p','muted','No project KPIs yet \u2014 add KPIs to your Key Results in the Quarter / OKR tab first.')); }
-  else { kpis.forEach(function(kpi){
-    var row=el('div'); row.style.cssText='padding:9px 10px;border:1px solid var(--line,#e6e6e2);border-radius:8px;margin:6px 0;cursor:pointer';
-    var nm=el('div',null); var s=el('span',null,(kpi.name||kpi.gid)); s.style.fontWeight='600'; nm.appendChild(s); if(kpi.unit){ nm.appendChild(el('span','muted',' ('+kpi.unit+')')); }
-    row.appendChild(nm); row.appendChild(el('div','muted small',kpi.label||''));
-    row.addEventListener('mouseenter',function(){ row.style.background='var(--hover,#f7f7f5)'; });
-    row.addEventListener('mouseleave',function(){ row.style.background=''; });
-    row.addEventListener('click',function(){ addLinkedKeyRead(t,expId,kpi); softRefresh(); renderPanel(expId); closeKeyReadKpiPicker(); });
-    list.appendChild(row);
-  }); }
+  else {
+    var GROUP_ORDER=["Initiative","Product","Component","Key results","Stage-gates"];
+    var byG={}; kpis.forEach(function(kpi){ var g=(kpi&&kpi.group)||"Other"; (byG[g]||(byG[g]=[])).push(kpi); });
+    var gord=GROUP_ORDER.filter(function(g){return byG[g]&&byG[g].length;}); Object.keys(byG).forEach(function(g){ if(gord.indexOf(g)<0) gord.push(g); });
+    gord.forEach(function(g){
+      var hdr=el('div','muted small',g); hdr.style.cssText='margin:12px 2px 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:10px;opacity:.7'; list.appendChild(hdr);
+      byG[g].forEach(function(kpi){
+        var row=el('div'); row.style.cssText='padding:9px 10px;border:1px solid var(--line,#e6e6e2);border-radius:8px;margin:6px 0;cursor:pointer';
+        var nm=el('div',null); var s=el('span',null,(kpi.name||kpi.gid)); s.style.fontWeight='600'; nm.appendChild(s); if(kpi.unit){ nm.appendChild(el('span','muted',' ('+kpi.unit+')')); }
+        row.appendChild(nm); row.appendChild(el('div','muted small',kpi.label||''));
+        row.addEventListener('mouseenter',function(){ row.style.background='var(--hover,#f7f7f5)'; });
+        row.addEventListener('mouseleave',function(){ row.style.background=''; });
+        row.addEventListener('click',function(){ addLinkedKeyRead(t,expId,kpi); softRefresh(); renderPanel(expId); closeKeyReadKpiPicker(); });
+        list.appendChild(row);
+      });
+    });
+  }
   sheet.appendChild(list);
   var rrow=el('div','row'); rrow.style.marginTop='12px'; var sp=el('div'); sp.style.flex='1'; rrow.appendChild(sp);
   var close=el('button',null,'Close'); close.addEventListener('click',closeKeyReadKpiPicker); rrow.appendChild(close); sheet.appendChild(rrow);
