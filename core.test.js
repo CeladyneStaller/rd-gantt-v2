@@ -465,9 +465,9 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
 
   // chainGatesByDate: G1(30)->G2(40)->G3(45); late G1 pushes both to 70
   var rCh = C.cascade(build(true), execChain, today);
-  approx(rCh.gateEffective['G2'], 70, 'chained G2 pushed to late G1 end (70)');
-  approx(rCh.gateEffective['G3'], 70, 'chained G3 pushed through the chain (70)');
-  approx(rCh.objectiveProjectedEnd['O'], 70, 'chained gate end flows into objective projEnd');
+  approx(rCh.gateEffective['G2'], 80, 'chained G2 = late G1 actual (70) + its 10-day gap = 80 (delay propagates)');
+  approx(rCh.gateEffective['G3'], 85, 'chained G3 = G2 (80) + its 5-day gap = 85 (delay propagates through the chain)');
+  approx(rCh.objectiveProjectedEnd['O'], 85, 'chained gate end (85) flows into objective projEnd');
 
   // lock exempts the locked gate from inherited push, and shields downstream
   var execLock = JSON.parse(JSON.stringify(execChain));
@@ -475,7 +475,7 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   execLock['D'].stageGates[1].baselineDate = 40;   // committed to 40
   var rLk = C.cascade(build(true), execLock, today);
   approx(rLk.gateEffective['G2'], 50, 'locked G2 holds at its own pfGate (50), not pushed to 70');
-  approx(rLk.gateEffective['G3'], 50, 'locked G2 shields G3 (inherits committed 50, not 70)');
+  approx(rLk.gateEffective['G3'], 55, 'locked G2 shields G3 from G1 lateness; G3 = G2 committed (50) + its 5-day gap = 55');
 
   // lock NEVER fakes on-time: a locked, overdue, undone gate still floors to today AND slips
   var pSolo = {
@@ -567,8 +567,8 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   } };
   var r = C.cascade(portfolio, exec, today);
   approx(r.gateEffective['Gb'], 75, 'execDoc edge: Gb = Ga end (70) + lag 5');
-  approx(r.gateEffective['Gc1'], 70, 'execDoc chain flag: Gc1 pushed by late Ga (70)');
-  approx(r.gateEffective['Gc2'], 70, 'execDoc chain flag: Gc2 pushed through the chain (70)');
+  approx(r.gateEffective['Gc1'], 72, 'execDoc chain flag: Gc1 = late Ga (70) + its 2-day gap = 72');
+  approx(r.gateEffective['Gc2'], 78, 'execDoc chain flag: Gc2 = Gc1 (72) + its 6-day gap = 78');
 })();
 
 /* ---- classifyGate: pure state machine ------------------------------------ */
@@ -1097,7 +1097,7 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
     stageGateSets: [ { id: 'setA', objectiveId: 'O1', chained: true }, { id: 'setB', objectiveId: 'O1', chained: true } ]
   } };
   var r = C.cascade(portfolio, execC, 10);
-  approx(r.gateEffective['A2'], 200, 'per-set chain: A2 pushed to 200 by same-set A1');
+  approx(r.gateEffective['A2'], 295, 'per-set chain: A2 = same-set A1 actual (200) + its 95-day gap = 295 (delay propagates)');
   approx(r.gateEffective['B1'], 50, 'per-set chain: parallel B1 is NOT pushed by A1 (stays 50)');
 
   // a set with chained:false does NOT date-chain its own gates
@@ -1112,7 +1112,69 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
     stageGates: [ { id: 'A1', objectiveId: 'O1', plannedDate: 5, actualDate: 200 }, { id: 'A2', objectiveId: 'O1', plannedDate: 100 }, { id: 'B1', objectiveId: 'O1', plannedDate: 50 } ],
     chainGatesByDate: { O1: true }
   } };
-  approx(C.cascade(portfolio, execL, 10).gateEffective['B1'], 200, 'legacy per-objective chain: B1 pushed to 200 (back-compat preserved)');
+  approx(C.cascade(portfolio, execL, 10).gateEffective['B1'], 245, 'legacy per-objective chain: B1 = A1 (200) + its 45-day gap = 245 (back-compat preserved)');
+})();
+
+/* ---- cascade Phase 0: delay PROPAGATION + done-anchor + acceleration opportunity ---------- */
+(function () {
+  function pkg() {
+    return { divisions: [{ id: 'D' }], initiatives: [{ id: 'I', divisionId: 'D', plannedStart: 90, plannedEnd: 200 }],
+      objectives: [{ id: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: 90, plannedEnd: 200, milestoneIds: [] }],
+      milestones: [], stageGateEdges: [], objectiveEdges: [], milestoneEdges: [] };
+  }
+  // chained set, generous 50-day slack: G1@100 -> G2@150 -> G3@200
+  function ex(g1) {
+    return { D: { stageGates: [
+      Object.assign({ id: 'G1', objectiveId: 'O', setId: 'S', plannedDate: 100 }, g1),
+      { id: 'G2', objectiveId: 'O', setId: 'S', plannedDate: 150 },
+      { id: 'G3', objectiveId: 'O', setId: 'S', plannedDate: 200 } ],
+      stageGateSets: [{ id: 'S', objectiveId: 'O', chained: true }], tasks: [] } };
+  }
+
+  // (1) PROPAGATION: G1 finishes 30 late -> every downstream gate shifts +30 DESPITE 50-day slack
+  //     (the old constraint model absorbed the delay and moved nothing)
+  var late = C.cascade(pkg(), ex({ actualDate: 130 }), 80);
+  approx(late.gateEffective['G1'], 130, 'propagation: G1 = its late actual (130)');
+  approx(late.gateEffective['G2'], 180, 'propagation: late G1 shifts G2 +30 (150->180) through its slack');
+  approx(late.gateEffective['G3'], 230, 'propagation: shift ripples to G3 (200->230)');
+  approx(late.objectiveProjectedEnd['O'], 230, 'propagation: objective estimated completion shifts to 230');
+  ok(late.objectiveAcceleration['O'] === 0, 'no acceleration opportunity while running late');
+
+  // (2) undone + overdue predecessor floors at today and still propagates the forecast delay
+  var od = C.cascade(pkg(), ex({}), 130);
+  approx(od.gateEffective['G2'], 180, 'overdue undone G1 (forecast 130) propagates +30 to G2');
+  approx(od.gateEffective['G3'], 230, 'overdue undone G1 propagates +30 to G3');
+
+  // (3) DONE-ANCHOR: G1 late (130) but G2 RECORDED on time (150) -> G2 holds its actual, G3 re-anchors to G2
+  var rec = C.cascade(pkg(), { D: { stageGates: [
+    { id: 'G1', objectiveId: 'O', setId: 'S', plannedDate: 100, actualDate: 130 },
+    { id: 'G2', objectiveId: 'O', setId: 'S', plannedDate: 150, actualDate: 150 },
+    { id: 'G3', objectiveId: 'O', setId: 'S', plannedDate: 200 } ],
+    stageGateSets: [{ id: 'S', objectiveId: 'O', chained: true }], tasks: [] } }, 80);
+  approx(rec.gateEffective['G2'], 150, 'done-anchor: recovered G2 holds its on-time actual (150), not inflated to 180');
+  approx(rec.gateEffective['G3'], 200, 'done-anchor: G3 re-anchors to recovered G2 (150+50), back on plan at 200');
+
+  // (4) ACCELERATION (fork B): G1 done 30 EARLY -> committed forecast does NOT pull in (delays-only),
+  //     but the earliest forecast does, and the opportunity is surfaced per gate + per objective
+  var early = C.cascade(pkg(), ex({ actualDate: 70 }), 80);
+  approx(early.gateEffective['G2'], 150, 'delays-only: early G1 does NOT pull committed G2 in (stays 150)');
+  approx(early.gateEffective['G3'], 200, 'delays-only: committed G3 stays 200');
+  approx(early.objectiveProjectedEnd['O'], 200, 'delays-only: committed objective completion stays 200');
+  approx(early.gateForecastEarliest['G2'], 120, 'earliest: G2 could finish 30 early (70+50=120)');
+  approx(early.gateForecastEarliest['G3'], 170, 'earliest: G3 could finish 30 early (120+50=170)');
+  approx(early.gateAcceleration['G2'], 30, 'acceleration flag: G2 could move up 30 days');
+  approx(early.gateAcceleration['G3'], 30, 'acceleration flag: G3 could move up 30 days');
+  approx(early.objectiveEarliestEnd['O'], 170, 'earliest objective end = 170');
+  approx(early.objectiveAcceleration['O'], 30, 'acceleration flag: objective could pull in 30 days');
+
+  // (5) LOCKED gate as a hard external date: it holds AND firewalls downstream from the propagated delay
+  var lk = C.cascade(pkg(), { D: { stageGates: [
+    { id: 'G1', objectiveId: 'O', setId: 'S', plannedDate: 100, actualDate: 160 },
+    { id: 'G2', objectiveId: 'O', setId: 'S', plannedDate: 150, locked: true, baselineDate: 150 },
+    { id: 'G3', objectiveId: 'O', setId: 'S', plannedDate: 200 } ],
+    stageGateSets: [{ id: 'S', objectiveId: 'O', chained: true }], tasks: [] } }, 80);
+  approx(lk.gateEffective['G2'], 150, 'locked G2 holds its committed 150 despite G1 +60');
+  approx(lk.gateEffective['G3'], 200, 'locked G2 firewalls G3: G3 = 150 + 50 gap = 200, not 210+');
 })();
 
 /* ---- summary ------------------------------------------------------------- */

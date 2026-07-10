@@ -1240,7 +1240,7 @@
       var gs = childCache[o.id].sgs;
       function chainSeq(list) {
         var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: seq[i].plannedDate - seq[i - 1].plannedDate });
       }
       if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
         sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
@@ -1262,6 +1262,7 @@
       if (!g) return 0;
       var seed = pfGate(g);
       if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (g.actualDate != null) { gateEff[gid] = seed; return seed; }   // a finished gate anchors at its actual; a late predecessor can't inflate it, and a recovered gate re-anchors its successors
       if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
       gateStack[gid] = true;
       var res = seed, preds = gatePreds[gid];
@@ -1275,6 +1276,33 @@
     }
     Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
 
+    // Optimistic ("earliest") gate forecast: same chain, but an undone gate floats down to today, so early
+    // upstream finishes DO pull successors in. gateEff (committed) floors undone gates at plannedDate (fork B:
+    // delays-only), so gateEff - gateEarliest is the acceleration opportunity we surface without moving the plan.
+    var gateEarliest = {}, gateEStack = {};
+    function pfGateEarliest(s) { return (s.actualDate != null) ? s.actualDate : today; }
+    function computeGateEarliest(gid) {
+      if (gateEarliest[gid] != null) return gateEarliest[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      if (g.locked) { gateEarliest[gid] = pfGate(g); return gateEarliest[gid]; }   // locked holds its committed date both ways
+      var seed = pfGateEarliest(g);
+      if (g.actualDate != null) { gateEarliest[gid] = seed; return seed; }
+      if (gateEStack[gid]) { gateEarliest[gid] = seed; return seed; }
+      gateEStack[gid] = true;
+      var res = seed, preds = gatePreds[gid];
+      for (var i = 0; i < preds.length; i++) {
+        if (gateEStack[preds[i].from]) continue;
+        res = Math.max(res, computeGateEarliest(preds[i].from) + preds[i].lag);
+      }
+      gateEStack[gid] = false;
+      gateEarliest[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEarliest(gid); });
+    var gateAcceleration = {};
+    Object.keys(gateById).forEach(function (gid) { gateAcceleration[gid] = Math.max(0, gateEff[gid] - gateEarliest[gid]); });
+
     // baseline-aware slip per gate: slipped iff committed and now forecast past it.
     var gateSlipped = {};
     Object.keys(gateById).forEach(function (gid) {
@@ -1282,13 +1310,14 @@
       gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
     });
 
-    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
-    var intrinsic = {};
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends) — committed + optimistic
+    var intrinsic = {}, intrinsicEarliest = {};
     objs.forEach(function (o) {
-      var c = childCache[o.id], vals = [];
-      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
-      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
+      var c = childCache[o.id], vals = [], valsE = [];
+      c.tasks.forEach(function (t) { var pt = pfTask(t); vals.push(pt); valsE.push(pt); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); valsE.push(gateEarliest[s.id]); });
       intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+      intrinsicEarliest[o.id] = valsE.length ? Math.max.apply(null, valsE) : o.plannedEnd;
     });
 
     // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
@@ -1316,6 +1345,31 @@
       return res;
     }
     objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
+    var projEndEarliest = {}, objEStack = {};
+    function computeProjEndEarliest(id) {
+      if (projEndEarliest[id] != null) return projEndEarliest[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objEStack[id]) return intrinsicEarliest[id];
+      objEStack[id] = true;
+      var cs = o.plannedStart, preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objEStack[preds[i].from]) continue;
+        cs = Math.max(cs, computeProjEndEarliest(preds[i].from) + preds[i].lag);
+      }
+      var c = childCache[id]; var hasKids = c && (c.sgs.length + c.tasks.length) > 0;
+      // an objective whose work IS its gates/tasks can finish as early as they allow (floored at its earliest start);
+      // a childless objective still occupies its planned duration, so it shows no spurious acceleration
+      var res = hasKids ? Math.max(intrinsicEarliest[id], cs) : Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
+      objEStack[id] = false;
+      projEndEarliest[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEndEarliest(o.id); });
+    var objectiveAcceleration = {};
+    objs.forEach(function (o) { objectiveAcceleration[o.id] = Math.max(0, projEnd[o.id] - projEndEarliest[o.id]); });
 
     // Stage 3: vertical lift into milestones
     var effective = {};
@@ -1366,10 +1420,14 @@
 
     return {
       objectiveProjectedEnd: projEnd,
+      objectiveEarliestEnd: projEndEarliest,
+      objectiveAcceleration: objectiveAcceleration,
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
       gateEffective: gateEff,
+      gateForecastEarliest: gateEarliest,
+      gateAcceleration: gateAcceleration,
       gateSlipped: gateSlipped,
       cycles: cycles
     };
