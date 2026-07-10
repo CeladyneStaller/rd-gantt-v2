@@ -1567,10 +1567,10 @@ html[data-theme="dark"] #etb-view{
         if (objEStack[preds[i].from]) continue;
         cs = Math.max(cs, computeProjEndEarliest(preds[i].from) + preds[i].lag);
       }
-      var c = childCache[id]; var hasKids = c && (c.sgs.length + c.tasks.length) > 0;
-      // an objective whose work IS its gates/tasks can finish as early as they allow (floored at its earliest start);
-      // a childless objective still occupies its planned duration, so it shows no spurious acceleration
-      var res = hasKids ? Math.max(intrinsicEarliest[id], cs) : Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
+      // Mirror the committed projEnd floor EXACTLY (line above uses cs + dur): an objective occupies its full
+      // planned duration regardless of how early its gates could finish, so acceleration reflects ONLY genuine
+      // early upstream work (a gate/task or predecessor ahead of plan), never the objective's own span slack.
+      var res = Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
       objEStack[id] = false;
       projEndEarliest[id] = res;
       return res;

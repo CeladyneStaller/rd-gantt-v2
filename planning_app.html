@@ -1366,10 +1366,10 @@
         if (objEStack[preds[i].from]) continue;
         cs = Math.max(cs, computeProjEndEarliest(preds[i].from) + preds[i].lag);
       }
-      var c = childCache[id]; var hasKids = c && (c.sgs.length + c.tasks.length) > 0;
-      // an objective whose work IS its gates/tasks can finish as early as they allow (floored at its earliest start);
-      // a childless objective still occupies its planned duration, so it shows no spurious acceleration
-      var res = hasKids ? Math.max(intrinsicEarliest[id], cs) : Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
+      // Mirror the committed projEnd floor EXACTLY (line above uses cs + dur): an objective occupies its full
+      // planned duration regardless of how early its gates could finish, so acceleration reflects ONLY genuine
+      // early upstream work (a gate/task or predecessor ahead of plan), never the objective's own span slack.
+      var res = Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
       objEStack[id] = false;
       projEndEarliest[id] = res;
       return res;
@@ -3271,9 +3271,9 @@ function ovObjTile(o, em, pool, casc){
   const dl=end!=null?end-todayDay():null;
   const daysStr=dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left");
   const oSlip=(o.plannedEnd!=null&&end!=null)?end-o.plannedEnd:null;
-  const oAccel=casc.objectiveAcceleration?(casc.objectiveAcceleration[o.id]||0):0;
-  const schedChip=(oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>'
-                 :(oAccel>0)?' <span class="ov-accel">\u2191 '+oAccel+'d faster possible</span>':'';
+  // Objective acceleration only ever occurs together with slip (a gate binding past the objective's span), so a
+  // standalone "faster possible" chip here is unreachable; the slip chip carries the schedule signal on the tile.
+  const schedChip=(oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>':'';
   const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
   return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
