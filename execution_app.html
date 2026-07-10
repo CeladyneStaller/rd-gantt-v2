@@ -1484,21 +1484,25 @@ html[data-theme="dark"] #etb-view{
     // upstream finishes DO pull successors in. gateEff (committed) floors undone gates at plannedDate (fork B:
     // delays-only), so gateEff - gateEarliest is the acceleration opportunity we surface without moving the plan.
     var gateEarliest = {}, gateEStack = {};
-    function pfGateEarliest(s) { return (s.actualDate != null) ? s.actualDate : today; }
     function computeGateEarliest(gid) {
       if (gateEarliest[gid] != null) return gateEarliest[gid];
       var g = gateById[gid];
       if (!g) return 0;
       if (g.locked) { gateEarliest[gid] = pfGate(g); return gateEarliest[gid]; }   // locked holds its committed date both ways
-      var seed = pfGateEarliest(g);
-      if (g.actualDate != null) { gateEarliest[gid] = seed; return seed; }
-      if (gateEStack[gid]) { gateEarliest[gid] = seed; return seed; }
+      if (g.actualDate != null) { gateEarliest[gid] = g.actualDate; return g.actualDate; }
+      var plannedFloor = (g.plannedDate != null) ? Math.max(today, g.plannedDate) : today;
+      if (gateEStack[gid]) { gateEarliest[gid] = plannedFloor; return plannedFloor; }
       gateEStack[gid] = true;
-      var res = seed, preds = gatePreds[gid];
+      var preds = gatePreds[gid], chain = null;
       for (var i = 0; i < preds.length; i++) {
         if (gateEStack[preds[i].from]) continue;
-        res = Math.max(res, computeGateEarliest(preds[i].from) + preds[i].lag);
+        var c = computeGateEarliest(preds[i].from) + preds[i].lag;
+        chain = (chain == null) ? c : Math.max(chain, c);
       }
+      // No binding predecessor -> a gate's earliest is its OWN planned date; it is not accelerated by nothing.
+      // (Fixes phantom acceleration on the first gate and on any gate merely planned in the future.) With a
+      // predecessor it follows by the planned gap, so only an EARLY upstream actual pulls it below its plan.
+      var res = (chain == null) ? plannedFloor : Math.max(today, chain);
       gateEStack[gid] = false;
       gateEarliest[gid] = res;
       return res;
