@@ -418,6 +418,9 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
+  // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
+  function gateAtTarget(sgId, execDocs) { return stageGateScore(sgId, execDocs) === 100; }
 
   // ---- stage-gate SETS (parallel workstreams within an objective) -----------
   // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
@@ -849,6 +852,26 @@
     }
     objs.forEach(function (o) { computeProjEnd(o.id); });
 
+    // Work-basis schedule slip (execution Schedule card): how late the objective's OWN gates/tasks are vs their
+    // PLANNED dates, independent of the objective's plannedEnd buffer. objectiveProjectedEnd is left untouched.
+    // forecast = latest gate/task forecast (intrinsic); baseline = latest gate/task PLANNED date. A childless
+    // objective falls back to projEnd vs plannedEnd so a predecessor push still surfaces.
+    var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
+    objs.forEach(function (o) {
+      var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
+      if (hasWork) {
+        c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
+        c.sgs.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
+        fEnd = intrinsic[o.id];
+        pEnd = pd.length ? Math.max.apply(null, pd) : o.plannedEnd;
+      } else {
+        fEnd = projEnd[o.id];
+        pEnd = o.plannedEnd;
+      }
+      objectiveWorkForecast[o.id] = fEnd;
+      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+    });
+
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
     var projEndEarliest = {}, objEStack = {};
     function computeProjEndEarliest(id) {
@@ -925,6 +948,8 @@
       objectiveProjectedEnd: projEnd,
       objectiveEarliestEnd: projEndEarliest,
       objectiveAcceleration: objectiveAcceleration,
+      objectiveWorkForecast: objectiveWorkForecast,
+      objectiveScheduleSlip: objectiveScheduleSlip,
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
@@ -1083,6 +1108,7 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    gateAtTarget: gateAtTarget,
     setScore: setScore,
     objectiveGateReadiness: objectiveGateReadiness,
     gatesForSet: gatesForSet,

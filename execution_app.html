@@ -1580,6 +1580,26 @@ html[data-theme="dark"] #etb-view{
     }
     objs.forEach(function (o) { computeProjEnd(o.id); });
 
+    // Work-basis schedule slip (execution Schedule card): how late the objective's OWN gates/tasks are vs their
+    // PLANNED dates, independent of the objective's plannedEnd buffer. objectiveProjectedEnd is left untouched.
+    // forecast = latest gate/task forecast (intrinsic); baseline = latest gate/task PLANNED date. A childless
+    // objective falls back to projEnd vs plannedEnd so a predecessor push still surfaces.
+    var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
+    objs.forEach(function (o) {
+      var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
+      if (hasWork) {
+        c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
+        c.sgs.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
+        fEnd = intrinsic[o.id];
+        pEnd = pd.length ? Math.max.apply(null, pd) : o.plannedEnd;
+      } else {
+        fEnd = projEnd[o.id];
+        pEnd = o.plannedEnd;
+      }
+      objectiveWorkForecast[o.id] = fEnd;
+      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+    });
+
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
     var projEndEarliest = {}, objEStack = {};
     function computeProjEndEarliest(id) {
@@ -1656,6 +1676,8 @@ html[data-theme="dark"] #etb-view{
       objectiveProjectedEnd: projEnd,
       objectiveEarliestEnd: projEndEarliest,
       objectiveAcceleration: objectiveAcceleration,
+      objectiveWorkForecast: objectiveWorkForecast,
+      objectiveScheduleSlip: objectiveScheduleSlip,
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
@@ -2468,14 +2490,15 @@ function objMetricStrip(o){
   const gateHealth=RD.objectiveGateReadiness(selectedObj, em, td);
   const ghTxt=gateHealth==null?"—":Math.round(gateHealth)+"%", ghCol=gateHealth==null?"var(--muted)":col(RD.band(gateHealth));
   const nSets=(exec.stageGateSets||[]).filter(x=>x.objectiveId===selectedObj).length;
-  let projEnd=null, slip=null, accel=0;
-  try{ const casc=RD.cascade(portfolio, em, td); projEnd=casc.objectiveProjectedEnd[selectedObj];
-    accel=casc.objectiveAcceleration[selectedObj]||0;
-    if(o.plannedEnd!=null && projEnd!=null) slip=projEnd-o.plannedEnd; }catch(e){}
+  let workEnd=null, slip=null, accel=0;
+  try{ const casc=RD.cascade(portfolio, em, td);
+    workEnd=casc.objectiveWorkForecast[selectedObj];
+    slip=casc.objectiveScheduleSlip[selectedObj];
+    accel=casc.objectiveAcceleration[selectedObj]||0; }catch(e){}
   const tasks=exec.tasks.filter(r=>r.objectiveId===selectedObj);
   const tAvg=tasks.length?Math.round(tasks.reduce((a,t)=>a+(t.percentComplete||0),0)/tasks.length):null;
-  const schedVal=projEnd!=null?dayToIso(projEnd):"—";
-  const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d slip`:"on plan");
+  const schedVal=workEnd!=null?dayToIso(workEnd):"—";
+  const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d behind schedule`:"on schedule");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
