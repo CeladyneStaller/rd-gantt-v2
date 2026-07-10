@@ -9,10 +9,11 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
   s.textContent=`(async function(){ try{ var o={};
     portfolio={divisions:[{id:'FC',name:'FC'}],products:[{id:'P1',name:'X',divisionId:'FC'}],initiatives:[{id:'I1',divisionId:'FC',productId:'P1'}],objectives:[{id:'O1',statement:'A',divisionId:'FC',initiativeId:'I1',plannedStart:20000,plannedEnd:20090}],milestones:[],kpis:[]};
     divisionId='FC'; exec=blankExec(); fillObjSelect();
-    apiGet=async function(id){ if(id.indexOf('ETB-')===0) return {doc:{trees:{O1:{project_id:'O1',root_experiment_id:'exp_001',experiments:{
+    exec.etbTrees={O1:{project_id:'O1',root_experiment_id:'exp_001',experiments:{
       exp_001:{id:'exp_001',code:'E1',name:'FirstExp',status:'planned',key_reads:[],possible_results:[{id:'res_a',label:'go',criteria:[],next_experiment_ids:['exp_002'],terminal:null}],actual_outcome:null,audit_log:[]},
       exp_002:{id:'exp_002',code:'E2',name:'SecondExp',status:'planned',key_reads:[],possible_results:[],actual_outcome:null,audit_log:[]}
-    }}},meta:{}},etag:'e',version:1}; return null; };
+    }}};   // migrated model: seed the tree in the exec doc
+    apiGet=async function(id){ return null; };
     apiPut=async function(){ return {etag:'e2',version:2}; };
     etbSyncObjective(); await etbLoadForDivision(); renderAll();
     o.hookSet = (typeof window.__etbOnChange==='function');

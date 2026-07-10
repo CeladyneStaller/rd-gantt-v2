@@ -14,7 +14,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     apiPut=async function(id,doc,im){var e=STORE[id];var cv=e?e.version:0;if(im!==ef(id,cv)&&im!==String(cv))throw new Error('412 '+id);STORE[id]={version:cv+1,doc:JSON.parse(JSON.stringify(doc))};return {version:cv+1,etag:ef(id,cv+1)};};
   })();
   function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  function hasExp(pid,eid){var S=window.__STORE['ETB-FC'];return !!(S&&S.doc&&S.doc.trees&&S.doc.trees[pid]&&S.doc.trees[pid].experiments&&S.doc.trees[pid].experiments[eid]);}
+  function hasExp(pid,eid){return !!(typeof exec!=='undefined'&&exec&&exec.etbTrees&&exec.etbTrees[pid]&&exec.etbTrees[pid].experiments&&exec.etbTrees[pid].experiments[eid]);}
   function mkExp(id,code,results){return {id:id,code:code,name:code,status:'planned',key_reads:[],possible_results:results||[],actual_outcome:null,audit_log:[]};}
   async function run(){ var R=window.__R;
     portfolio={divisions:[{id:'FC',name:'FC'}],products:[{id:'P1',name:'X',divisionId:'FC'}],initiatives:[{id:'I1',divisionId:'FC',productId:'P1'}],objectives:[
@@ -43,11 +43,11 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     sel.value='O1'; sel.dispatchEvent(new Event('change')); await sleep(350);
     R.switchFlushesO2 = hasExp('O2','exp_B1');
 
-    // D) refresh: pollute local, reload O1 from the broker
-    ETB.getTree().experiments['ghost_local']=mkExp('ghost_local','GL'); await ETB.loadForHub();
+    // D) refresh: the persist store (exec.etbTrees) is authoritative on reload — drop exp_A2 there, reload, working tree follows
+    delete exec.etbTrees['O1'].experiments['exp_A2']; await ETB.loadForHub();
     R.refreshRestoresA1 = !!ETB.experimentById('exp_A1');
     R.refreshRestoresA3 = !!ETB.experimentById('exp_A3');
-    R.refreshDropsLocal = !ETB.experimentById('ghost_local');
+    R.refreshDropsLocal = !ETB.experimentById('exp_A2');
     document.body.setAttribute('data-done','1');
   }
   run().catch(function(e){ document.body.setAttribute('data-err', e.message+' | '+((e.stack||'').split(String.fromCharCode(10))[1]||'')); });
@@ -63,7 +63,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['switching back flushes O2 pending edit (no loss)',R.switchFlushesO2],
      ['refresh restores manually-saved experiment',R.refreshRestoresA1],
      ['refresh restores auto-saved/flushed experiment',R.refreshRestoresA3],
-     ['refresh reflects the broker (local-only dropped)',R.refreshDropsLocal]]
+     ['refresh follows the persist store (exec.etbTrees authoritative)',R.refreshDropsLocal]]
     .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
     console.log(process.exitCode?"\u2717 persistence FAILED":"\u2705 ETB persists: manual + auto + switch-safe + refresh-restore");
   },2600);

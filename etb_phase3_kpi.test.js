@@ -20,7 +20,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
                     {id:'kr2', name:'Scratch read', unit:'', critical_value:'', direction:'>='} ],
         possible_results:[ {id:'res_a', label:'Meets target', criteria:[{key_read_id:'kr1', status:'hit'}], next_experiment_ids:[], terminal:{type:'success'}} ],
         actual_outcome:null, audit_log:[] } }};
-    apiGet = async function(id){ if(id.indexOf('ETB-')===0) return { doc:{ trees:{ 'O1':TREE }, meta:{} }, etag:'e1', version:2 }; return null; };
+    exec.etbTrees={ 'O1':TREE };   // migrated model: trees live in the divisional exec doc; loadFromBin reads exec.etbTrees
+    apiGet = async function(id){ return null; };
     apiPut = async function(id,doc,etag){ return { etag:'e2', version:3 }; };
     etbSyncObjective(); await etbLoadForDivision(); renderExpSummary();
     // 1) bridge: hubProjectKpis returns the objective's KPI in the ETB shape
@@ -51,7 +52,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     o.rollupMoved = (after!=null && after>=100);
     // 5) regression
     o.summaryOk = /Membrane screen|No current experiment/.test(document.getElementById('expSummary').innerHTML);
-    renderAll(); o.tasksIntact=/Execution tasks/.test(document.getElementById('subTASK').innerHTML);
+    renderAll(); o.tasksRetired=!(/Execution tasks/.test(document.getElementById('subTASK').innerHTML));
     o.etbMounted=!!document.getElementById('etb-view');
     document.body.setAttribute('data-out',JSON.stringify(o));
   }catch(e){document.body.setAttribute('data-err',(e&&e.message)+' @ '+((e&&e.stack)||'').split('\\n').slice(1,4).join(' | '));} })();`;
@@ -63,7 +64,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['KR score is empty before any reading',o.scoreBeforeNull],['recording writes exactly one reading',o.oneReading],
      ['reading is for the linked KPI at the measured value',o.readingForKpi1],['unlinked key-read is not posted',o.unlinkedIgnored],
      ['KR score rolls up from the posted reading',o.rollupMoved],['summary still renders',o.summaryOk],
-     ['tasks panel intact',o.tasksIntact],['#etb-view still mounted',o.etbMounted]]
+     ['tasks panel retired (E5)',o.tasksRetired],['#etb-view still mounted',o.etbMounted]]
     .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB Phase 3 all passed"));
   },400);

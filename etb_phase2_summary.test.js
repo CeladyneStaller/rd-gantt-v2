@@ -18,7 +18,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
         actual_outcome:null, audit_log:[] },
       exp_002:{ id:'exp_002', code:'E2', name:'Durability soak', status:'planned', key_reads:[], possible_results:[], actual_outcome:null, audit_log:[] }
     }};
-    apiGet = async function(id){ if(id.indexOf('ETB-')===0) return { doc:{ trees:{ 'O1':TREE }, meta:{} }, etag:'e1', version:2 }; return null; };
+    exec.etbTrees={ 'O1':TREE };   // migrated model: trees live in the divisional exec doc; loadFromBin reads exec.etbTrees
+    apiGet = async function(id){ return null; };
     apiPut = async function(id,doc,etag){ return { etag:'e2', version:3 }; };
     etbSyncObjective(); await etbLoadForDivision(); renderExpSummary();
     // 1) summary shows the current experiment
@@ -48,7 +49,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     o.summaryAdvanced = /Durability soak/.test(document.getElementById('expSummary').innerHTML);
     // 4) Phase-1 regression
     o.etbMounted = !!document.getElementById('etb-view') && !!document.getElementById('etb-view').closest('#subEXP');
-    renderAll(); o.tasksIntact = /Execution tasks/.test(document.getElementById('subTASK').innerHTML);
+    renderAll(); o.tasksRetired = !(/Execution tasks/.test(document.getElementById('subTASK').innerHTML));
     document.body.setAttribute('data-out',JSON.stringify(o));
   }catch(e){document.body.setAttribute('data-err',(e&&e.message)+' @ '+((e&&e.stack)||'').split('\\n').slice(1,4).join(' | '));} })();`;
   d.body.appendChild(s);
@@ -61,7 +62,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['recorder populates key-read input',o.recorderHasKeyread],['recorder populates result radios',o.recorderHasResults],
      ['entering a value auto-checks the matched result',o.autoChecked],['record button enables once a result is picked',o.recordEnabled],
      ['recording advances reachability to next experiment',o.advanced],['recorded experiment marked complete',o.exp1Complete],
-     ['summary re-renders to the new current step',o.summaryAdvanced],['Phase-1: #etb-view still mounted',o.etbMounted],['Phase-1: tasks panel intact',o.tasksIntact]]
+     ['summary re-renders to the new current step',o.summaryAdvanced],['Phase-1: #etb-view still mounted',o.etbMounted],['Phase-1: tasks panel retired (E5)',o.tasksRetired]]
     .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB Phase 2 all passed"));
   },400);

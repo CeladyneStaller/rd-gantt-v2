@@ -20,25 +20,24 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     // per-objective scoping without a loaded doc: setActiveProject stamps the tree
     ETB.setActiveProject('O1');
     o.scopeStamp = (ETB.getActiveProjectId()==='O1');
-    // broker seam: stub apiGet, load the division's ETB doc, confirm doc id + tree selection
-    var captured=[];
-    apiGet = async function(id){ captured.push(id);
-      if(id.indexOf('ETB-')===0) return { doc:{ trees:{ 'O1':{ project_id:'O1', experiments:{ exp_001:{ id:'exp_001', code:'E1', name:'Membrane test', status:'planned', results:[] } }, root_experiment_id:'exp_001' } }, meta:{} }, etag:'e1', version:3 };
-      return null; };
+    // tree loads from the divisional exec doc (exec.etbTrees), seeded in seedPortfolioForTest
+    apiGet = async function(id){ return null; };
     seedPortfolioForTest();
+    ETB.setActiveProject('O1');
     await etbLoadForDivision();
-    o.brokerDocId = (captured.indexOf('ETB-FC')>=0);
     o.treeLoaded = !!(ETB.experimentById && ETB.experimentById('exp_001'));
     o.outlineHasExp = /Membrane test/.test(document.getElementById('view-outline').innerHTML);
     // tasks panel still present after a full render
     renderAll();
-    o.tasksIntact = /Execution tasks/.test(document.getElementById('subTASK').innerHTML);
+    o.tasksRetired = !(/Execution tasks/.test(document.getElementById('subTASK').innerHTML));
     o.expSectionPresent = !!document.getElementById('subEXP');
     document.body.setAttribute('data-out',JSON.stringify(o));
   }catch(e){document.body.setAttribute('data-err',(e&&e.message)+' @ '+((e&&e.stack)||'').split('\\n').slice(1,4).join(' | '));} })();
   function seedPortfolioForTest(){
     portfolio={divisions:[{id:'FC',name:'Fuel Cells'}],products:[{id:'P1',name:'FCS-100',divisionId:'FC'}],initiatives:[{id:'I1',divisionId:'FC',productId:'P1'}],objectives:[{id:'O1',statement:'Alpha',divisionId:'FC',initiativeId:'I1',quarter:'2026Q3',plannedStart:20000,plannedEnd:20090}],milestones:[],kpis:[]};
-    divisionId='FC'; exec=blankExec(); fillObjSelect();
+    divisionId='FC'; exec=blankExec();
+    exec.etbTrees={O1:{project_id:'O1',root_experiment_id:'exp_001',experiments:{exp_001:{id:'exp_001',code:'E1',name:'Membrane test',status:'planned',key_reads:[],possible_results:[],actual_outcome:null,audit_log:[]}}}};   // seed tree in the exec doc
+    fillObjSelect();
   }`;
   // expose seed fn to the async block scope by declaring it before appending
   d.body.appendChild(s);
@@ -47,9 +46,9 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     const o=JSON.parse(d.body.getAttribute('data-out')||'{}');
     [['ETB module booted (window.ETB API present)',o.etbGlobal],['#etb-view mounted inside #subEXP',o.mounted],
      ['#etb-view is shown (hidden removed)',o.notHidden],['ETB rendered its Outline at init',o.outlineRendered],
-     ['setActiveProject stamps the active objective',o.scopeStamp],['broker seam hits ETB-<division> doc id',o.brokerDocId],
-     ['objective tree loads from broker doc',o.treeLoaded],['loaded experiment shows in the Outline',o.outlineHasExp],
-     ['Experiments section present in the objective view',o.expSectionPresent],['tasks panel intact (kept)',o.tasksIntact]]
+     ['setActiveProject stamps the active objective',o.scopeStamp],
+     ['objective tree loads from the exec doc',o.treeLoaded],['loaded experiment shows in the Outline',o.outlineHasExp],
+     ['Experiments section present in the objective view',o.expSectionPresent],['tasks panel retired (E5, #subTASK empty)',o.tasksRetired]]
     .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB port Phase 1 all passed"));
   },400);
