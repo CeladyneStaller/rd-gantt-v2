@@ -46,6 +46,8 @@
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
   header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
   header h1 .dot{color:var(--accent)}
+  header .home{color:var(--muted);text-decoration:none;font-size:17px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .12s,background .12s;flex:none}
+  header .home:hover{color:var(--accent);background:var(--panel2)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
   body.readonly [data-addkpi], body.readonly [data-addkr], body.readonly [data-addlink], body.readonly [data-addsg], body.readonly [data-addsub], body.readonly [data-addsubkr], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editmodel], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
@@ -240,6 +242,7 @@
 </head>
 <body>
 <header>
+  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▤</span> Product Specification</h1>
   <span class="div-pill" id="docPill">—</span>
   <div class="spacer"></div>
@@ -329,7 +332,7 @@
   var ID_PREFIX = {
     division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
-    product: 'PRD', model: 'MDL'
+    product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
   // Structural levels pad to 2 digits; leaf metrics use plain integers.
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
@@ -706,6 +709,18 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
+  // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
+  function gateAtTarget(sgId, execDocs) { return stageGateScore(sgId, execDocs) === 100; }
+
+  // ---- stage-gate SETS (parallel workstreams within an objective) -----------
+  // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
+  function gatesForSet(setId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var gs=execDocs[d].stageGates||[]; for(var i=0;i<gs.length;i++) if(gs[i].setId===setId) out.push(gs[i]); } return out; }
+  function setsForObjective(objId, execDocs){ var out=[]; for(var d in execDocs){ if(!execDocs.hasOwnProperty(d)||d===PORTFOLIO_KEY) continue; var ss=execDocs[d].stageGateSets||[]; for(var i=0;i<ss.length;i++) if(ss[i].objectiveId===objId) out.push(ss[i]); } return out; }
+  // set score = % of the set's gates that are passed (date-based classifyGate). null when the set has no gates.
+  function setScore(setId, execDocs, today){ var gs=gatesForSet(setId, execDocs); if(!gs.length) return null; var p=0; for(var i=0;i<gs.length;i++){ var st=classifyGate(gs[i], today); if(st==='passed'||st==='passed-late') p++; } return 100*p/gs.length; }
+  // objective gate readiness = MIN over the objective's sets of setScore (weakest workstream wins). null if no scorable sets.
+  function objectiveGateReadiness(objId, execDocs, today){ var ss=setsForObjective(objId, execDocs), m=null; for(var i=0;i<ss.length;i++){ var sc=setScore(ss[i].id, execDocs, today); if(sc==null) continue; if(m==null||sc<m) m=sc; } return m; }
   // generic: mean resolved score of every KPI hosted at (hostType, hostId) — used for product/component levels
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
@@ -838,6 +853,61 @@
     return c.kind === 'model' ? c.modelId : null;
   }
 
+  // ---- quarter helpers (calendar quarters, matching YYYY"Q"N) ----
+  function quarterRange(q) {                          // 'YYYYQN' -> { start:'YYYY-MM-DD', end:'YYYY-MM-DD' } | null
+    var m = /^(\d{4})Q([1-4])$/.exec(String(q == null ? '' : q).trim());
+    if (!m) return null;
+    var y = +m[1], sm = (+m[2] - 1) * 3, pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var ey = y, em = sm + 3; if (em >= 12) { ey = y + 1; em = 0; }
+    var last = new Date(Date.UTC(ey, em, 1) - 86400000);
+    return { start: y + '-' + pad(sm + 1) + '-01',
+             end: last.getUTCFullYear() + '-' + pad(last.getUTCMonth() + 1) + '-' + pad(last.getUTCDate()) };
+  }
+  function quarterList(used, refYear, back, fwd) {    // rolling window ∪ used, sorted; caller adds the blank option
+    back = back == null ? 1 : back; fwd = fwd == null ? 2 : fwd;
+    var set = {};
+    for (var y = refYear - back; y <= refYear + fwd; y++) for (var q = 1; q <= 4; q++) set[y + 'Q' + q] = 1;
+    (used || []).forEach(function (u) { if (/^\d{4}Q[1-4]$/.test(u)) set[u] = 1; });
+    return Object.keys(set).sort();
+  }
+
+  // ---- layered grouping of objectives by an ordered list of dimensions ----
+  // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
+  // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
+  // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  function _dimKey(o, dim, portfolio) {
+    if (dim === 'division') return o.divisionId || '';
+    if (dim === 'product') return effProduct(o, portfolio) || '';
+    if (dim === 'model') return effModel(o, portfolio) || '';
+    if (dim === 'quarter') return o.quarter || '';
+    if (dim === 'owner') return o.owner || '';
+    if (dim === 'initiative') return o.initiativeId || '';
+    return '';
+  }
+  function _dimOrder(dim, keys, portfolio) {
+    var none = keys.indexOf('') >= 0, rest = keys.filter(function (k) { return k !== ''; });
+    var src = dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
+            : dim === 'model' ? portfolio.models : dim === 'initiative' ? portfolio.initiatives : null;
+    if (src) { var idx = {}; src.forEach(function (r, i) { idx[r.id] = i; });
+      rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
+        return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
+    } else { rest.sort(); }
+    if (none) rest.push('');
+    return rest;
+  }
+  function groupObjectives(objs, dims, portfolio) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+    var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
+    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    return _dimOrder(dim, seen, portfolio).map(function (k) {
+      var node = { key: k, dim: dim };
+      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      else node.objs = buckets[k];
+      return node;
+    });
+  }
+
   // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
   // Enforces the node invariant (at most one of productId/modelId) and the
   // §5.3 no-broadening / same-branch rule relative to the objective's initiative.
@@ -958,12 +1028,19 @@
       (execDocs[dk].stageGateEdges || []).forEach(addGateEdge);
     }
     objs.forEach(function (o) {
-      var exChain = (execFor(o.divisionId).chainGatesByDate || {})[o.id];
-      if (!o.chainGatesByDate && !exChain) return;
-      var seq = childCache[o.id].sgs.filter(function (s) { return s.plannedDate != null; })
-        .slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-      for (var i = 1; i < seq.length; i++) {
-        gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+      var exf = execFor(o.divisionId);
+      var sets = (exf.stageGateSets || []).filter(function (st) { return st.objectiveId === o.id; });
+      var gs = childCache[o.id].sgs;
+      function chainSeq(list) {
+        var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: seq[i].plannedDate - seq[i - 1].plannedDate });
+      }
+      if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
+        sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
+      } else {                                             // legacy per-objective chain (pre-sets docs)
+        var exChain = (exf.chainGatesByDate || {})[o.id];
+        if (!o.chainGatesByDate && !exChain) return;
+        chainSeq(gs);
       }
     });
 
@@ -978,6 +1055,7 @@
       if (!g) return 0;
       var seed = pfGate(g);
       if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (g.actualDate != null) { gateEff[gid] = seed; return seed; }   // a finished gate anchors at its actual; a late predecessor can't inflate it, and a recovered gate re-anchors its successors
       if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
       gateStack[gid] = true;
       var res = seed, preds = gatePreds[gid];
@@ -991,6 +1069,37 @@
     }
     Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
 
+    // Optimistic ("earliest") gate forecast: same chain, but an undone gate floats down to today, so early
+    // upstream finishes DO pull successors in. gateEff (committed) floors undone gates at plannedDate (fork B:
+    // delays-only), so gateEff - gateEarliest is the acceleration opportunity we surface without moving the plan.
+    var gateEarliest = {}, gateEStack = {};
+    function computeGateEarliest(gid) {
+      if (gateEarliest[gid] != null) return gateEarliest[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      if (g.locked) { gateEarliest[gid] = pfGate(g); return gateEarliest[gid]; }   // locked holds its committed date both ways
+      if (g.actualDate != null) { gateEarliest[gid] = g.actualDate; return g.actualDate; }
+      var plannedFloor = (g.plannedDate != null) ? Math.max(today, g.plannedDate) : today;
+      if (gateEStack[gid]) { gateEarliest[gid] = plannedFloor; return plannedFloor; }
+      gateEStack[gid] = true;
+      var preds = gatePreds[gid], chain = null;
+      for (var i = 0; i < preds.length; i++) {
+        if (gateEStack[preds[i].from]) continue;
+        var c = computeGateEarliest(preds[i].from) + preds[i].lag;
+        chain = (chain == null) ? c : Math.max(chain, c);
+      }
+      // No binding predecessor -> a gate's earliest is its OWN planned date; it is not accelerated by nothing.
+      // (Fixes phantom acceleration on the first gate and on any gate merely planned in the future.) With a
+      // predecessor it follows by the planned gap, so only an EARLY upstream actual pulls it below its plan.
+      var res = (chain == null) ? plannedFloor : Math.max(today, chain);
+      gateEStack[gid] = false;
+      gateEarliest[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEarliest(gid); });
+    var gateAcceleration = {};
+    Object.keys(gateById).forEach(function (gid) { gateAcceleration[gid] = Math.max(0, gateEff[gid] - gateEarliest[gid]); });
+
     // baseline-aware slip per gate: slipped iff committed and now forecast past it.
     var gateSlipped = {};
     Object.keys(gateById).forEach(function (gid) {
@@ -998,13 +1107,14 @@
       gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
     });
 
-    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
-    var intrinsic = {};
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends) — committed + optimistic
+    var intrinsic = {}, intrinsicEarliest = {};
     objs.forEach(function (o) {
-      var c = childCache[o.id], vals = [];
-      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
-      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
+      var c = childCache[o.id], vals = [], valsE = [];
+      c.tasks.forEach(function (t) { var pt = pfTask(t); vals.push(pt); valsE.push(pt); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); valsE.push(gateEarliest[s.id]); });
       intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+      intrinsicEarliest[o.id] = valsE.length ? Math.max.apply(null, valsE) : o.plannedEnd;
     });
 
     // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
@@ -1032,6 +1142,51 @@
       return res;
     }
     objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // Work-basis schedule slip (execution Schedule card): how late the objective's OWN gates/tasks are vs their
+    // PLANNED dates, independent of the objective's plannedEnd buffer. objectiveProjectedEnd is left untouched.
+    // forecast = latest gate/task forecast (intrinsic); baseline = latest gate/task PLANNED date. A childless
+    // objective falls back to projEnd vs plannedEnd so a predecessor push still surfaces.
+    var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
+    objs.forEach(function (o) {
+      var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
+      if (hasWork) {
+        c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
+        c.sgs.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
+        fEnd = intrinsic[o.id];
+        pEnd = pd.length ? Math.max.apply(null, pd) : o.plannedEnd;
+      } else {
+        fEnd = projEnd[o.id];
+        pEnd = o.plannedEnd;
+      }
+      objectiveWorkForecast[o.id] = fEnd;
+      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+    });
+
+    // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
+    var projEndEarliest = {}, objEStack = {};
+    function computeProjEndEarliest(id) {
+      if (projEndEarliest[id] != null) return projEndEarliest[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objEStack[id]) return intrinsicEarliest[id];
+      objEStack[id] = true;
+      var cs = o.plannedStart, preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objEStack[preds[i].from]) continue;
+        cs = Math.max(cs, computeProjEndEarliest(preds[i].from) + preds[i].lag);
+      }
+      // Mirror the committed projEnd floor EXACTLY (line above uses cs + dur): an objective occupies its full
+      // planned duration regardless of how early its gates could finish, so acceleration reflects ONLY genuine
+      // early upstream work (a gate/task or predecessor ahead of plan), never the objective's own span slack.
+      var res = Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
+      objEStack[id] = false;
+      projEndEarliest[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEndEarliest(o.id); });
+    var objectiveAcceleration = {};
+    objs.forEach(function (o) { objectiveAcceleration[o.id] = Math.max(0, projEnd[o.id] - projEndEarliest[o.id]); });
 
     // Stage 3: vertical lift into milestones
     var effective = {};
@@ -1082,10 +1237,16 @@
 
     return {
       objectiveProjectedEnd: projEnd,
+      objectiveEarliestEnd: projEndEarliest,
+      objectiveAcceleration: objectiveAcceleration,
+      objectiveWorkForecast: objectiveWorkForecast,
+      objectiveScheduleSlip: objectiveScheduleSlip,
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
       gateEffective: gateEff,
+      gateForecastEarliest: gateEarliest,
+      gateAcceleration: gateAcceleration,
       gateSlipped: gateSlipped,
       cycles: cycles
     };
@@ -1238,6 +1399,11 @@
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    gateAtTarget: gateAtTarget,
+    setScore: setScore,
+    objectiveGateReadiness: objectiveGateReadiness,
+    gatesForSet: gatesForSet,
+    setsForObjective: setsForObjective,
     hostScore: hostScore,
     milestoneScore: milestoneScore,
     milestoneAchieved: milestoneAchieved,
@@ -1256,6 +1422,9 @@
     effClass: effClass,
     effProduct: effProduct,
     effModel: effModel,
+    quarterRange: quarterRange,
+    quarterList: quarterList,
+    groupObjectives: groupObjectives,
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,

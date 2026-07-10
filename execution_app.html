@@ -46,6 +46,8 @@
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
   header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
   header h1 .dot{color:var(--accent)}
+  header .home{color:var(--muted);text-decoration:none;font-size:17px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .12s,background .12s;flex:none}
+  header .home:hover{color:var(--accent);background:var(--panel2)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
   body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
@@ -580,6 +582,7 @@ html[data-theme="dark"] #etb-view{
 </head>
 <body>
 <header>
+  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
   <div class="spacer"></div>
   <select class="obj" id="divSelect"><option>loading…</option></select>
