@@ -331,6 +331,8 @@
   .ovwrap .chead{display:flex;align-items:flex-start;gap:6px;margin-bottom:8px}
   .ovwrap .cname{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ovwrap .csub{font-size:10.5px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+  .ovwrap .csub .ov-slip{color:var(--bad)}
+  .ovwrap .csub .ov-accel{color:var(--ok)}
   .ovwrap .cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
   .ovwrap .kpit{display:grid;grid-template-columns:12px 1fr auto auto;gap:2px 8px;font-size:10.8px;align-items:center;margin-bottom:8px}
   .ovwrap .kh{color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);padding-bottom:3px;border-bottom:1px solid var(--line)}
@@ -3261,10 +3263,14 @@ function ovObjTile(o, em, pool, casc){
   const end=(o.plannedEnd!=null)?(casc.objectiveProjectedEnd[o.id]!=null?casc.objectiveProjectedEnd[o.id]:o.plannedEnd):casc.objectiveProjectedEnd[o.id];
   const dl=end!=null?end-todayDay():null;
   const daysStr=dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left");
+  const oSlip=(o.plannedEnd!=null&&end!=null)?end-o.plannedEnd:null;
+  const oAccel=casc.objectiveAcceleration?(casc.objectiveAcceleration[o.id]||0):0;
+  const schedChip=(oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>'
+                 :(oAccel>0)?' <span class="ov-accel">\u2191 '+oAccel+'d faster possible</span>':'';
   const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
   return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
-    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+schedChip+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
     +ovKpiTbl("Key result", krRows)
     +ovProg(score, scoreColor(score))
     +gatesBlock
