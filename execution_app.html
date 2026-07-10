@@ -107,6 +107,12 @@
   .dep-chip button{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;line-height:1;padding:0}
   .dep-chip button:hover{color:var(--bad)}
   .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:5px;padding:2px 7px}
+  .fc-est{font-family:var(--mono);font-size:12px} .fc-est.late{color:var(--bad)} .fc-est.onplan{color:var(--muted)}
+  .fc-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;border-radius:5px;padding:2px 7px;white-space:nowrap;font-weight:600}
+  .fc-badge.slip{color:var(--pill-bad-fg);background:var(--pill-bad-bg);border:1px solid var(--pill-bad-bd)}
+  .fc-badge.pushed{color:var(--pill-warn-fg);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd)}
+  .fc-badge.accel{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border:1px solid var(--pill-ok-bd)}
+  .mc-accel{font-size:11px;font-family:var(--mono);margin-top:6px;color:var(--ok)}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
@@ -1438,7 +1444,7 @@ html[data-theme="dark"] #etb-view{
       var gs = childCache[o.id].sgs;
       function chainSeq(list) {
         var seq = list.filter(function (s) { return s.plannedDate != null; }).slice().sort(function (a, b) { return a.plannedDate - b.plannedDate; });
-        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: 0 });
+        for (var i = 1; i < seq.length; i++) gatePreds[seq[i].id].push({ from: seq[i - 1].id, lag: seq[i].plannedDate - seq[i - 1].plannedDate });
       }
       if (sets.length) {                                   // per-set date-chain: parallel sets chain independently; cross-set links are explicit edges
         sets.forEach(function (st) { if (st.chained === false) return; chainSeq(gs.filter(function (s) { return s.setId === st.id; })); });
@@ -1460,6 +1466,7 @@ html[data-theme="dark"] #etb-view{
       if (!g) return 0;
       var seed = pfGate(g);
       if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (g.actualDate != null) { gateEff[gid] = seed; return seed; }   // a finished gate anchors at its actual; a late predecessor can't inflate it, and a recovered gate re-anchors its successors
       if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
       gateStack[gid] = true;
       var res = seed, preds = gatePreds[gid];
@@ -1473,6 +1480,33 @@ html[data-theme="dark"] #etb-view{
     }
     Object.keys(gateById).forEach(function (gid) { computeGateEff(gid); });
 
+    // Optimistic ("earliest") gate forecast: same chain, but an undone gate floats down to today, so early
+    // upstream finishes DO pull successors in. gateEff (committed) floors undone gates at plannedDate (fork B:
+    // delays-only), so gateEff - gateEarliest is the acceleration opportunity we surface without moving the plan.
+    var gateEarliest = {}, gateEStack = {};
+    function pfGateEarliest(s) { return (s.actualDate != null) ? s.actualDate : today; }
+    function computeGateEarliest(gid) {
+      if (gateEarliest[gid] != null) return gateEarliest[gid];
+      var g = gateById[gid];
+      if (!g) return 0;
+      if (g.locked) { gateEarliest[gid] = pfGate(g); return gateEarliest[gid]; }   // locked holds its committed date both ways
+      var seed = pfGateEarliest(g);
+      if (g.actualDate != null) { gateEarliest[gid] = seed; return seed; }
+      if (gateEStack[gid]) { gateEarliest[gid] = seed; return seed; }
+      gateEStack[gid] = true;
+      var res = seed, preds = gatePreds[gid];
+      for (var i = 0; i < preds.length; i++) {
+        if (gateEStack[preds[i].from]) continue;
+        res = Math.max(res, computeGateEarliest(preds[i].from) + preds[i].lag);
+      }
+      gateEStack[gid] = false;
+      gateEarliest[gid] = res;
+      return res;
+    }
+    Object.keys(gateById).forEach(function (gid) { computeGateEarliest(gid); });
+    var gateAcceleration = {};
+    Object.keys(gateById).forEach(function (gid) { gateAcceleration[gid] = Math.max(0, gateEff[gid] - gateEarliest[gid]); });
+
     // baseline-aware slip per gate: slipped iff committed and now forecast past it.
     var gateSlipped = {};
     Object.keys(gateById).forEach(function (gid) {
@@ -1480,13 +1514,14 @@ html[data-theme="dark"] #etb-view{
       gateSlipped[gid] = (g.baselineDate != null) && (gateEff[gid] > g.baselineDate);
     });
 
-    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends)
-    var intrinsic = {};
+    // Stage 1c: intrinsic projected end per objective (tasks + chained gate ends) — committed + optimistic
+    var intrinsic = {}, intrinsicEarliest = {};
     objs.forEach(function (o) {
-      var c = childCache[o.id], vals = [];
-      c.tasks.forEach(function (t) { vals.push(pfTask(t)); });
-      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); });
+      var c = childCache[o.id], vals = [], valsE = [];
+      c.tasks.forEach(function (t) { var pt = pfTask(t); vals.push(pt); valsE.push(pt); });
+      c.sgs.forEach(function (s) { vals.push(gateEff[s.id]); valsE.push(gateEarliest[s.id]); });
       intrinsic[o.id] = vals.length ? Math.max.apply(null, vals) : o.plannedEnd;
+      intrinsicEarliest[o.id] = valsE.length ? Math.max.apply(null, valsE) : o.plannedEnd;
     });
 
     // Stage 2: lateral OBJ->OBJ forward pass (topological, cycle-guarded)
@@ -1514,6 +1549,31 @@ html[data-theme="dark"] #etb-view{
       return res;
     }
     objs.forEach(function (o) { computeProjEnd(o.id); });
+
+    // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
+    var projEndEarliest = {}, objEStack = {};
+    function computeProjEndEarliest(id) {
+      if (projEndEarliest[id] != null) return projEndEarliest[id];
+      var o = objById[id];
+      if (!o) return 0;
+      if (objEStack[id]) return intrinsicEarliest[id];
+      objEStack[id] = true;
+      var cs = o.plannedStart, preds = objPreds[id];
+      for (var i = 0; i < preds.length; i++) {
+        if (objEStack[preds[i].from]) continue;
+        cs = Math.max(cs, computeProjEndEarliest(preds[i].from) + preds[i].lag);
+      }
+      var c = childCache[id]; var hasKids = c && (c.sgs.length + c.tasks.length) > 0;
+      // an objective whose work IS its gates/tasks can finish as early as they allow (floored at its earliest start);
+      // a childless objective still occupies its planned duration, so it shows no spurious acceleration
+      var res = hasKids ? Math.max(intrinsicEarliest[id], cs) : Math.max(intrinsicEarliest[id], cs + (o.plannedEnd - o.plannedStart));
+      objEStack[id] = false;
+      projEndEarliest[id] = res;
+      return res;
+    }
+    objs.forEach(function (o) { computeProjEndEarliest(o.id); });
+    var objectiveAcceleration = {};
+    objs.forEach(function (o) { objectiveAcceleration[o.id] = Math.max(0, projEnd[o.id] - projEndEarliest[o.id]); });
 
     // Stage 3: vertical lift into milestones
     var effective = {};
@@ -1564,10 +1624,14 @@ html[data-theme="dark"] #etb-view{
 
     return {
       objectiveProjectedEnd: projEnd,
+      objectiveEarliestEnd: projEndEarliest,
+      objectiveAcceleration: objectiveAcceleration,
       milestoneEffective: effective,
       initiativeProjectedEnd: initProjEnd,
       longTermSlip: slip,
       gateEffective: gateEff,
+      gateForecastEarliest: gateEarliest,
+      gateAcceleration: gateAcceleration,
       gateSlipped: gateSlipped,
       cycles: cycles
     };
@@ -2372,8 +2436,9 @@ function objMetricStrip(o){
   const gateHealth=RD.objectiveGateReadiness(selectedObj, em, td);
   const ghTxt=gateHealth==null?"—":Math.round(gateHealth)+"%", ghCol=gateHealth==null?"var(--muted)":col(RD.band(gateHealth));
   const nSets=(exec.stageGateSets||[]).filter(x=>x.objectiveId===selectedObj).length;
-  let projEnd=null, slip=null;
+  let projEnd=null, slip=null, accel=0;
   try{ const casc=RD.cascade(portfolio, em, td); projEnd=casc.objectiveProjectedEnd[selectedObj];
+    accel=casc.objectiveAcceleration[selectedObj]||0;
     if(o.plannedEnd!=null && projEnd!=null) slip=projEnd-o.plannedEnd; }catch(e){}
   const tasks=exec.tasks.filter(r=>r.objectiveId===selectedObj);
   const tAvg=tasks.length?Math.round(tasks.reduce((a,t)=>a+(t.percentComplete||0),0)/tasks.length):null;
@@ -2389,7 +2454,7 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
-    <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
+    <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div>${accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}</div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
@@ -3063,11 +3128,44 @@ function gateSchedRow(g){
   h+=`</div>`;
   return h;
 }
+// P2: per-gate forecast surfacing. gEff/gEarly/gAcc come from RD.cascade (committed + optimistic + acceleration).
+function gateDriverOf(g, setGates, td){
+  const earlier=(setGates||[]).filter(x=>x.plannedDate!=null && g.plannedDate!=null && x.plannedDate<g.plannedDate).sort((a,b)=>a.plannedDate-b.plannedDate);
+  for(let i=0;i<earlier.length;i++){ const x=earlier[i];
+    const xLate=(x.actualDate!=null && x.plannedDate!=null && x.actualDate>x.plannedDate) || (x.actualDate==null && x.plannedDate!=null && x.plannedDate<td);
+    if(xLate) return x; }
+  return null;
+}
+function gateForecastMeta(g, gEff, gEarly, gAcc, td, setGates){
+  if(g.actualDate!=null){
+    const d=(g.plannedDate!=null)?g.actualDate-g.plannedDate:0;
+    if(d>0) return ` <span class="fc-badge slip" title="finished after its planned date">finished +${d}d late</span>`;
+    if(d<0) return ` <span class="fc-badge accel" title="finished ahead of its planned date">finished ${-d}d early</span>`;
+    return "";
+  }
+  const planned=g.plannedDate, eff=gEff[g.id];
+  if(planned==null || eff==null) return "";
+  const fcSlip=eff-planned;
+  if(fcSlip>0){
+    const est=` · <span class="fc-est late">est ${dayToIso(eff)}</span>`;
+    if(planned<td) return est+` <span class="fc-badge slip" title="overdue — forecast to at least today, pushed further by any upstream slip">+${fcSlip}d late</span>`;
+    const drv=gateDriverOf(g, setGates, td);
+    return est+` <span class="fc-badge pushed" title="moved by an upstream slip">→ pushed +${fcSlip}d${drv?` by ${esc(gateLabel(drv.id))}`:" upstream"}</span>`;
+  }
+  const acc=gAcc[g.id]||0;
+  if(acc>0){
+    const early=gEarly[g.id];
+    return ` · <span class="fc-est onplan">est ${dayToIso(eff)}</span> <span class="fc-badge accel" title="committed date holds; could pull in if downstream is re-planned">↑ could finish ${dayToIso(early)} (${acc}d earlier)</span>`;
+  }
+  return "";
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const td=todayDay(), ed=sgSetEditor, multi=sets.length>1;
+  let gEff={}, gEarly={}, gAcc={};
+  try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
   let inner="";
   sets.forEach(set=>{
     const gates=gatesOfSet(set.id);
@@ -3093,7 +3191,7 @@ function renderGates(){
         <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
         <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
         <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
+        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/>${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</span>
           ${moveSel}
           <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
           <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
