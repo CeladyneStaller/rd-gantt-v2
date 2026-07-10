@@ -387,8 +387,18 @@ html[data-theme="dark"] #etb-view{
 #etb-view .test .err{font-family:var(--mono);font-size:11.5px;color:var(--stop-fg);margin-top:2px}
 #etb-view .muted{color:var(--muted)}
 #etb-view .hint{color:var(--faint);font-size:12px}
-#etb-view .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;z-index:20;padding:60px 16px}
+#etb-view .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;z-index:40;padding:60px 16px}
 #etb-view .overlay.open{display:flex}
+#etb-view .exp-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#etb-view .exp-modal-head h3{margin:0;font-size:15px;font-weight:600}
+#etb-view .exp-modal-sec{margin-top:14px}
+#etb-view .exp-modal-sec>.p-lab{margin-bottom:6px;font-weight:600}
+#etb-view .exp-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+#etb-view .nonext-tag{color:var(--stop-fg);font-weight:600;border:1px solid var(--stop-fg);border-radius:6px;padding:1px 7px;font-size:11px}
+#etb-view .exp-kr{margin-top:6px}
+#etb-view .exp-kr .meta.small{padding-left:8px;color:var(--muted)}
+#etb-view .exp-modal-sec .lab{color:var(--faint)}
+#etb-view .exp-modal-sec .outcome-line{font-size:13px;line-height:1.5}
 #etb-view .sheet{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;max-width:460px;width:100%;padding:20px 22px}
 #etb-view .sheet h3{margin:0 0 4px}
 #etb-view .field{margin:12px 0}
@@ -3507,6 +3517,10 @@ function buildGraphElements(tree,reach){
       } else if(nextId){
         const lbl=(exps[nextId]&&exps[nextId].repeat_of===eid)?"repeat":(r.label||"");
         edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nextId,source:eid,target:nextId,label:lbl,viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+      } else {
+        const nn="nonext_"+eid+"_"+r.id;
+        nodes.push({data:{id:nn,kind:"nonext",label:"No next step",branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nn,source:eid,target:nn,label:r.label||"",viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
       }
     }
     if(ao&&isSentinel(ao.result_id)){
@@ -3518,6 +3532,10 @@ function buildGraphElements(tree,reach){
         edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+tid,source:eid,target:tid,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
       } else if(nextId){
         edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+nextId,source:eid,target:nextId,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
+      } else {
+        const nn="nonext_"+eid+"_"+ao.result_id;
+        nodes.push({data:{id:nn,kind:"nonext",label:"No next step",branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+nn,source:eid,target:nn,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
       }
     }
   }
@@ -3908,7 +3926,7 @@ function renderNode(eid,reach,types,visited){
   const r=reach[eid]; if(r) node.classList.add("reach-"+r);
 
   const head=el("div","node-head");
-  head.style.cursor="pointer";head.title="Open details";head.addEventListener("click",()=>openPanel(eid));
+  head.style.cursor="pointer";head.title="Open details";head.addEventListener("click",()=>{if(exp.actual_outcome)openExpDetailModal(eid);else openPanel(eid);});
   head.appendChild(el("span","code",exp.code||eid));
   head.appendChild(el("span","name",exp.name||""));
   head.appendChild(statusPill(exp.status||"planned"));
@@ -4027,6 +4045,8 @@ function cyStyle(p){
     {selector:'node[kind="terminal"][termType="conduct_fmea"]',style:{"background-color":p.amberBg,"color":p.amberFg,"border-color":p.amberFg}},
     {selector:'node[kind="terminal"][termType="halt"]',style:{"background-color":p.stopBg,"color":p.stopFg,"border-color":p.stopFg}},
     {selector:'node[kind="terminal"][branchState="not_pursued"]',style:{"opacity":0.5}},
+    {selector:'node[kind="nonext"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1.5,"border-color":p.stopFg,"color":p.stopFg,"width":(e)=>nodeDims(e.data("label"),10,120).w,"height":(e)=>nodeDims(e.data("label"),10,120).h,"font-size":10}},
+    {selector:'node[kind="nonext"][branchState="not_pursued"]',style:{"opacity":0.5,"border-style":"dashed"}},
     {selector:'node[kind="edgelabel"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
     {selector:'node[kind="edgelabel"][branchState="active"]',style:{"border-color":p.accent,"color":p.ink,"font-weight":600}},
     {selector:'node[kind="edgelabel"][branchState="pending"]',style:{"color":p.muted}},
@@ -4049,7 +4069,7 @@ function renderGraph(){
   const p=resolvePalette();
   if(cy){try{cy.destroy();}catch(e){}cy=null;}
   cy=cytoscape({container:host,elements:[...R.nodes,...R.edges],style:cyStyle(p),layout:DAGRE_LAYOUT,minZoom:0.2,maxZoom:2.5});
-  cy.on("tap",'node[kind="experiment"]',(evt)=>openPanel(evt.target.id()));
+  cy.on("tap",'node[kind="experiment"]',(evt)=>{const __id=evt.target.id();const __e=state.tree.experiments[__id];if(__e&&__e.actual_outcome)openExpDetailModal(__id);else openPanel(__id);});
   cy.ready(()=>cy.fit(undefined,28));
   if(typeof requestAnimationFrame==="function") requestAnimationFrame(function(){ if(cy){ try{ cy.resize(); cy.fit(undefined,28); }catch(e){} } });   // iframe: correct size/frame once layout settles
   if(state.panelExpId){const n=cy.getElementById(state.panelExpId);if(n&&n.length)n.select();}
@@ -4072,6 +4092,64 @@ function closePanel(){
   state.panelExpId=null;
   const d=$("#drawer");d.classList.remove("open");d.setAttribute("aria-hidden","true");
   if(cy)cy.$(":selected").unselect();
+}
+// Read-only detail modal for a completed experiment (has an actual_outcome). Edit button hands off to the panel.
+function closeExpDetailModal(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');if(ov){ov.classList.remove('open');if(ov.parentNode)ov.parentNode.removeChild(ov);}}
+function openExpDetailModal(expId){
+  closeExpDetailModal();
+  const t=state.tree;const exp=t.experiments[expId];if(!exp)return;
+  const types=t.terminal_types||{};const reach=computeReachability(t);const rr=reach[expId];
+  const out=resolveOutcome(exp);const ao=exp.actual_outcome;
+  const ov=el('div','overlay');ov.id='exp-detail-overlay';
+  const sheet=el('div','sheet');sheet.style.maxWidth='560px';
+  const hd=el('div','exp-modal-head');
+  hd.appendChild(Object.assign(el('h3'),{innerHTML:`<span class="mono" style="font-weight:600">${esc(exp.code||expId)}</span> <span style="font-weight:400">${esc(exp.name||"")}</span>`}));
+  const hx=el('button','modal-x','\u2715');hx.title='Close';hx.addEventListener('click',closeExpDetailModal);hd.appendChild(hx);
+  sheet.appendChild(hd);
+  const meta=el('div','p-meta');meta.appendChild(statusPill(exp.status||"planned"));if(rr)meta.appendChild(reachTag(rr));if(exp.hypothesis_verdict)meta.appendChild(Object.assign(el('span','verdict'),{textContent:"hypothesis "+exp.hypothesis_verdict}));sheet.appendChild(meta);
+  const det=el('div','exp-modal-sec');det.appendChild(el('div','p-lab','Experiment details'));
+  if(exp.hypothesis)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Hypothesis</span> ${esc(exp.hypothesis)}`}));
+  if(exp.toggle)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Toggle</span> ${esc(exp.toggle)}`}));
+  if(exp.test)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Experiment</span> ${esc(exp.test)}`}));
+  if((exp.key_reads||[]).length){const kb=el('div','exp-kr');kb.appendChild(el('span','lab','Key reads'));(exp.key_reads||[]).forEach(k=>{const row=el('div','meta small');row.textContent=`${k.name||"(unnamed)"} ${k.direction||""} ${(k.critical_value!==""&&k.critical_value!=null)?k.critical_value:""}${k.unit?(" "+k.unit):""}`;kb.appendChild(row);});det.appendChild(kb);}
+  sheet.appendChild(det);
+  if(ao){
+    const os=el('div','exp-modal-sec');os.appendChild(el('div','p-lab','Result'));
+    const line=el('div','outcome-line');
+    if(out&&out.kind==="sentinel"){line.innerHTML=`<b>Outcome:</b> ${esc(out.label)}${ao.note?` \u2014 ${esc(ao.note)}`:""}${out.conclusion?`<br><span class="lab">Conclusion</span> ${esc(out.conclusion)}`:""}`;}
+    else{line.innerHTML=`<b>Observed:</b> ${esc(out?out.label:ao.result_id)}${ao.recorded_date?` \u00b7 recorded ${esc(ao.recorded_date)}`:""}${ao.recorded_by?` by ${esc(ao.recorded_by)}`:""}${ao.note?`<br><span class="lab">Note</span> ${esc(ao.note)}`:""}${(out&&out.conclusion)?`<br><span class="lab">Conclusion</span> ${esc(out.conclusion)}`:""}`;}
+    os.appendChild(line);
+    const nr=el('div','nextrow');nr.style.marginTop='8px';
+    if(out&&out.terminal){nr.appendChild(Object.assign(el('span','arr'),{textContent:'\u2192'}));nr.appendChild(Object.assign(el('span','lab'),{textContent:'Next step'}));nr.appendChild(terminalPill(out.terminal,types));}
+    else if(out&&out.nextId&&t.experiments[out.nextId]){const tgt=t.experiments[out.nextId];nr.innerHTML=`<span class="arr">\u2192</span> <span class="lab">Next step</span> <span class="mono">${esc(tgt.code||out.nextId)}</span> ${esc(tgt.name||"")}`;}
+    else{nr.innerHTML=`<span class="arr">\u2192</span> <span class="lab">Next step</span> <span class="nonext-tag">No next step</span>`;}
+    os.appendChild(nr);sheet.appendChild(os);
+  }
+  const results=exp.possible_results||[];
+  if(results.length){
+    const rs=el('div','exp-modal-sec');rs.appendChild(el('div','p-lab','Possible results'));
+    const rwrap=el('div','results');
+    results.forEach(res=>{
+      const observed=ao&&!isSentinel(ao.result_id)&&ao.result_id===res.id;
+      const card=el('div','result'+(observed?' observed':''));
+      const top=el('div','result-top');top.appendChild(el('span','lbl',res.label||res.id));if(observed)top.appendChild(Object.assign(el('span','observed-badge'),{textContent:'observed'}));card.appendChild(top);
+      const ct=criteriaText(res,exp.key_reads);if(ct)card.appendChild(el('div','crit',ct));
+      if(res.conclusion){const c=el('div','concl');c.innerHTML=`<b>Conclusion \u00b7 </b>${esc(res.conclusion)}`;card.appendChild(c);}
+      const nextId=(res.next_experiment_ids||[])[0];const nr2=el('div','nextrow');
+      if(res.terminal){nr2.appendChild(Object.assign(el('span','arr'),{textContent:'\u2192'}));nr2.appendChild(terminalPill(res.terminal,types));}
+      else if(nextId){const tgt=t.experiments[nextId];nr2.innerHTML=`<span class="arr">\u2192</span> Next: <span class="mono">${esc(tgt?tgt.code:nextId)}</span>`;}
+      else{nr2.innerHTML=`<span class="arr">\u2192</span> <span class="nonext-tag">No next step</span>`;}
+      card.appendChild(nr2);rwrap.appendChild(card);
+    });
+    rs.appendChild(rwrap);sheet.appendChild(rs);
+  }
+  const foot=el('div','exp-modal-foot');
+  foot.appendChild(Object.assign(el('span','muted small'),{textContent:'Read-only view'}));
+  const editB=el('button','primary','Edit results');editB.title='Open the editor to correct the results';editB.addEventListener('click',()=>{closeExpDetailModal();openPanel(expId);});foot.appendChild(editB);
+  sheet.appendChild(foot);
+  ov.appendChild(sheet);
+  ov.addEventListener('click',(e)=>{if(e.target===ov)closeExpDetailModal();});
+  ETB_ROOT.appendChild(ov);ov.classList.add('open');
 }
 function softRefresh(){syncRepeats(state.tree);cacheTree();renderStatus();renderOutline();if(!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}}
 function fRow(label,inputEl){const w=el("div","p-row");w.appendChild(el("div","p-lab",label));w.appendChild(inputEl);return w;}
