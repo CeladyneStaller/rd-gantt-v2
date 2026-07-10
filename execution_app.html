@@ -1905,7 +1905,7 @@ const URLP = (function(){
   const t = p.get("token");
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"" };
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -2073,6 +2073,7 @@ function writeKpiUpdatesFromReads(expId, readings){
 }
 let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "" = all quarters
 let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
+let pendingObjective = URLP.objective;   // ?objective=<id> deep-link (robust-resolve); consumed once by fillObjSelect
 let pollTimer = null;
 
 function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],etbTrees:{} }; }
@@ -2215,6 +2216,8 @@ async function loadAll(){
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio doc on the broker yet — create it from the Planning app first.", "err"); return; }
     portfolio = p.doc; portfolioVersion = p.version;
+    if(pendingObjective){ const _to=(portfolio.objectives||[]).find(o=>o.id===pendingObjective);
+      if(_to) divisionId=_to.divisionId; else pendingObjective=""; }   // ?objective= robust-resolve: switch to its division; drop an unknown id
     if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
     if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
@@ -2331,7 +2334,13 @@ function fillProductSelect(){
 function fillObjSelect(){
   fillQtrSelect(); fillProductSelect();
   const s=document.getElementById("objSelect");
-  const objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  const want=pendingObjective; pendingObjective="";   // ?objective= deep-link, consumed once per load
+  let objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  if(want && myObjectives().some(o=>o.id===want) && !objs.some(o=>o.id===want)){   // target is in this division but a quarter/product filter hides it -> drop the filters
+    selectedQuarter=""; selectedProduct=""; fillQtrSelect(); fillProductSelect();
+    objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  }
+  if(want && objs.some(o=>o.id===want)) selectedObj=want;
   s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
