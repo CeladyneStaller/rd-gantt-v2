@@ -333,6 +333,7 @@
   .ovwrap .csub{font-size:10.5px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
   .ovwrap .csub .ov-slip{color:var(--bad)}
   .ovwrap .csub .ov-accel{color:var(--ok)}
+  .ms-tbl .ms-slip{color:var(--bad);font-weight:600}
   .ovwrap .cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
   .ovwrap .kpit{display:grid;grid-template-columns:12px 1fr auto auto;gap:2px 8px;font-size:10.8px;align-items:center;margin-bottom:8px}
   .ovwrap .kh{color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);padding-bottom:3px;border-bottom:1px solid var(--line)}
@@ -2820,6 +2821,8 @@ function renderMilestones(){
       const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
       const nk=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id).length;
       const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
+      const msRepSlip=(!done && eff!=null && ms.plannedDate!=null)?eff-ms.plannedDate:null;
+      const effCell = effTxt + ((msRepSlip!=null&&msRepSlip>0)?` <span class="ms-slip">+${msRepSlip}d</span>`:"");
       const stCell = done ? `<span class="band on-track">achieved</span>` : `<span class="band ${bnd}">${bnd.replace("-"," ")}</span>`;
       h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
         `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
@@ -2827,7 +2830,7 @@ function renderMilestones(){
         `<td>${init?esc(init.name||init.id):"—"}</td>`+
         `<td>${prodId?esc(productName(prodId)):"—"}</td>`+
         `<td class="mono">${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"}</td>`+
-        `<td class="mono">${effTxt}</td>`+
+        `<td class="mono">${effCell}</td>`+
         `<td style="white-space:nowrap">${stCell}</td>`+
         `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
         `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
@@ -3212,7 +3215,7 @@ function overviewTilesHtml(){
       groups+='<div class="prodblock"><div class="prodlabel"><span class="pdot"></span>'+plabel+'</div>';
       if(models.length) groups+='<div class="rowsec"><div class="kidlbl">Models</div><div class="tilerow">'+models.map(function(m){return ovModelTile(m,em);}).join("")+'</div></div>';
       if(objs.length) groups+='<div class="rowsec"><div class="kidlbl">Objectives</div><div class="tilerow">'+objs.map(function(o){return ovObjTile(o,em,pool,casc);}).join("")+'</div></div>';
-      if(mss.length) groups+='<div class="rowsec"><div class="kidlbl">Milestones</div><div class="tilerow">'+mss.map(function(m){return ovMsTile(m,em,pool);}).join("")+'</div></div>';
+      if(mss.length) groups+='<div class="rowsec"><div class="kidlbl">Milestones</div><div class="tilerow">'+mss.map(function(m){return ovMsTile(m,em,pool,casc);}).join("")+'</div></div>';
       groups+='</div>';
     }
     groups+='</div>';
@@ -3280,14 +3283,19 @@ function ovObjTile(o, em, pool, casc){
     +gatesBlock
     +'</div></div>';
 }
-function ovMsTile(m, em, pool){
+function ovMsTile(m, em, pool, casc){
   const div=ovMsDiv(m); const doc=execDocs["EXEC-"+div]||{kpis:[]};
   const achieved=RD.milestoneAchieved(m,em); const score=achieved?100:RD.milestoneScore(m.id, em);
   const kpiRows=ovKpiRowsFor("milestone", m.id, doc, pool, em);
-  const dueStr = m.plannedDate!=null?dayToIso(m.plannedDate):"";
+  const mEff=(casc&&casc.milestoneEffective)?casc.milestoneEffective[m.id]:null;
+  const mSlip=(!achieved&&m.plannedDate!=null&&mEff!=null)?mEff-m.plannedDate:null;
+  const dueStr = achieved ? (m.completedDate!=null?("Done "+dayToIso(m.completedDate)):"Achieved")
+               : (mSlip!=null&&mSlip>0) ? ("Est "+dayToIso(mEff))
+               : (m.plannedDate!=null?("Due "+dayToIso(m.plannedDate)):"");
+  const msChip=(mSlip!=null&&mSlip>0)?' <span class="ov-slip">+'+mSlip+'d slip</span>':'';
   return '<div class="tcard" style="width:234px" onclick="openOvDetail(\'milestone\',\''+m.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
-    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(m.name||m.id)+'">'+esc(m.name||m.id)+'</div><div class="csub">'+(dueStr?("Due "+dueStr):"")+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(m.name||m.id)+'">'+esc(m.name||m.id)+'</div><div class="csub">'+dueStr+msChip+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
     +ovKpiTbl("KPI", kpiRows)
     +ovProg(score, scoreColor(score))
     +'</div></div>';
