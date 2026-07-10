@@ -160,6 +160,29 @@
   .statepill.passed-late{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
   .statepill.overdue{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
   .statepill.pending{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
+  .markbtn{background:var(--pill-ok-bg);border:1px solid var(--pill-ok-bd);color:var(--pill-ok-fg);border-radius:6px;padding:3px 10px;font-family:var(--mono);font-size:11px;cursor:pointer}
+  .markbtn:hover{filter:brightness(1.12)}
+  .passed-label{font-family:var(--mono);font-size:12px;border-radius:5px;padding:2px 8px;cursor:pointer;border:1px solid transparent}
+  .passed-label.ok{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border-color:var(--pill-ok-bd)}
+  .passed-label.late{color:var(--pill-warn-fg);background:var(--pill-warn-bg);border-color:var(--pill-warn-bd)}
+  .passed-label:hover{filter:brightness(1.12);text-decoration:underline}
+  #modalBody .modal-field input[type=date],#modalBody .modal-field textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
+  #modalBody .modal-field textarea{resize:vertical;min-height:56px}
+  .modal-field .opt{color:var(--none)}
+  .gc-method{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;border-radius:6px;padding:5px 10px}
+  .gc-method.auto{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .gc-method.manual{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd)}
+  .gc-justi{font-size:12px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:6px;padding:8px 10px;margin-top:8px}
+  table.gc-kpi{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  table.gc-kpi th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line)}
+  table.gc-kpi td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--mono)}
+  table.gc-kpi tr:last-child td{border-bottom:none}
+  .gc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .gc-empty{color:var(--muted);font-style:italic}
+  .gc-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .gc-actions .right{display:flex;gap:10px}
+  .gc-uncomplete{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
+  .gc-uncomplete:hover{color:var(--bad)}
   /* modal */
   /* FMEA / risk register */
   .rpn-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap}
@@ -1123,6 +1146,9 @@ html[data-theme="dark"] #etb-view{
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
+  // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
+  function gateAtTarget(sgId, execDocs) { return stageGateScore(sgId, execDocs) === 100; }
 
   // ---- stage-gate SETS (parallel workstreams within an objective) -----------
   // A gate carries setId; sets are declared in execDoc.stageGateSets [{id,objectiveId,name,order,chained}].
@@ -1788,6 +1814,7 @@ html[data-theme="dark"] #etb-view{
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
     stageGateScore: stageGateScore,
+    gateAtTarget: gateAtTarget,
     setScore: setScore,
     objectiveGateReadiness: objectiveGateReadiness,
     gatesForSet: gatesForSet,
@@ -2408,6 +2435,7 @@ function postRead(host, kpiId){
 /* ---------------- render: objective header + sub-tables ---------------- */
 function renderAll(){
   if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
+  autoCompleteGates();   // a gate at 100% readiness completes itself (Targets achieved); idempotent, 0/0-guarded
   if(divisionId) renderInitPanel(); else document.getElementById("initPanel").innerHTML="";
   const objs = myObjectives();
   if(!objs.length || !selectedObj){
@@ -3163,6 +3191,70 @@ function gateForecastMeta(g, gEff, gEarly, gAcc, td, setGates){
   }
   return "";
 }
+function autoCompleteGates(){
+  const em=emForCore(), td=todayDay(); let changed=0;
+  (exec.stageGates||[]).forEach(g=>{ if(g.actualDate==null && RD.gateAtTarget(g.id, em)){ g.actualDate=td; g.completionMethod="auto"; changed++; } });
+  return changed;
+}
+function gateCompletionControl(g, st){
+  if(g.actualDate!=null){
+    const late=(st==='passed-late');
+    return `<span class="passed-label ${late?'late':'ok'} click" data-completion="${g.id}" title="view / edit completion">passed ${dayToIso(g.actualDate)}</span> `;
+  }
+  return `<button class="markbtn" data-markcomplete="${g.id}" title="mark this gate complete">Mark complete \u25be</button> `;
+}
+function gateKpiRows(gateId, objScope){
+  const AK=allKpisPool(), EM=emForCore();
+  const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType==="stageGate" && k.hostId===gateId);
+  if(!rows.length) return `<tr><td colspan="3" class="gc-empty">no KPIs on this gate</td></tr>`;
+  return rows.map(k=>{
+    const name=RD.kpiName(k,AK), unit=RD.kpiUnit(k,AK);
+    const tgt=RD.effTarget(k,AK), cv=RD.effValue(k,AK,EM), s=RD.kpiScoreResolved(k,AK,EM);
+    const c=col(RD.band(s)), cur=(cv==null)?'no read':(esc(String(cv))+(unit?' '+esc(unit):''));
+    return `<tr><td>${esc(name||'(unnamed)')}</td><td>${fmtTarget(tgt,unit)}</td><td style="color:${c}"><span class="gc-dot" style="background:${c}"></span>${cur}</td></tr>`;
+  }).join('');
+}
+function openMarkComplete(gateId){
+  const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return;
+  openModal("Mark complete \u2014 "+(g.name||g.id),
+    `<div class="modal-field"><span class="lbl">Completed date</span><input type="date" id="mcDate" value="${dayToIso(todayDay())}"></div>`+
+    `<div class="modal-field"><span class="lbl">Override justification <span class="opt">\u2014 optional</span></span><textarea id="mcJust" placeholder="Why is this gate being marked complete manually\u2026"></textarea></div>`+
+    `<div class="gc-actions"><span></span><div class="right"><button class="ghost" data-mc-cancel>Cancel</button><button class="primary" data-mc-save="${g.id}">Mark complete</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  mb.querySelector("[data-mc-cancel]").onclick=closeModal;
+  mb.querySelector("[data-mc-save]").onclick=()=>{
+    const d=isoToDay(mb.querySelector("#mcDate").value);
+    g.actualDate=(d!=null)?d:todayDay(); g.completionMethod="manual";
+    g.overrideJustification=(mb.querySelector("#mcJust").value||"").trim();
+    closeModal(); persist(); renderAll(); setMsg("Gate marked complete","ok");
+  };
+}
+function openGateDetail(gateId){
+  const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return;
+  const method=g.completionMethod||"manual";
+  const methodHtml=(method==="auto")
+    ? `<span class="gc-method auto">\u2713 Targets achieved</span>`
+    : `<span class="gc-method manual">\u2691 Manual override</span>`+(g.overrideJustification?`<div class="gc-justi">${esc(g.overrideJustification)}</div>`:``);
+  const justField=(method==="manual")
+    ? `<div class="modal-field" style="margin-top:10px"><span class="lbl">Justification <span class="opt">\u2014 optional</span></span><textarea id="gcJust">${esc(g.overrideJustification||"")}</textarea></div>` : ``;
+  openModal("Completion \u2014 "+(g.name||g.id),
+    `<div class="modal-field"><span class="lbl">Passed date</span><input type="date" id="gcDate" value="${dayToIso(g.actualDate)}"></div>`+
+    `<span class="modal-section-lbl">Completion method</span>${methodHtml}${justField}`+
+    `<span class="modal-section-lbl">Stage-gate KPIs</span><table class="gc-kpi"><thead><tr><th>KPI</th><th>target</th><th>current</th></tr></thead><tbody>${gateKpiRows(gateId, g.objectiveId)}</tbody></table>`+
+    `<div class="gc-actions"><button class="gc-uncomplete" data-gc-uncomplete="${g.id}">Un-complete gate</button><div class="right"><button class="ghost" data-gc-cancel>Cancel</button><button class="primary" data-gc-save="${g.id}">Save</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  mb.querySelector("[data-gc-cancel]").onclick=closeModal;
+  mb.querySelector("[data-gc-save]").onclick=()=>{
+    const d=isoToDay(mb.querySelector("#gcDate").value);
+    if(d==null){ g.actualDate=null; g.completionMethod=null; g.overrideJustification=null; }
+    else { g.actualDate=d; const jt=mb.querySelector("#gcJust"); if(jt) g.overrideJustification=(jt.value||"").trim(); }
+    closeModal(); persist(); renderAll(); setMsg("Completion updated","ok");
+  };
+  mb.querySelector("[data-gc-uncomplete]").onclick=()=>{
+    g.actualDate=null; g.completionMethod=null; g.overrideJustification=null;
+    closeModal(); persist(); renderAll(); setMsg("Gate un-completed","ok");
+  };
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   const sets=objSetsOrdered();
@@ -3195,7 +3287,7 @@ function renderGates(){
         <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
         <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
         <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/>${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</span>
+        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · ${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</span>
           ${moveSel}
           <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
           <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
@@ -3251,7 +3343,8 @@ function wireExec(host){
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
-  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; persist(); setMsg("Gate updated","ok"); });
+  host.querySelectorAll("[data-markcomplete]").forEach(b=>b.onclick=()=>openMarkComplete(b.dataset.markcomplete));
+  host.querySelectorAll("[data-completion]").forEach(b=>b.onclick=()=>openGateDetail(b.dataset.completion));
   host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"add"}; armedDelSet=null; renderAll(); });
   host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
