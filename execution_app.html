@@ -116,6 +116,9 @@
   table.mtbl .m-cur{font-weight:600}
   table.mtbl .m-cur.met{color:var(--ok)} table.mtbl .m-cur.near{color:var(--warn)} table.mtbl .m-cur.miss{color:var(--bad)} table.mtbl .m-cur.none{color:var(--muted);font-weight:400}
   table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
+  table.mtbl td.m-cur[data-postcell]{cursor:pointer}
+  table.mtbl td.m-cur[data-postcell]:hover{text-decoration:underline dotted;text-underline-offset:3px}
+  .m-postin{width:74px;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .m-badge .d{width:5px;height:5px;border-radius:50%}
   .m-badge.met{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .m-badge.met .d{background:var(--ok)}
@@ -2630,6 +2633,21 @@ function postRead(host, kpiId){
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
   renderAll(); setMsg("Reading posted","ok");
 }
+function openPostCell(td){
+  if(td.querySelector("input")) return;                                  // already editing this cell
+  const kpiId=td.dataset.postcell, saved=td.innerHTML;
+  const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
+  const cur=k?RD.effValue(k, AK, emForCore()):null;
+  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="value"/>`;
+  const inp=td.querySelector("input"); inp.focus(); inp.select();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; const v=inp.value;
+    if(v==="" || isNaN(Number(v)) || Number(v)===cur){ td.innerHTML=saved; return; }   // blank / invalid / unchanged -> no post
+    exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(v), timestamp:Date.now(), note:"" });
+    renderAll(); setMsg("Reading posted","ok"); };
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; td.innerHTML=saved; } };
+  inp.onblur=commit;
+}
 
 /* ---------------- render: objective header + sub-tables ---------------- */
 function renderAll(){
@@ -3336,8 +3354,8 @@ function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   const isGate = hostType==="stageGate";
-  let h = `<table class="mtbl"><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-post-h">Post reading</th><th class="m-act-h"></th></tr></thead><tbody>`;
-  if(!rows.length) h += `<tr><td colspan="7" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
+  let h = `<table class="mtbl"><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
+  if(!rows.length) h += `<tr><td colspan="6" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
     const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
     const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = RD.kpiScoreResolved(k, AK, EM);
@@ -3352,9 +3370,8 @@ function kpiTable(hostType, hostId, objScope){
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
       <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
-      <td class="num m-cur ${bc}">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}</td>
+      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}</td>
       <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
-      <td class="m-post"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/><button class="ghost mini" data-postread="${k.id}">post</button></td>
       <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
@@ -3648,6 +3665,7 @@ function wireExec(host){
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
+  host.querySelectorAll("[data-postcell]").forEach(td=>td.onclick=()=>openPostCell(td));
   host.querySelectorAll("[data-markcomplete]").forEach(b=>b.onclick=()=>openMarkComplete(b.dataset.markcomplete));
   host.querySelectorAll("[data-completion]").forEach(b=>b.onclick=()=>openGateDetail(b.dataset.completion));
   host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
