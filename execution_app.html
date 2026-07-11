@@ -127,6 +127,68 @@
   table.mtbl .m-acts{text-align:right;white-space:nowrap}
   table.mtbl .ovr{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
   td.mtbl-empty{color:var(--muted);font-style:italic;text-align:center;padding:12px 14px}
+  /* ---- pass 2: gate rows + workstream header + collapse + chaining modal ---- */
+  #modalBody .modal-field input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
+  .ws-head{display:flex;align-items:center;gap:11px;padding:11px 12px 10px;flex-wrap:wrap}
+  .ws-name{font-weight:600;font-size:13px;letter-spacing:.005em}
+  .ws-name.click{cursor:pointer}
+  .ws-name.click:hover{color:var(--accent)}
+  .chain-ic{display:inline-flex;align-items:center;justify-content:center;width:23px;height:21px;border-radius:5px;cursor:help}
+  .chain-ic.on{color:var(--accent);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd)}
+  .chain-ic.off{color:var(--none);border:1px solid var(--line)}
+  .ws-meter{display:flex;align-items:center;gap:9px;margin-left:auto;font-family:var(--mono)}
+  .ws-bar{width:96px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .ws-fill{height:100%;border-radius:2px}
+  .ws-pct{font-size:12px;font-weight:600;min-width:32px;text-align:right}
+  .ws-cnt{font-size:11px;color:var(--muted)}
+  .ws-acts{display:flex;gap:6px;align-items:center}
+  .btn-ico{padding:3px 7px !important;line-height:1}
+  .grow{display:grid;grid-template-columns:1fr 116px 124px 186px 92px;align-items:start;column-gap:16px;padding:12px;border-top:1px solid var(--line);position:relative;transition:background .12s}
+  .ws-head + .grow{border-top:none}
+  .grow:hover{background:var(--panel2)}
+  .grow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .grow.st-passed{--rail:var(--ok)} .grow.st-passed-late{--rail:var(--warn)} .grow.st-overdue{--rail:var(--bad)} .grow.st-pending{--rail:var(--none)}
+  .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+  .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
+  .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
+  .g-name.click{cursor:pointer}
+  .g-name.click:hover{color:var(--accent)}
+  .g-committed{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);border-radius:4px;padding:1px 6px}
+  .g-intent{flex-basis:100%;display:flex;gap:9px;align-items:baseline;margin-top:5px;max-width:64ch}
+  .g-intent .lab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);flex:none}
+  .g-intent .txt{font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .g-status-cell{padding-top:1px}
+  .g-ready .r-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .g-ready .r-lab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .g-ready .r-val{font-family:var(--mono);font-size:13px;font-weight:700}
+  .g-ready .r-val .u{font-size:10px;color:var(--muted);font-weight:400}
+  .g-ready .r-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .g-ready .r-fill{height:100%;border-radius:2px}
+  .g-ready.empty .r-val{color:var(--muted)}
+  .g-sched{font-family:var(--mono);font-size:11px;line-height:1.65;color:var(--muted);display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .g-acts{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap;opacity:0;transition:opacity .12s}
+  .grow:hover .g-acts{opacity:1}
+  .g-acts .setmove{font-size:11px;max-width:90px}
+  .g-tgt{grid-column:1/-1;margin-top:10px}
+  .tgt-toggle{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-transform:uppercase}
+  .tgt-toggle:hover{border-color:var(--muted);color:var(--ink)}
+  .tgt-toggle .cnt{color:var(--ink);letter-spacing:0}
+  .tgt-toggle .arw{font-size:8px;transition:transform .15s}
+  .tgt-toggle[aria-expanded="true"] .arw{transform:rotate(90deg)}
+  .tgt-toggle.add{border-style:dashed}
+  .tgt-toggle.add:hover{border-color:var(--accent);color:var(--accent)}
+  .tgt-panel{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+  .tgt-foot{padding:8px 12px;border-top:1px solid var(--line);background:var(--panel2);display:flex;gap:8px}
+  .ws-choice{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px}
+  .ws-opt{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;background:var(--panel);transition:border-color .12s,background .12s}
+  .ws-opt:hover{border-color:var(--muted)}
+  .ws-opt.sel{border-color:var(--accent);background:var(--pill-active-bg)}
+  .ws-radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line);flex:none;margin-top:2px;position:relative}
+  .ws-opt.sel .ws-radio{border-color:var(--accent)}
+  .ws-opt.sel .ws-radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+  .ws-otxt{display:flex;flex-direction:column}
+  .ws-ot{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .ws-od{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
@@ -2445,6 +2507,7 @@ const SUB = {
 // addingFor: null | {type, hostType?, hostId?}   editingSub: null | {type, id}
 let addingFor = null, editingSub = null, armedDel = null;
 let armedDelSet = null, sgSetEditor = null, pendingGateSet = null;   // stage-gate SET (parallel workstream) management state
+let expandedGates = new Set();   // which gate rows have their target table expanded (survives re-render)
 let subReturn = null;  // when a KPI/link editor is launched from inside the gate modal, return here on close
 function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
 function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
@@ -3420,51 +3483,87 @@ function openGateDetail(gateId){
     closeModal(); persist(); renderAll(); setMsg("Gate un-completed","ok");
   };
 }
+function chainSymbol(chained){
+  return chained
+    ? `<span class="chain-ic on" title="Chained \u2014 a gate finishing late pushes the next gate"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg></span>`
+    : `<span class="chain-ic off" title="Independent \u2014 gates keep their own planned dates"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l1.5-1.5a4.5 4.5 0 0 0-6.4-6.4"/><path d="M7 16l-1.5 1.5a4.5 4.5 0 0 0 6.4 6.4"/><line x1="4" y1="4" x2="20" y2="20"/></svg></span>`;
+}
+function openWorkstreamModal(setId){
+  const set = setId ? (exec.stageGateSets||[]).find(x=>x.id===setId) : null;
+  const chained = set ? (set.chained!==false) : true;
+  const opt=(mode,sel,label,desc)=>`<label class="ws-opt ${sel?'sel':''}" data-wschoice="${mode}"><span class="ws-radio"></span><span class="ws-otxt"><span class="ws-ot">${chainSymbol(mode==="chained")} ${label}</span><span class="ws-od">${desc}</span></span></label>`;
+  openModal(set?"Edit workstream":"New workstream",
+    `<div class="modal-field"><span class="lbl">Name</span><input type="text" id="wsName" value="${esc(set?(set.name||''):'')}" placeholder="e.g. Balance of plant"></div>`+
+    `<span class="modal-section-lbl">Scheduling</span><div class="ws-choice">${opt("chained",chained,"Chained","A gate finishing late pushes the next gate's forecast date.")}${opt("independent",!chained,"Independent","Gates keep their own planned dates; a slip on one doesn't move the others.")}</div>`+
+    `<div class="gc-actions">${set?`<button class="gc-uncomplete" data-wsdel="${set.id}">Delete workstream</button>`:'<span></span>'}<div class="right"><button class="ghost" data-ws-cancel>Cancel</button><button class="act" data-ws-save>${set?'Save':'Create workstream'}</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  let mode = chained?"chained":"independent";
+  mb.querySelectorAll("[data-wschoice]").forEach(o=>o.onclick=()=>{ mode=o.dataset.wschoice; mb.querySelectorAll(".ws-opt").forEach(x=>x.classList.remove("sel")); o.classList.add("sel"); });
+  mb.querySelector("[data-ws-cancel]").onclick=closeModal;
+  mb.querySelector("[data-ws-save]").onclick=()=>{
+    const nm=(mb.querySelector("#wsName").value||"").trim(); if(!nm){ mb.querySelector("#wsName").focus(); return; }
+    const ch = mode==="chained";
+    if(set){ set.name=nm; set.chained=ch; }
+    else { const ns={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(x=>x.id)), objectiveId:selectedObj, name:nm, order:objSetsOrdered().length, chained:ch }; (exec.stageGateSets=exec.stageGateSets||[]).push(ns); }
+    closeModal(); persist(); renderAll(); setMsg(set?"Workstream updated":"Workstream added","ok");
+  };
+  const dl=mb.querySelector("[data-wsdel]");
+  if(dl){ let armed=false; dl.onclick=()=>{
+    if(!armed){ armed=true; dl.textContent="Confirm delete"; return; }
+    const id=dl.dataset.wsdel, others=objSetsOrdered().filter(x=>x.id!==id), gts=gatesOfSet(id);
+    if(gts.length && !others.length){ setMsg("Can't delete the only workstream while it holds gates \u2014 add another first.","err"); return; }
+    if(gts.length){ const to=others[0].id; gts.forEach(g=>{ g.setId=to; }); }
+    exec.stageGateSets=(exec.stageGateSets||[]).filter(x=>x.id!==id);
+    closeModal(); persist(); renderAll(); setMsg("Workstream deleted"+(gts.length?" \u2014 gates moved to "+esc(others[0].name||'another'):""),"ok");
+  }; }
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
-  const td=todayDay(), ed=sgSetEditor, multi=sets.length>1;
+  const td=todayDay(), multi=sets.length>1;
   let gEff={}, gEarly={}, gAcc={};
   try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
+  const AK=allKpisPool(), EM=emForCore();
   let inner="";
   sets.forEach(set=>{
     const gates=gatesOfSet(set.id);
     const pct=setScorePct(set.id);
-    const pctTxt=pct==null?'—':Math.round(pct)+'%';
+    const pctTxt=pct==null?'\u2014':Math.round(pct)+'%';
     const pctCol=pct==null?'var(--muted)':col(RD.band(pct));
     const chained=set.chained!==false;
-    const renaming=ed&&ed.mode==="rename"&&ed.setId===set.id;
-    const nameCell=renaming
-      ? `<input class="setname-inp" data-setname value="${esc(set.name||'')}" placeholder="set name"/><button class="ghost mini" data-setsave>save</button><button class="ghost mini" data-setcancel>cancel</button>`
-      : `<span class="setname click" data-setrename="${set.id}" title="rename set">${esc(set.name||'(unnamed set)')}</span>`;
-    inner+=`<div class="sgset"><div class="sgset-head">${nameCell}
-      <span class="sgset-score" style="color:${pctCol}" title="% of this set's gates passed">${pctTxt}</span>
-      <label class="chain-toggle mini" title="Chain this set's gates by planned date — a slip pushes the next in the set."><input type="checkbox" data-setchain="${set.id}" ${chained?'checked':''}/> chain</label>
-      <span class="sgset-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini danger ${armedDelSet===set.id?'armed':''}" data-setdel="${set.id}">${armedDelSet===set.id?'confirm':'del set'}</button></span></div>`;
-    if(!gates.length) inner+=`<p class="hint" style="margin:2px 0 8px 10px">no gates in this set</p>`;
+    const passed=gates.filter(g=>g.actualDate!=null).length;
+    inner+=`<div class="sgset"><div class="ws-head">
+      <span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
+      <span class="ws-meter"><span class="ws-bar"><span class="ws-fill" style="width:${pct==null?0:Math.round(pct)}%;background:${pctCol}"></span></span><span class="ws-pct" style="color:${pctCol}">${pctTxt}</span><span class="ws-cnt">${passed} / ${gates.length}</span></span>
+      <span class="ws-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini btn-ico" data-wsedit="${set.id}" title="edit workstream">\u270e</button></span>
+    </div>`;
+    if(!gates.length) inner+=`<p class="hint" style="margin:0 0 10px 12px">no gates in this workstream</p>`;
     gates.forEach(g=>{
-      const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
-      const cmt=g.baselineDate!=null?`<span class="committed-badge" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
-      const moveSel=multi?`<select class="setmove" data-setmove="${g.id}" title="move to another set">${sets.map(s2=>`<option value="${s2.id}"${s2.id===set.id?' selected':''}>${esc(s2.name||'set')}</option>`).join('')}</select>`:'';
-      inner+=`<div class="icard"><div class="icard-top">
-        <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span>
-        <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
-        <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
-        <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-        <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · ${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</span>
-          ${moveSel}
-          <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
-          <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
-          <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-        </div>${g.intention?`<div class="icard-intent">${esc(g.intention)}</div>`:''}<div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+      const sc=RD.stageGateScore(g.id, EM), st=RD.classifyGate(g, td);
+      const cmt=g.baselineDate!=null?`<span class="g-committed" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
+      const moveSel=multi?`<select class="setmove" data-setmove="${g.id}" title="move to another workstream">${sets.map(s2=>`<option value="${s2.id}"${s2.id===set.id?' selected':''}>${esc(s2.name||'set')}</option>`).join('')}</select>`:'';
+      const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
+      const open=expandedGates.has(g.id);
+      const tk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="stageGate" && k.hostId===g.id);
+      const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&RD.band(s2)==='on-track';}).length;
+      const toggle = tk.length
+        ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
+        : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button>`;
+      const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
+      inner+=`<div class="grow st-${st}">
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
+        <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
+        <div class="g-sched">planned ${dayToIso(g.plannedDate)||'\u2014'} \u00b7 ${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</div>
+        <div class="g-acts">${moveSel}<button class="ghost mini btn-ico" data-edit="stageGate:${g.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}" title="delete">${armedDel===g.id?'\u2713':'\u00d7'}</button></div>
+        <div class="g-tgt">${toggle}${panel}</div>
+      </div>`;
     });
     inner+=`</div>`;
   });
-  if(!sets.length) inner+=`<p class="hint">no stage-gate sets yet — add a gate to start one, or add a named set for a parallel workstream</p>`;
-  let acts;
-  if(ed&&ed.mode==="add") acts=`<input class="setname-inp" data-setname placeholder="new set name"/><button class="ghost mini" data-setsave>add</button><button class="ghost mini" data-setcancel>cancel</button>`;
-  else acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ add set</button>`;
+  if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
+  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
@@ -3511,7 +3610,9 @@ function wireExec(host){
   host.querySelectorAll("[data-markcomplete]").forEach(b=>b.onclick=()=>openMarkComplete(b.dataset.markcomplete));
   host.querySelectorAll("[data-completion]").forEach(b=>b.onclick=()=>openGateDetail(b.dataset.completion));
   host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
-  host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"add"}; armedDelSet=null; renderAll(); });
+  host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>openWorkstreamModal(null));
+  host.querySelectorAll("[data-wsedit]").forEach(b=>b.onclick=()=>openWorkstreamModal(b.dataset.wsedit));
+  host.querySelectorAll("[data-gtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.gtoggle; if(expandedGates.has(id)) expandedGates.delete(id); else expandedGates.add(id); renderGates(); });
   host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
   host.querySelectorAll("[data-setsave]").forEach(b=>b.onclick=()=>{ const inp=host.querySelector("[data-setname]"); const nm=(inp?inp.value:"").trim(); if(!nm){ setMsg("Set name required","err"); return; } if(sgSetEditor&&sgSetEditor.mode==="add") addSet(nm); else if(sgSetEditor&&sgSetEditor.mode==="rename") renameSet(sgSetEditor.setId, nm); sgSetEditor=null; renderAll(); });
   host.querySelectorAll("[data-setcancel]").forEach(b=>b.onclick=()=>{ sgSetEditor=null; renderAll(); });
