@@ -168,7 +168,8 @@
   .g-ready .r-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
   .g-ready .r-fill{height:100%;border-radius:2px}
   .g-ready.empty .r-val{color:var(--muted)}
-  .g-sched{font-family:var(--mono);font-size:11px;line-height:1.65;color:var(--muted);display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .g-sched{font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .gs-state{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
   .g-acts{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap;opacity:0;transition:opacity .12s}
   .grow:hover .g-acts{opacity:1}
   .g-acts .setmove{font-size:11px;max-width:90px}
@@ -192,6 +193,9 @@
   .ws-otxt{display:flex;flex-direction:column}
   .ws-ot{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
   .ws-od{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .ws-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--none)}
+  #modalBody .row-actions.gate-foot{justify-content:space-between;align-items:center}
+  .ra-right{display:flex;gap:8px;align-items:center}
   /* ---- pass 3: Key Result pace rows ---- */
   .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px;padding:12px;border-top:1px solid var(--line);position:relative;transition:background .12s}
   .item-list>.krow:first-child{border-top:none}
@@ -229,7 +233,7 @@
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
-  .sgset{border:1px solid var(--line);border-radius:9px;padding:8px 10px 4px;margin:0 0 12px;background:var(--panel2)}
+  .sgset{border:1px solid var(--line);border-radius:9px;margin:0 0 12px;background:var(--panel);overflow:hidden}
   .sgset-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
   .setname{font-weight:700;font-size:13px;color:var(--ink);cursor:pointer;border-bottom:1px dashed transparent}
   .setname:hover{border-bottom-color:var(--line-strong)}
@@ -2766,6 +2770,11 @@ function wireModalBody(body){
   const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
   const apt = body.querySelector("[data-addpendingtarget]"); if(apt) apt.onclick=()=>openTgtModal("__pending__", null);
   wirePendingTgt(body);
+  const gd = body.querySelector("[data-gatedel]");
+  if(gd) gd.onclick=()=>{
+    if(gd.getAttribute("data-armed")!=="1"){ gd.setAttribute("data-armed","1"); gd.textContent="Confirm delete"; return; }
+    const id=gd.dataset.gatedel; editingSub=null; pendingGateTargets=[]; armedDel=id; delSub("stageGate", id);
+  };
   const seg = body.querySelector("[data-seg]");
   if(seg){
     const statusInp = body.querySelector('[data-f="status"]');
@@ -2862,7 +2871,8 @@ function gateModalBody(g){
       <p class="hint" style="margin:12px 0 0">Or Link the gate straight to a product / model / initiative metric; predecessors can be added after saving.</p>`;
   }
   const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
-  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  const gateDel = isEdit ? `<button class="gc-uncomplete" data-gatedel="${g.id}" title="delete this gate">Delete gate</button>` : '';
+  h+=`<div class="row-actions${isEdit?' gate-foot':''}">${gateDel}<span class="ra-right"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></span></div>`;
   return h;
 }
 
@@ -3584,7 +3594,7 @@ function renderGates(){
   try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
   const AK=allKpisPool(), EM=emForCore();
   let inner="";
-  sets.forEach(set=>{
+  sets.forEach((set, si)=>{
     const gates=gatesOfSet(set.id);
     const pct=setScorePct(set.id);
     const pctTxt=pct==null?'\u2014':Math.round(pct)+'%';
@@ -3592,7 +3602,7 @@ function renderGates(){
     const chained=set.chained!==false;
     const passed=gates.filter(g=>g.actualDate!=null).length;
     inner+=`<div class="sgset"><div class="ws-head">
-      <span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
+      <span class="ws-eyebrow">Workstream ${String.fromCharCode(65+si)}</span><span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
       <span class="ws-meter"><span class="ws-bar"><span class="ws-fill" style="width:${pct==null?0:Math.round(pct)}%;background:${pctCol}"></span></span><span class="ws-pct" style="color:${pctCol}">${pctTxt}</span><span class="ws-cnt">${passed} / ${gates.length}</span></span>
       <span class="ws-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini btn-ico" data-wsedit="${set.id}" title="edit workstream">\u270e</button></span>
     </div>`;
@@ -3613,8 +3623,8 @@ function renderGates(){
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
-        <div class="g-sched">planned ${dayToIso(g.plannedDate)||'\u2014'} \u00b7 ${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</div>
-        <div class="g-acts">${moveSel}<button class="ghost mini btn-ico" data-edit="stageGate:${g.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}" title="delete">${armedDel===g.id?'\u2713':'\u00d7'}</button></div>
+        <div class="g-sched"><div class="gs-plan">planned ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-state">${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</div></div>
+        <div class="g-acts">${moveSel}</div>
         <div class="g-tgt">${toggle}${panel}</div>
       </div>`;
     });
