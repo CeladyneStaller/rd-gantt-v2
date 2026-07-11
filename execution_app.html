@@ -102,6 +102,31 @@
   table.kpitable{margin:0}
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
+  table.mtbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:0}
+  table.mtbl thead th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel2)}
+  table.mtbl th.num,table.mtbl td.num{text-align:right}
+  table.mtbl th.ctr,table.mtbl td.ctr{text-align:center}
+  table.mtbl tbody td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.mtbl tbody tr:last-child td{border-bottom:none}
+  table.mtbl .m-name a.rowedit{color:var(--ink);font-weight:500;text-decoration:none;cursor:pointer}
+  table.mtbl .m-name a.rowedit:hover{color:var(--accent);text-decoration:underline}
+  table.mtbl .m-crit,table.mtbl .m-cur,table.mtbl .m-unit{font-family:var(--mono);white-space:nowrap}
+  table.mtbl .m-crit{color:var(--ink)}
+  table.mtbl .m-unit{color:var(--muted);font-size:11.5px}
+  table.mtbl .m-cur{font-weight:600}
+  table.mtbl .m-cur.met{color:var(--ok)} table.mtbl .m-cur.near{color:var(--warn)} table.mtbl .m-cur.miss{color:var(--bad)} table.mtbl .m-cur.none{color:var(--muted);font-weight:400}
+  table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
+  .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .m-badge .d{width:5px;height:5px;border-radius:50%}
+  .m-badge.met{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .m-badge.met .d{background:var(--ok)}
+  .m-badge.near{background:var(--pill-warn-bg);color:var(--pill-warn-fg)} .m-badge.near .d{background:var(--warn)}
+  .m-badge.miss{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .m-badge.miss .d{background:var(--bad)}
+  .m-badge.none{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)} .m-badge.none .d{background:var(--none)}
+  table.mtbl .m-post{white-space:nowrap}
+  table.mtbl .m-post .tiny{width:62px}
+  table.mtbl .m-acts{text-align:right;white-space:nowrap}
+  table.mtbl .ovr{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+  td.mtbl-empty{color:var(--muted);font-style:italic;text-align:center;padding:12px 14px}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
@@ -3227,26 +3252,27 @@ function initKpiTableRO(initId){
 function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
-  let h = `<table class="kpitable"><thead><tr><th>KPI</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
-  if(!rows.length) h += `<tr><td colspan="7" class="hint">no KPIs yet — add or link a measurement</td></tr>`;
+  const isGate = hostType==="stageGate";
+  let h = `<table class="mtbl"><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-post-h">Post reading</th><th class="m-act-h"></th></tr></thead><tbody>`;
+  if(!rows.length) h += `<tr><td colspan="7" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
     const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
     const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = RD.kpiScoreResolved(k, AK, EM);
     const member = isMemberKpi(k), defLinks = isDefinerWithLinks(k);
-    const tgtCell = fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
-    let badge = '';
-    if(member) badge = `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
-    else if(defLinks) badge = `<span class="linkbadge" title="defines a linked metric">🔗 defines ${groupMemberCount(k.groupId)-1}</span>`;
-    const acts = member
-      ? `<button class="ghost mini" data-unlink="${k.id}">unlink</button>`
-      : ``;
-    h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
-      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
-      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
-      <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
-        <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
-      <td class="row-actions">${acts}
-        <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
+    const crit = (k.targetType==="binary") ? "pass" : ((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"") + fmtTarget(tgt, ""));
+    const ovr = member ? (k.target!=null?'<span class="ovr">override</span>':'<span class="ovr">inherited</span>') : '';
+    const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}">linked</span>`
+                : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
+    const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
+    const stTxt = s==null?'open':(bnd==='on-track'?'met':bnd==='at-risk'?'near':'below');
+    h += `<tr>
+      <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
+      <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
+      <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
+      <td class="num m-cur ${bc}">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}</td>
+      <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
+      <td class="m-post"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/><button class="ghost mini" data-postread="${k.id}">post</button></td>
+      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
   return h;
