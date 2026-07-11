@@ -189,6 +189,25 @@
   .ws-otxt{display:flex;flex-direction:column}
   .ws-ot{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
   .ws-od{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  /* ---- pass 3: Key Result pace rows ---- */
+  .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px;padding:12px;border-top:1px solid var(--line);position:relative;transition:background .12s}
+  .item-list>.krow:first-child{border-top:none}
+  .krow:hover{background:var(--panel2)}
+  .krow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .krow.b-on{--rail:var(--ok)} .krow.b-risk{--rail:var(--warn)} .krow.b-behind{--rail:var(--bad)} .krow.b-none{--rail:var(--none)}
+  .kr-band{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:3px 8px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .kr-band .d{width:5px;height:5px;border-radius:50%}
+  .kr-band.on{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .kr-band.on .d{background:var(--ok)}
+  .kr-band.risk{background:var(--pill-warn-bg);color:var(--pill-warn-fg)} .kr-band.risk .d{background:var(--warn)}
+  .kr-band.behind{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .kr-band.behind .d{background:var(--bad)}
+  .kr-band.none{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)} .kr-band.none .d{background:var(--none)}
+  .pace-bar{position:relative;height:5px;border-radius:3px;background:var(--line);margin-top:2px}
+  .pace-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px}
+  .pace-mark{position:absolute;top:-3px;height:11px;width:2px;border-radius:1px;background:var(--muted);box-shadow:0 0 0 1.5px var(--panel)}
+  .pace-cap{margin-top:7px;font-family:var(--mono);font-size:10px;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+  .pace-cap .ico{font-size:9px}
+  .pace-cap.ok{color:var(--muted)} .pace-cap.risk{color:var(--warn)} .pace-cap.behind{color:var(--bad)}
+  .pace-cap .el{color:var(--none)}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
@@ -2508,6 +2527,7 @@ const SUB = {
 let addingFor = null, editingSub = null, armedDel = null;
 let armedDelSet = null, sgSetEditor = null, pendingGateSet = null;   // stage-gate SET (parallel workstream) management state
 let expandedGates = new Set();   // which gate rows have their target table expanded (survives re-render)
+let expandedKRs = new Set();   // which KR rows have their KPI table expanded
 let subReturn = null;  // when a KPI/link editor is launched from inside the gate modal, return here on close
 function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
 function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
@@ -3343,18 +3363,39 @@ function kpiTable(hostType, hostId, objScope){
 function renderKRs(){
   const host=document.getElementById("subKR");
   const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
+  const EM=emForCore(), AK=allKpisPool(), obj=objById(selectedObj), td=todayDay();
+  const bandMap={'on-track':['On track','on'],'at-risk':['At risk','risk'],'off-track':['Behind','behind'],'no-band':['No data','none']};
   let inner="";
-  if(!krs.length) inner+=`<p class="hint">none yet — a Key Result groups the KPIs that score this objective (no Key Result ⇒ no objective score)</p>`;
+  if(!krs.length) inner+=`<p class="hint">none yet \u2014 a Key Result groups the KPIs that score this objective (no Key Result \u21d2 no objective score)</p>`;
   krs.forEach((kr,idx)=>{
-    const s=RD.keyResultScore(kr.id, emForCore());
-    inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span>
-      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
-      <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
-        <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
-        <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedObj)}</div></div>`;
+    const pace=RD.keyResultPace(kr.id, obj, EM, td);
+    const att=pace.attainment, el=pace.elapsed, band=pace.band;
+    const bm=bandMap[band]||['No data','none'], bTxt=bm[0], bCls=bm[1], c=col(band);
+    const attTxt=att==null?'\u2014':Math.round(att);
+    let cap='';
+    if(att!=null && att>=100){ cap=`<div class="pace-cap ok"><span class="ico">\u25b2</span>target met${el!=null?` <span class="el">\u00b7 ${Math.round(el)}% elapsed</span>`:''}</div>`; }
+    else if(att!=null && el!=null){ const gap=Math.round(el-att);
+      cap = gap<=0 ? `<div class="pace-cap ok"><span class="ico">\u25b2</span>${gap===0?'on pace':'ahead of pace'} <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`
+                   : `<div class="pace-cap ${band==='off-track'?'behind':'risk'}"><span class="ico">\u25bc</span>${gap} pts behind pace <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`; }
+    else if(att!=null){ cap=`<div class="pace-cap ok"><span class="el">no objective dates \u2014 score only</span></div>`; }
+    const kk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="keyResult" && k.hostId===kr.id);
+    const metCnt=kk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&RD.band(s2)==='on-track';}).length;
+    const open=expandedKRs.has(kr.id);
+    const toggle = kk.length
+      ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
+      : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
+    const panel = open ? `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>` : '';
+    inner+=`<div class="krow b-${bCls}">
+      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
+      <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
+      <div class="g-ready">
+        <div class="r-top"><span class="r-lab">Attainment</span><span class="r-val" style="color:${c}">${attTxt}${att==null?'':'<span class="u">%</span>'}</span></div>
+        <div class="pace-bar"><span class="pace-fill" style="width:${att==null?0:Math.round(att)}%;background:${c}"></span>${el!=null?`<span class="pace-mark" style="left:${Math.round(el)}%"></span>`:''}</div>
+        ${cap}
+      </div>
+      <div class="g-acts"><button class="ghost mini btn-ico" data-edit="keyResult:${kr.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}" title="delete">${armedDel===kr.id?'\u2713':'\u00d7'}</button></div>
+      <div class="g-tgt">${toggle}${panel}</div>
+    </div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add key result</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Key Results",krs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
@@ -3613,6 +3654,7 @@ function wireExec(host){
   host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>openWorkstreamModal(null));
   host.querySelectorAll("[data-wsedit]").forEach(b=>b.onclick=()=>openWorkstreamModal(b.dataset.wsedit));
   host.querySelectorAll("[data-gtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.gtoggle; if(expandedGates.has(id)) expandedGates.delete(id); else expandedGates.add(id); renderGates(); });
+  host.querySelectorAll("[data-krtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.krtoggle; if(expandedKRs.has(id)) expandedKRs.delete(id); else expandedKRs.add(id); renderKRs(); });
   host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
   host.querySelectorAll("[data-setsave]").forEach(b=>b.onclick=()=>{ const inp=host.querySelector("[data-setname]"); const nm=(inp?inp.value:"").trim(); if(!nm){ setMsg("Set name required","err"); return; } if(sgSetEditor&&sgSetEditor.mode==="add") addSet(nm); else if(sgSetEditor&&sgSetEditor.mode==="rename") renameSet(sgSetEditor.setId, nm); sgSetEditor=null; renderAll(); });
   host.querySelectorAll("[data-setcancel]").forEach(b=>b.onclick=()=>{ sgSetEditor=null; renderAll(); });
