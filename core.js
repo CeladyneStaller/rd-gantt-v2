@@ -416,6 +416,24 @@
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
+  // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
+  function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
+    if (attainment == null) return 'no-band';
+    if (attainment >= 100) return 'on-track';                                                        // target met
+    if (plannedStart == null || plannedEnd == null || plannedEnd <= plannedStart) return band(attainment); // no dates -> score band
+    var elapsed = Math.max(0, Math.min(1, (today - plannedStart) / (plannedEnd - plannedStart))) * 100;
+    if (elapsed >= 100) return 'off-track';                                                          // past plannedEnd, unmet
+    var gap = elapsed - attainment;                                                                  // pts behind the linear pace
+    if (gap <= 10) return 'on-track';
+    if (gap <= 30) return 'at-risk';
+    return 'off-track';
+  }
+  function keyResultPace(krId, obj, execDocs, today) {
+    var att = keyResultScore(krId, execDocs);
+    var ps = obj ? obj.plannedStart : null, pe = obj ? obj.plannedEnd : null;
+    var elapsed = (ps != null && pe != null && pe > ps) ? Math.max(0, Math.min(1, (today - ps) / (pe - ps))) * 100 : null;
+    return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
+  }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
@@ -1107,6 +1125,8 @@
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    keyResultPaceBand: keyResultPaceBand,
+    keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
     gateAtTarget: gateAtTarget,
     setScore: setScore,

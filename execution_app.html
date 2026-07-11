@@ -84,6 +84,8 @@
   .row-actions{display:flex;gap:6px;align-items:center}
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  .ed textarea{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px;resize:vertical;min-height:44px}
+  .icard-intent{font-size:12.5px;color:var(--muted);line-height:1.5;margin:1px 0 9px 2px;max-width:74ch}
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
@@ -185,6 +187,11 @@
   .gc-actions .right{display:flex;gap:10px}
   .gc-uncomplete{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
   .gc-uncomplete:hover{color:var(--bad)}
+  .pending-tgt{display:flex;align-items:center;gap:10px;padding:6px 9px;border:1px solid var(--line);border-radius:7px;margin-top:6px;background:var(--panel2)}
+  .pending-tgt .pt-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer;padding:2px 4px;border-radius:5px}
+  .pending-tgt .pt-main:hover{background:var(--panel)}
+  .pending-tgt .pt-name{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pending-tgt .pt-desc{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
   /* modal */
   /* FMEA / risk register */
   .rpn-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap}
@@ -1173,6 +1180,24 @@ html[data-theme="dark"] #etb-view{
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
+  // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
+  function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
+    if (attainment == null) return 'no-band';
+    if (attainment >= 100) return 'on-track';                                                        // target met
+    if (plannedStart == null || plannedEnd == null || plannedEnd <= plannedStart) return band(attainment); // no dates -> score band
+    var elapsed = Math.max(0, Math.min(1, (today - plannedStart) / (plannedEnd - plannedStart))) * 100;
+    if (elapsed >= 100) return 'off-track';                                                          // past plannedEnd, unmet
+    var gap = elapsed - attainment;                                                                  // pts behind the linear pace
+    if (gap <= 10) return 'on-track';
+    if (gap <= 30) return 'at-risk';
+    return 'off-track';
+  }
+  function keyResultPace(krId, obj, execDocs, today) {
+    var att = keyResultScore(krId, execDocs);
+    var ps = obj ? obj.plannedStart : null, pe = obj ? obj.plannedEnd : null;
+    var elapsed = (ps != null && pe != null && pe > ps) ? Math.max(0, Math.min(1, (today - ps) / (pe - ps))) * 100 : null;
+    return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
+  }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
@@ -1864,6 +1889,8 @@ html[data-theme="dark"] #etb-view{
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    keyResultPaceBand: keyResultPaceBand,
+    keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
     gateAtTarget: gateAtTarget,
     setScore: setScore,
@@ -2397,9 +2424,9 @@ let subReturn = null;  // when a KPI/link editor is launched from inside the gat
 function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
 function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
 
-function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
+function subOpenAdd(type, hostType, hostId){ captureReturn(type); pendingGateTargets=[]; addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
 function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; pendingGateSet = null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; pendingGateSet = null; pendingGateTargets=[]; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -2460,6 +2487,10 @@ function saveSub(thenLink){
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
     if(type==="stageGate"){ base.setId = pendingGateSet || ensureDefaultSet(); pendingGateSet=null; }
     arr.push(Object.assign(base, data));
+    if(type==="stageGate" && pendingGateTargets.length){   // commit draft targets as KPIs on the just-created gate
+      pendingGateTargets.forEach(t=>{ const kid=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); exec.kpis.push(Object.assign({ id:kid, objectiveId:selectedObj, hostType:"stageGate", hostId:newId, groupId:null, isDefiner:true }, t)); });
+      pendingGateTargets=[];
+    }
   }
   addingFor=null; editingSub=null;
   if(thenLink===true && newId && type==="stageGate"){ addingFor={type:"link", hostType:"stageGate", hostId:newId}; renderAll(); return; }   // save, then link the new gate directly
@@ -2607,6 +2638,8 @@ function closeModal(){
 function wireModalBody(body){
   wireExec(body);
   const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
+  const apt = body.querySelector("[data-addpendingtarget]"); if(apt) apt.onclick=()=>openTgtModal("__pending__", null);
+  wirePendingTgt(body);
   const seg = body.querySelector("[data-seg]");
   if(seg){
     const statusInp = body.querySelector('[data-f="status"]');
@@ -2652,6 +2685,27 @@ function renderModal(){
   if(body==null){ closeModal(); return; }
   openModal(title, body);
 }
+function pendingTgtRows(){
+  if(!pendingGateTargets.length) return '<div class="hint" style="margin:6px 0 0">No targets yet — click “+ target” to add measurable pass criteria.</div>';
+  return pendingGateTargets.map((t,i)=>{
+    const desc = t.targetType==="binary" ? "binary (met / not met)" : ((t.direction==="down"?"↓ ":"↑ ")+((t.target!=null&&t.target!=="")?t.target:"—")+(t.unit?(" "+t.unit):""));
+    return `<div class="pending-tgt"><span class="pt-main" data-editpending="${i}" title="Edit target"><span class="pt-name">${esc(t.name)}</span><span class="pt-desc mono">${esc(desc)}</span></span><button type="button" class="ghost mini" data-rmpending="${i}" title="Remove">✕</button></div>`;
+  }).join("");
+}
+function wirePendingTgt(scope){ const root=scope||document;
+  root.querySelectorAll("[data-editpending]").forEach(b=>b.onclick=()=>openPendingTgtEdit(Number(b.dataset.editpending)));
+  root.querySelectorAll("[data-rmpending]").forEach(b=>b.onclick=()=>{ pendingGateTargets.splice(Number(b.dataset.rmpending),1); const list=document.getElementById("pendingTgtList"); if(list){ list.innerHTML=pendingTgtRows(); wirePendingTgt(); } });
+}
+function openPendingTgtEdit(idx){
+  const t=pendingGateTargets[idx]; if(!t) return;
+  pendingTgtEditIdx=idx;
+  draftTgtHost={hostType:"stageGate", hostId:"__pending__", pending:true}; draftTgtId=null;
+  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"" };
+  document.getElementById("kpiTgtTitle").textContent="Edit gate target";
+  document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
+  document.getElementById("kpiTgtOverlay").classList.add("open");
+  wireTgtModal();
+}
 function gateModalBody(g){
   g = g || {};
   const isEdit = !!g.id;
@@ -2660,6 +2714,7 @@ function gateModalBody(g){
   const segBtns = statuses.map(function(p){ return `<button type="button" class="seg-btn${cur===p[0]?' seg-'+p[0]:''}" data-gstatus="${p[0]}">${p[1]}</button>`; }).join("");
   let h=`<div class="ed">
     <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}"/></label>
+    <label style="grid-column:1/-1">Intention<textarea data-f="intention" rows="2" placeholder="What is this gate meant to prove?">${esc(g.intention||'')}</textarea></label>
     <label>Gate id (optional)<input data-f="gate_id" type="text" value="${esc(g.gate_id||'')}"/></label>
     <label>Planned date<input data-f="plannedDate" type="date" value="${dayToIso(g.plannedDate)}"/></label>
     <label>Passed / actual date<input data-f="actualDate" type="date" value="${dayToIso(g.actualDate)}"/></label>
@@ -2674,7 +2729,11 @@ function gateModalBody(g){
       ${kpiTable("stageGate", g.id, selectedObj)}
       <span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
   } else {
-    h+=`<p class="hint" style="margin:14px 0 0">Add the gate, or Link it straight to a product / model / initiative metric. You can reopen it later to add more targets and predecessors.</p>`;
+    h+=`<span class="modal-section-lbl">Targets / pass criteria</span>
+      <div class="gt-head"><span class="hint" style="margin:0">measurable criteria — added to the gate when you click Add</span>
+        <span class="gt-acts"><button class="ghost mini" data-addpendingtarget="1">+ target</button></span></div>
+      <div id="pendingTgtList">${pendingTgtRows()}</div>
+      <p class="hint" style="margin:12px 0 0">Or Link the gate straight to a product / model / initiative metric; predecessors can be added after saving.</p>`;
   }
   const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
   h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></div>`;
@@ -2683,6 +2742,8 @@ function gateModalBody(g){
 
 /* ---------------- KR modal (tracker-cloned tracking modes) ---------------- */
 let draftKr=null, draftKrFor=null;          // KR modal draft + which KR it's for
+let pendingGateTargets=[];                  // draft gate targets while ADDING a gate; committed as KPIs on save
+let pendingTgtEditIdx=null;                 // which draft target is being edited in place (null = adding a new one)
 let draftSubKr=null, draftSubKrIdx=null;    // sub-KR sub-modal draft
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
 function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
@@ -2887,7 +2948,7 @@ function parseNums(str){ return String(str||"").split(/[\s,;]+/).map(x=>Number(x
 function statPreview(d){ const nums=parseNums(d.readings); if(!nums.length) return "no readings yet"; const v=RD.computeStat(d.statistic||"average", nums); return "→ "+(d.statistic||"average")+": "+(v==null?"—":(Math.round(v*1000)/1000))+" ("+nums.length+" reads)"; }
 function openTgtModal(gateId, kpiId){ openKpiTgtModal("stageGate", gateId, kpiId); }   // stage-gate target (back-compat)
 function openKpiTgtModal(hostType, hostId, kpiId){
-  draftTgtHost={hostType:hostType, hostId:hostId}; draftTgtId=kpiId||null;
+  pendingTgtEditIdx=null; draftTgtHost={hostType:hostType, hostId:hostId, pending:(hostId==="__pending__")}; draftTgtId=kpiId||null;
   const pk=kpiId?exec.kpis.find(k=>k.id===kpiId):null;
   draftTgt={
     name:pk?(pk.name||""):"",
@@ -2904,7 +2965,7 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   document.getElementById("kpiTgtOverlay").classList.add("open");
   wireTgtModal();
 }
-function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; }
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; pendingTgtEditIdx=null; }
 function tgtModalBody(){
   const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   return `
@@ -2931,6 +2992,17 @@ function saveTgtModal(){
   body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
   const d=draftTgt;
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
+  if(draftTgtHost&&draftTgtHost.pending){   // ADDING a gate: stash the target; it becomes a KPI when the gate is saved
+    const t={ name:String(d.name).trim(), targetType:d.type };
+    if(d.type==="binary"){ t.direction=null; t.target=null; t.unit=null; }
+    else { t.direction=(d.dir==="decrease")?"down":"up"; t.target=parseTargetNum(d.target); t.unit=d.unit||null;
+      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
+    const editing=(pendingTgtEditIdx!=null && pendingGateTargets[pendingTgtEditIdx]);
+    if(editing) pendingGateTargets[pendingTgtEditIdx]=t; else pendingGateTargets.push(t);
+    closeTgtModal();
+    const list=document.getElementById("pendingTgtList"); if(list){ list.innerHTML=pendingTgtRows(); wirePendingTgt(); }
+    setMsg(editing?"Target updated":"Target added — saved with the gate","ok"); return;
+  }
   const isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   let pk=draftTgtId?exec.kpis.find(k=>k.id===draftTgtId):null;
   if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:draftTgtHost.hostType, hostId:draftTgtHost.hostId, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
@@ -3199,6 +3271,12 @@ function renderKRs(){
   host.innerHTML=`<div class="panel">${panelHead("KR","Key Results",krs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
   wireExec(host);
 }
+function gateOptsByObjective(cand){
+  const byObj={}; cand.forEach(x=>{ (byObj[x.objectiveId||'']=byObj[x.objectiveId||'']||[]).push(x); });
+  const keys=Object.keys(byObj).sort((a,b)=> a===selectedObj?-1 : b===selectedObj?1 : 0);   // current objective first
+  return keys.map(oid=>{ const o=(portfolio.objectives||[]).find(oo=>oo.id===oid); const lab=o?(o.statement||o.id):(oid||'(no objective)');
+    return `<optgroup label="${esc(lab)}">`+byObj[oid].map(x=>`<option value="${x.id}">${esc(gateLabel(x.id))} — ${esc(x.name||x.id)}</option>`).join('')+`</optgroup>`; }).join('');
+}
 function gateSchedRow(g){
   const committed = g.baselineDate!=null;
   const preds = (exec.stageGateEdges||[]).filter(e=>e.toGate===g.id);
@@ -3214,7 +3292,7 @@ function gateSchedRow(g){
   preds.forEach(e=>{ h+=`<span class="dep-chip" title="${esc(gateName(e.fromGate))}">${esc(gateLabel(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
   if(cand.length){
     h+=`<select class="edgepick" data-edgepick="${g.id}"><option value="">+ predecessor…</option>`+
-       cand.map(x=>`<option value="${x.id}">${esc(gateLabel(x.id))} — ${esc(x.name||x.id)}</option>`).join('')+`</select>`+
+       gateOptsByObjective(cand)+`</select>`+
        `<input class="laginp" type="number" min="0" placeholder="lag d" data-edgelag="${g.id}"/>`+
        `<button class="ghost mini" data-addedge="${g.id}">add</button>`;
   }
@@ -3353,7 +3431,7 @@ function renderGates(){
           <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
           <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
           <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-        </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+        </div>${g.intention?`<div class="icard-intent">${esc(g.intention)}</div>`:''}<div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
     });
     inner+=`</div>`;
   });
