@@ -146,11 +146,12 @@
   .ws-cnt{font-size:11px;color:var(--muted)}
   .ws-acts{display:flex;gap:6px;align-items:center}
   .btn-ico{padding:3px 7px !important;line-height:1}
-  .grow{display:grid;grid-template-columns:1fr 116px 124px 186px 92px;align-items:start;column-gap:16px;padding:12px;border-top:1px solid var(--line);position:relative;transition:background .12s}
-  .ws-head + .grow{border-top:none}
-  .grow:hover{background:var(--panel2)}
-  .grow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
-  .grow.st-passed{--rail:var(--ok)} .grow.st-passed-late{--rail:var(--warn)} .grow.st-overdue{--rail:var(--bad)} .grow.st-pending{--rail:var(--none)}
+  .gate-block{position:relative;border-top:1px solid var(--line);padding:12px;transition:background .12s}
+  .ws-head + .gate-block{border-top:none}
+  .gate-block:hover{background:var(--panel2)}
+  .gate-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .gate-block.st-passed{--rail:var(--ok)} .gate-block.st-passed-late{--rail:var(--warn)} .gate-block.st-overdue{--rail:var(--bad)} .gate-block.st-pending{--rail:var(--none)}
+  .grow{display:grid;grid-template-columns:1fr 116px 124px 186px 92px;align-items:start;column-gap:16px}
   .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
@@ -171,9 +172,9 @@
   .g-sched{font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--muted);display:flex;flex-direction:column;gap:6px}
   .gs-state{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
   .g-acts{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap;opacity:0;transition:opacity .12s}
-  .grow:hover .g-acts{opacity:1}
+  .gate-block:hover .g-acts,.kr-block:hover .g-acts{opacity:1}
   .g-acts .setmove{font-size:11px;max-width:90px}
-  .g-tgt{grid-column:1/-1;margin-top:10px}
+  .g-tgt{margin-top:10px}
   .tgt-toggle{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-transform:uppercase}
   .tgt-toggle:hover{border-color:var(--muted);color:var(--ink)}
   .tgt-toggle .cnt{color:var(--ink);letter-spacing:0}
@@ -197,11 +198,12 @@
   #modalBody .row-actions.gate-foot{justify-content:space-between;align-items:center}
   .ra-right{display:flex;gap:8px;align-items:center}
   /* ---- pass 3: Key Result pace rows ---- */
-  .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px;padding:12px;border-top:1px solid var(--line);position:relative;transition:background .12s}
-  .item-list>.krow:first-child{border-top:none}
-  .krow:hover{background:var(--panel2)}
-  .krow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
-  .krow.b-on{--rail:var(--ok)} .krow.b-risk{--rail:var(--warn)} .krow.b-behind{--rail:var(--bad)} .krow.b-none{--rail:var(--none)}
+  .kr-block{position:relative;border-top:1px solid var(--line);padding:12px;transition:background .12s}
+  .item-list>.kr-block:first-child{border-top:none}
+  .kr-block:hover{background:var(--panel2)}
+  .kr-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .kr-block.b-on{--rail:var(--ok)} .kr-block.b-risk{--rail:var(--warn)} .kr-block.b-behind{--rail:var(--bad)} .kr-block.b-none{--rail:var(--none)}
+  .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px}
   .kr-band{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:3px 8px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
   .kr-band .d{width:5px;height:5px;border-radius:50%}
   .kr-band.on{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .kr-band.on .d{background:var(--ok)}
@@ -3412,7 +3414,7 @@ function renderKRs(){
       ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
       : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
     const panel = open ? `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>` : '';
-    inner+=`<div class="krow b-${bCls}">
+    inner+=`<div class="kr-block b-${bCls}"><div class="krow">
       <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
       <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
       <div class="g-ready">
@@ -3421,6 +3423,7 @@ function renderKRs(){
         ${cap}
       </div>
       <div class="g-acts"><button class="ghost mini btn-ico" data-edit="keyResult:${kr.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}" title="delete">${armedDel===kr.id?'\u2713':'\u00d7'}</button></div>
+      </div>
       <div class="g-tgt">${toggle}${panel}</div>
     </div>`;
   });
@@ -3619,12 +3622,13 @@ function renderGates(){
         ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
-      inner+=`<div class="grow st-${st}">
+      inner+=`<div class="gate-block st-${st}"><div class="grow">
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-plan">planned ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-state">${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</div></div>
         <div class="g-acts">${moveSel}</div>
+        </div>
         <div class="g-tgt">${toggle}${panel}</div>
       </div>`;
     });
