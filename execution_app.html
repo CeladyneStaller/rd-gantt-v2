@@ -153,7 +153,7 @@
   .gate-block:hover{background:var(--panel2)}
   .gate-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
   .gate-block.st-passed{--rail:var(--ok)} .gate-block.st-passed-late{--rail:var(--warn)} .gate-block.st-overdue{--rail:var(--bad)} .gate-block.st-pending{--rail:var(--none)}
-  .grow{display:grid;grid-template-columns:1fr 116px 124px 250px 92px;align-items:start;column-gap:16px}
+  .grow{display:grid;grid-template-columns:1fr 116px 124px 250px;align-items:start;column-gap:16px}
   .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
@@ -2850,6 +2850,7 @@ function openPendingTgtEdit(idx){
 function gateModalBody(g){
   g = g || {};
   const isEdit = !!g.id;
+  const multi = objSetsOrdered().length > 1;
   const statuses=[["pending","Pending"],["active","In progress"],["hit","Passed"],["missed","Failed"]];
   const cur = g.status || (g.actualDate!=null?"hit":"pending");
   const segBtns = statuses.map(function(p){ return `<button type="button" class="seg-btn${cur===p[0]?' seg-'+p[0]:''}" data-gstatus="${p[0]}">${p[1]}</button>`; }).join("");
@@ -2857,6 +2858,7 @@ function gateModalBody(g){
     <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}"/></label>
     <label style="grid-column:1/-1">Intention<textarea data-f="intention" rows="2" placeholder="What is this gate meant to prove?">${esc(g.intention||'')}</textarea></label>
     <label>Gate id (optional)<input data-f="gate_id" type="text" value="${esc(g.gate_id||'')}"/></label>
+    ${(isEdit && multi) ? `<label>Workstream<select data-f="setId">${objSetsOrdered().map(s2=>`<option value="${esc(s2.id)}"${s2.id===g.setId?' selected':''}>${esc(s2.name||'workstream')}</option>`).join('')}</select></label>` : ''}
     <label>Planned date<input data-f="plannedDate" type="date" value="${dayToIso(g.plannedDate)}"/></label>
     <label>Passed / actual date<input data-f="actualDate" type="date" value="${dayToIso(g.actualDate)}"/></label>
     <input type="hidden" data-f="status" value="${cur}"/>
@@ -3596,7 +3598,7 @@ function renderGates(){
   const host=document.getElementById("subSG");
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
-  const td=todayDay(), multi=sets.length>1;
+  const td=todayDay();
   let gEff={}, gEarly={}, gAcc={};
   try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
   const AK=allKpisPool(), EM=emForCore();
@@ -3617,7 +3619,6 @@ function renderGates(){
     gates.forEach(g=>{
       const sc=RD.stageGateScore(g.id, EM), st=RD.classifyGate(g, td);
       const cmt=g.baselineDate!=null?`<span class="g-committed" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
-      const moveSel=multi?`<select class="setmove" data-setmove="${g.id}" title="move to another workstream">${sets.map(s2=>`<option value="${s2.id}"${s2.id===set.id?' selected':''}>${esc(s2.name||'set')}</option>`).join('')}</select>`:'';
       const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
       const open=expandedGates.has(g.id);
       const tk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="stageGate" && k.hostId===g.id);
@@ -3632,7 +3633,6 @@ function renderGates(){
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div></div>
-        <div class="g-acts">${moveSel}</div>
         </div>
         <div class="g-tgt">${toggle}${panel}</div>
       </div>`;
@@ -3697,7 +3697,6 @@ function wireExec(host){
   host.querySelectorAll("[data-setcancel]").forEach(b=>b.onclick=()=>{ sgSetEditor=null; renderAll(); });
   host.querySelectorAll("[data-setname]").forEach(el=>{ el.onkeydown=(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); const sb=host.querySelector("[data-setsave]"); if(sb) sb.click(); } else if(ev.key==="Escape"){ sgSetEditor=null; renderAll(); } }; if(document.activeElement!==el){ el.focus(); const v=el.value; el.value=""; el.value=v; } });
   host.querySelectorAll("[data-setchain]").forEach(el=>el.onchange=()=>{ const st=(exec.stageGateSets||[]).find(x=>x.id===el.dataset.setchain); if(st) st.chained=el.checked; renderAll(); setMsg("Set chaining "+(el.checked?"on":"off"),"ok"); });
-  host.querySelectorAll("[data-setmove]").forEach(el=>el.onchange=()=>{ const g=exec.stageGates.find(x=>x.id===el.dataset.setmove); if(g) g.setId=el.value; renderAll(); setMsg("Gate moved to "+setLabelOf(g&&setOfGate(g)),"ok"); });
   host.querySelectorAll("[data-setdel]").forEach(b=>b.onclick=()=>delSet(b.dataset.setdel));
   host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+"","ok"); });
   host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released","ok"); });
