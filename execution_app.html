@@ -102,7 +102,7 @@
   table.kpitable{margin:0}
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
-  table.mtbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:0}
+  table.mtbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;margin:0}
   table.mtbl thead th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel2)}
   table.mtbl th.num,table.mtbl td.num{text-align:right}
   table.mtbl th.ctr,table.mtbl td.ctr{text-align:center}
@@ -110,6 +110,8 @@
   table.mtbl tbody tr:last-child td{border-bottom:none}
   table.mtbl .m-name a.rowedit{color:var(--ink);font-weight:500;text-decoration:none;cursor:pointer}
   table.mtbl .m-name a.rowedit:hover{color:var(--accent);text-decoration:underline}
+  table.mtbl .m-name{overflow-wrap:anywhere;word-break:break-word}
+  table.mtbl .m-crit,table.mtbl .m-cur,table.mtbl .m-unit{overflow:hidden;text-overflow:ellipsis}
   table.mtbl .m-crit,table.mtbl .m-cur,table.mtbl .m-unit{font-family:var(--mono);white-space:nowrap}
   table.mtbl .m-crit{color:var(--ink)}
   table.mtbl .m-unit{color:var(--muted);font-size:11.5px}
@@ -118,7 +120,7 @@
   table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
   table.mtbl td.m-cur[data-postcell]{cursor:pointer}
   table.mtbl td.m-cur[data-postcell]:hover{text-decoration:underline dotted;text-underline-offset:3px}
-  .m-postin{width:74px;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
+  .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .m-badge .d{width:5px;height:5px;border-radius:50%}
   .m-badge.met{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .m-badge.met .d{background:var(--ok)}
@@ -151,7 +153,7 @@
   .gate-block:hover{background:var(--panel2)}
   .gate-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
   .gate-block.st-passed{--rail:var(--ok)} .gate-block.st-passed-late{--rail:var(--warn)} .gate-block.st-overdue{--rail:var(--bad)} .gate-block.st-pending{--rail:var(--none)}
-  .grow{display:grid;grid-template-columns:1fr 116px 124px 186px 92px;align-items:start;column-gap:16px}
+  .grow{display:grid;grid-template-columns:1fr 116px 124px 250px 92px;align-items:start;column-gap:16px}
   .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
@@ -169,8 +171,10 @@
   .g-ready .r-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
   .g-ready .r-fill{height:100%;border-radius:2px}
   .g-ready.empty .r-val{color:var(--muted)}
-  .g-sched{font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--muted);display:flex;flex-direction:column;gap:6px}
-  .gs-state{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .g-sched{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;align-items:center;line-height:1.35}
+  .g-sched .gs-c{min-width:0}
+  .g-sched .gs-k{color:var(--muted);opacity:.8}
+  .g-sched .fc-est,.g-sched .fc-badge{font-size:10px}
   .g-acts{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap;opacity:0;transition:opacity .12s}
   .gate-block:hover .g-acts,.kr-block:hover .g-acts{opacity:1}
   .g-acts .setmove{font-size:11px;max-width:90px}
@@ -3366,7 +3370,7 @@ function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   const isGate = hostType==="stageGate";
-  let h = `<table class="mtbl"><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
+  let h = `<table class="mtbl"><colgroup><col style="width:32%"/><col style="width:14%"/><col style="width:11%"/><col style="width:13%"/><col style="width:15%"/><col style="width:15%"/></colgroup><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
   if(!rows.length) h += `<tr><td colspan="6" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
     const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
@@ -3470,25 +3474,25 @@ function gateDriverOf(g, setGates, td){
 function gateForecastMeta(g, gEff, gEarly, gAcc, td, setGates){
   if(g.actualDate!=null){
     const d=(g.plannedDate!=null)?g.actualDate-g.plannedDate:0;
-    if(d>0) return ` <span class="fc-badge slip" title="finished after its planned date">finished +${d}d late</span>`;
-    if(d<0) return ` <span class="fc-badge accel" title="finished ahead of its planned date">finished ${-d}d early</span>`;
-    return "";
+    if(d>0) return {est:"", delta:`<span class="fc-badge slip" title="finished after its planned date">finished +${d}d late</span>`};
+    if(d<0) return {est:"", delta:`<span class="fc-badge accel" title="finished ahead of its planned date">finished ${-d}d early</span>`};
+    return {est:"", delta:""};
   }
   const planned=g.plannedDate, eff=gEff[g.id];
-  if(planned==null || eff==null) return "";
+  if(planned==null || eff==null) return {est:"", delta:""};
   const fcSlip=eff-planned;
   if(fcSlip>0){
-    const est=` · <span class="fc-est late">est ${dayToIso(eff)}</span>`;
-    if(planned<td) return est+` <span class="fc-badge slip" title="overdue — forecast to at least today, pushed further by any upstream slip">+${fcSlip}d late</span>`;
+    const est=`<span class="fc-est late">est ${dayToIso(eff)}</span>`;
+    if(planned<td) return {est, delta:`<span class="fc-badge slip" title="overdue — forecast to at least today, pushed further by any upstream slip">+${fcSlip}d late</span>`};
     const drv=gateDriverOf(g, setGates, td);
-    return est+` <span class="fc-badge pushed" title="moved by an upstream slip">→ pushed +${fcSlip}d${drv?` by ${esc(gateLabel(drv.id))}`:" upstream"}</span>`;
+    return {est, delta:`<span class="fc-badge pushed" title="moved by an upstream slip">→ pushed +${fcSlip}d${drv?` by ${esc(gateLabel(drv.id))}`:" upstream"}</span>`};
   }
   const acc=gAcc[g.id]||0;
   if(acc>0){
     const early=gEarly[g.id];
-    return ` · <span class="fc-est onplan">est ${dayToIso(eff)}</span> <span class="fc-badge accel" title="committed date holds; could pull in if downstream is re-planned">↑ could finish ${dayToIso(early)} (${acc}d earlier)</span>`;
+    return {est:`<span class="fc-est onplan">est ${dayToIso(eff)}</span>`, delta:`<span class="fc-badge accel" title="committed date holds; could pull in if downstream is re-planned">↑ could finish ${dayToIso(early)} (${acc}d earlier)</span>`};
   }
-  return "";
+  return {est:"", delta:""};
 }
 function autoCompleteGates(){
   const em=emForCore(), td=todayDay(); let changed=0;
@@ -3622,11 +3626,12 @@ function renderGates(){
         ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
+      const fc=gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
       inner+=`<div class="gate-block st-${st}"><div class="grow">
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
-        <div class="g-sched"><div class="gs-plan">planned ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-state">${gateCompletionControl(g, st)}${gateForecastMeta(g, gEff, gEarly, gAcc, td, gates)}</div></div>
+        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div></div>
         <div class="g-acts">${moveSel}</div>
         </div>
         <div class="g-tgt">${toggle}${panel}</div>
