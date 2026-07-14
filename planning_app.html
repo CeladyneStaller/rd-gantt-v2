@@ -292,6 +292,9 @@
   .gdia.overdue{background:var(--bad);border:1.5px solid var(--bad)}
   .gdia.pending{background:transparent;border:1.5px solid var(--muted)}
   .gdia.ghost{background:transparent;border:1.5px dashed var(--muted);opacity:.55}
+  .gdia.cancelled{background:repeating-linear-gradient(45deg, var(--none) 0 1.5px, transparent 1.5px 3.5px);border:1px solid var(--none);opacity:.85}
+  .gbar.gsetbar.cancelled{opacity:.42;border-color:var(--none)!important}
+  .gbar.gsetbar.cancelled .gbarfill{background:repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px)!important;opacity:.6}
   .gdia.done{background:var(--ok);border-color:var(--ok)}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
@@ -3134,22 +3137,24 @@ function renderGantt(){
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
+    const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
-      html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
-      if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
+      if(g.slip>0 && g.pe!=null && !_ended){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
-      if(g.slipped && g.baseline!=null){
+      const _cnl = _ended && st!=='passed' && st!=='passed-late';
+      if(!_cnl && g.slipped && g.baseline!=null){
         const bx=x(g.baseline);
         html+=`<div class="gconn committed" style="left:${Math.min(bx,ex)}px;width:${Math.max(2,Math.abs(ex-bx))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
-      } else if(g.eff!=null && g.planned!=null && g.eff!==g.planned){
+      } else if(!_cnl && g.eff!=null && g.planned!=null && g.eff!==g.planned){
         const px=x(g.planned);
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
       html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
@@ -3158,7 +3163,7 @@ function renderGantt(){
     html+=`</div></div>`;
   });
   html+=`</div>`;
-  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span></div>`;
+  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span><span><i style="background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)"></i>cancelled</span></div>`;
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
