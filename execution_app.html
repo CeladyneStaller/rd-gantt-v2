@@ -237,6 +237,36 @@
   .fc-badge.pushed{color:var(--pill-warn-fg);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd)}
   .fc-badge.accel{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border:1px solid var(--pill-ok-bd)}
   .mc-accel{font-size:11px;font-family:var(--mono);margin-top:6px;color:var(--ok)}
+  .mc.sched-alarm{border-color:var(--bad);background:linear-gradient(180deg,rgba(248,113,113,.12),var(--panel) 62%);box-shadow:0 0 0 1px var(--bad),0 0 18px 2px rgba(248,113,113,.42);animation:schedpulse 2.1s ease-in-out infinite;position:relative}
+  @keyframes schedpulse{0%,100%{box-shadow:0 0 0 1px var(--bad),0 0 12px 1px rgba(248,113,113,.32)}50%{box-shadow:0 0 0 1px var(--bad),0 0 26px 5px rgba(248,113,113,.62)}}
+  .mc.sched-alarm .mc-label,.mc.sched-alarm .mc-val{color:var(--bad)}
+  .alarm-tag{position:absolute;top:11px;right:12px;display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--pill-bad-fg);border:1px solid var(--pill-bad-bd);background:var(--pill-bad-bg);border-radius:4px;padding:1px 6px}
+  .catchup-btn{margin-top:11px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:var(--sans);font-size:12px;font-weight:600;color:#fff;background:linear-gradient(180deg,#e8615f,#d0403e);border:1px solid #b83533;border-radius:8px;padding:8px 10px;cursor:pointer}
+  .catchup-btn:hover{filter:brightness(1.06)}
+  .catchup-btn.calm{background:transparent;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd)}
+  .cu-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,rgba(251,191,36,.10),transparent);border:1px solid var(--pill-warn-bd);border-left:3px solid var(--warn);border-radius:9px;padding:9px 13px;margin:0 0 10px}
+  .cu-banner .ic{font-size:15px;color:var(--warn)} .cu-banner .txt{font-size:12.5px} .cu-banner .txt b{color:var(--pill-warn-fg)}
+  .cu-banner .meta{color:var(--muted);font-family:var(--mono);font-size:11px} .cu-banner .sp{flex:1}
+  .cu-banner button{font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
+  .cu-banner button:hover{color:var(--ink);border-color:var(--muted)}
+  .cu-tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);border-radius:4px;padding:1px 5px}
+  .gs-recommit{grid-column:1/-1;display:flex;align-items:center;gap:7px;margin-top:3px;padding-top:5px;border-top:1px dashed var(--line);font-size:10px}
+  .gs-recommit .was{color:var(--muted);text-decoration:line-through} .gs-recommit .arrow{color:var(--muted)}
+  .gs-recommit .now{color:var(--warn);font-weight:600}
+  .gs-recommit .lab{color:var(--none);text-transform:uppercase;letter-spacing:.05em;font-size:8.5px}
+  .cu-intro{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 12px} .cu-intro b{color:var(--ink)}
+  .cu-req{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--pill-warn-fg);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:5px;padding:2px 8px;margin-bottom:10px}
+  .cu-req.ok{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border-color:var(--pill-ok-bd)}
+  .cu-tbl{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .cu-hrow,.cu-row{display:grid;grid-template-columns:1fr 96px 104px 132px;align-items:center;gap:10px;padding:9px 12px}
+  .cu-hrow{background:var(--panel2);font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .cu-row{border-top:1px solid var(--line)}
+  .cu-g{display:flex;align-items:center;gap:8px;min-width:0} .cu-g .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cu-cur{font-family:var(--mono);font-size:11px;color:var(--muted)} .cu-fc{font-family:var(--mono);font-size:11px;color:var(--warn)}
+  .cu-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
+  .cu-in.filled{border-color:var(--pill-warn-bd)}
+  .cu-foot{display:flex;align-items:center;gap:10px;margin-top:14px} .cu-foot .note{color:var(--muted);font-size:11px;font-family:var(--mono)} .cu-foot .sp{flex:1}
+  #modalBody .act[disabled]{opacity:.45;cursor:not-allowed}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
@@ -1981,6 +2011,16 @@ html[data-theme="dark"] #etb-view{
   }
 
   // ---- exports --------------------------------------------------------------
+  function activeCatchupPlan(catchupPlans, objId){
+    var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
+    if(!plans.length) return null;
+    return plans.reduce(function(a,b){ return (b.enactedDay||0)>=(a.enactedDay||0)?b:a; });
+  }
+  function catchupEntry(catchupPlans, objId, gateId){
+    var p=activeCatchupPlan(catchupPlans, objId); if(!p) return null;
+    var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
+    return null;
+  }
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -2044,6 +2084,7 @@ html[data-theme="dark"] #etb-view{
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
+    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,
@@ -2100,6 +2141,7 @@ const EPOCH = Date.UTC(2020,0,1);
 const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
 const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().slice(0,10);
 const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
+const CATCHUP_SLIP_THRESHOLD = 10;   // objective slip (days) that trips the schedule alarm
 
 /* ---------------- state ---------------- */
 let portfolio = null;            // read-only
@@ -2255,7 +2297,7 @@ let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "
 let pendingObjective = URLP.objective;   // ?objective=<id> deep-link (robust-resolve); consumed once by fillObjSelect
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],etbTrees:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -2675,6 +2717,7 @@ function renderAll(){
     ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
+  document.getElementById("objHeadWrap").querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
   renderKRs(); renderGates(); renderRisks(); renderModal(); renderExpSummary();
   if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
@@ -2709,6 +2752,9 @@ function objMetricStrip(o){
   const schedVal=workEnd!=null?dayToIso(workEnd):"—";
   const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d behind schedule`:"on schedule");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
+  const cuActiveObj = !!RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
+  const schedAlarm = (slip!=null && slip > CATCHUP_SLIP_THRESHOLD);
+  const cuBtn = schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build catch-up plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb catch-up plan active \u00b7 revise</button>` : "");
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
   const riskColor = roll.openHigh>0?"var(--bad)":roll.openMed>0?"var(--warn)":roll.total?"var(--ok)":"var(--muted)";
@@ -2718,7 +2764,7 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
-    <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div>${accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}</div>
+    <div class="mc${schedAlarm?' sched-alarm':''}">${schedAlarm?`<span class="alarm-tag">\u25cf +${slip}d</span>`:""}<div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div>${accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}${cuBtn}</div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
@@ -3637,11 +3683,14 @@ function renderGates(){
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
       const fc=gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
+      const cuEntry=RD.catchupEntry(exec.catchupPlans, selectedObj, g.id);
+      const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
+      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
-        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
-        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div></div>
+        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
         </div>
         <div class="g-tgt">${toggle}${panel}</div>
       </div>`;
@@ -3650,7 +3699,11 @@ function renderGates(){
   });
   if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
   const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
-  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
+  let cuBanner="";
+  if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
+    cuBanner=`<div class="cu-banner"><span class="ic">\u21bb</span><span class="txt"><b>Catch-up plan active</b> \u2014 ${cuPlan.gates.length} gate${cuPlan.gates.length===1?"":"s"} re-committed <span class="meta">\u00b7 enacted ${dayToIso(cuPlan.enactedDay)}${slipNow!=null?" \u00b7 now "+(slipNow>0?"+"+slipNow+"d behind":"on schedule"):""}</span></span><span class="sp"></span><button data-catchup="${selectedObj}">Revise</button><button data-catchup-clear="${selectedObj}">Clear plan</button></div>`; }
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
 function renderTasks(){
@@ -3674,7 +3727,52 @@ function renderTasks(){
   host.innerHTML=`<div class="panel">${panelHead("TASK","Execution tasks",rows.length,acts)}<div class="item-list${listOpen("TASK")}">${inner}</div></div>`;
   wireExec(host);
 }
+function enactCatchup(objId, dateMap){
+  const prev=RD.activeCatchupPlan(exec.catchupPlans, objId);
+  const prevOrig={}; if(prev) prev.gates.forEach(e=>{ prevOrig[e.gateId]=e.originalDate; });
+  const gates=exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null);
+  const entries=[];
+  gates.forEach(g=>{ const nd=dateMap[g.id]; if(nd==null) return; const orig=(g.id in prevOrig)?prevOrig[g.id]:g.plannedDate; entries.push({gateId:g.id, originalDate:orig, newDate:nd}); g.plannedDate=nd; });
+  exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
+  exec.catchupPlans.push({ id:"catchup:"+objId, objectiveId:objId, enactedDay:todayDay(), gates:entries });
+  closeModal(); renderAll(); setMsg("Catch-up plan enacted \u2014 "+entries.length+" gate"+(entries.length===1?"":"s")+" re-committed","ok");
+}
+function clearCatchup(objId){
+  exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
+  renderAll(); setMsg("Catch-up plan cleared","ok");
+}
+function openCatchupModal(objId){
+  const o=objById(objId); if(!o) return;
+  const em=emForCore(), td=todayDay();
+  let gEff={}, slip=null; try{ const casc=RD.cascade(portfolio, em, td); gEff=casc.gateEffective||{}; slip=casc.objectiveScheduleSlip[objId]; }catch(e){}
+  const prev=RD.activeCatchupPlan(exec.catchupPlans, objId);
+  const prevNew={}; if(prev) prev.gates.forEach(e=>{ prevNew[e.gateId]=e.newDate; });
+  const gates=sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null));
+  if(!gates.length){ setMsg("No unfinished stage-gates to re-commit.","err"); return; }
+  const rows=gates.map(g=>{
+    const cur=dayToIso(g.plannedDate)||"";
+    const fc=gEff[g.id]!=null?dayToIso(gEff[g.id]):"";
+    const preset=(g.id in prevNew)?dayToIso(prevNew[g.id]):cur;
+    return `<div class="cu-row"><div class="cu-g"><span class="g-chip">${esc(gateLabel(g.id))}</span><span class="nm">${esc(g.name||g.id)}</span></div><div class="cu-cur">${cur||'\u2014'}</div><div class="cu-fc">${fc||'\u2014'}</div><div><input type="date" class="cu-in${preset?' filled':''}" data-cu-date="${g.id}" value="${preset}"></div></div>`;
+  }).join("");
+  openModal("Build catch-up plan",
+    `<p class="cu-intro">This objective is <b>${slip!=null&&slip>0?"+"+slip+" days behind":"off schedule"}</b>. Re-commit every <b>unfinished</b> stage-gate to a new date. Passed gates aren't listed \u2014 new dates may match the current date.</p>`+
+    `<div class="cu-req" data-cu-reqnote>All ${gates.length} dates required to enact</div>`+
+    `<div class="cu-tbl"><div class="cu-hrow"><div>Gate</div><div>Committed</div><div>Forecast</div><div>New commitment</div></div>${rows}</div>`+
+    `<div class="cu-foot"><span class="note" data-cu-count></span><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act" data-cu-enact>Enact catch-up plan</button></div>`);
+  const mb=document.getElementById("modalBody");
+  const inputs=Array.from(mb.querySelectorAll("[data-cu-date]"));
+  const enactBtn=mb.querySelector("[data-cu-enact]"), reqNote=mb.querySelector("[data-cu-reqnote]"), cnt=mb.querySelector("[data-cu-count]");
+  function refresh(){ const dated=inputs.filter(i=>i.value).length; inputs.forEach(i=>i.classList.toggle("filled",!!i.value)); const all=dated===inputs.length; enactBtn.disabled=!all; cnt.textContent=dated+" of "+inputs.length+" dated"; reqNote.classList.toggle("ok",all); reqNote.textContent=all?"Ready to enact":("All "+inputs.length+" dates required to enact"); }
+  inputs.forEach(i=>i.oninput=refresh);
+  mb.querySelector("[data-cu-cancel]").onclick=closeModal;
+  enactBtn.onclick=()=>{ const map={}; let all=true; inputs.forEach(i=>{ if(!i.value){all=false;return;} map[i.dataset.cuDate]=isoToDay(i.value); }); if(!all){ setMsg("Every gate needs a date.","err"); return; } enactCatchup(objId, map); };
+  refresh();
+}
+
 function wireExec(host){
+  host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>clearCatchup(b.dataset.catchupClear));
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
