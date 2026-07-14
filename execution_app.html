@@ -1432,6 +1432,10 @@ html[data-theme="dark"] #etb-view{
   function score(entityType, entityId, portfolio, execDocs, quarter) {
     var objs = objectivesInScope(entityType, entityId, portfolio);
     if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    else if (entityType !== 'objective') objs = objs.filter(function (o) {   // OVERALL aggregate: abandoned drops out; achieved stays
+      var es = objectiveEndState((execDocs[o.divisionId] || {}).objectiveState, o.id);
+      return !(es && es.status === 'abandoned');
+    });
     var scores = [];
     for (var i = 0; i < objs.length; i++) {
       var s = objectiveScore(objs[i].id, execDocs);

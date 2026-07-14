@@ -1012,6 +1012,10 @@
   function score(entityType, entityId, portfolio, execDocs, quarter) {
     var objs = objectivesInScope(entityType, entityId, portfolio);
     if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    else if (entityType !== 'objective') objs = objs.filter(function (o) {   // OVERALL aggregate: abandoned drops out; achieved stays
+      var es = objectiveEndState((execDocs[o.divisionId] || {}).objectiveState, o.id);
+      return !(es && es.status === 'abandoned');
+    });
     var scores = [];
     for (var i = 0; i < objs.length; i++) {
       var s = objectiveScore(objs[i].id, execDocs);
@@ -1396,8 +1400,14 @@
         fEnd = projEnd[o.id];
         pEnd = o.plannedEnd;
       }
-      objectiveWorkForecast[o.id] = fEnd;
-      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      var endSt = objectiveEndState(execFor(o.divisionId).objectiveState, o.id);
+      if (endSt) {                                                    // ended objective: freeze the schedule, no ongoing slip
+        objectiveWorkForecast[o.id] = (endSt.endedDay != null) ? endSt.endedDay : fEnd;
+        objectiveScheduleSlip[o.id] = null;
+      } else {
+        objectiveWorkForecast[o.id] = fEnd;
+        objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      }
     });
 
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
@@ -1604,6 +1614,21 @@
   }
 
   // ---- exports --------------------------------------------------------------
+  function objectiveEndState(objectiveState, objId){
+    var arr = objectiveState || [];
+    for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
+    return null;
+  }
+  function activeCatchupPlan(catchupPlans, objId){
+    var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
+    if(!plans.length) return null;
+    return plans.reduce(function(a,b){ return (b.enactedDay||0)>=(a.enactedDay||0)?b:a; });
+  }
+  function catchupEntry(catchupPlans, objId, gateId){
+    var p=activeCatchupPlan(catchupPlans, objId); if(!p) return null;
+    var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
+    return null;
+  }
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1667,6 +1692,7 @@
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
+    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,
@@ -1879,9 +1905,10 @@ function divCard(d, overall, qCells, counts, worst){
       <span><i class="pip" style="background:var(--none)"></i>${counts["no-band"]}</span></div>
     <div class="slip">${slipTxt}</div></div>`;
 }
+function pfAbandoned(o){ const es=RD.objectiveEndState((execDocs["EXEC-"+o.divisionId]||{}).objectiveState, o.id); return !!(es && es.status==='abandoned'); }
 function statusCounts(type, id, em){
   const c={"on-track":0,"at-risk":0,"off-track":0,"no-band":0};
-  const objs = portfolio.objectives.filter(o=>type==="division"?o.divisionId===id:true);
+  const objs = portfolio.objectives.filter(o=>(type==="division"?o.divisionId===id:true) && !pfAbandoned(o));
   objs.forEach(o=>{ c[RD.band(RD.objectiveScore(o.id, em))]++; });
   return c;
 }
@@ -2502,7 +2529,7 @@ function renderGroupNodes(nodes, em, depth, path){
   nodes.forEach(n=>{
     const nodePath=path.concat([[n.dim,n.key]]), pre=groupPrefill(nodePath);
     const under=collectObjs(n);
-    const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
+    const vs=under.filter(o=>!pfAbandoned(o)).map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
     h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
     if(n.children) h+=renderGroupNodes(n.children, em, depth+1, nodePath);
     else h+=n.objs.map(o=>objLeafHtml(o,depth+1)).join("");
@@ -3035,7 +3062,7 @@ function renderGantt(){
       const dss=[], des=[];
       (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
         else { const gg=node.g; if(gg.ds!=null)dss.push(gg.ds); const e=gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); if(e!=null)des.push(e); } }); })(kids);
-      const under=collectObjs(n), vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
+      const under=collectObjs(n), vs=under.filter(o=>!pfAbandoned(o)).map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
       out.push({ synthetic:true, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
         g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
     });
