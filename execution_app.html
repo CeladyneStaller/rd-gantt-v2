@@ -267,6 +267,9 @@
   .cu-in.filled{border-color:var(--pill-warn-bd)}
   .cu-foot{display:flex;align-items:center;gap:10px;margin-top:14px} .cu-foot .note{color:var(--muted);font-size:11px;font-family:var(--mono)} .cu-foot .sp{flex:1}
   #modalBody .act[disabled]{opacity:.45;cursor:not-allowed}
+  .cu-clear-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;margin:0 0 4px;box-sizing:border-box}
+  .cu-clear-in:focus{border-color:var(--bad);outline:none}
+  .act.danger{background:var(--bad);color:var(--on-danger);border-color:transparent}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
@@ -3685,7 +3688,7 @@ function renderGates(){
       const fc=gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
       const cuEntry=RD.catchupEntry(exec.catchupPlans, selectedObj, g.id);
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
-      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
+      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
@@ -3730,9 +3733,10 @@ function renderTasks(){
 function enactCatchup(objId, dateMap){
   const prev=RD.activeCatchupPlan(exec.catchupPlans, objId);
   const prevOrig={}; if(prev) prev.gates.forEach(e=>{ prevOrig[e.gateId]=e.originalDate; });
+  const prevVer={}; if(prev) prev.gates.forEach(e=>{ prevVer[e.gateId]=e.version||0; });
   const gates=exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null);
   const entries=[];
-  gates.forEach(g=>{ const nd=dateMap[g.id]; if(nd==null) return; const orig=(g.id in prevOrig)?prevOrig[g.id]:g.plannedDate; entries.push({gateId:g.id, originalDate:orig, newDate:nd}); g.plannedDate=nd; });
+  gates.forEach(g=>{ const nd=dateMap[g.id]; if(nd==null) return; const orig=(g.id in prevOrig)?prevOrig[g.id]:g.plannedDate; const ver=(prevVer[g.id]||0)+1; entries.push({gateId:g.id, originalDate:orig, newDate:nd, version:ver}); g.plannedDate=nd; });
   exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
   exec.catchupPlans.push({ id:"catchup:"+objId, objectiveId:objId, enactedDay:todayDay(), gates:entries });
   closeModal(); renderAll(); setMsg("Catch-up plan enacted \u2014 "+entries.length+" gate"+(entries.length===1?"":"s")+" re-committed","ok");
@@ -3741,18 +3745,29 @@ function clearCatchup(objId){
   exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
   renderAll(); setMsg("Catch-up plan cleared","ok");
 }
+function confirmClearCatchup(objId){
+  openModal("Clear catch-up plan",
+    `<p class="cu-intro">This discards the active catch-up plan and its version history for this objective. The re-committed dates stay on the gates, but the original\u2192new tracking is removed. This can\u2019t be undone.</p>`+
+    `<p class="cu-intro" style="margin:0 0 6px">Type <b>CLEAR</b> to confirm.</p>`+
+    `<input type="text" class="cu-clear-in" data-cu-clearword placeholder="CLEAR" autocomplete="off" spellcheck="false">`+
+    `<div class="cu-foot"><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act danger" data-cu-clearok disabled>Clear plan</button></div>`);
+  const mb=document.getElementById("modalBody");
+  const inp=mb.querySelector("[data-cu-clearword]"), okb=mb.querySelector("[data-cu-clearok]");
+  inp.oninput=()=>{ okb.disabled = inp.value.trim()!=="CLEAR"; };
+  mb.querySelector("[data-cu-cancel]").onclick=closeModal;
+  okb.onclick=()=>{ if(inp.value.trim()!=="CLEAR") return; closeModal(); clearCatchup(objId); };
+  try{ inp.focus(); }catch(e){}
+}
 function openCatchupModal(objId){
   const o=objById(objId); if(!o) return;
   const em=emForCore(), td=todayDay();
   let gEff={}, slip=null; try{ const casc=RD.cascade(portfolio, em, td); gEff=casc.gateEffective||{}; slip=casc.objectiveScheduleSlip[objId]; }catch(e){}
-  const prev=RD.activeCatchupPlan(exec.catchupPlans, objId);
-  const prevNew={}; if(prev) prev.gates.forEach(e=>{ prevNew[e.gateId]=e.newDate; });
   const gates=sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null));
   if(!gates.length){ setMsg("No unfinished stage-gates to re-commit.","err"); return; }
   const rows=gates.map(g=>{
     const cur=dayToIso(g.plannedDate)||"";
     const fc=gEff[g.id]!=null?dayToIso(gEff[g.id]):"";
-    const preset=(g.id in prevNew)?dayToIso(prevNew[g.id]):cur;
+    const preset = fc || cur;   // committed + delay (the forecast) — makes the user actively pull dates in
     return `<div class="cu-row"><div class="cu-g"><span class="g-chip">${esc(gateLabel(g.id))}</span><span class="nm">${esc(g.name||g.id)}</span></div><div class="cu-cur">${cur||'\u2014'}</div><div class="cu-fc">${fc||'\u2014'}</div><div><input type="date" class="cu-in${preset?' filled':''}" data-cu-date="${g.id}" value="${preset}"></div></div>`;
   }).join("");
   openModal("Build catch-up plan",
@@ -3772,7 +3787,7 @@ function openCatchupModal(objId){
 
 function wireExec(host){
   host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
-  host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>clearCatchup(b.dataset.catchupClear));
+  host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>confirmClearCatchup(b.dataset.catchupClear));
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
