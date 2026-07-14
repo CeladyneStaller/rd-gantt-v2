@@ -248,6 +248,10 @@
   .mdia{color:var(--accent2);font-size:11px;text-align:center}
   .tname.muted{color:var(--muted)}
   .tname.muted:hover{color:var(--accent)}
+  .obj-ended{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+  .obj-ended.abandoned{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg);border:1px solid var(--line)}
+  .obj-ended.achieved{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .tname.obj-struck{text-decoration:line-through;color:var(--muted)}
   .tstatic{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none;margin-left:auto;padding-left:12px;opacity:.8}
   #ganttWrap{overflow-x:auto}
@@ -1905,7 +1909,10 @@ function divCard(d, overall, qCells, counts, worst){
       <span><i class="pip" style="background:var(--none)"></i>${counts["no-band"]}</span></div>
     <div class="slip">${slipTxt}</div></div>`;
 }
-function pfAbandoned(o){ const es=RD.objectiveEndState((execDocs["EXEC-"+o.divisionId]||{}).objectiveState, o.id); return !!(es && es.status==='abandoned'); }
+function pfObjEnd(o){ return o ? RD.objectiveEndState((execDocs["EXEC-"+o.divisionId]||{}).objectiveState, o.id) : null; }
+function endBadge(es){ return es?`<span class="obj-ended ${es.status}" title="${es.status==='abandoned'?'Abandoned':'Achieved'}${es.endedDay!=null?' '+dayToIso(es.endedDay):''}">${es.status==='abandoned'?'Abandoned':'Achieved'}</span>`:""; }
+function objEndBadge(o){ return endBadge(pfObjEnd(o)); }
+function pfAbandoned(o){ const es=pfObjEnd(o); return !!(es && es.status==='abandoned'); }
 function statusCounts(type, id, em){
   const c={"on-track":0,"at-risk":0,"off-track":0,"no-band":0};
   const objs = portfolio.objectives.filter(o=>(type==="division"?o.divisionId===id:true) && !pfAbandoned(o));
@@ -2333,7 +2340,7 @@ const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegate
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
-function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
+function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; const _oe=entity==="objective"?pfObjEnd(r):null; const _sk=(_oe&&_oe.status==="abandoned")?" obj-struck":""; return `<a class="tname${mu}${_sk}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${endBadge(_oe)}`; }
 function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}${treeActs(entity,r.id)}`; }
 function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}${treeActs(entity,r.id)}</div>`; }
 // read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
@@ -2827,7 +2834,7 @@ function renderStructTables(){
       html+=`<tr class="s-parent">`+idCell("initiative",i.id)+`<td><b>${esc(i.name)}</b></td><td>${structRefName("division",i.divisionId)}</td>`+acts("initiative",i.id,[["objective","+ obj"],["milestone","+ ms"]])+`</tr>`;
       structObjsOf(i).forEach(o=>{
         const b=nodeBand("objective",o.id);
-        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
+        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}${objEndBadge(o)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
       });
       byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
         html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
@@ -3227,7 +3234,7 @@ function activePanelHtml(){
     g.obj.forEach(o=>{ const b=nodeBand("objective",o.id), sc=RD.rollupObjective(o.id,portfolio,em);
       const dates=[o.quarter,(o.plannedStart!=null&&o.plannedEnd!=null)?`${dayToIso(o.plannedStart)} – ${dayToIso(o.plannedEnd)}`:null].filter(Boolean).join(" · ");
       h+=`<div class="ap-row" data-lineage="objective:${o.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
-        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>`+
+        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>${objEndBadge(o)}`+
         `<div class="ap-sub">${dates?`<span>${esc(dates)}</span>`:""}${activeKrDots(o,em)}</div></div>`+
         `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
     });
@@ -3349,15 +3356,16 @@ function ovObjTile(o, em, pool, casc){
   const behind=gates.filter(function(g){return RD.classifyGate(g,todayDay())==="overdue";}).length;
   const end=(o.plannedEnd!=null)?(casc.objectiveProjectedEnd[o.id]!=null?casc.objectiveProjectedEnd[o.id]:o.plannedEnd):casc.objectiveProjectedEnd[o.id];
   const dl=end!=null?end-todayDay():null;
-  const daysStr=dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left");
+  const _oe=pfObjEnd(o);
+  const daysStr= _oe ? ("ended "+dayToIso(_oe.endedDay)) : (dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left"));
   const oSlip=(o.plannedEnd!=null&&end!=null)?end-o.plannedEnd:null;
   // Objective acceleration only ever occurs together with slip (a gate binding past the objective's span), so a
   // standalone "faster possible" chip here is unreachable; the slip chip carries the schedule signal on the tile.
-  const schedChip=(oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>':'';
+  const schedChip= _oe ? "" : ((oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>':'');
   const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
   return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
-    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+schedChip+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+schedChip+'</div></div><div class="cbadges">'+objEndBadge(o)+ovBadge(score)+'</div></div>'
     +ovKpiTbl("Key result", krRows)
     +ovProg(score, scoreColor(score))
     +gatesBlock
@@ -3387,7 +3395,7 @@ function openOvDetail(kind, id){
   if(kind==="objective"){
     const o=byId("objective",id); if(!o) return; const doc=execDocs["EXEC-"+o.divisionId]||{keyResults:[],kpis:[],stageGates:[],risks:[]};
     const score=RD.rollupObjective(o.id, portfolio, em);
-    title=o.statement||o.id; badges=ovBadge(score)+' <span class="pn">'+esc(productName(ovObjProdId(o))||"\u2014")+'</span>';
+    title=o.statement||o.id; badges=objEndBadge(o)+ovBadge(score)+' <span class="pn">'+esc(productName(ovObjProdId(o))||"\u2014")+'</span>';
     const krRows=ovKrRows(o.id, doc, pool, em);
     const krBlk=krRows.length?'<div class="mblk"><div class="mblkh">Key results</div>'+krRows.map(function(r){return '<div class="krline"><div class="kdot" style="background:'+r.c+'"></div><span>'+esc(r.name)+'</span><span class="kt">'+esc(r.tgt)+'</span><span class="kv" style="color:'+r.c+'">'+esc(r.cur)+'</span></div>';}).join("")+'</div>':"";
     const gates=(doc.stageGates||[]).filter(function(g){return g.objectiveId===o.id;});
