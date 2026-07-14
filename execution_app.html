@@ -3476,7 +3476,7 @@ function kpiTable(hostType, hostId, objScope){
     const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}">linked</span>`
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
     const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
-    const stTxt = s==null?'open':(bnd==='on-track'?'met':bnd==='at-risk'?'near':'below');
+    const stTxt = s==null?'open':(s>=100?'met':bnd==='on-track'?'on track':bnd==='at-risk'?'near':'below');
     h += `<tr>
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
@@ -3507,7 +3507,7 @@ function renderKRs(){
                    : `<div class="pace-cap ${band==='off-track'?'behind':'risk'}"><span class="ico">\u25bc</span>${gap} pts behind pace <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`; }
     else if(att!=null){ cap=`<div class="pace-cap ok"><span class="el">no objective dates \u2014 score only</span></div>`; }
     const kk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="keyResult" && k.hostId===kr.id);
-    const metCnt=kk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&RD.band(s2)==='on-track';}).length;
+    const metCnt=kk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
     const open=expandedKRs.has(kr.id);
     const toggle = kk.length
       ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
@@ -3716,7 +3716,7 @@ function renderGates(){
       const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
       const open=expandedGates.has(g.id);
       const tk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="stageGate" && k.hostId===g.id);
-      const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&RD.band(s2)==='on-track';}).length;
+      const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
       const toggle = tk.length
         ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
