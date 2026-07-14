@@ -122,6 +122,27 @@
   table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
   table.mtbl td.m-cur[data-postcell]{cursor:pointer}
   table.mtbl td.m-cur[data-postcell]:hover{text-decoration:underline dotted;text-underline-offset:3px}
+  .spop{position:fixed;z-index:120;width:252px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:10px;font-size:12px}
+  .spop .sp-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .spop .sp-name{font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spop .sp-x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px}
+  .spop .sp-x:hover{color:var(--ink);background:var(--panel2)}
+  .spop .sp-sum{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px}
+  .spop .sp-cnt{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+  .spop .sp-cnt.ok{color:var(--ok)} .spop .sp-cnt.warn{color:var(--warn)}
+  .spop .sp-tgt{font-family:var(--mono);font-size:10px;color:var(--muted);margin:2px 0 8px}
+  .spop .sp-list{max-height:168px;overflow-y:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .spop .sp-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .spop .sp-row:last-child{border-bottom:0}
+  .spop .sp-v{font-family:var(--mono);font-weight:600;min-width:44px;text-align:right}
+  .spop .sp-ts{flex:1;min-width:0;font-size:9.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spop .sp-rm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:10px;padding:2px 5px;border-radius:4px;flex:none}
+  .spop .sp-rm:hover{color:var(--bad);background:var(--pill-bad-bg)}
+  .spop .sp-rm.armed{color:var(--bad);background:var(--pill-bad-bg);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+  .spop .sp-none{padding:8px 0;color:var(--muted);font-size:11px;text-align:center}
+  .spop .sp-add{display:flex;gap:6px;margin-top:8px}
+  .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
+  .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
   .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .m-badge .d{width:5px;height:5px;border-radius:50%}
@@ -2729,6 +2750,8 @@ function openPostCell(td){
   if(td.querySelector("input")) return;                                  // already editing this cell
   const kpiId=td.dataset.postcell, saved=td.innerHTML;
   const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
+  // statistical targets take a SAMPLE, not a value -> open the sample popover instead of an inline value input
+  if(k && RD.definerOf(k, AK).targetType==="statistical"){ openSamplePop(td, kpiId); return; }
   const cur=k?RD.effValue(k, AK, emForCore()):null;
   td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="value"/>`;
   const inp=td.querySelector("input"); inp.focus(); inp.select();
@@ -2740,6 +2763,85 @@ function openPostCell(td){
   inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; td.innerHTML=saved; } };
   inp.onblur=commit;
 }
+
+
+/* ---- statistical sample popover: a statistical target aggregates a SAMPLE, so the check-in adds one
+   measurement rather than setting the value. Shows the live sample, what it computes to, and its
+   completeness; lets a mis-keyed reading be removed. Writes only to exec.kpiUpdates (this app's only
+   writable doc). Anchored position:fixed off the cell rect — .hostcard and .m-cur both clip overflow. ---- */
+let samplePopKpi = null, samplePopArmed = null;
+function samplePopReads(kpiId){                                          // this KPI's own readings, newest first
+  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId && !isNaN(Number(u.value)))
+    .slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+}
+function fmtReadTs(ts){ if(!ts) return ""; const d=new Date(ts); return isNaN(d.getTime())?"":d.toISOString().slice(0,16).replace("T"," "); }
+function samplePopHtml(kpiId){
+  const AK=allKpisPool(), EM=emForCore(), k=AK.find(x=>x.id===kpiId);
+  if(!k) return "";
+  const dk=RD.definerOf(k, AK), stat=dk.statistic||"average", statLbl=STAT_SHORT[stat]||stat;
+  const unit=(stat==="cv")?"%":(RD.kpiUnit(k,AK)||"");
+  const dir=RD.kpiDirection(k,AK), tgt=RD.effTarget(k,AK,EM);
+  const reads=samplePopReads(kpiId), xs=reads.map(u=>Number(u.value));
+  const computed=xs.length?RD.computeStat(stat, xs):null;
+  const exp=Number(dk.readCount)>0?Number(dk.readCount):0, n=xs.length, complete=!exp||n>=exp;
+  const cntTxt=exp?`${n} / ${exp} ${complete?"\u2713":"\u26a0"}`:`${n} read${n===1?"":"s"}`;
+  const critTxt=(dk.targetType==="binary")?"pass":((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"")+fmtTarget(tgt,"")+(unit?" "+unit:""));
+  const rows=reads.length ? reads.map((u,i)=>{
+      const armed=samplePopArmed===i;
+      return `<div class="sp-row"><span class="sp-v">${esc(String(u.value))}</span><span class="sp-ts">${esc(fmtReadTs(u.timestamp))}${u.note?" \u00b7 "+esc(u.note):""}</span><button class="sp-rm${armed?" armed":""}" data-sp-rm="${i}" title="Remove this reading">${armed?"confirm":"\u2715"}</button></div>`;
+    }).join("")
+    : `<div class="sp-none">no readings yet \u2014 add the first measurement below</div>`;
+  return `<div class="sp-h"><span class="sp-name">${esc(RD.kpiName(k,AK)||"")}</span><button class="sp-x" data-sp-close title="Close">\u2715</button></div>`+
+    `<div class="sp-sum"><span class="sp-stat">${esc(statLbl)} = <b>${computed==null?"\u2014":esc(String(Math.round(computed*1000)/1000))}</b>${computed!=null&&unit?" "+esc(unit):""}</span><span class="sp-cnt ${complete?"ok":"warn"}">${cntTxt}</span></div>`+
+    `<div class="sp-tgt">target ${esc(critTxt)}</div>`+
+    `<div class="sp-list">${rows}</div>`+
+    `<div class="sp-add"><input type="number" step="any" class="sp-in" placeholder="new reading" data-sp-in/><button class="act mini" data-sp-add>Add</button></div>`+
+    `<div class="sp-hint">each entry is one measurement \u2014 the ${esc(statLbl)} above is computed from all of them</div>`;
+}
+function renderSamplePop(){
+  const pop=document.getElementById("samplePop"); if(!pop||!samplePopKpi) return;
+  pop.innerHTML=samplePopHtml(samplePopKpi);
+  pop.querySelector("[data-sp-close]").onclick=()=>closeSamplePop();
+  const inp=pop.querySelector("[data-sp-in]"), addB=pop.querySelector("[data-sp-add]");
+  const add=()=>{ const v=inp.value;
+    if(v==="" || isNaN(Number(v))){ inp.focus(); return; }               // no ===cur guard: a repeat reading is a real reading
+    exec.kpiUpdates.push({ id:"UPD-"+samplePopKpi+"-"+Date.now(), kpiId:samplePopKpi, value:Number(v), timestamp:Date.now(), note:"" });
+    samplePopArmed=null; renderAll(); renderSamplePop();
+    const i2=document.querySelector("#samplePop [data-sp-in]"); if(i2) i2.focus();
+    setMsg("Reading added","ok"); };
+  addB.onclick=add;
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } };
+  pop.querySelectorAll("[data-sp-rm]").forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.spRm);
+    if(samplePopArmed!==i){ samplePopArmed=i; renderSamplePop(); return; }   // arm first (house convention for destructive)
+    const u=samplePopReads(samplePopKpi)[i]; if(!u){ samplePopArmed=null; renderSamplePop(); return; }
+    const at=exec.kpiUpdates.indexOf(u);                                     // by reference: ETB-written readings have no id
+    if(at>=0) exec.kpiUpdates.splice(at,1);
+    samplePopArmed=null; renderAll(); renderSamplePop(); setMsg("Reading removed","ok");
+  });
+}
+function openSamplePop(td, kpiId){
+  closeSamplePop();
+  samplePopKpi=kpiId; samplePopArmed=null;
+  const pop=document.createElement("div"); pop.className="spop"; pop.id="samplePop";
+  document.body.appendChild(pop);
+  renderSamplePop();
+  const r=td.getBoundingClientRect(), pw=pop.offsetWidth||240, ph=pop.offsetHeight||0;
+  let left=r.right-pw, top=r.bottom+6;
+  if(left<8) left=8;
+  if(ph && top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);       // flip above when it would overflow
+  pop.style.left=left+"px"; pop.style.top=top+"px";
+  const inp=pop.querySelector("[data-sp-in]"); if(inp) inp.focus();
+}
+function closeSamplePop(){
+  const pop=document.getElementById("samplePop"); if(pop) pop.remove();
+  samplePopKpi=null; samplePopArmed=null;
+}
+/* dismissal loses nothing (every add/remove commits immediately), so click-away + Escape close it.
+   This is a popover, not one of the .overlay modals gated by CLICKOFF_OK. */
+document.addEventListener("mousedown", (e)=>{ const pop=document.getElementById("samplePop");
+  if(pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest("[data-postcell]"))) closeSamplePop(); });
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && document.getElementById("samplePop")) closeSamplePop(); });
 
 /* ---------------- render: objective header + sub-tables ---------------- */
 function renderAll(){
