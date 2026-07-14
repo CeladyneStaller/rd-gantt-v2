@@ -1936,6 +1936,13 @@ function statusCounts(type, id, em){
   objs.forEach(o=>{ c[RD.band(RD.objectiveScore(o.id, em))]++; });
   return c;
 }
+function delayedInits(divId, casc, n){
+  return portfolio.initiatives.filter(i=>i.divisionId===divId)
+    .map(i=>({ i, slip:casc.longTermSlip[i.id], pe:casc.initiativeProjectedEnd[i.id] }))
+    .filter(r=>r.slip!=null && !isNaN(r.slip) && r.slip>0)          // only actually-delayed, dated initiatives
+    .sort((a,b)=>b.slip-a.slip)
+    .slice(0, n||3);
+}
 function worstSlip(divId, casc){
   let w=null;
   portfolio.initiatives.filter(i=>i.divisionId===divId).forEach(i=>{
@@ -3450,9 +3457,13 @@ function openOvDetail(kind, id){
     title=d.name||d.id; badges=ovBadge(overall);
     const nObj=portfolio.objectives.filter(function(o){return o.divisionId===d.id;}).length, nMs=portfolio.milestones.filter(function(m){return ovMsDiv(m)===d.id;}).length;
     const sumBlk='<div class="mblk"><div class="mblkh">Summary</div><div class="datagrid"><span class="dk">Overall</span><span class="dv" style="color:'+scoreColor(overall)+';font-weight:700">'+fmtScore(overall)+' \u00b7 '+RD.band(overall).replace("-"," ")+'</span><span class="dk">Active</span><span class="dv">'+nObj+' objectives \u00b7 '+nMs+' milestones</span><span class="dk">Status mix</span><span class="dv">'+counts["on-track"]+' on track \u00b7 '+counts["at-risk"]+' at risk \u00b7 '+counts["off-track"]+' off track</span><span class="dk">Worst slip</span><span class="dv">'+(worst==null?"\u2014":(worst<=0?"0":"+"+worst)+"d")+'</span></div></div>';
+    const dl=delayedInits(d.id, casc, 3);
+    const dlBlk=dl.length?'<div class="mblk"><div class="mblkh">Most delayed initiatives</div>'+dl.map(function(r){
+      return '<div class="modelobjline"><span>'+esc(r.i.name||r.i.id)+'<span style="color:var(--muted)"> \u00b7 due '+(r.i.plannedEnd!=null?dayToIso(r.i.plannedEnd):"\u2014")+'</span></span><span class="cv" style="color:var(--bad);font-weight:600">+'+Math.round(r.slip)+'d<span style="color:var(--muted);font-weight:400"> \u2192 '+(r.pe!=null&&!isNaN(r.pe)?dayToIso(r.pe):"\u2014")+'</span></span></div>';
+    }).join("")+'</div>':'<div class="mblk"><div class="mblkh">Most delayed initiatives</div><p class="hint" style="margin:0">No initiatives are running late.</p></div>';
     const models=portfolio.models.filter(function(m){return divOfModel(m.id)===d.id;});
     const mBlk=models.length?'<div class="mblk"><div class="mblkh">Models</div>'+models.map(function(m){var r=RD.sliceScore("model",m.id,portfolio,em,null),c=modelConformance(m.id);return '<div class="modelobjline"><span>'+esc(productName(m.productId)||"")+' <span style="color:var(--muted)">/ '+esc(m.name)+'</span></span><span class="cv" style="color:'+scoreColor(r)+';font-weight:600">rollup '+fmtScore(r)+' \u00b7 conf '+fmtScore(c)+(c!=null?'%':'')+'</span></div>';}).join("")+'</div>':"";
-    body=sumBlk+mBlk;
+    body=sumBlk+dlBlk+mBlk;
   }
   document.getElementById("ovDetTitle").textContent=title;
   document.getElementById("ovDetBadges").innerHTML=badges;
