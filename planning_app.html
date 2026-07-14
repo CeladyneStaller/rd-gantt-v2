@@ -923,6 +923,24 @@
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
+  // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
+  function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
+    if (attainment == null) return 'no-band';
+    if (attainment >= 100) return 'on-track';                                                        // target met
+    if (plannedStart == null || plannedEnd == null || plannedEnd <= plannedStart) return band(attainment); // no dates -> score band
+    var elapsed = Math.max(0, Math.min(1, (today - plannedStart) / (plannedEnd - plannedStart))) * 100;
+    if (elapsed >= 100) return 'off-track';                                                          // past plannedEnd, unmet
+    var gap = elapsed - attainment;                                                                  // pts behind the linear pace
+    if (gap <= 10) return 'on-track';
+    if (gap <= 30) return 'at-risk';
+    return 'off-track';
+  }
+  function keyResultPace(krId, obj, execDocs, today) {
+    var att = keyResultScore(krId, execDocs);
+    var ps = obj ? obj.plannedStart : null, pe = obj ? obj.plannedEnd : null;
+    var elapsed = (ps != null && pe != null && pe > ps) ? Math.max(0, Math.min(1, (today - ps) / (pe - ps))) * 100 : null;
+    return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
+  }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
@@ -1614,6 +1632,8 @@
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    keyResultPaceBand: keyResultPaceBand,
+    keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
     gateAtTarget: gateAtTarget,
     setScore: setScore,
@@ -2325,15 +2345,16 @@ function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${
 /* ---- stage-gate SETS (read from the exec doc; the exec app owns them) ---- */
 function planSetsForObj(doc, objId){ return ((doc&&doc.stageGateSets)||[]).filter(s=>s.objectiveId===objId).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
 function planGroupGates(doc, objId){
+  const byDue=(a,b)=>{ const pa=a.plannedDate==null?Infinity:a.plannedDate, pb=b.plannedDate==null?Infinity:b.plannedDate; return (pa-pb)||String(a.name||'').localeCompare(String(b.name||''))||String(a.id).localeCompare(String(b.id)); };
   const gates=((doc&&doc.stageGates)||[]).filter(g=>g.objectiveId===objId);
   const sets=planSetsForObj(doc, objId);
-  const groups=sets.map(st=>({set:st, gates:gates.filter(g=>g.setId===st.id)}));
+  const groups=sets.map(st=>({set:st, gates:gates.filter(g=>g.setId===st.id).slice().sort(byDue)}));
   const valid=new Set(sets.map(st=>st.id));
-  const orphans=gates.filter(g=>!valid.has(g.setId));
+  const orphans=gates.filter(g=>!valid.has(g.setId)).slice().sort(byDue);
   if(orphans.length) groups.push({set:{id:"__ung__:"+objId, name:"Ungrouped"}, gates:orphans});
   return groups;
 }
-function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(const grp of groups){ const i=grp.gates.findIndex(x=>x.id===g.id); if(i>=0) return (grp.set.name||"Set")+"-"+(i+1); } return g.name||g.id; }
+function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(const grp of groups){ const i=grp.gates.findIndex(x=>x.id===g.id); if(i>=0) return "SG-"+(i+1); } return g.name||g.id; }
 function ganttGateLabel(g){ const o=byId("objective", g.objectiveId); const doc=o&&execDocs["EXEC-"+o.divisionId]; return doc?planGateLabel(doc,g):(g.name||g.id); }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
@@ -2347,7 +2368,7 @@ function objectiveExecHtml(objId){
   planGroupGates(doc, objId).forEach(grp=>{
     if(!grp.gates.length) return;
     h+=`<div class="tleaf tsethead"><span class="texlab">set</span><span class="tstatic"><b>${esc(grp.set.name||"Set")}</b></span></div>`;
-    grp.gates.forEach((g,i)=> h+=execLeaf((grp.set.name||"Set")+"-"+(i+1), g.name||g.id));
+    grp.gates.forEach((g,i)=> h+=execLeaf("SG-"+(i+1), g.name||g.id));
   });
   return h || `<div class="tleaf"><span class="tstatic">no key results or stage-gates yet</span></div>`;
 }

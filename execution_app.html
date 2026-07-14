@@ -3714,13 +3714,14 @@ function wireExec(host){
 let draftRisk = null, editingRiskId = null, armedDelRisk = null;
 
 function execGatePassed(gateId){ if(!gateId) return false; const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return false; const s=RD.classifyGate(g, todayDay()); return s==="passed"||s==="passed-late"; }
-function objGatesOrdered(){ return exec.stageGates.filter(r=>r.objectiveId===selectedObj); }
+function sortGatesByDue(list){ return list.slice().sort((a,b)=>{ const pa=a.plannedDate==null?Infinity:a.plannedDate, pb=b.plannedDate==null?Infinity:b.plannedDate; return (pa-pb)||String(a.name||'').localeCompare(String(b.name||''))||String(a.id).localeCompare(String(b.id)); }); }
+function objGatesOrdered(){ return sortGatesByDue(exec.stageGates.filter(r=>r.objectiveId===selectedObj)); }
 /* ---- stage-gate SETS: helpers ---- */
 function objSetsOrdered(){ return (exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
 function setOfGate(g){ return (exec.stageGateSets||[]).find(s=>s.id===(g&&g.setId))||null; }
-function gatesOfSet(setId){ return exec.stageGates.filter(g=>g.objectiveId===selectedObj && g.setId===setId); }
+function gatesOfSet(setId){ return sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===selectedObj && g.setId===setId)); }
 function setLabelOf(set){ return set?(set.name||'Set'):'?'; }
-function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=exec.stageGates.filter(x=>x.setId===g.setId); const n=peers.findIndex(x=>x.id===gateId)+1; return setLabelOf(setOfGate(g))+'-'+n; }
+function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=sortGatesByDue(exec.stageGates.filter(x=>x.objectiveId===g.objectiveId && x.setId===g.setId)); const n=peers.findIndex(x=>x.id===gateId)+1; return n>0?'SG-'+n:String(gateId); }
 function setScorePct(setId){ return RD.setScore(setId, emForCore(), todayDay()); }
 function ensureDefaultSet(){ let sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj); if(!sets.length){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:"General", order:0, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); sets=[set]; } return sets[0].id; }
 function addSet(name){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:name, order:objSetsOrdered().length, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); setMsg("Set added","ok"); }
