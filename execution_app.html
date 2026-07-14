@@ -270,6 +270,16 @@
   .cu-clear-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;margin:0 0 4px;box-sizing:border-box}
   .cu-clear-in:focus{border-color:var(--bad);outline:none}
   .act.danger{background:var(--bad);color:var(--on-danger);border-color:transparent}
+  .obj-title .obj-endbtn{margin-left:auto;font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
+  .obj-title .obj-endbtn:hover{color:var(--ink);border-color:var(--muted)}
+  .obj-title .obj-endbtn.reopen{color:var(--accent2);border-color:var(--pill-active-bd)}
+  .obj-ended{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:2px 8px}
+  .obj-ended.abandoned{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg);border:1px solid var(--line)}
+  .obj-ended.achieved{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .gate-block.st-cancelled{--rail:var(--none);opacity:.62}
+  .gate-block.st-cancelled .g-name{text-decoration:line-through;color:var(--muted)}
+  .statepill.cancelled{background:var(--pill-neutral-bg);color:var(--muted)}
+  .g-sched .fc-est.cnl{color:var(--muted);font-style:italic}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
@@ -1806,8 +1816,14 @@ html[data-theme="dark"] #etb-view{
         fEnd = projEnd[o.id];
         pEnd = o.plannedEnd;
       }
-      objectiveWorkForecast[o.id] = fEnd;
-      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      var endSt = objectiveEndState(execFor(o.divisionId).objectiveState, o.id);
+      if (endSt) {                                                    // ended objective: freeze the schedule, no ongoing slip
+        objectiveWorkForecast[o.id] = (endSt.endedDay != null) ? endSt.endedDay : fEnd;
+        objectiveScheduleSlip[o.id] = null;
+      } else {
+        objectiveWorkForecast[o.id] = fEnd;
+        objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      }
     });
 
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
@@ -2014,6 +2030,11 @@ html[data-theme="dark"] #etb-view{
   }
 
   // ---- exports --------------------------------------------------------------
+  function objectiveEndState(objectiveState, objId){
+    var arr = objectiveState || [];
+    for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
+    return null;
+  }
   function activeCatchupPlan(catchupPlans, objId){
     var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
     if(!plans.length) return null;
@@ -2087,7 +2108,7 @@ html[data-theme="dark"] #etb-view{
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
-    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry,
+    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,
@@ -2721,6 +2742,8 @@ function renderAll(){
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
   document.getElementById("objHeadWrap").querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  document.getElementById("objHeadWrap").querySelectorAll("[data-endobj]").forEach(b=>b.onclick=()=>openEndObjectiveModal(b.dataset.endobj));
+  document.getElementById("objHeadWrap").querySelectorAll("[data-reopenobj]").forEach(b=>b.onclick=()=>reopenObjective(b.dataset.reopenobj));
   renderKRs(); renderGates(); renderRisks(); renderModal(); renderExpSummary();
   if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
@@ -2755,9 +2778,14 @@ function objMetricStrip(o){
   const schedVal=workEnd!=null?dayToIso(workEnd):"—";
   const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d behind schedule`:"on schedule");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
-  const cuActiveObj = !!RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
-  const schedAlarm = (slip!=null && slip > CATCHUP_SLIP_THRESHOLD);
-  const cuBtn = schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build catch-up plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb catch-up plan active \u00b7 revise</button>` : "");
+  const objES = objEndState(selectedObj);
+  const cuActiveObj = !objES && !!RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
+  const schedAlarm = !objES && (slip!=null && slip > CATCHUP_SLIP_THRESHOLD);
+  const cuBtn = objES ? "" : (schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build catch-up plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb catch-up plan active \u00b7 revise</button>` : ""));
+  const _eoOver = (objES && objES.endedDay!=null && o.plannedEnd!=null) ? objES.endedDay-o.plannedEnd : null;
+  const eoVal = objES ? (objES.status==='abandoned'?'Abandoned':'Achieved') : schedVal;
+  const eoCol = objES ? (objES.status==='abandoned'?'var(--none)':'var(--ok)') : schedColor;
+  const eoSub = objES ? (`ended ${dayToIso(objES.endedDay)}`+(_eoOver!=null&&_eoOver>0?` · was +${_eoOver}d over at close`:"")) : `${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}`;
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
   const riskColor = roll.openHigh>0?"var(--bad)":roll.openMed>0?"var(--warn)":roll.total?"var(--ok)":"var(--muted)";
@@ -2767,7 +2795,7 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
-    <div class="mc${schedAlarm?' sched-alarm':''}">${schedAlarm?`<span class="alarm-tag">\u25cf +${slip}d</span>`:""}<div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div>${accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}${cuBtn}</div>
+    <div class="mc${schedAlarm?' sched-alarm':''}${objES?' sched-ended':''}">${schedAlarm?`<span class="alarm-tag">\u25cf +${slip}d</span>`:""}<div class="mc-label">Schedule</div><div class="mc-val small" style="color:${eoCol}">${eoVal}</div><div class="mc-sub">${eoSub}</div>${!objES&&accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}${cuBtn}</div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
@@ -2782,7 +2810,9 @@ function parseQuarter(q){
   return { qn, yr, start, label:"Q"+qn+" "+yr };
 }
 function quarterHeader(o){
-  const title=`<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span></div>`;
+  const _es=objEndState(o.id);
+  const _endCtl = _es ? `<span class="obj-ended ${_es.status}"${_es.note?` title="${esc(_es.note)}"`:''}>${_es.status==='abandoned'?'Abandoned':'Achieved'} ${dayToIso(_es.endedDay)}</span><button class="obj-endbtn reopen" data-reopenobj="${o.id}">Reopen</button>` : `<button class="obj-endbtn" data-endobj="${o.id}">End objective</button>`;
+  const title=`<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span>${_endCtl}</div>`;
   const td=todayDay();
   const q=parseQuarter(o.quarter);
   if(q){
@@ -3213,6 +3243,7 @@ function saveTgtModal(){
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
 const LEVEL = { initiative:3, milestone:3, keyResult:2, stageGate:1, task:0 };
 function objById(id){ return (portfolio.objectives||[]).find(o=>o.id===id); }
+function objEndState(objId){ return RD.objectiveEndState(exec.objectiveState, objId); }
 function initiativeIdOf(objId){ const o=objById(objId); return o?o.initiativeId:null; }
 function divInitiatives(){ return (portfolio.initiatives||[]).filter(i=>i.divisionId===divisionId); }
 function initName(id){ const i=(portfolio.initiatives||[]).find(x=>x.id===id); return i?(i.name||i.id):id; }
@@ -3656,6 +3687,7 @@ function renderGates(){
   const host=document.getElementById("subSG");
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
+  const objEnded=!!objEndState(selectedObj);
   const td=todayDay();
   let gEff={}, gEarly={}, gAcc={};
   try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
@@ -3675,7 +3707,7 @@ function renderGates(){
     </div>`;
     if(!gates.length) inner+=`<p class="hint" style="margin:0 0 10px 12px">no gates in this workstream</p>`;
     gates.forEach(g=>{
-      const sc=RD.stageGateScore(g.id, EM), st=RD.classifyGate(g, td);
+      const sc=RD.stageGateScore(g.id, EM); let st=RD.classifyGate(g, td); const cancelled=objEnded && g.actualDate==null; if(cancelled) st='cancelled';
       const cmt=g.baselineDate!=null?`<span class="g-committed" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
       const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
       const open=expandedGates.has(g.id);
@@ -3685,7 +3717,7 @@ function renderGates(){
         ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
-      const fc=gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
+      const fc=cancelled?{est:'<span class="fc-est cnl">cancelled</span>', delta:''}:gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
       const cuEntry=RD.catchupEntry(exec.catchupPlans, selectedObj, g.id);
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
@@ -3693,7 +3725,7 @@ function renderGates(){
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
-        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
+        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
         </div>
         <div class="g-tgt">${toggle}${panel}</div>
       </div>`;
@@ -3783,6 +3815,32 @@ function openCatchupModal(objId){
   mb.querySelector("[data-cu-cancel]").onclick=closeModal;
   enactBtn.onclick=()=>{ const map={}; let all=true; inputs.forEach(i=>{ if(!i.value){all=false;return;} map[i.dataset.cuDate]=isoToDay(i.value); }); if(!all){ setMsg("Every gate needs a date.","err"); return; } enactCatchup(objId, map); };
   refresh();
+}
+
+function openEndObjectiveModal(objId){
+  const o=objById(objId); if(!o) return;
+  const openGates=exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null).length;
+  const opt=(mode,sel,label,desc)=>`<label class="ws-opt ${sel?'sel':''}" data-eo="${mode}"><span class="ws-radio"></span><span class="ws-otxt"><span class="ws-ot">${label}</span><span class="ws-od">${desc}</span></span></label>`;
+  openModal("End objective",
+    `<p class="cu-intro">Ending an objective freezes its schedule so its delays stop extending into the next quarter.${openGates>0?` <b>${openGates}</b> unfinished stage-gate${openGates===1?'':'s'} will show as cancelled.`:''} You can reopen it later.</p>`+
+    `<span class="modal-section-lbl">Outcome</span><div class="ws-choice">${opt("abandoned",true,"Abandoned","Work stopped \u2014 remaining gates cancelled.")}${opt("achieved",false,"Achieved","Goals met \u2014 remaining gates are moot.")}</div>`+
+    `<div class="modal-field"><span class="lbl">End date</span><input type="date" id="eoDate" value="${dayToIso(todayDay())}"></div>`+
+    `<div class="modal-field"><span class="lbl">Note (optional)</span><textarea id="eoNote" rows="2" placeholder="Why is it ending?"></textarea></div>`+
+    `<div class="cu-foot"><span class="sp"></span><button class="ghost" data-eo-cancel>Cancel</button><button class="act" data-eo-save>End objective</button></div>`);
+  const mb=document.getElementById("modalBody");
+  let outcome="abandoned";
+  mb.querySelectorAll("[data-eo]").forEach(el=>el.onclick=()=>{ outcome=el.dataset.eo; mb.querySelectorAll(".ws-opt").forEach(x=>x.classList.remove("sel")); el.classList.add("sel"); });
+  mb.querySelector("[data-eo-cancel]").onclick=closeModal;
+  mb.querySelector("[data-eo-save]").onclick=()=>{ const dv=mb.querySelector("#eoDate").value; const day=dv?isoToDay(dv):todayDay(); const note=(mb.querySelector("#eoNote").value||"").trim(); endObjective(objId, outcome, day, note); };
+}
+function endObjective(objId, status, endedDay, note){
+  exec.objectiveState=(exec.objectiveState||[]).filter(r=>r.objectiveId!==objId);
+  exec.objectiveState.push({objectiveId:objId, status:status, endedDay:endedDay, note:note||""});
+  closeModal(); renderAll(); setMsg("Objective ended \u2014 "+status,"ok");
+}
+function reopenObjective(objId){
+  exec.objectiveState=(exec.objectiveState||[]).filter(r=>r.objectiveId!==objId);
+  renderAll(); setMsg("Objective reopened","ok");
 }
 
 function wireExec(host){
