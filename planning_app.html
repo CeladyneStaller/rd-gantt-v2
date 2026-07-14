@@ -62,7 +62,8 @@
   .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
   .ov-ctl{display:flex;align-items:center;gap:9px}
   .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
-  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly [data-sdel], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
@@ -2322,7 +2323,8 @@ function treeActs(entity, id){
                 initiative:[["objective","+ obj"],["milestone","+ milestone"]],
                 product:[["model","+ model"]] }[entity] || [];
   const addBtns = ADD.map(a=>`<button class="tact" title="Add ${a[0]} here" data-tadd="${a[0]}:${id}">${a[1]}</button>`).join("");
-  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}</span>`;
+  const delBtn=`<button class="tact danger" title="Delete this ${entity}" data-sdel="${entity}:${id}">✕</button>`;
+  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}${delBtn}</span>`;
 }
 function openTreeAdd(childEntity, parentId){
   let prefill = {};
@@ -2453,6 +2455,7 @@ function wireTreeLinks(root){
   root.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
   root.querySelectorAll("[data-tedit]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
   root.querySelectorAll("[data-tadd]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
+  root.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); armedDelete=null; structDelete(s.slice(0,i), s.slice(i+1)); });
 }
 /* ---------------- filter & group (Structure + Gantt) ---------------- */
 function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
