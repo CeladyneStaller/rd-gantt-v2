@@ -302,6 +302,10 @@
   .glegend span{display:flex;align-items:center;gap:7px}
   .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
   .gtoday{position:absolute;top:0;bottom:0;border-left:1px solid var(--accent);opacity:.65;pointer-events:none}
+  .gended{position:absolute;top:2px;bottom:2px;border-left:2px dashed var(--bad);z-index:3;pointer-events:auto}
+  .gended.achieved{border-left-color:var(--ok)}
+  .gended::after{content:'';position:absolute;top:-2px;left:-4px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--panel)}
+  .gended.achieved::after{background:var(--ok)}
   .gtodaylbl{position:absolute;top:0;font-size:9px;color:var(--accent);font-family:var(--mono);pointer-events:none;opacity:.9}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
@@ -654,13 +658,18 @@
     var ups=readingsFor(kpiId, execDocs);
     if(!ups.length) return null;
     if(defn && defn.targetType==='statistical'){
-      var n=parseInt(defn.readCount,10);
-      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
-      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      // aggregate ALL posted readings; readCount is the expected sample size (completeness), not a window
+      var xs=[]; for(var i=0;i<ups.length;i++){ var v=Number(ups[i].value); if(!isNaN(v)) xs.push(v); }
       if(!xs.length) return null;
       return computeStat(defn.statistic||'average', xs);
     }
     return ups[0].value;
+  }
+  // count of numeric readings posted to a kpi id — for statistical-target completeness (N / expected)
+  function readingCount(kpiId, execDocs){
+    var ups=readingsFor(kpiId, execDocs), n=0;
+    for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
+    return n;
   }
 
   // latest reading posted to a specific KPI id (the host where it was entered)
@@ -1664,6 +1673,7 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
@@ -3017,9 +3027,15 @@ function renderGantt(){
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
+  function gateDisplayEff(g){
+    const st=RD.classifyGate(g, td), done=(st==='passed'||st==='passed-late');
+    if(!done){ const oe=pfObjEnd(byId("objective", g.objectiveId)); if(oe) return g.plannedDate; }  // ended objective: incomplete gate sits at its planned date (no forecast extension)
+    const ge=casc.gateEffective[g.id];
+    return ge!=null?ge:(g.plannedDate==null?null:pfGate(g));
+  }
   function geom(entity, r){
-    if(entity==="stagegate"){ const ge=casc.gateEffective[r.id]; return {kind:"diamond", gate:true, planned:r.plannedDate, eff:(ge!=null?ge:(r.plannedDate==null?null:pfGate(r))), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
-    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(g=>{ const ge=casc.gateEffective[g.id]; return ge!=null?ge:(g.plannedDate==null?null:pfGate(g)); }).filter(v=>v!=null); const ds=planned.length?Math.min.apply(null,planned):null; const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
+    if(entity==="stagegate"){ return {kind:"diamond", gate:true, planned:r.plannedDate, eff:gateDisplayEff(r), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
+    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(gateDisplayEff).filter(v=>v!=null); const _obj=byId("objective", r.objectiveId); const _objDs=_obj?geom("objective",_obj).ds:null; const ds=_objDs!=null?_objDs:(planned.length?Math.min.apply(null,planned):null); const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
     if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
@@ -3142,6 +3158,7 @@ function renderGantt(){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null && !_ended){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      if(_ended && n.entity==="objective" && _oEnd && _oEnd.endedDay!=null){ const mx=x(_oEnd.endedDay); html+=`<div class="gended ${_oEnd.status}" style="left:${mx}px" title="${_oEnd.status==='abandoned'?'abandoned':'achieved'} ${dayToIso(_oEnd.endedDay)}"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
       const _cnl = _ended && st!=='passed' && st!=='passed-late';
@@ -3154,7 +3171,7 @@ function renderGantt(){
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
       html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
