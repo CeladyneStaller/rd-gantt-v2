@@ -4106,6 +4106,13 @@ document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getEleme
   sync();
   if(window.matchMedia){ try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(e){ try{ if(!localStorage.getItem('rd_theme')){ document.documentElement.setAttribute('data-theme', e.matches?'dark':'light'); sync(); } }catch(_){} }); }catch(e){} }
 })();
+/* --- modal click-off: dismissal on backdrop click is DISABLED globally. To restore it for a
+   specific modal, add its overlay id to CLICKOFF_OK (e.g. CLICKOFF_OK.add("modalOverlay")).
+   Escape-to-close and the ✕ button are unaffected. --- */
+const CLICKOFF_OK = new Set();
+document.addEventListener("click", function(e){ const ov=e.target;
+  if(ov && ov.classList && ov.classList.contains("overlay") && !CLICKOFF_OK.has(ov.id)) e.stopImmediatePropagation();
+}, true);
 document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
 document.getElementById("subkrX").onclick = closeSubKrModal;

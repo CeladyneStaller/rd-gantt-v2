@@ -431,13 +431,18 @@
     var ups=readingsFor(kpiId, execDocs);
     if(!ups.length) return null;
     if(defn && defn.targetType==='statistical'){
-      var n=parseInt(defn.readCount,10);
-      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
-      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      // aggregate ALL posted readings; readCount is the expected sample size (completeness), not a window
+      var xs=[]; for(var i=0;i<ups.length;i++){ var v=Number(ups[i].value); if(!isNaN(v)) xs.push(v); }
       if(!xs.length) return null;
       return computeStat(defn.statistic||'average', xs);
     }
     return ups[0].value;
+  }
+  // count of numeric readings posted to a kpi id — for statistical-target completeness (N / expected)
+  function readingCount(kpiId, execDocs){
+    var ups=readingsFor(kpiId, execDocs), n=0;
+    for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
+    return n;
   }
 
   // latest reading posted to a specific KPI id (the host where it was entered)
@@ -474,8 +479,9 @@
   // Legacy groupId/isDefiner is normalized on the fly by linkOf (definer/standalone
   // -> root, every member -> contribute-child of its definer), so existing data
   // resolves identically. Precedence among contributors to a parent (§7): the
-  // node's OWN reading ranks above its children; among children direct outranks
-  // contribute; then quarter (nulls last), then reading recency. linkPriority wins first.
+  // node's OWN reading (manual) ALWAYS ranks above its children; among children the
+  // latest link wins (higher linkPriority), then direct outranks contribute, then
+  // quarter (nulls last), then reading recency.
   var LINK_OWN_RANK = 3;                    // a node's own directly-posted reading
   function relationRank(type){ return type==='direct'?2 : type==='contribute'?1 : 0; }
   function kpiById(id, kpis){ for(var i=0;i<kpis.length;i++) if(kpis[i].id===id) return kpis[i]; return null; }
@@ -488,7 +494,7 @@
   function linkOf(kpi, kpis){
     if(kpi.linkParent !== undefined) return { parent:kpi.linkParent, type:kpi.linkType||'contribute', priority:kpi.linkPriority||0 };
     if(!kpi.groupId || kpi.isDefiner) return { parent:null, type:'contribute', priority:0 };
-    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:0 };
+    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:(kpi.linkPriority||0) };
   }
   function rootOf(kpi, kpis){ var seen={}, cur=kpi;
     while(cur){ if(seen[cur.id]) return cur; seen[cur.id]=1; var lk=linkOf(cur,kpis);
@@ -552,7 +558,9 @@
     return { priority:(kpi.linkPriority||0), rank:rank, quarter:objectiveQuarter(kpi.objectiveId, execDocs), ts:(reading?(reading.timestamp||0):0) };
   }
   function precCmp(x, y){                    // sort comparator: negative => x wins (ranks first)
-    if(x.priority!==y.priority) return y.priority-x.priority;
+    var xo=(x.rank===LINK_OWN_RANK)?1:0, yo=(y.rank===LINK_OWN_RANK)?1:0;
+    if(xo!==yo) return yo-xo;                 // a node's OWN reading (manual) always beats linked children
+    if(x.priority!==y.priority) return y.priority-x.priority;  // among children: higher linkPriority = latest link wins
     if(x.rank!==y.rank) return y.rank-x.rank;
     if(x.quarter!==y.quarter){ if(x.quarter==null) return 1; if(y.quarter==null) return -1; return x.quarter<y.quarter?1:-1; }
     return (y.ts||0)-(x.ts||0);
@@ -707,6 +715,24 @@
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
+  // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
+  function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
+    if (attainment == null) return 'no-band';
+    if (attainment >= 100) return 'on-track';                                                        // target met
+    if (plannedStart == null || plannedEnd == null || plannedEnd <= plannedStart) return band(attainment); // no dates -> score band
+    var elapsed = Math.max(0, Math.min(1, (today - plannedStart) / (plannedEnd - plannedStart))) * 100;
+    if (elapsed >= 100) return 'off-track';                                                          // past plannedEnd, unmet
+    var gap = elapsed - attainment;                                                                  // pts behind the linear pace
+    if (gap <= 10) return 'on-track';
+    if (gap <= 30) return 'at-risk';
+    return 'off-track';
+  }
+  function keyResultPace(krId, obj, execDocs, today) {
+    var att = keyResultScore(krId, execDocs);
+    var ps = obj ? obj.plannedStart : null, pe = obj ? obj.plannedEnd : null;
+    var elapsed = (ps != null && pe != null && pe > ps) ? Math.max(0, Math.min(1, (today - ps) / (pe - ps))) * 100 : null;
+    return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
+  }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
   // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
@@ -775,6 +801,10 @@
   function score(entityType, entityId, portfolio, execDocs, quarter) {
     var objs = objectivesInScope(entityType, entityId, portfolio);
     if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    else if (entityType !== 'objective') objs = objs.filter(function (o) {   // OVERALL aggregate: abandoned drops out; achieved stays
+      var es = objectiveEndState((execDocs[o.divisionId] || {}).objectiveState, o.id);
+      return !(es && es.status === 'abandoned');
+    });
     var scores = [];
     for (var i = 0; i < objs.length; i++) {
       var s = objectiveScore(objs[i].id, execDocs);
@@ -1159,8 +1189,14 @@
         fEnd = projEnd[o.id];
         pEnd = o.plannedEnd;
       }
-      objectiveWorkForecast[o.id] = fEnd;
-      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      var endSt = objectiveEndState(execFor(o.divisionId).objectiveState, o.id);
+      if (endSt) {                                                    // ended objective: freeze the schedule, no ongoing slip
+        objectiveWorkForecast[o.id] = (endSt.endedDay != null) ? endSt.endedDay : fEnd;
+        objectiveScheduleSlip[o.id] = null;
+      } else {
+        objectiveWorkForecast[o.id] = fEnd;
+        objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      }
     });
 
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
@@ -1367,6 +1403,21 @@
   }
 
   // ---- exports --------------------------------------------------------------
+  function objectiveEndState(objectiveState, objId){
+    var arr = objectiveState || [];
+    for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
+    return null;
+  }
+  function activeCatchupPlan(catchupPlans, objId){
+    var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
+    if(!plans.length) return null;
+    return plans.reduce(function(a,b){ return (b.enactedDay||0)>=(a.enactedDay||0)?b:a; });
+  }
+  function catchupEntry(catchupPlans, objId, gateId){
+    var p=activeCatchupPlan(catchupPlans, objId); if(!p) return null;
+    var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
+    return null;
+  }
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1395,9 +1446,12 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    keyResultPaceBand: keyResultPaceBand,
+    keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
     gateAtTarget: gateAtTarget,
     setScore: setScore,
@@ -1428,6 +1482,7 @@
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
+    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,
@@ -2953,6 +3008,13 @@ function renderProdList(){
 document.getElementById("saveBtn").onclick = persist;
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); const show=p.style.display==="none"; p.style.display=show?"block":"none"; if(show){ document.getElementById("tokenInput").value=tok(); renderProdList(); } };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
+/* --- modal click-off: dismissal on backdrop click is DISABLED globally. To restore it for a
+   specific modal, add its overlay id to CLICKOFF_OK (e.g. CLICKOFF_OK.add("modalOverlay")).
+   Escape-to-close and the ✕ button are unaffected. --- */
+const CLICKOFF_OK = new Set();
+document.addEventListener("click", function(e){ const ov=e.target;
+  if(ov && ov.classList && ov.classList.contains("overlay") && !CLICKOFF_OK.has(ov.id)) e.stopImmediatePropagation();
+}, true);
 document.getElementById("modalX").onclick = ()=>{ if(modelEditing!=null) closeModelEditor(); else subCancel(); };
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay"){ if(modelEditing!=null) closeModelEditor(); else subCancel(); } };
 document.getElementById("subkrX").onclick = closeSubKrModal;
