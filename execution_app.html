@@ -117,6 +117,8 @@
   table.mtbl .m-unit{color:var(--muted);font-size:11.5px}
   table.mtbl .m-cur{font-weight:600}
   table.mtbl .m-cur.met{color:var(--ok)} table.mtbl .m-cur.near{color:var(--warn)} table.mtbl .m-cur.miss{color:var(--bad)} table.mtbl .m-cur.none{color:var(--muted);font-weight:400}
+  table.mtbl .m-cur-sub{display:block;font-size:9px;font-weight:400;letter-spacing:.02em;margin-top:2px;font-family:var(--mono)}
+  table.mtbl .m-cur-sub.ok{color:var(--ok)} table.mtbl .m-cur-sub.warn{color:var(--warn)}
   table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
   table.mtbl td.m-cur[data-postcell]{cursor:pointer}
   table.mtbl td.m-cur[data-postcell]:hover{text-decoration:underline dotted;text-underline-offset:3px}
@@ -1067,13 +1069,18 @@ html[data-theme="dark"] #etb-view{
     var ups=readingsFor(kpiId, execDocs);
     if(!ups.length) return null;
     if(defn && defn.targetType==='statistical'){
-      var n=parseInt(defn.readCount,10);
-      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
-      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      // aggregate ALL posted readings; readCount is the expected sample size (completeness), not a window
+      var xs=[]; for(var i=0;i<ups.length;i++){ var v=Number(ups[i].value); if(!isNaN(v)) xs.push(v); }
       if(!xs.length) return null;
       return computeStat(defn.statistic||'average', xs);
     }
     return ups[0].value;
+  }
+  // count of numeric readings posted to a kpi id — for statistical-target completeness (N / expected)
+  function readingCount(kpiId, execDocs){
+    var ups=readingsFor(kpiId, execDocs), n=0;
+    for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
+    return n;
   }
 
   // latest reading posted to a specific KPI id (the host where it was entered)
@@ -2077,6 +2084,7 @@ html[data-theme="dark"] #etb-view{
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
@@ -2977,6 +2985,7 @@ let pendingGateTargets=[];                  // draft gate targets while ADDING a
 let pendingTgtEditIdx=null;                 // which draft target is being edited in place (null = adding a new one)
 let draftSubKr=null, draftSubKrIdx=null;    // sub-KR sub-modal draft
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
+const STAT_SHORT={average:"avg",median:"median",stddev:"std dev",cv:"CV",range:"range",max:"max",min:"min"};
 function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
 function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
 function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
@@ -3475,13 +3484,18 @@ function kpiTable(hostType, hostId, objScope){
     const ovr = member ? (k.target!=null?'<span class="ovr">override</span>':'<span class="ovr">inherited</span>') : '';
     const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}">linked</span>`
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
+    const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
+    const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
+    const nReads = expReads ? RD.readingCount(k.id, EM) : 0, complete = !expReads || nReads>=expReads;
+    const statSub = expReads ? `<span class="m-cur-sub ${complete?'ok':'warn'}">${STAT_SHORT[dk.statistic||'average']} \u00b7 ${nReads}/${expReads} ${complete?'\u2713':'\u26a0'}</span>` : '';
     const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
-    const stTxt = s==null?'open':(s>=100?'met':bnd==='on-track'?'on track':bnd==='at-risk'?'near':'below');
+    const metOk = (s!=null && s>=100 && complete);   // statistical: "met" needs the target reached AND a complete sample
+    const stTxt = s==null?'open':(metOk?'met':(s>=100?'on track':bnd==='on-track'?'on track':bnd==='at-risk'?'near':'below'));
     h += `<tr>
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
       <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
-      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}</td>
+      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}</td>
       <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
       <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
   });
