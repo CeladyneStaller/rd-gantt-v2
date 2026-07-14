@@ -690,8 +690,9 @@
   // Legacy groupId/isDefiner is normalized on the fly by linkOf (definer/standalone
   // -> root, every member -> contribute-child of its definer), so existing data
   // resolves identically. Precedence among contributors to a parent (§7): the
-  // node's OWN reading ranks above its children; among children direct outranks
-  // contribute; then quarter (nulls last), then reading recency. linkPriority wins first.
+  // node's OWN reading (manual) ALWAYS ranks above its children; among children the
+  // latest link wins (higher linkPriority), then direct outranks contribute, then
+  // quarter (nulls last), then reading recency.
   var LINK_OWN_RANK = 3;                    // a node's own directly-posted reading
   function relationRank(type){ return type==='direct'?2 : type==='contribute'?1 : 0; }
   function kpiById(id, kpis){ for(var i=0;i<kpis.length;i++) if(kpis[i].id===id) return kpis[i]; return null; }
@@ -704,7 +705,7 @@
   function linkOf(kpi, kpis){
     if(kpi.linkParent !== undefined) return { parent:kpi.linkParent, type:kpi.linkType||'contribute', priority:kpi.linkPriority||0 };
     if(!kpi.groupId || kpi.isDefiner) return { parent:null, type:'contribute', priority:0 };
-    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:0 };
+    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:(kpi.linkPriority||0) };
   }
   function rootOf(kpi, kpis){ var seen={}, cur=kpi;
     while(cur){ if(seen[cur.id]) return cur; seen[cur.id]=1; var lk=linkOf(cur,kpis);
@@ -768,7 +769,9 @@
     return { priority:(kpi.linkPriority||0), rank:rank, quarter:objectiveQuarter(kpi.objectiveId, execDocs), ts:(reading?(reading.timestamp||0):0) };
   }
   function precCmp(x, y){                    // sort comparator: negative => x wins (ranks first)
-    if(x.priority!==y.priority) return y.priority-x.priority;
+    var xo=(x.rank===LINK_OWN_RANK)?1:0, yo=(y.rank===LINK_OWN_RANK)?1:0;
+    if(xo!==yo) return yo-xo;                 // a node's OWN reading (manual) always beats linked children
+    if(x.priority!==y.priority) return y.priority-x.priority;  // among children: higher linkPriority = latest link wins
     if(x.rank!==y.rank) return y.rank-x.rank;
     if(x.quarter!==y.quarter){ if(x.quarter==null) return 1; if(y.quarter==null) return -1; return x.quarter<y.quarter?1:-1; }
     return (y.ts||0)-(x.ts||0);
@@ -2354,7 +2357,7 @@ function planGroupGates(doc, objId){
   if(orphans.length) groups.push({set:{id:"__ung__:"+objId, name:"Ungrouped"}, gates:orphans});
   return groups;
 }
-function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(const grp of groups){ const i=grp.gates.findIndex(x=>x.id===g.id); if(i>=0) return "SG-"+(i+1); } return g.name||g.id; }
+function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(let gi=0; gi<groups.length; gi++){ const i=groups[gi].gates.findIndex(x=>x.id===g.id); if(i>=0) return "SG-"+String.fromCharCode(65+gi)+(i+1); } return g.name||g.id; }
 function ganttGateLabel(g){ const o=byId("objective", g.objectiveId); const doc=o&&execDocs["EXEC-"+o.divisionId]; return doc?planGateLabel(doc,g):(g.name||g.id); }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
@@ -2365,10 +2368,10 @@ function objectiveExecHtml(objId){
   if(!doc) return `<div class="tleaf"><span class="tstatic">no exec doc loaded for this division</span></div>`;
   let h="";
   (doc.keyResults||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KR", k.statement||k.id));
-  planGroupGates(doc, objId).forEach(grp=>{
+  planGroupGates(doc, objId).forEach((grp,gi)=>{
     if(!grp.gates.length) return;
     h+=`<div class="tleaf tsethead"><span class="texlab">set</span><span class="tstatic"><b>${esc(grp.set.name||"Set")}</b></span></div>`;
-    grp.gates.forEach((g,i)=> h+=execLeaf("SG-"+(i+1), g.name||g.id));
+    grp.gates.forEach((g,i)=> h+=execLeaf("SG-"+String.fromCharCode(65+gi)+(i+1), g.name||g.id));
   });
   return h || `<div class="tleaf"><span class="tstatic">no key results or stage-gates yet</span></div>`;
 }
