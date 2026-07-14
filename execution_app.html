@@ -186,6 +186,7 @@
   .tgt-toggle[aria-expanded="true"] .arw{transform:rotate(90deg)}
   .tgt-toggle.add{border-style:dashed}
   .tgt-toggle.add:hover{border-color:var(--accent);color:var(--accent)}
+  .tgt-toggle + .tgt-toggle{margin-left:6px}
   .tgt-panel{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
   .tgt-foot{padding:8px 12px;border-top:1px solid var(--line);background:var(--panel2);display:flex;gap:8px}
   .ws-choice{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px}
@@ -1066,8 +1067,9 @@ html[data-theme="dark"] #etb-view{
   // Legacy groupId/isDefiner is normalized on the fly by linkOf (definer/standalone
   // -> root, every member -> contribute-child of its definer), so existing data
   // resolves identically. Precedence among contributors to a parent (§7): the
-  // node's OWN reading ranks above its children; among children direct outranks
-  // contribute; then quarter (nulls last), then reading recency. linkPriority wins first.
+  // node's OWN reading (manual) ALWAYS ranks above its children; among children the
+  // latest link wins (higher linkPriority), then direct outranks contribute, then
+  // quarter (nulls last), then reading recency.
   var LINK_OWN_RANK = 3;                    // a node's own directly-posted reading
   function relationRank(type){ return type==='direct'?2 : type==='contribute'?1 : 0; }
   function kpiById(id, kpis){ for(var i=0;i<kpis.length;i++) if(kpis[i].id===id) return kpis[i]; return null; }
@@ -1080,7 +1082,7 @@ html[data-theme="dark"] #etb-view{
   function linkOf(kpi, kpis){
     if(kpi.linkParent !== undefined) return { parent:kpi.linkParent, type:kpi.linkType||'contribute', priority:kpi.linkPriority||0 };
     if(!kpi.groupId || kpi.isDefiner) return { parent:null, type:'contribute', priority:0 };
-    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:0 };
+    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:(kpi.linkPriority||0) };
   }
   function rootOf(kpi, kpis){ var seen={}, cur=kpi;
     while(cur){ if(seen[cur.id]) return cur; seen[cur.id]=1; var lk=linkOf(cur,kpis);
@@ -1144,7 +1146,9 @@ html[data-theme="dark"] #etb-view{
     return { priority:(kpi.linkPriority||0), rank:rank, quarter:objectiveQuarter(kpi.objectiveId, execDocs), ts:(reading?(reading.timestamp||0):0) };
   }
   function precCmp(x, y){                    // sort comparator: negative => x wins (ranks first)
-    if(x.priority!==y.priority) return y.priority-x.priority;
+    var xo=(x.rank===LINK_OWN_RANK)?1:0, yo=(y.rank===LINK_OWN_RANK)?1:0;
+    if(xo!==yo) return yo-xo;                 // a node's OWN reading (manual) always beats linked children
+    if(x.priority!==y.priority) return y.priority-x.priority;  // among children: higher linkPriority = latest link wins
     if(x.rank!==y.rank) return y.rank-x.rank;
     if(x.quarter!==y.quarter){ if(x.quarter==null) return 1; if(y.quarter==null) return -1; return x.quarter<y.quarter?1:-1; }
     return (y.ts||0)-(x.ts||0);
@@ -3195,7 +3199,7 @@ function linkCandidates(hostType, hostId){
   const pool = allKpisPool();
   const fam = familyOfObjective(O);                                       // this objective's product/model lineage
   // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
-  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
+  const occupied = new Set(exec.kpis.filter(k=>k.hostType===hostType && k.hostId===hostId).map(k=>RD.definerOf(k, pool).id));  // per-host: a host can't double-link the same metric, but siblings may link it too
   const seen=new Set(), out=[];
   pool.forEach(k=>{
     const def = RD.definerOf(k, pool);                                    // the link TARGET is the group's definer
@@ -3207,6 +3211,11 @@ function linkCandidates(hostType, hostId){
   });
   return out;
 }
+function nextLinkPriority(parentId){
+  const parent=allKpisPool().find(k=>k.id===parentId); let mx=0;
+  (exec.kpis||[]).forEach(k=>{ if(k.id===parentId) return; const isChild=(k.linkParent===parentId)||(parent&&parent.groupId&&k.groupId===parent.groupId&&!k.isDefiner); if(isChild) mx=Math.max(mx, k.linkPriority||0); });
+  return mx+1;
+}
 function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
@@ -3216,7 +3225,7 @@ function makeLinkMember(hostType, hostId, definerId, linkType){
     const objScope = hostType==="initiative" ? null : selectedObj;
     const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
     if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:0,
+    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(definerId),
                      name:null, direction:null, unit:null, target:null, order:0 });
     addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
   }
@@ -3225,7 +3234,7 @@ function makeLinkMember(hostType, hostId, definerId, linkType){
   if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
+  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false, linkPriority:nextLinkPriority(def.id),
                    name:null, direction:null, unit:null, target:null, order:0 });
   addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
 }
@@ -3625,7 +3634,7 @@ function renderGates(){
       const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&RD.band(s2)==='on-track';}).length;
       const toggle = tk.length
         ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
-        : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button>`;
+        : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
       const fc=gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
       inner+=`<div class="gate-block st-${st}"><div class="grow">
@@ -3721,7 +3730,7 @@ function objSetsOrdered(){ return (exec.stageGateSets||[]).filter(s=>s.objective
 function setOfGate(g){ return (exec.stageGateSets||[]).find(s=>s.id===(g&&g.setId))||null; }
 function gatesOfSet(setId){ return sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===selectedObj && g.setId===setId)); }
 function setLabelOf(set){ return set?(set.name||'Set'):'?'; }
-function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=sortGatesByDue(exec.stageGates.filter(x=>x.objectiveId===g.objectiveId && x.setId===g.setId)); const n=peers.findIndex(x=>x.id===gateId)+1; return n>0?'SG-'+n:String(gateId); }
+function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=sortGatesByDue(exec.stageGates.filter(x=>x.objectiveId===g.objectiveId && x.setId===g.setId)); const n=peers.findIndex(x=>x.id===gateId)+1; if(n<1) return String(gateId); const sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===g.objectiveId).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); const si=sets.findIndex(s=>s.id===g.setId); return 'SG-'+(si>=0?String.fromCharCode(65+si):'')+n; }
 function setScorePct(setId){ return RD.setScore(setId, emForCore(), todayDay()); }
 function ensureDefaultSet(){ let sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj); if(!sets.length){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:"General", order:0, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); sets=[set]; } return sets[0].id; }
 function addSet(name){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:name, order:objSetsOrdered().length, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); setMsg("Set added","ok"); }
