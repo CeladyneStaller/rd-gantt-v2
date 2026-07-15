@@ -3088,6 +3088,9 @@ function renderGantt(){
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
+  // An objective that closed a few days past its input end date is quarter-boundary noise, not a delay.
+  // Only a real overrun (strictly MORE than this many days) paints red.
+  const OBJ_END_GRACE_DAYS = 7;
   function gateDisplayEff(g){
     const st=RD.classifyGate(g, td), done=(st==='passed'||st==='passed-late');
     if(!done){ const oe=pfObjEnd(byId("objective", g.objectiveId)); if(oe) return g.plannedDate; }   // ended objective: no forecast extension
@@ -3103,6 +3106,18 @@ function renderGantt(){
       const peRaw=casc.objectiveProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
       const de=r.plannedEnd!=null?r.plannedEnd:pe;
+      // Ended objective: the overrun runs to the day it actually closed (a fixed date), not to a live
+      // forecast — so the banded bar still stops at the input end and only the real overrun paints red.
+      const oe=pfObjEnd(r);
+      if(oe && oe.endedDay!=null){
+        const over=(r.plannedEnd!=null)?(oe.endedDay-r.plannedEnd):0;
+        // Closed EARLY -> the bar ends where the work actually stopped (same rule as a KPI-less initiative).
+        // No grace on this side: the grace exists to suppress false alarms, and a shorter bar isn't an alarm.
+        // Closed LATE -> the bar holds at the input end and only a real overrun paints red.
+        const endedDe=(r.plannedEnd!=null)?Math.min(r.plannedEnd, oe.endedDay):oe.endedDay;
+        return {kind:"bar", ds, de:endedDe, pe:oe.endedDay, slip:(over>OBJ_END_GRACE_DAYS?over:0), slipFrom:r.plannedEnd,
+                derived:(r.plannedStart==null||r.plannedEnd==null)};
+      }
       const slip=r.plannedEnd!=null?Math.max(0,(pe!=null?pe:r.plannedEnd)-r.plannedEnd):0;
       return {kind:"bar", ds, de, pe, slip, slipFrom:r.plannedEnd, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
@@ -3264,7 +3279,7 @@ function renderGantt(){
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
-      if(g.slip>0 && g.pe!=null && !_ended){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      if(g.slip>0 && g.pe!=null){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
       if(_ended && n.entity==="objective" && _oEnd && _oEnd.endedDay!=null){ const mx=x(_oEnd.endedDay); html+=`<div class="gended ${_oEnd.status}" style="left:${mx}px" title="${_oEnd.status==='abandoned'?'abandoned':'achieved'} ${dayToIso(_oEnd.endedDay)}"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
