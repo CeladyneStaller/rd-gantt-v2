@@ -2786,7 +2786,7 @@ function saveRecord(){
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
   const ret = (ent==="milestone" && msReturn) ? msReturn : null;
-  closeEditor(); renderPortfolio(); renderOverview(); renderGantt();
+  closeEditor(); renderAll();
   if(ret) openEditor(ret, "initiative");
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
@@ -2880,7 +2880,7 @@ function structDelete(ent, id){
     const n=targets.length-1;
     close();
     applyStructDelete(targets);
-    renderPortfolio(); renderOverview(); renderGantt();
+    renderAll();
     persistPortfolio(()=>applyStructDelete(targets), cap(ent)+(n>0?" and "+n+" item"+(n>1?"s":"")+" deleted.":" deleted."));
   });
   modal.hidden=false;
