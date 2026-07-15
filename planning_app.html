@@ -190,6 +190,14 @@
   .pft-name{font-weight:600;color:var(--ink)}
   .pft-sum{color:var(--muted);font-size:11.5px}
   .pft-cur{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+  .pfk-srcs{display:flex;flex-direction:column;gap:3px;margin-top:4px;max-height:132px;overflow-y:auto}
+  .pfk-src{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:400}
+  .pfk-src .muted{color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pft-srcrow{grid-column:1/-1;margin:-2px 0 4px 18px}
+  .pft-src{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
+  .pft-cur[data-tgtpost]{cursor:pointer;border-radius:4px}
+  .pft-cur[data-tgtpost]:hover{background:var(--panel2);box-shadow:0 0 0 1px var(--line)}
+  .pft-in{width:100%;max-width:90px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:2px 5px;font-family:var(--mono);font-size:11.5px;text-align:right}
   .pft-cur .muted{color:var(--muted);font-variant-numeric:normal}
   .pft-acts{display:flex;gap:5px;justify-content:flex-end}
   .pft-acts .ghost{padding:4px 9px;font-size:11px}
@@ -809,21 +817,57 @@
     return kpi.target!=null ? kpi.target : effectiveTarget(P, kpis, seen);
   }
   // effective VALUE — own reading + direct/contribute children, precedence winner (§6/§7)
-  function effectiveValue(kpi, kpis, execDocs, root, seen){
+  // A parent may name its value sources EXPLICITLY (kpi.sources = [kpiId,...]) instead of each child
+  // carrying linkParent. This exists because a milestone KPI lives in the portfolio doc while the KR KPIs
+  // that feed it live in EXEC-<div> docs, which the planning app cannot write — so the link has to be stored
+  // on the parent. sourcesOf is additive: a kpi with no `sources` behaves exactly as before.
+  function sourcesOf(kpi, kpis){
+    var out=[], ids=kpi.sources||[];
+    for(var i=0;i<ids.length;i++){ var k=kpiById(ids[i], kpis); if(k) out.push(k); }
+    return out;
+  }
+  // effectiveValueEntry: like effectiveValue but reports WHICH contributor won, so callers can name the
+  // source of a value. { value, src, own }.
+  function effectiveValueEntry(kpi, kpis, execDocs, root, seen){
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
     var ownV=resolvedReadingValue(kpi.id, root, execDocs);
-    if(ownV!=null) pool.push({ value:ownV, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
+    if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
+    var ex=sourcesOf(kpi, kpis);
+    for(var j=0;j<ex.length;j++) if(kids.indexOf(ex[j])===-1) kids.push(ex[j]);   // explicit sources join the children
     for(var i=0;i<kids.length;i++){ var lk=linkOf(kids[i],kpis);
       if(lk.type==='specification') continue;                          // firewall: value does not flow up
-      var v=effectiveValue(kids[i], kpis, execDocs, root, seen);
-      if(v!=null) pool.push({ value:v, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
+      var e=effectiveValueEntry(kids[i], kpis, execDocs, root, seen);
+      if(e!=null && e.value!=null) pool.push({ value:e.value, src:e.src, own:false, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
     }
     if(!pool.length) return null;
+    // A milestone KPI draws from several sources at once and asks "did ANY of them meet the milestone?", so
+    // the BEST-SCORING source wins — each contributor's value scored against THIS kpi's own target, not the
+    // contributor's. (Pressure >= 40 bar fed by a 10 bar KR and a 40 bar KR -> the 40 bar KR wins.) A value
+    // posted directly on the milestone KPI still overrides every source (LINK_OWN_RANK).
+    var hasOwn=false; for(var p=0;p<pool.length;p++) if(pool[p].own) hasOwn=true;
+    if(kpi.hostType==='milestone' && !hasOwn && pool.length>1){
+      var tgt=effectiveTarget(kpi, kpis);
+      var scored=kpi.targetType==='binary' || tgt!=null;
+      if(scored){
+        var probe={ targetType:kpi.targetType, target:tgt, direction:kpiDirection(kpi, kpis) };
+        pool.sort(function(a,b){
+          var sa=kpiScore(probe, a.value), sb=kpiScore(probe, b.value);
+          if(sa==null) sa=-1; if(sb==null) sb=-1;
+          if(sa!==sb) return sb-sa;                                     // best score first
+          return precCmp(a.key, b.key);                                 // tie -> the existing precedence
+        });
+        return pool[0];
+      }
+    }
     pool.sort(function(a,b){ return precCmp(a.key, b.key); });
-    return pool[0].value;                                              // highest precedence contributor that has a value
+    return pool[0];                                                     // highest precedence contributor that has a value
+  }
+  function effectiveValue(kpi, kpis, execDocs, root, seen){
+    var e=effectiveValueEntry(kpi, kpis, execDocs, root, seen);
+    return e?e.value:null;
   }
   // public 2/3-arg aliases (harness + shells call these)
   function effTarget(kpi, kpis){ return effectiveTarget(kpi, kpis); }
@@ -1699,6 +1743,8 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
+    sourcesOf: sourcesOf,
     readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
@@ -1812,7 +1858,7 @@ let knownVersions = {};          // docId -> version (ignore own echo)
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
-  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],composition:[] }; }
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
@@ -2183,6 +2229,32 @@ function classificationKpisHtml(node){
   return `<div class="pftargets"><div class="pft-head"><span>${ck.kind==="product"?"Product":"Model"} specifications — ${esc(ck.label)}</span>`+
     `<span class="hint" style="font-weight:400">read-only · from Product Designer</span></div>${body}</div>`;
 }
+// A milestone KPI can draw its current value from KR KPIs inside its own initiative. The link is stored on
+// the milestone KPI (kpi.sources) because the KR KPI lives in an EXEC-<div> doc this app cannot write.
+function msSourceCandidates(msId){
+  const ms=byId("milestone", msId); if(!ms) return [];
+  const objIds=(portfolio.objectives||[]).filter(o=>o.initiativeId===ms.initiativeId).map(o=>o.id);
+  const out=[];
+  for(const key in execDocs){
+    const doc=execDocs[key]||{};
+    (doc.kpis||[]).forEach(k=>{
+      if(k.hostType!=="keyResult") return;
+      const kr=(doc.keyResults||[]).find(r=>r.id===k.hostId);
+      if(!kr || objIds.indexOf(kr.objectiveId)<0) return;
+      out.push({ id:k.id, label:(k.name||k.id), kr:(kr.statement||kr.id) });
+    });
+  }
+  return out;
+}
+function kpiSourceNote(k){
+  const pm=pfMap(), pool=poolOf(pm);
+  const e=RD.effValueSource(k, pool, pm);
+  if(!e) return "";
+  if(e.src===k.id) return `<span class="pft-src">source: manual entry</span>`;
+  const sk=pool.find(x=>x.id===e.src);
+  const n=(k.sources||[]).length;
+  return `<span class="pft-src">source: ${esc(sk?(sk.name||sk.id):e.src)}${n>1?` <span class="muted">(best of ${n})</span>`:""}</span>`;
+}
 function initTargetsHtml(hostId, hostType){
   hostType=hostType||"initiative";
   const list=(portfolio.kpis||[]).filter(k=>k.hostType===hostType && k.hostId===hostId);
@@ -2201,10 +2273,11 @@ function initTargetsHtml(hostId, hostType){
         `<span class="tdot" style="background:${bandColor(bnd)}" title="${bnd}"></span>`+
         `<span class="pft-name">${esc(k.name||k.id)}</span>`+
         `<span class="pft-sum">${esc(targetSummary(k))}</span>`+
-        `<span class="pft-cur">${valTxt}</span>`+
+        `<span class="pft-cur"${RO?"":` data-tgtpost="${k.id}" title="Click to record a value"`}>${valTxt}</span>`+
         `<span class="pft-acts"><button class="ghost" data-tedit="${k.id}">edit</button>`+
         `<button class="ghost danger ${armed?'armed':''}" data-tdel="${k.id}">${armed?'confirm':'remove'}</button></span>`+
-      `</div>`;
+      `</div>`+
+      ((hostType==="milestone" && (val!=null || (k.sources||[]).length)) ? `<div class="pft-srcrow">${kpiSourceNote(k)}</div>` : "");
     });
     h+=`</div>`;
   }
@@ -2277,9 +2350,25 @@ function msDelete(id, initId){
   persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
     portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
 }
+function postTargetValue(kpiId, hostId, hostType){
+  const el=document.querySelector(`#pfModalBody [data-tgtpost="${kpiId}"]`); if(!el || el.querySelector("input")) return;
+  const saved=el.innerHTML;
+  el.innerHTML=`<input type="number" step="any" class="pft-in" placeholder="value"/>`;
+  const inp=el.querySelector("input"); inp.focus();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; const v=inp.value;
+    if(v==="" || isNaN(Number(v))){ el.innerHTML=saved; return; }
+    portfolio.kpiUpdates=portfolio.kpiUpdates||[];                       // additive: older portfolio docs have no array
+    portfolio.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId:kpiId, value:Number(v), timestamp:Date.now(), note:"" });
+    refreshInitTargets(hostId, hostType); renderAll();
+    persistPortfolio(null, "Value recorded."); };
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ done=true; el.innerHTML=saved; } };
+  inp.onblur=commit;
+}
 function wireInitTargets(hostId, hostType){
   hostType=hostType||"initiative";
   const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(hostId,null,hostType);
+  document.querySelectorAll("#pfModalBody [data-tgtpost]").forEach(c=>c.onclick=()=>postTargetValue(c.dataset.tgtpost, hostId, hostType));
   document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(hostId,b.dataset.tedit,hostType));
   document.querySelectorAll("#pfModalBody [data-tdel]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.tdel;
@@ -2316,6 +2405,14 @@ function pfKpiFormHtml(d){
       `<label class="pffield"><span>Target value</span><input data-k="target" type="number" value="${d.target!=null?d.target:''}" placeholder="value"/></label></div>`;
     h+=`<label class="pffield"><span>Unit</span><input data-k="unit" type="text" value="${esc(d.unit||'')}" placeholder="e.g. A/g, %, mV"/></label>`;
   }
+  if(pfKpiHostType==="milestone"){
+    const cands=msSourceCandidates(pfKpiInit), cur=d.sources||[];
+    h+=`<div class="pfk-f" style="grid-column:1/-1"><label>Value sources <span class="hint" style="font-weight:400">— KR KPIs in this initiative; the best-scoring one sets the value</span></label>`;
+    h+= cands.length
+      ? `<div class="pfk-srcs">`+cands.map(c=>`<label class="pfk-src"><input type="checkbox" data-src="${esc(c.id)}" ${cur.indexOf(c.id)>=0?"checked":""}/> <span>${esc(c.label)}</span> <span class="muted">${esc(c.kr)}</span></label>`).join("")+`</div>`
+      : `<p class="hint" style="margin:4px 0 0">No Key Result KPIs in this initiative yet.</p>`;
+    h+=`</div>`;
+  }
   h+=`</div><div class="row-actions"><button class="act" id="pfKpiSave">Save target</button>`+
      `<button class="ghost" id="pfKpiCancel">Cancel</button></div>`;
   return h;
@@ -2348,6 +2445,11 @@ function saveKpiEditor(){
   const tt=d.targetType||"demonstration";
   const rec={ hostType:pfKpiHostType, hostId:initId, objectiveId:null, isDefiner:true, groupId:null,
     name:(d.name||"").trim(), targetType:tt };
+  if(pfKpiHostType==="milestone"){
+    const boxes=document.querySelectorAll('#pfKpiBody [data-src]');
+    if(boxes.length) rec.sources=Array.from(boxes).filter(b=>b.checked).map(b=>b.dataset.src);
+    else if(d.sources) rec.sources=d.sources.slice();      // picker not rendered -> keep what was there
+  }
   if(tt!=="binary"){
     rec.direction=(d.direction==="down")?"down":"up";
     rec.target=(d.target!=null&&d.target!=="")?Number(d.target):null;

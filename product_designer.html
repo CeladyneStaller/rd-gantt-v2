@@ -577,21 +577,57 @@
     return kpi.target!=null ? kpi.target : effectiveTarget(P, kpis, seen);
   }
   // effective VALUE — own reading + direct/contribute children, precedence winner (§6/§7)
-  function effectiveValue(kpi, kpis, execDocs, root, seen){
+  // A parent may name its value sources EXPLICITLY (kpi.sources = [kpiId,...]) instead of each child
+  // carrying linkParent. This exists because a milestone KPI lives in the portfolio doc while the KR KPIs
+  // that feed it live in EXEC-<div> docs, which the planning app cannot write — so the link has to be stored
+  // on the parent. sourcesOf is additive: a kpi with no `sources` behaves exactly as before.
+  function sourcesOf(kpi, kpis){
+    var out=[], ids=kpi.sources||[];
+    for(var i=0;i<ids.length;i++){ var k=kpiById(ids[i], kpis); if(k) out.push(k); }
+    return out;
+  }
+  // effectiveValueEntry: like effectiveValue but reports WHICH contributor won, so callers can name the
+  // source of a value. { value, src, own }.
+  function effectiveValueEntry(kpi, kpis, execDocs, root, seen){
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
     var ownV=resolvedReadingValue(kpi.id, root, execDocs);
-    if(ownV!=null) pool.push({ value:ownV, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
+    if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
+    var ex=sourcesOf(kpi, kpis);
+    for(var j=0;j<ex.length;j++) if(kids.indexOf(ex[j])===-1) kids.push(ex[j]);   // explicit sources join the children
     for(var i=0;i<kids.length;i++){ var lk=linkOf(kids[i],kpis);
       if(lk.type==='specification') continue;                          // firewall: value does not flow up
-      var v=effectiveValue(kids[i], kpis, execDocs, root, seen);
-      if(v!=null) pool.push({ value:v, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
+      var e=effectiveValueEntry(kids[i], kpis, execDocs, root, seen);
+      if(e!=null && e.value!=null) pool.push({ value:e.value, src:e.src, own:false, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
     }
     if(!pool.length) return null;
+    // A milestone KPI draws from several sources at once and asks "did ANY of them meet the milestone?", so
+    // the BEST-SCORING source wins — each contributor's value scored against THIS kpi's own target, not the
+    // contributor's. (Pressure >= 40 bar fed by a 10 bar KR and a 40 bar KR -> the 40 bar KR wins.) A value
+    // posted directly on the milestone KPI still overrides every source (LINK_OWN_RANK).
+    var hasOwn=false; for(var p=0;p<pool.length;p++) if(pool[p].own) hasOwn=true;
+    if(kpi.hostType==='milestone' && !hasOwn && pool.length>1){
+      var tgt=effectiveTarget(kpi, kpis);
+      var scored=kpi.targetType==='binary' || tgt!=null;
+      if(scored){
+        var probe={ targetType:kpi.targetType, target:tgt, direction:kpiDirection(kpi, kpis) };
+        pool.sort(function(a,b){
+          var sa=kpiScore(probe, a.value), sb=kpiScore(probe, b.value);
+          if(sa==null) sa=-1; if(sb==null) sb=-1;
+          if(sa!==sb) return sb-sa;                                     // best score first
+          return precCmp(a.key, b.key);                                 // tie -> the existing precedence
+        });
+        return pool[0];
+      }
+    }
     pool.sort(function(a,b){ return precCmp(a.key, b.key); });
-    return pool[0].value;                                              // highest precedence contributor that has a value
+    return pool[0];                                                     // highest precedence contributor that has a value
+  }
+  function effectiveValue(kpi, kpis, execDocs, root, seen){
+    var e=effectiveValueEntry(kpi, kpis, execDocs, root, seen);
+    return e?e.value:null;
   }
   // public 2/3-arg aliases (harness + shells call these)
   function effTarget(kpi, kpis){ return effectiveTarget(kpi, kpis); }
@@ -1467,6 +1503,8 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
+    sourcesOf: sourcesOf,
     readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
