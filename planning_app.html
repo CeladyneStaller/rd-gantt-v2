@@ -304,6 +304,10 @@
   .glegend span{display:flex;align-items:center;gap:7px}
   .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
   .gtoday{position:absolute;top:0;bottom:0;border-left:1px solid var(--accent);opacity:.65;pointer-events:none}
+  .gended{position:absolute;top:2px;bottom:2px;border-left:2px dashed var(--bad);z-index:3;pointer-events:auto}
+  .gended.achieved{border-left-color:var(--ok)}
+  .gended::after{content:'';position:absolute;top:-2px;left:-4px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--panel)}
+  .gended.achieved::after{background:var(--ok)}
   .gtodaylbl{position:absolute;top:0;font-size:9px;color:var(--accent);font-family:var(--mono);pointer-events:none;opacity:.9}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
@@ -3084,9 +3088,15 @@ function renderGantt(){
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
+  function gateDisplayEff(g){
+    const st=RD.classifyGate(g, td), done=(st==='passed'||st==='passed-late');
+    if(!done){ const oe=pfObjEnd(byId("objective", g.objectiveId)); if(oe) return g.plannedDate; }   // ended objective: no forecast extension
+    const ge=casc.gateEffective[g.id];
+    return ge!=null?ge:(g.plannedDate==null?null:pfGate(g));
+  }
   function geom(entity, r){
-    if(entity==="stagegate"){ const ge=casc.gateEffective[r.id]; return {kind:"diamond", gate:true, planned:r.plannedDate, eff:(ge!=null?ge:(r.plannedDate==null?null:pfGate(r))), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
-    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(g=>{ const ge=casc.gateEffective[g.id]; return ge!=null?ge:(g.plannedDate==null?null:pfGate(g)); }).filter(v=>v!=null); const ds=planned.length?Math.min.apply(null,planned):null; const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
+    if(entity==="stagegate"){ return {kind:"diamond", gate:true, planned:r.plannedDate, eff:gateDisplayEff(r), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
+    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(gateDisplayEff).filter(v=>v!=null); const _obj=byId("objective", r.objectiveId); const _objDs=_obj?geom("objective",_obj).ds:null; const ds=_objDs!=null?_objDs:(planned.length?Math.min.apply(null,planned):null); const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
     if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
@@ -3094,16 +3104,26 @@ function renderGantt(){
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
       const de=r.plannedEnd!=null?r.plannedEnd:pe;
       const slip=r.plannedEnd!=null?Math.max(0,(pe!=null?pe:r.plannedEnd)-r.plannedEnd):0;
-      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
+      return {kind:"bar", ds, de, pe, slip, slipFrom:r.plannedEnd, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     if(entity==="initiative"){
       const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=P.milestones.filter(m=>m.initiativeId===r.id);
       const starts=[]; objs.forEach(o=>{ const g=geom("objective",o); if(g.ds!=null) starts.push(g.ds); }); mils.forEach(m=>{ if(m.plannedDate!=null) starts.push(m.plannedDate); });
       const peRaw=casc.initiativeProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
+      // An initiative with no KPIs of its own is a pure container: its bar ends where its children end,
+      // even if it carries a later plannedEnd. One WITH KPIs is measured in its own right, so its own
+      // plannedEnd still governs. (Objectives in 26Q1+26Q2 but none in 26Q3 -> the bar stops at 26Q2.)
+      const hasKpis=(P.kpis||[]).some(k=>k.hostType==="initiative" && k.hostId===r.id);
+      const kidEnds=[];
+      objs.forEach(o=>{ const kg=geom("objective",o); if(kg.de!=null) kidEnds.push(kg.de); });
+      mils.forEach(m=>{ const me=casc.milestoneEffective[m.id], v=(me!=null?me:m.plannedDate); if(v!=null) kidEnds.push(v); });
+      const kidEnd=kidEnds.length?Math.max.apply(null,kidEnds):null;
+      const fromKids=(!hasKpis && kidEnd!=null);
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
-      const de=r.plannedEnd!=null?r.plannedEnd:pe;
-      const slip=r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0;
-      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
+      const de=fromKids?kidEnd:(r.plannedEnd!=null?r.plannedEnd:pe);
+      const slipFrom=fromKids?kidEnd:r.plannedEnd;
+      const slip=fromKids ? ((pe!=null&&pe>kidEnd)?pe-kidEnd:0) : (r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0);
+      return {kind:"bar", ds, de, pe, slip, slipFrom, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     // division: pure rollup over its initiatives (no own dates)
     const gs=P.initiatives.filter(i=>i.divisionId===r.id).map(i=>geom("initiative",i));
@@ -3115,7 +3135,10 @@ function renderGantt(){
     if(entity==="division") return P.initiatives.filter(i=>i.divisionId===r.id).map(i=>({entity:"initiative",rec:i}));
     if(entity==="initiative") return P.milestones.filter(m=>m.initiativeId===r.id).map(m=>({entity:"milestone",rec:m}))
       .concat(P.objectives.filter(o=>o.initiativeId===r.id).map(o=>({entity:"objective",rec:o})));
-    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; return planGroupGates(doc, r.id).filter(grp=>grp.gates.length).map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
+    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId];
+      const grps=planGroupGates(doc, r.id).filter(grp=>grp.gates.length);
+      if(grps.length===1) return grps[0].gates.map(g=>({entity:"stagegate",rec:g}));   // lone workstream: hang the gates straight off the objective
+      return grps.map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
     if(entity==="stagegateset") return (r.__gates||[]).map(g=>({entity:"stagegate",rec:g}));
     return [];
   };
@@ -3226,7 +3249,8 @@ function renderGantt(){
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
-      if(g.slip>0 && g.pe!=null && !_ended){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      if(g.slip>0 && g.pe!=null && !_ended){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      if(_ended && n.entity==="objective" && _oEnd && _oEnd.endedDay!=null){ const mx=x(_oEnd.endedDay); html+=`<div class="gended ${_oEnd.status}" style="left:${mx}px" title="${_oEnd.status==='abandoned'?'abandoned':'achieved'} ${dayToIso(_oEnd.endedDay)}"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
       const _cnl = _ended && st!=='passed' && st!=='passed-late';
@@ -3239,7 +3263,7 @@ function renderGantt(){
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
       html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
