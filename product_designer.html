@@ -976,9 +976,19 @@
     }
 
     if (io.kind === 'model') {
-      // initiative is at the finest grain: objective must match exactly (no broaden)
-      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
-      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+      // Initiative is at the finest grain. The objective must match that model, or narrow into one of its
+      // SUB-PRODUCTS — a composition descendant (portfolio.composition: parent model CONTAINS child model,
+      // e.g. a System model containing a Stack model). Narrowing is allowed; broadening or diverging is not.
+      // This is how the rest of the system already reasons: the in-scope-target resolver expands a classified
+      // model to its descendants too ("+ sub-products, transitively"). Product-pinned initiatives deliberately
+      // do NOT get this reach — they stay narrow, so initiatives point at specific models.
+      if (oo.kind === 'model') {
+        if (oo.modelId === io.modelId) return { ok: true };
+        return descendantModels(io.modelId, portfolio.composition).indexOf(oo.modelId) !== -1
+          ? { ok: true }
+          : { ok: false, reason: 'objective model is neither the initiative model nor one of its sub-products' };
+      }
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model or one of its sub-products' };
     }
     return { ok: true };
   }
