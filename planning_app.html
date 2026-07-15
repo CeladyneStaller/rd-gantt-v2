@@ -3123,11 +3123,29 @@ function renderGantt(){
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
+  /* Objectives always read end-date ascending inside whatever parent or group they land in. The key is
+     g.de — the bar's drawn end (plannedEnd, else the projected end); visible() guarantees it is non-null
+     for any rendered objective bar. Ties fall back to the statement so the order is stable across renders.
+     Note this ignores the `order` field, which the Gantt never honoured anyway (the Structure tab still
+     uses it via byOrder), so the two tabs can legitimately differ in row order. */
+  const objEndCmp=(a,b)=>{
+    const ae=(a.g.de==null?Infinity:a.g.de), be=(b.g.de==null?Infinity:b.g.de);
+    if(ae!==be) return ae-be;
+    return String(nameOf("objective",a.rec)).localeCompare(String(nameOf("objective",b.rec)));
+  };
+  // sort ONLY the objective children in place, leaving milestones (and anything else) in their slots
+  const sortObjKids=(kids)=>{
+    const objs=kids.filter(k=>k.entity==="objective");
+    if(objs.length<2) return;
+    objs.sort(objEndCmp);
+    let i=0; for(let j=0;j<kids.length;j++) if(kids[j].entity==="objective") kids[j]=objs[i++];
+  };
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
     if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
     const g=geom(entity,r); if(!visible(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
+    sortObjKids(kids);
     if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
@@ -3137,7 +3155,7 @@ function renderGantt(){
     nodes.forEach(n=>{
       const key=keyPrefix+"/"+n.dim+":"+n.key;
       const kids = n.children ? buildGroupRoots(n.children, depth+1, key)
-                              : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean);
+                              : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean).sort(objEndCmp);
       if(!kids.length) return;
       const dss=[], des=[];
       (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
@@ -3155,7 +3173,7 @@ function renderGantt(){
     roots = buildGroupRoots(RD.groupObjectives(gobjs, pfGroupDims, portfolio), 0, "");
   } else if(pfGroupMode==="dims"){                                             // dims cleared → flat objectives, no division tree
     const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
-    roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean);
+    roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean).sort(objEndCmp);
   } else {
     P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
   }
