@@ -920,21 +920,34 @@
       rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
         return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
     } else { rest.sort(); }
-    if (none) rest.push('');
+    if (none) rest.unshift('');   // no value for this dimension -> reads first
     return rest;
   }
-  function groupObjectives(objs, dims, portfolio) {
-    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+  // A milestone carries no divisionId/quarter/owner of its own — only initiativeId. Division comes from its
+  // initiative; product/model fall out of effProduct/effModel, which already inherit the initiative's class
+  // because a milestone is always class-agnostic. Dimensions a milestone simply doesn't have return '' and the
+  // renderers then skip that level entirely.
+  function _msDimKey(m, dim, portfolio) {
+    if (dim === 'initiative') return m.initiativeId || '';
+    if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'product') return effProduct(m, portfolio) || '';
+    if (dim === 'model') return effModel(m, portfolio) || '';
+    return '';
+  }
+  function _groupBy(items, dims, portfolio, keyFn) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
       if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
-      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
       else node.objs = buckets[k];
       return node;
     });
   }
+  function groupObjectives(objs, dims, portfolio) { return _groupBy(objs, dims, portfolio, _dimKey); }
+  function groupMilestones(ms, dims, portfolio) { return _groupBy(ms, dims, portfolio, _msDimKey); }
 
   // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
   // Enforces the node invariant (at most one of productId/modelId) and the
@@ -1477,6 +1490,7 @@
     quarterRange: quarterRange,
     quarterList: quarterList,
     groupObjectives: groupObjectives,
+    groupMilestones: groupMilestones,
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,

@@ -1152,21 +1152,34 @@
       rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
         return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
     } else { rest.sort(); }
-    if (none) rest.push('');
+    if (none) rest.unshift('');   // no value for this dimension -> reads first
     return rest;
   }
-  function groupObjectives(objs, dims, portfolio) {
-    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+  // A milestone carries no divisionId/quarter/owner of its own — only initiativeId. Division comes from its
+  // initiative; product/model fall out of effProduct/effModel, which already inherit the initiative's class
+  // because a milestone is always class-agnostic. Dimensions a milestone simply doesn't have return '' and the
+  // renderers then skip that level entirely.
+  function _msDimKey(m, dim, portfolio) {
+    if (dim === 'initiative') return m.initiativeId || '';
+    if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'product') return effProduct(m, portfolio) || '';
+    if (dim === 'model') return effModel(m, portfolio) || '';
+    return '';
+  }
+  function _groupBy(items, dims, portfolio, keyFn) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
       if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
-      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
       else node.objs = buckets[k];
       return node;
     });
   }
+  function groupObjectives(objs, dims, portfolio) { return _groupBy(objs, dims, portfolio, _dimKey); }
+  function groupMilestones(ms, dims, portfolio) { return _groupBy(ms, dims, portfolio, _msDimKey); }
 
   // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
   // Enforces the node invariant (at most one of productId/modelId) and the
@@ -1709,6 +1722,7 @@
     quarterRange: quarterRange,
     quarterList: quarterList,
     groupObjectives: groupObjectives,
+    groupMilestones: groupMilestones,
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
@@ -2610,6 +2624,9 @@ function renderGroupNodes(nodes, em, depth, path){
   if(nodes.length===1 && nodes[0].dim==null){ return nodes[0].objs.map(o=>objLeafHtml(o,0)).join(""); }   // no dims → flat, no header
   let h="";
   nodes.forEach(n=>{
+    // no value for this dimension -> no group level at all: the items read at the parent's depth, and
+    // _dimOrder puts them first, so they sit above the real groups
+    if(n.key===""){ h += n.children ? renderGroupNodes(n.children, em, depth, path) : n.objs.map(o=>objLeafHtml(o,depth)).join(""); return; }
     const nodePath=path.concat([[n.dim,n.key]]), pre=groupPrefill(nodePath);
     const under=collectObjs(n);
     const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
@@ -2968,18 +2985,22 @@ function msMatches(ms){ const f=pfFilters; const init=byId("initiative",ms.initi
   return true; }
 function renderMilestones(){
   const el=document.getElementById("msBody"); if(!el) return;
-  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
+  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em=pfMap(), casc=RD.cascade(portfolio, em, todayDay());
   const rows=portfolio.milestones.filter(msMatches);
   if(!rows.length){ el.innerHTML=`<p class="hint">${portfolio.milestones.length?"No milestones match the current filters.":"No milestones yet — add one from an initiative in the Structure tab."}</p>`; return; }
-  const groups={}; rows.forEach(ms=>{ const init=byId("initiative",ms.initiativeId); const div=init?init.divisionId:"—"; (groups[div]=groups[div]||[]).push(ms); });
-  const divOrder=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]).concat(groups["—"]?["—"]:[]);
+
   let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th><th></th></tr></thead><tbody>`;
-  divOrder.forEach(div=>{
-    const list=groups[div].slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
-    const dname = div==="—" ? "— no division —" : (nameOf("division",byId("division",div))||div);
-    h+=`<tr class="grouphead"><td colspan="10">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
-    list.forEach(ms=>{
+  const msSort=(list)=>list.slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+  const collectMs=(n)=> n.children ? n.children.reduce((acc,c)=>acc.concat(collectMs(c)),[]) : (n.objs||[]);
+  const msGroups=(nodes, depth)=>{
+  nodes.forEach(n=>{
+    const under=collectMs(n); if(!under.length) return;
+    // "— none —" is not a group: no header, and the rows read at the parent's depth (first, per _dimOrder)
+    const bare=(n.key===""||n.key==="__all__");
+    if(!bare) h+=`<tr class="grouphead"><td colspan="10" style="padding-left:${6+depth*16}px">${esc(dimLabel(n.dim,n.key))} <span class="tsub" style="margin-left:6px">${under.length}</span></td></tr>`;
+    if(n.children){ msGroups(n.children, bare?depth:depth+1); return; }
+    msSort(n.objs).forEach(ms=>{
       const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
       const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
       const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
@@ -3002,6 +3023,8 @@ function renderMilestones(){
       `</tr>`;
     });
   });
+  };
+  msGroups(RD.groupMilestones(rows, pfGroupDims, portfolio), 0);
   h+=`</tbody></table>`;
   el.innerHTML=h;
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
@@ -3208,6 +3231,11 @@ function renderGantt(){
     const out=[];
     nodes.forEach(n=>{
       const key=keyPrefix+"/"+n.dim+":"+n.key;
+      if(n.key===""){   // no value for this dimension -> no synthetic group row; hoist straight to this depth
+        (n.children ? buildGroupRoots(n.children, depth, keyPrefix)
+                    : n.objs.map(o=>build("objective",o,depth)).filter(Boolean).sort(objEndCmp)).forEach(k=>out.push(k));
+        return;
+      }
       const kids = n.children ? buildGroupRoots(n.children, depth+1, key)
                               : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean).sort(objEndCmp);
       if(!kids.length) return;
