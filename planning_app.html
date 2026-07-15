@@ -3110,20 +3110,35 @@ function renderGantt(){
       const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=P.milestones.filter(m=>m.initiativeId===r.id);
       const starts=[]; objs.forEach(o=>{ const g=geom("objective",o); if(g.ds!=null) starts.push(g.ds); }); mils.forEach(m=>{ if(m.plannedDate!=null) starts.push(m.plannedDate); });
       const peRaw=casc.initiativeProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
-      // An initiative with no KPIs of its own is a pure container: its bar ends where its children end,
-      // even if it carries a later plannedEnd. One WITH KPIs is measured in its own right, so its own
-      // plannedEnd still governs. (Objectives in 26Q1+26Q2 but none in 26Q3 -> the bar stops at 26Q2.)
+      // An initiative with no KPIs of its own is a pure container — its real end comes from the work
+      // underneath, taken as the EARLIER of (i) the day its last objective was closed out and (ii) its last
+      // stage-gate. (i) only counts once EVERY objective is ended; while any is still live there is no "last
+      // objective ended" yet, so the gate schedule governs. An initiative WITH KPIs is measured in its own
+      // right, so its own dates stand.
+      // The BASELINE is always the initiative's own input dates: the bar runs plannedStart -> plannedEnd
+      // (banded by OKR score), and anything past plannedEnd renders as red slip. If the work finishes EARLY
+      // the bar shrinks to the real end instead (26Q1+26Q2 objectives under a 26Q3 initiative -> ends 26Q2).
       const hasKpis=(P.kpis||[]).some(k=>k.hostType==="initiative" && k.hostId===r.id);
-      const kidEnds=[];
-      objs.forEach(o=>{ const kg=geom("objective",o); if(kg.de!=null) kidEnds.push(kg.de); });
-      mils.forEach(m=>{ const me=casc.milestoneEffective[m.id], v=(me!=null?me:m.plannedDate); if(v!=null) kidEnds.push(v); });
-      const kidEnd=kidEnds.length?Math.max.apply(null,kidEnds):null;
-      const fromKids=(!hasKpis && kidEnd!=null);
+      let kidEnd=null;
+      if(!hasKpis && objs.length){
+        const cands=[];
+        const endDays=objs.map(o=>{ const es=pfObjEnd(o); return (es && es.endedDay!=null)?es.endedDay:null; });
+        if(endDays.every(v=>v!=null)) cands.push(Math.max.apply(null,endDays));            // (i) all objectives closed out
+        const gEnds=[];
+        objs.forEach(o=>{ const gs=gatesOf(o);
+          if(gs.length) gs.forEach(g=>{ const v=gateDisplayEff(g); if(v!=null) gEnds.push(v); });
+          else { const og=geom("objective",o); if(og.de!=null) gEnds.push(og.de); }         // gate-less objective: its own end
+        });
+        if(gEnds.length) cands.push(Math.max.apply(null,gEnds));                            // (ii) the last stage-gate
+        if(cands.length) kidEnd=Math.min.apply(null,cands);                                 // the EARLIER of the two
+      }
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
-      const de=fromKids?kidEnd:(r.plannedEnd!=null?r.plannedEnd:pe);
-      const slipFrom=fromKids?kidEnd:r.plannedEnd;
-      const slip=fromKids ? ((pe!=null&&pe>kidEnd)?pe-kidEnd:0) : (r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0);
-      return {kind:"bar", ds, de, pe, slip, slipFrom, derived:(r.plannedStart==null||r.plannedEnd==null)};
+      const base=(r.plannedEnd!=null?r.plannedEnd:pe);                                      // baseline end = the input date
+      const de  = kidEnd!=null ? (base!=null?Math.min(base,kidEnd):kidEnd) : base;          // shrink if the work ends early
+      const pEnd= kidEnd!=null ? kidEnd : pe;
+      const slip= (kidEnd!=null && base!=null) ? Math.max(0,kidEnd-base)                    // overrun past the baseline = slip
+                                              : (r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0);
+      return {kind:"bar", ds, de, pe:pEnd, slip, slipFrom:base, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     // division: pure rollup over its initiatives (no own dates)
     const gs=P.initiatives.filter(i=>i.divisionId===r.id).map(i=>geom("initiative",i));
