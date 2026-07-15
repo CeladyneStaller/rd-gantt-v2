@@ -63,6 +63,7 @@
   .ov-ctl{display:flex;align-items:center;gap:9px}
   .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
   body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly [data-sdel], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  .obj-xdiv{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--panel2);border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
   .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
@@ -1930,6 +1931,49 @@ function divCard(d, overall, qCells, counts, worst){
 function pfObjEnd(o){ return o ? RD.objectiveEndState((execDocs["EXEC-"+o.divisionId]||{}).objectiveState, o.id) : null; }
 function endBadge(es){ return es?`<span class="obj-ended ${es.status}" title="${es.status==='abandoned'?'Abandoned':'Achieved'}${es.endedDay!=null?' '+dayToIso(es.endedDay):''}">${es.status==='abandoned'?'Abandoned':'Achieved'}</span>`:""; }
 function objEndBadge(o){ return endBadge(pfObjEnd(o)); }
+/* ---- cross-division objectives -------------------------------------------------------------------
+   An objective carries its OWN divisionId, and that id decides which EXEC-<div> bin holds its key
+   results, stage-gates and readings. Planning nests objectives under their INITIATIVE, so an objective
+   whose division differs from its initiative's shows here under one division but lives in another in
+   the execution app. That can be deliberate (a modelling division serving another division's
+   initiative), so this is reported neutrally, never as an error. ---- */
+function divName(id){ const d=byId("division", id); return (d && d.name) || id || ""; }
+function objXDiv(o){
+  if(!o || !o.initiativeId || !o.divisionId) return null;
+  const i=byId("initiative", o.initiativeId);
+  return (i && i.divisionId && i.divisionId!==o.divisionId) ? o.divisionId : null;
+}
+function objDivBadge(o){ const d=objXDiv(o); if(!d) return "";
+  return `<span class="obj-xdiv" title="Executed in ${esc(divName(d))} \u2014 this objective's key results and stage-gates live in that division's execution bin, while its initiative sits in ${esc(divName((byId("initiative",o.initiativeId)||{}).divisionId))}.">exec: ${esc(divName(d))}</span>`; }
+function objExecCounts(o){                                   // what lives in this objective's CURRENT bin
+  const doc=execDocs["EXEC-"+o.divisionId]; if(!doc) return null;
+  return { kr:(doc.keyResults||[]).filter(x=>x.objectiveId===o.id).length,
+           g:(doc.stageGates||[]).filter(x=>x.objectiveId===o.id).length };
+}
+/* Advisory guard on a division change. Planning can only write the portfolio bin, so it cannot migrate an
+   objective's execution payload between EXEC-<div> bins — the honest move is to warn, not to block or
+   silently "fix". Arming is per-move: re-picking a different division re-arms. */
+let moveArmed = null;
+function confirmDivisionMove(ent, id, rec, data){
+  if(ent!=="objective" && ent!=="initiative") return true;
+  if(data.divisionId===undefined || !rec.divisionId || data.divisionId===rec.divisionId) return true;
+  const sig=ent+":"+id+":"+rec.divisionId+">"+data.divisionId;
+  if(moveArmed===sig){ moveArmed=null; return true; }                    // already warned for exactly this move
+  const from=divName(rec.divisionId), to=divName(data.divisionId);
+  let msg;
+  if(ent==="objective"){
+    const c=objExecCounts(rec), bits=[];
+    if(c){ if(c.kr) bits.push(c.kr+" key result"+(c.kr>1?"s":"")); if(c.g) bits.push(c.g+" stage-gate"+(c.g>1?"s":"")); }
+    if(c && !bits.length) return true;                                   // nothing to strand -> move freely
+    const what=bits.length?bits.join(" and "):"any execution data";
+    msg=`Moving this objective from ${from} to ${to}. Its ${what} live in ${from}'s execution bin and will NOT move \u2014 they'll disappear from view until the division is set back. Click Save again to move anyway.`;
+  } else {
+    const stay=portfolio.objectives.filter(o=>o.initiativeId===id && o.divisionId===rec.divisionId);
+    if(!stay.length) return true;                                        // no aligned objectives -> nothing strands
+    msg=`Moving this initiative from ${from} to ${to}. Its ${stay.length} objective${stay.length>1?"s":""} stay in ${from} \u2014 they'll show under ${to} here but remain in ${from} in the execution app. Click Save again to move anyway.`;
+  }
+  moveArmed=sig; showEditorErr(msg); return false;
+}
 function pfAbandoned(o){ const es=pfObjEnd(o); return !!(es && es.status==='abandoned'); }
 function statusCounts(type, id, em){
   const c={"on-track":0,"at-risk":0,"off-track":0,"no-band":0};
@@ -1993,6 +2037,7 @@ function renderPortfolio(){
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
+  moveArmed = null;
   if(entityOverride) activeEntity = entityOverride;
   editingId = id || null;
   const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : (prefill || {});
@@ -2366,7 +2411,7 @@ const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegate
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
-function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; const _oe=entity==="objective"?pfObjEnd(r):null; const _sk=(_oe&&_oe.status==="abandoned")?" obj-struck":""; return `<a class="tname${mu}${_sk}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${endBadge(_oe)}`; }
+function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; const _oe=entity==="objective"?pfObjEnd(r):null; const _sk=(_oe&&_oe.status==="abandoned")?" obj-struck":""; return `<a class="tname${mu}${_sk}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${endBadge(_oe)}${entity==="objective"?objDivBadge(r):""}`; }
 function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}${treeActs(entity,r.id)}`; }
 function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}${treeActs(entity,r.id)}</div>`; }
 // read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
@@ -2708,6 +2753,7 @@ function saveRecord(){
     const merged = Object.assign({}, rec, data);
     if(ent==="objective" && reconcileObjClass(merged)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, merged)) return;   // validate before mutating
+    if(!confirmDivisionMove(ent, id, rec, data)) return;   // advisory: a division move strands execution data
     Object.assign(rec, data);
     reapply = ()=>{ const r=SEL[ent]().find(x=>x.id===id); if(r) Object.assign(r, data); else SEL[ent]().push(Object.assign({id}, data)); };
   } else {
@@ -2861,7 +2907,7 @@ function renderStructTables(){
       html+=`<tr class="s-parent">`+idCell("initiative",i.id)+`<td><b>${esc(i.name)}</b></td><td>${structRefName("division",i.divisionId)}</td>`+acts("initiative",i.id,[["objective","+ obj"],["milestone","+ ms"]])+`</tr>`;
       structObjsOf(i).forEach(o=>{
         const b=nodeBand("objective",o.id);
-        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}${objEndBadge(o)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
+        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}${objEndBadge(o)}${objDivBadge(o)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
       });
       byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
         html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
