@@ -2569,7 +2569,11 @@ async function pollOnce(){
 
 /* ---------------- lookups ---------------- */
 function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); return d?d.name:id; }
-function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId && o.layer!=="roadmap"); }
+// Every objective in this division, regardless of `layer`. The old `&& o.layer!=="roadmap"` clause hid
+// roadmap-layer objectives here; nothing in this suite writes `layer` (it comes from outside), planning
+// showed both layers with no way to tell them apart, and the roadmap/execution split is no longer wanted.
+// To restore the split, re-add the clause — no data was changed.
+function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId); }
 async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
