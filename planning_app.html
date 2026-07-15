@@ -65,6 +65,8 @@
   body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly [data-sdel], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
   .obj-xdiv{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--panel2);border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
   .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
+  .gact.danger{color:var(--bad)} .gact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
+  .ms-tbl .gact + .gact{margin-left:4px}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
@@ -295,6 +297,7 @@
   .gdia.pending{background:transparent;border:1.5px solid var(--muted)}
   .gdia.ghost{background:transparent;border:1.5px dashed var(--muted);opacity:.55}
   .gdia.cancelled{background:repeating-linear-gradient(45deg, var(--none) 0 1.5px, transparent 1.5px 3.5px);border:1px solid var(--none);opacity:.85}
+  .gdia.cancelled.missed{background:repeating-linear-gradient(45deg, var(--bad) 0 1.5px, transparent 1.5px 3.5px);border-color:var(--bad);opacity:1}
   .gbar.gsetbar.cancelled{opacity:.42;border-color:var(--none)!important}
   .gbar.gsetbar.cancelled .gbarfill{background:repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px)!important;opacity:.6}
   .gdia.done{background:var(--ok);border-color:var(--ok)}
@@ -2995,7 +2998,7 @@ function renderMilestones(){
         `<td style="white-space:nowrap">${stCell}</td>`+
         `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
         `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
-        `<td style="text-align:center"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button></td>`+
+        `<td style="text-align:center;white-space:nowrap"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button>${RO?"":`<button class="gact danger" data-sdel="milestone:${ms.id}" title="Delete this milestone">✕</button>`}</td>`+
       `</tr>`;
     });
   });
@@ -3003,6 +3006,7 @@ function renderMilestones(){
   el.innerHTML=h;
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
   el.querySelectorAll("[data-msreport]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openMilestoneReport(b.dataset.msreport); });
+  el.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const t=b.dataset.sdel,i=t.indexOf(":"); armedDelete=null; structDelete(t.slice(0,i), t.slice(i+1)); });
 }
 /* ---------------- milestone report modal (phase 3) ---------------- */
 let msrCurrent=null, msrDraft=null;
@@ -3284,6 +3288,7 @@ function renderGantt(){
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
       const _cnl = _ended && st!=='passed' && st!=='passed-late';
+      const _missed = _cnl && _oEnd.status==='abandoned';   // abandoned -> these gates were MISSED; achieved -> work simply stopped
       if(!_cnl && g.slipped && g.baseline!=null){
         const bx=x(g.baseline);
         html+=`<div class="gconn committed" style="left:${Math.min(bx,ex)}px;width:${Math.max(2,Math.abs(ex-bx))}px"></div>`;
@@ -3293,7 +3298,7 @@ function renderGantt(){
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}" style="left:${ex}px" title="${_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
       html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
@@ -3302,7 +3307,7 @@ function renderGantt(){
     html+=`</div></div>`;
   });
   html+=`</div>`;
-  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span><span><i style="background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)"></i>cancelled</span></div>`;
+  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span><span><i style="background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)"></i>cancelled</span><span><i style="background:repeating-linear-gradient(45deg,var(--bad) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--bad)"></i>missed</span></div>`;
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
