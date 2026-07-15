@@ -250,9 +250,13 @@
     #msrBody{max-height:none !important;overflow:visible !important}
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
-  .pfk-srcs{display:flex;flex-direction:column;gap:3px;margin-top:4px;max-height:132px;overflow-y:auto}
-  .pfk-src{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:400}
-  .pfk-src .muted{color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pfk-srcs{display:flex;flex-direction:column;margin-top:4px;max-height:190px;overflow-y:auto}
+  .pfk-og{margin-bottom:5px}
+  .pfk-obj{font-size:11.5px;font-weight:600;color:var(--ink);padding:2px 0}
+  .pfk-q{color:var(--muted);font-weight:400;font-family:var(--mono);font-size:10px}
+  .pfk-krg{margin-left:10px;padding:1px 0}
+  .pfk-kr{font-size:10px;color:var(--muted);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pfk-src{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:400;margin-left:12px;padding:1px 0}
   .pft-srcrow{grid-column:1/-1;margin:-2px 0 4px 18px}
   .pft-src{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
   .pft-cur[data-tgtpost]{cursor:pointer;border-radius:4px}
@@ -2291,19 +2295,26 @@ function classificationKpisHtml(node){
 }
 // A milestone KPI can draw its current value from KR KPIs inside its own initiative. The link is stored on
 // the milestone KPI (kpi.sources) because the KR KPI lives in an EXEC-<div> doc this app cannot write.
-function msSourceCandidates(msId){
+function msSourceTree(msId){
   const ms=byId("milestone", msId); if(!ms) return [];
-  const objIds=(portfolio.objectives||[]).filter(o=>o.initiativeId===ms.initiativeId).map(o=>o.id);
+  const objs=(portfolio.objectives||[]).filter(o=>o.initiativeId===ms.initiativeId);
+  const tree=[];
+  objs.forEach(o=>{
+    const krs=[];
+    for(const key in execDocs){
+      const doc=execDocs[key]||{};
+      (doc.keyResults||[]).filter(r=>r.objectiveId===o.id).forEach(kr=>{
+        const kpis=(doc.kpis||[]).filter(k=>k.hostType==="keyResult" && k.hostId===kr.id).map(k=>({ id:k.id, label:(k.name||k.id) }));
+        if(kpis.length) krs.push({ id:kr.id, label:(kr.statement||kr.id), kpis:kpis });   // a KR with no KPIs has nothing to offer
+      });
+    }
+    if(krs.length) tree.push({ id:o.id, label:(o.statement||o.id), quarter:o.quarter||"", krs:krs });
+  });
+  return tree;
+}
+function msSourceCandidates(msId){                                   // flat view of the same set
   const out=[];
-  for(const key in execDocs){
-    const doc=execDocs[key]||{};
-    (doc.kpis||[]).forEach(k=>{
-      if(k.hostType!=="keyResult") return;
-      const kr=(doc.keyResults||[]).find(r=>r.id===k.hostId);
-      if(!kr || objIds.indexOf(kr.objectiveId)<0) return;
-      out.push({ id:k.id, label:(k.name||k.id), kr:(kr.statement||kr.id) });
-    });
-  }
+  msSourceTree(msId).forEach(o=>o.krs.forEach(kr=>kr.kpis.forEach(k=>out.push({ id:k.id, label:k.label, kr:kr.label }))));
   return out;
 }
 function kpiSourceNote(k){
@@ -2466,10 +2477,14 @@ function pfKpiFormHtml(d){
     h+=`<label class="pffield"><span>Unit</span><input data-k="unit" type="text" value="${esc(d.unit||'')}" placeholder="e.g. A/g, %, mV"/></label>`;
   }
   if(pfKpiHostType==="milestone"){
-    const cands=msSourceCandidates(pfKpiInit), cur=d.sources||[];
+    const tree=msSourceTree(pfKpiInit), cur=d.sources||[];
     h+=`<div class="pfk-f" style="grid-column:1/-1"><label>Value sources <span class="hint" style="font-weight:400">— KR KPIs in this initiative; the best-scoring one sets the value</span></label>`;
-    h+= cands.length
-      ? `<div class="pfk-srcs">`+cands.map(c=>`<label class="pfk-src"><input type="checkbox" data-src="${esc(c.id)}" ${cur.indexOf(c.id)>=0?"checked":""}/> <span>${esc(c.label)}</span> <span class="muted">${esc(c.kr)}</span></label>`).join("")+`</div>`
+    h+= tree.length
+      ? `<div class="pfk-srcs">`+tree.map(o=>
+          `<div class="pfk-og"><div class="pfk-obj">${esc(o.label)}${o.quarter?` <span class="pfk-q">(${esc(o.quarter)})</span>`:""}</div>`+
+          o.krs.map(kr=>`<div class="pfk-krg"><div class="pfk-kr">${esc(kr.label)}</div>`+
+            kr.kpis.map(k=>`<label class="pfk-src"><input type="checkbox" data-src="${esc(k.id)}" ${cur.indexOf(k.id)>=0?"checked":""}/> <span>${esc(k.label)}</span></label>`).join("")+
+          `</div>`).join("")+`</div>`).join("")+`</div>`
       : `<p class="hint" style="margin:4px 0 0">No Key Result KPIs in this initiative yet.</p>`;
     h+=`</div>`;
   }
