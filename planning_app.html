@@ -190,6 +190,66 @@
   .pft-name{font-weight:600;color:var(--ink)}
   .pft-sum{color:var(--muted);font-size:11.5px}
   .pft-cur{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+  /* The milestone report is a DOCUMENT: fixed light regardless of the app theme, so it prints correctly. */
+  .msr-doc{background:#fff;color:#1a1a1a;padding:22px 24px;font-size:13px;line-height:1.45;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .msr-doc *{box-sizing:border-box}
+  .msr-lbl{font-size:10px;letter-spacing:.08em;color:#666;text-transform:uppercase;margin-bottom:2px}
+  .msr-head{display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;
+    border-bottom:2px solid #185FA5;padding-bottom:12px;margin-bottom:16px}
+  .msr-proj{font-size:18px;font-weight:500}
+  .msr-tagrow{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .msr-tag{background:#E6F1FB;color:#0C447C;font-size:11px;font-weight:500;padding:3px 10px;border-radius:4px;font-family:var(--mono)}
+  .msr-msname{font-size:12px;color:#666}
+  .msr-metas{display:flex;gap:24px}
+  .msr-val{font-size:12px;font-weight:500;font-family:var(--mono)}
+  .msr-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;font-family:var(--mono);display:inline-block}
+  .msr-green{background:#EAF3DE;color:#3B6D11} .msr-red{background:#FCEBEB;color:#A32D2D}
+  .msr-amber{background:#FAEEDA;color:#854F0B} .msr-gray{background:#f0f0ee;color:#888}
+  .msr-sec{border:.5px solid #ddd;border-radius:8px;padding:12px 16px;margin-bottom:16px}
+  .msr-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .msr-two .msr-sec{margin-bottom:16px;height:calc(100% - 16px)}
+  .msr-sect{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#666;font-weight:500;
+    margin-bottom:8px;border-bottom:.5px solid #ddd;padding-bottom:6px}
+  .msr-body{font-size:12px;color:#555;line-height:1.7}
+  .msr-ph{color:#bbb}
+  .msr-doc [contenteditable]{outline:none;border-radius:3px}
+  .msr-doc [contenteditable]:hover,.msr-doc [contenteditable]:focus{background:#f5f5f3}
+  .msr-mhead,.msr-metric{display:grid;grid-template-columns:1fr 84px 84px 66px;gap:8px;align-items:center}
+  .msr-metric{padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-metric:last-child{border-bottom:none}
+  .msr-mhead{margin-bottom:3px}
+  .msr-col{font-size:10px;color:#888;text-align:center}
+  .msr-mono{font-family:var(--mono);font-size:12px;font-weight:500;text-align:center}
+  .msr-mname{display:flex;flex-direction:column;gap:1px}
+  .msr-src{font-size:9px;color:#999;font-family:var(--mono)}
+  .msr-sel{font-size:10px;font-family:var(--mono);border:1px solid #ddd;border-radius:3px;background:#fff;color:#1a1a1a;padding:1px 3px;width:100%}
+  .msr-empty{font-size:11px;color:#999;padding:6px 0}
+  .msr-finding{display:flex;gap:8px;padding:6px 0;border-bottom:.5px solid #eee;font-size:12px;align-items:flex-start}
+  .msr-finding:last-child{border-bottom:none}
+  .msr-fn{font-family:var(--mono);font-size:10px;color:#888;flex:none;width:18px;padding-top:1px}
+  .msr-finding>div:last-child{flex:1;line-height:1.5}
+  .msr-stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-stat:last-child{border-bottom:none}
+  .msr-slbl{color:#666} .msr-sval{font-family:var(--mono);font-size:12px;font-weight:500;text-align:right}
+  .msr-late{color:#854F0B} .msr-early{color:#3B6D11}
+  .msr-ahead,.msr-action{display:grid;grid-template-columns:1fr 100px 92px;gap:8px;align-items:center}
+  .msr-action{padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-action:last-child{border-bottom:none}
+  .msr-amono{font-family:var(--mono);font-size:11px;text-align:center;color:#666}
+  .msr-foot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border-top:.5px solid #ddd;padding-top:12px}
+  .msr-sig{border-bottom:.5px solid #aaa;height:24px;margin-bottom:4px}
+  .msr-siglbl{font-size:10px;color:#888;letter-spacing:.05em;text-transform:uppercase}
+  @media print {
+    body *{visibility:hidden !important}
+    #msReportModal,#msReportModal *{visibility:visible !important}
+    #msReportModal{position:absolute !important;inset:0 !important;padding:0 !important;background:#fff !important;display:block !important}
+    #msReportModal .modal-card{width:100% !important;max-width:none !important;max-height:none !important;
+      border:0 !important;box-shadow:none !important;background:#fff !important}
+    #msReportModal .modal-head,#msrActions{display:none !important}
+    #msrBody{max-height:none !important;overflow:visible !important}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
   .pfk-srcs{display:flex;flex-direction:column;gap:3px;margin-top:4px;max-height:132px;overflow-y:auto}
   .pfk-src{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:400}
   .pfk-src .muted{color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3147,67 +3207,134 @@ function renderMilestones(){
 let msrCurrent=null, msrDraft=null;
 function msKpiResult(score){ if(score==null) return "N/A"; if(score>=100) return "Met"; if(score>=70) return "Partial"; return "Missed"; }
 function resultBandCls(r){ return r==="Met"?"on-track":r==="Partial"?"at-risk":r==="Missed"?"off-track":"no-band"; }
+function msrBlank(){ return { kpiOverrides:{}, findings:["","","",""], project:"", author:"", version:"",
+  demonstrated:"", context:{ budget:"", buildNo:"", linkedOkr:"" },
+  actions:[{item:"",owner:"",due:""},{item:"",owner:"",due:""},{item:"",owner:"",due:""}], locked:false }; }
 function openMilestoneReport(msId){
   const ms=byId("milestone",msId); if(!ms) return;
   msrCurrent=msId;
-  const rep=ms.milestoneReport||{};
-  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})), findings:(rep.findings&&rep.findings.length?rep.findings.slice():["","","",""]), locked:!!rep.locked };
+  const rep=ms.milestoneReport||{}, bl=msrBlank();
+  // additive: reports saved before these fields existed simply come back blank
+  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})),
+    findings:(rep.findings&&rep.findings.length?rep.findings.slice():bl.findings),
+    project:rep.project||"", author:rep.author||"", version:rep.version||"", demonstrated:rep.demonstrated||"",
+    context:Object.assign({}, bl.context, rep.context||{}),
+    actions:(rep.actions&&rep.actions.length?JSON.parse(JSON.stringify(rep.actions)):bl.actions).slice(0,3),
+    locked:!!rep.locked };
+  while(msrDraft.actions.length<3) msrDraft.actions.push({item:"",owner:"",due:""});
   renderMsReport();
   document.getElementById("msReportModal").hidden=false;
 }
+function msrPlaceholder(txt){ return `<span class="msr-ph">${esc(txt)}</span>`; }
 function renderMsReport(){
   const ms=byId("milestone",msrCurrent); if(!ms) return;
   const em=pfMap(), pool=poolOf(em), locked=msrDraft.locked, ce=locked?"":'contenteditable="true"';
   const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
-  const planned=ms.plannedDate, actual=ms.completedDate;
+  const planned=ms.plannedDate, actual=ms.completedDate, done=RD.milestoneAchieved(ms,em);
   const variance=(planned!=null&&actual!=null)?(actual-planned):null;
-  const varTxt=variance==null?"—":(variance>0?`+${variance} days late`:variance<0?`${-variance} days early`:"on time");
-  const varCls=variance==null?"no-band":(variance>0?"off-track":"on-track");
+  const varTxt=variance==null?"—":(variance>0?`+${variance} days`:variance<0?`${variance} days`:"on time");
   const dirSym=d=>(d==="down"||d==="decrease")?"≤":d==="maintain"?"~":"≥";
+  const ed=(field,val,ph)=>`<span class="msr-ed" ${ce} data-msr="${field}">${val?esc(val):(locked?"—":msrPlaceholder(ph))}</span>`;
+  // ---- performance vs targets (derived target; measured overridable; NO band/score, per the mockup) ----
   const kpis=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id);
-  let kpiRows;
+  let metricRows;
   if(kpis.length){
-    kpiRows=kpis.map(k=>{
+    metricRows=kpis.map(k=>{
       const s=RD.kpiScoreResolved(k,pool,em), val=RD.effValue(k,pool,em), tgt=RD.effTarget(k,pool,em), unit=RD.kpiUnit(k,pool)||k.unit||"";
       const ov=msrDraft.kpiOverrides[k.id]||{};
       const measured=(ov.measured!=null&&ov.measured!=="")?ov.measured:(val==null?"—":`${fmtNum(val)}${unit?" "+unit:""}`);
-      const result=ov.result||msKpiResult(s), bnd=RD.band(s);
+      const result=ov.result||msKpiResult(s);
       const tgtTxt=tgt==null?"—":`${dirSym(k.direction)} ${fmtNum(typeof tgt==="object"?tgt.hi:tgt)}${unit?" "+unit:""}`;
-      const resCell=locked?`<span class="band ${resultBandCls(result)}">${result}</span>`
-        :`<select data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
-      return `<tr><td>${esc(RD.kpiName(k,pool)||k.id)}</td>`+
-        `<td class="mono">${esc(tgtTxt)}</td>`+
-        `<td class="mono" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</td>`+
-        `<td>${resCell}</td>`+
-        `<td><span class="band ${bnd}">${bnd.replace("-"," ")}</span></td>`+
-        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td></tr>`;
+      const resCell=locked?`<span class="msr-badge ${msrBadgeCls(result)}">${esc(result)}</span>`
+        :`<select class="msr-sel" data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
+      // where the current value came from (manual entry vs the best-scoring linked KR KPI)
+      let srcTxt="";
+      const e=RD.effValueSource(k,pool,em);
+      if(e){ if(e.src===k.id) srcTxt="manual entry";
+             else { const sk=pool.find(x=>x.id===e.src), n=(k.sources||[]).length;
+                    srcTxt=(sk?(sk.name||sk.id):e.src)+(n>1?` (best of ${n})`:""); } }
+      return `<div class="msr-metric">`+
+        `<span class="msr-mname">${esc(RD.kpiName(k,pool)||k.id)}${srcTxt?`<span class="msr-src">source: ${esc(srcTxt)}</span>`:""}</span>`+
+        `<span class="msr-mono">${esc(tgtTxt)}</span>`+
+        `<span class="msr-mono msr-ed" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</span>`+
+        `<span style="text-align:center">${resCell}</span></div>`;
     }).join("");
-  } else kpiRows=`<tr><td colspan="6"><span class="hint">No KPIs on this milestone — add them in the editor's Targets section.</span></td></tr>`;
-  const findingsHtml=msrDraft.findings.map((f,i)=>`<div class="msr-finding"><span class="msr-fn">${String(i+1).padStart(2,"0")}</span><div ${ce} data-msr="finding" data-idx="${i}">${esc(f||"")}</div></div>`).join("");
-  document.getElementById("msrBody").innerHTML=
-    `<div class="msr-hd"><div><span class="msr-num mono">${esc(milestoneNumber(ms))}</span> <b>${esc(ms.name||ms.id)}</b></div>`+
-    `<div class="msr-meta">${init?esc(init.name||init.id):""}${prodId?" · "+esc(productName(prodId)):""}</div></div>`+
-    `<div class="msr-dates"><span>Planned <b>${planned!=null?dayToIso(planned):"—"}</b></span>`+
-    `<span>Actual <b>${actual!=null?dayToIso(actual):"—"}</b></span>`+
-    `<span>Variance <span class="band ${varCls}">${varTxt}</span></span></div>`+
-    `<div class="msr-sec-lbl">KPI results</div>`+
-    `<table class="msr-tbl"><thead><tr><th>KPI</th><th>Target</th><th>Measured</th><th>Result</th><th>Band</th><th style="text-align:right">Score</th></tr></thead><tbody>${kpiRows}</tbody></table>`+
-    `<div class="msr-sec-lbl">Findings &amp; learnings</div>${findingsHtml}`;
-  document.getElementById("msrActions").innerHTML=locked
-    ?`<span class="hint" style="margin-right:auto">🔒 Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
-    :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`;
-  document.getElementById("msrLock").textContent=locked?"🔒 Unlock":"Lock";
+  } else metricRows=`<div class="msr-empty">No targets on this milestone — add them in the editor's Targets section.</div>`;
+  const findingsHtml=msrDraft.findings.map((f,i)=>
+    `<div class="msr-finding"><div class="msr-fn">${String(i+1).padStart(2,"0")}</div>`+
+    `<div class="msr-ed" ${ce} data-msr="finding" data-idx="${i}">${f?esc(f):(locked?"":msrPlaceholder("Finding or learning from the demonstration."))}</div></div>`).join("");
+  const stat=(lbl,val,cls)=>`<div class="msr-stat"><span class="msr-slbl">${esc(lbl)}</span><span class="msr-sval ${cls||""}">${val}</span></div>`;
+  const ctxEd=(key,ph)=>`<span class="msr-sval msr-ed" ${ce} data-msr="ctx" data-key="${key}">${msrDraft.context[key]?esc(msrDraft.context[key]):(locked?"—":msrPlaceholder(ph))}</span>`;
+  const actionsHtml=msrDraft.actions.map((a,i)=>
+    `<div class="msr-action">`+
+    `<span class="msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="item">${a.item?esc(a.item):(locked?"":msrPlaceholder("Action item arising from demonstration"))}</span>`+
+    `<span class="msr-amono msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="owner">${a.owner?esc(a.owner):(locked?"":msrPlaceholder("Name"))}</span>`+
+    `<span class="msr-amono msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="due">${a.due?esc(a.due):(locked?"":msrPlaceholder("2026-04-15"))}</span></div>`).join("");
+  document.getElementById("msrBody").innerHTML=`<div class="msr-doc" id="msrDoc">`+
+    // ---- header: project editable; tag / name / achieved / date derived ----
+    `<div class="msr-head"><div>`+
+      `<div class="msr-lbl">Project</div>`+
+      `<div class="msr-proj">${ed("project", msrDraft.project, prodId?productName(prodId):(init?(init.name||init.id):"Project / Product name"))}</div>`+
+      `<div class="msr-tagrow"><span class="msr-tag">${esc(milestoneNumber(ms))}</span>`+
+      `<span class="msr-msname">${esc(ms.name||ms.id)}</span>`+
+      `<span class="msr-badge ${done?"msr-green":"msr-gray"}">${done?"Achieved":"Not achieved"}</span></div>`+
+    `</div><div class="msr-metas">`+
+      `<div class="msr-meta"><div class="msr-lbl">Date achieved</div><div class="msr-val">${actual!=null?esc(dayToIso(actual)):"—"}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">Author</div><div class="msr-val">${ed("author", msrDraft.author, "Name")}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">Version</div><div class="msr-val">${ed("version", msrDraft.version, "v1.0")}</div></div>`+
+    `</div></div>`+
+    // ---- what was demonstrated ----
+    `<div class="msr-sec"><div class="msr-sect">What was demonstrated</div>`+
+      `<div class="msr-body msr-ed" ${ce} data-msr="demonstrated">${msrDraft.demonstrated?esc(msrDraft.demonstrated):(locked?"—":msrPlaceholder("Describe what was physically demonstrated, tested, or shown — setup conditions, operating envelope, duration, and any observers present."))}</div></div>`+
+    // ---- performance vs targets ----
+    `<div class="msr-sec"><div class="msr-sect">Performance vs. targets</div>`+
+      `<div class="msr-mhead"><span></span><span class="msr-col">Target</span><span class="msr-col">Measured</span><span class="msr-col">Result</span></div>`+
+      metricRows+`</div>`+
+    // ---- findings + context ----
+    `<div class="msr-two">`+
+      `<div class="msr-sec"><div class="msr-sect">Key findings &amp; learnings</div>${findingsHtml}</div>`+
+      `<div class="msr-sec"><div class="msr-sect">Milestone context</div>`+
+        stat("Planned date", planned!=null?esc(dayToIso(planned)):"—")+
+        stat("Actual date", actual!=null?esc(dayToIso(actual)):"—")+
+        stat("Variance", esc(varTxt), variance!=null&&variance>0?"msr-late":(variance!=null&&variance<0?"msr-early":""))+
+        stat("Budget spent", ctxEd("budget","$42k / $50k"))+
+        stat("Prototype build no.", ctxEd("buildNo","Build #3"))+
+        stat("Linked OKR", ctxEd("linkedOkr","KR 1.3"))+
+      `</div>`+
+    `</div>`+
+    // ---- actions ----
+    `<div class="msr-sec"><div class="msr-sect">Actions required before next milestone</div>`+
+      `<div class="msr-ahead"><span class="msr-col" style="text-align:left">Action item</span><span class="msr-col">Owner</span><span class="msr-col">Due</span></div>`+
+      actionsHtml+`</div>`+
+    // ---- signatures: ruled lines + labels only, printed blank for wet signing ----
+    `<div class="msr-foot">`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">Technical lead</div></div>`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">CTO / R&amp;D director</div></div>`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">Reviewer / sponsor</div></div>`+
+    `</div></div>`;
+  document.getElementById("msrActions").innerHTML=
+    `<button class="ghost" id="msrPrint">Print / Save as PDF</button>`+
+    (locked?`<span class="hint" style="margin-right:auto">\u{1F512} Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
+           :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`);
+  document.getElementById("msrLock").textContent=locked?"\u{1F512} Unlock":"Lock";
   wireMsReport();
 }
+function msrBadgeCls(r){ return r==="Met"?"msr-green":r==="Missed"?"msr-red":r==="Partial"?"msr-amber":"msr-gray"; }
+function msrTxt(el){ const t=(el.textContent||"").trim(); return (t==="—"||el.querySelector(".msr-ph"))?"":t; }
 function collectMsReport(){
   const body=document.getElementById("msrBody"); if(!body||!msrDraft) return;
-  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid, v=(el.textContent||"").trim(); (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=(v==="—"?"":v); });
+  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=msrTxt(el); });
   body.querySelectorAll('[data-msr="result"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).result=el.value; });
-  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.findings[i]=(el.textContent||"").trim(); });
+  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ msrDraft.findings[Number(el.dataset.idx)]=msrTxt(el); });
+  ["project","author","version","demonstrated"].forEach(fk=>{ const el=body.querySelector(`[data-msr="${fk}"]`); if(el) msrDraft[fk]=msrTxt(el); });
+  body.querySelectorAll('[data-msr="ctx"]').forEach(el=>{ msrDraft.context[el.dataset.key]=msrTxt(el); });
+  body.querySelectorAll('[data-msr="act"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.actions[i]=msrDraft.actions[i]||{item:"",owner:"",due:""}; msrDraft.actions[i][el.dataset.key]=msrTxt(el); });
 }
 function persistMsReport(msg){
   const ms=byId("milestone",msrCurrent); if(!ms) return;
-  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings, locked:msrDraft.locked, savedAt:Date.now() };
+  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings,
+    project:msrDraft.project, author:msrDraft.author, version:msrDraft.version, demonstrated:msrDraft.demonstrated,
+    context:msrDraft.context, actions:msrDraft.actions, locked:msrDraft.locked, savedAt:Date.now() };
   const id=ms.id, snap=JSON.parse(JSON.stringify(ms.milestoneReport));
   renderMilestones();
   persistPortfolio(()=>{ const m=byId("milestone",id); if(m) m.milestoneReport=snap; }, msg||"Report saved.");
@@ -3220,6 +3347,7 @@ function wireMsReport(){
   const c2=document.getElementById("msrCancel2"); if(c2) c2.onclick=closeMsReport;
   const sv=document.getElementById("msrSave"); if(sv) sv.onclick=saveMilestoneReport;
   document.getElementById("msrLock").onclick=toggleMsLock;
+  const pb=document.getElementById("msrPrint"); if(pb) pb.onclick=()=>{ collectMsReport(); window.print(); };
 }
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
