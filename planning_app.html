@@ -3466,14 +3466,23 @@ function overviewTilesHtml(){
   for(const d of portfolio.divisions){
     const dObjs=activeObjs.filter(function(o){return o.divisionId===d.id;});
     const dMs=activeMs.filter(function(m){return ovMsDiv(m)===d.id;});
-    if(!dObjs.length && !dMs.length) continue;
-    let prodIds=Array.from(new Set(dObjs.map(ovObjProdId).concat(dMs.map(ovMsProdId))));
+    // Products/models come from the division that OWNS them (product.divisionId), not from whatever objectives
+    // happen to reference them. Two consequences: a product still gets a tile with no active objective this
+    // quarter, and an objective pointing at another division's product no longer drags that product in here.
+    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id;}).map(function(p){return p.id;});
+    if(!dObjs.length && !dMs.length && !dProdIds.length) continue;
+    const ownHere=function(pid){ return pid!=null && dProdIds.indexOf(pid)>=0; };
+    // an objective/milestone whose product is owned by another division has no tile to sit under here
+    const objProd=function(o){ const p=ovObjProdId(o); return ownHere(p)?p:null; };
+    const msProd =function(m){ const p=ovMsProdId(m);  return ownHere(p)?p:null; };
+    let prodIds=dProdIds.slice();
+    if(dObjs.some(function(o){return objProd(o)==null;}) || dMs.some(function(m){return msProd(m)==null;})) prodIds.push(null);
     prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1; return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
     groups+='<div class="divgroup"><div class="divlabel"><div class="ldot"></div><div class="nm">'+esc(d.name)+'</div><div class="rule"></div></div>';
     for(const pid of prodIds){
-      const objs=dObjs.filter(function(o){return ovObjProdId(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
-      const mss=dMs.filter(function(m){return ovMsProdId(m)===pid;});
-      if(!objs.length && !mss.length) continue;
+      const objs=dObjs.filter(function(o){return objProd(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
+      const mss=dMs.filter(function(m){return msProd(m)===pid;});
+      if(pid==null && !objs.length && !mss.length) continue;   // owned products always tile; the unclassified bucket only when it holds something
       const models = pid ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];
       const plabel = pid ? esc(productName(pid)||pid) : "\u2014 unclassified \u2014";
       groups+='<div class="prodblock"><div class="prodlabel"><span class="pdot"></span>'+plabel+'</div>';
