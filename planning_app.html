@@ -3438,6 +3438,8 @@ function ovObjModelId(o){ const c=RD.effClass(o,portfolio); if(c.kind==="model")
 function ovObjProdId(o){ const mid=ovObjModelId(o); if(mid){ const m=byId("model",mid); if(m) return m.productId; } const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; const i=ovInit(o); return (i&&i.productId)||null; }
 function ovMsProdId(ms){ const i=ovInit(ms); if(i&&i.modelId){ const m=byId("model",i.modelId); if(m) return m.productId; } return (i&&i.productId)||null; }
 function ovMsDiv(ms){ const i=ovInit(ms); return (i&&i.divisionId)||null; }
+function divCode(divId){ const t=String(divId||""), i=t.indexOf("-"); return i>=0?t.slice(i+1):t; }   // "DIV-EL" -> "EL", same stem core uses to mint ids
+function prodDiv(pid){ const p=byId("product",pid); return p?p.divisionId:null; }
 function ovBadge(v){ const b=RD.band(v); return '<span class="band '+b+'">'+b.replace("-"," ")+'</span>'; }
 function ovProg(pct,color){ pct=Math.max(0,Math.min(100,Math.round(pct||0))); return '<div class="prog"><div class="ptrack"><div class="pfill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="ppct">'+pct+'%</span></div>'; }
 function ovKpiTbl(label, rows){ if(!rows.length) return ""; const head='<div class="kh"></div><div class="kh">'+label+'</div><div class="kh" style="text-align:right">Target</div><div class="kh" style="text-align:right">Now</div>'; const body=rows.map(function(r){ return '<div><div class="kdot" style="background:'+r.c+'"></div></div><span class="kname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="ktgt">'+esc(r.tgt)+'</span><span class="kcur" style="color:'+r.c+'">'+esc(r.cur)+'</span>'; }).join(""); return '<div class="kpit">'+head+body+'</div>'; }
@@ -3472,19 +3474,27 @@ function overviewTilesHtml(){
     const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id;}).map(function(p){return p.id;});
     if(!dObjs.length && !dMs.length && !dProdIds.length) continue;
     const ownHere=function(pid){ return pid!=null && dProdIds.indexOf(pid)>=0; };
-    // an objective/milestone whose product is owned by another division has no tile to sit under here
-    const objProd=function(o){ const p=ovObjProdId(o); return ownHere(p)?p:null; };
-    const msProd =function(m){ const p=ovMsProdId(m);  return ownHere(p)?p:null; };
+    // Work here can point at a product owned by ANOTHER division. That product still gets a labelled block in
+    // this group (so the objectives read under their product rather than being orphaned into "unclassified"),
+    // but it renders no model scorecards — those belong to the owning division's block, and only there.
+    const objProd=function(o){ return ovObjProdId(o)||null; };
+    const msProd =function(m){ return ovMsProdId(m)||null; };
     let prodIds=dProdIds.slice();
+    dObjs.forEach(function(o){ const p=objProd(o); if(p && prodIds.indexOf(p)<0) prodIds.push(p); });
+    dMs.forEach(function(m){ const p=msProd(m); if(p && prodIds.indexOf(p)<0) prodIds.push(p); });
     if(dObjs.some(function(o){return objProd(o)==null;}) || dMs.some(function(m){return msProd(m)==null;})) prodIds.push(null);
-    prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1; return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
+    prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1;
+      const fa=!ownHere(a), fb=!ownHere(b); if(fa!==fb) return fa?1:-1;   // this division's own products first, borrowed ones after
+      return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
     groups+='<div class="divgroup"><div class="divlabel"><div class="ldot"></div><div class="nm">'+esc(d.name)+'</div><div class="rule"></div></div>';
     for(const pid of prodIds){
       const objs=dObjs.filter(function(o){return objProd(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
       const mss=dMs.filter(function(m){return msProd(m)===pid;});
-      if(pid==null && !objs.length && !mss.length) continue;   // owned products always tile; the unclassified bucket only when it holds something
-      const models = pid ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];
-      const plabel = pid ? esc(productName(pid)||pid) : "\u2014 unclassified \u2014";
+      const foreign = pid!=null && !ownHere(pid);
+      // owned products always tile; the unclassified bucket and borrowed products only when they hold something
+      if(!objs.length && !mss.length && (pid==null || foreign)) continue;
+      const models = (pid && !foreign) ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];   // scorecards live only in the owning division
+      const plabel = pid ? esc((foreign?divCode(prodDiv(pid))+" \u2014 ":"")+(productName(pid)||pid)) : "\u2014 unclassified \u2014";
       groups+='<div class="prodblock"><div class="prodlabel"><span class="pdot"></span>'+plabel+'</div>';
       if(models.length) groups+='<div class="rowsec"><div class="kidlbl">Models</div><div class="tilerow">'+models.map(function(m){return ovModelTile(m,em);}).join("")+'</div></div>';
       if(objs.length) groups+='<div class="rowsec"><div class="kidlbl">Objectives</div><div class="tilerow">'+objs.map(function(o){return ovObjTile(o,em,pool,casc);}).join("")+'</div></div>';
