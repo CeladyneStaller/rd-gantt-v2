@@ -233,6 +233,10 @@
   .msr-stat:last-child{border-bottom:none}
   .msr-slbl{color:#666} .msr-sval{font-family:var(--mono);font-size:12px;font-weight:500;text-align:right}
   .msr-late{color:#854F0B} .msr-early{color:#3B6D11}
+  .msr-objs{align-items:flex-start}
+  .msr-objs .msr-sval{display:flex;flex-direction:column;gap:2px;text-align:right;font-family:inherit;font-size:11.5px}
+  .msr-obj{line-height:1.35}
+  .msr-oq{color:#888;font-family:var(--mono);font-size:10px}
   .msr-ahead,.msr-action{display:grid;grid-template-columns:1fr 100px 92px;gap:8px;align-items:center}
   .msr-action{padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
   .msr-action:last-child{border-bottom:none}
@@ -2147,7 +2151,8 @@ const SCHEMAS = {
                ["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
   milestone:  [["name","Name","text"],["initiativeId","Initiative","ref:initiative"],
-               ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],["order","Order","number"]],
+               ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],
+               ["trl","TRL achieved","number"],["mrl","MRL achieved","number"],["order","Order","number"]],
   objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
                ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter","quarter"],
                ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
@@ -2295,6 +2300,24 @@ function classificationKpisHtml(node){
 }
 // A milestone KPI can draw its current value from KR KPIs inside its own initiative. The link is stored on
 // the milestone KPI (kpi.sources) because the KR KPI lives in an EXEC-<div> doc this app cannot write.
+// The objectives this milestone actually draws from: every KPI named in a milestone target's `sources`,
+// resolved back through its Key Result to the owning objective.
+function msLinkedObjectives(msId){
+  const srcIds=[];
+  (portfolio.kpis||[]).filter(k=>k.hostType==="milestone" && k.hostId===msId)
+    .forEach(k=>(k.sources||[]).forEach(id=>{ if(srcIds.indexOf(id)<0) srcIds.push(id); }));
+  if(!srcIds.length) return [];
+  const objIds=[];
+  for(const key in execDocs){
+    const doc=execDocs[key]||{};
+    (doc.kpis||[]).forEach(k=>{
+      if(srcIds.indexOf(k.id)<0 || k.hostType!=="keyResult") return;
+      const kr=(doc.keyResults||[]).find(r=>r.id===k.hostId);
+      if(kr && kr.objectiveId && objIds.indexOf(kr.objectiveId)<0) objIds.push(kr.objectiveId);
+    });
+  }
+  return objIds.map(id=>byId("objective",id)).filter(Boolean);
+}
 function msSourceTree(msId){
   const ms=byId("milestone", msId); if(!ms) return [];
   const objs=(portfolio.objectives||[]).filter(o=>o.initiativeId===ms.initiativeId);
@@ -3258,10 +3281,9 @@ function renderMsReport(){
       const s=RD.kpiScoreResolved(k,pool,em), val=RD.effValue(k,pool,em), tgt=RD.effTarget(k,pool,em), unit=RD.kpiUnit(k,pool)||k.unit||"";
       const ov=msrDraft.kpiOverrides[k.id]||{};
       const measured=(ov.measured!=null&&ov.measured!=="")?ov.measured:(val==null?"—":`${fmtNum(val)}${unit?" "+unit:""}`);
-      const result=ov.result||msKpiResult(s);
+      const result=msKpiResult(s);   // assessed from current vs target — not a user choice
       const tgtTxt=tgt==null?"—":`${dirSym(k.direction)} ${fmtNum(typeof tgt==="object"?tgt.hi:tgt)}${unit?" "+unit:""}`;
-      const resCell=locked?`<span class="msr-badge ${msrBadgeCls(result)}">${esc(result)}</span>`
-        :`<select class="msr-sel" data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
+      const resCell=`<span class="msr-badge ${msrBadgeCls(result)}">${esc(result)}</span>`;
       // where the current value came from (manual entry vs the best-scoring linked KR KPI)
       let srcTxt="";
       const e=RD.effValueSource(k,pool,em);
@@ -3279,7 +3301,7 @@ function renderMsReport(){
     `<div class="msr-finding"><div class="msr-fn">${String(i+1).padStart(2,"0")}</div>`+
     `<div class="msr-ed" ${ce} data-msr="finding" data-idx="${i}">${f?esc(f):(locked?"":msrPlaceholder("Finding or learning from the demonstration."))}</div></div>`).join("");
   const stat=(lbl,val,cls)=>`<div class="msr-stat"><span class="msr-slbl">${esc(lbl)}</span><span class="msr-sval ${cls||""}">${val}</span></div>`;
-  const ctxEd=(key,ph)=>`<span class="msr-sval msr-ed" ${ce} data-msr="ctx" data-key="${key}">${msrDraft.context[key]?esc(msrDraft.context[key]):(locked?"—":msrPlaceholder(ph))}</span>`;
+  const linkedObjs=msLinkedObjectives(ms.id);
   const actionsHtml=msrDraft.actions.map((a,i)=>
     `<div class="msr-action">`+
     `<span class="msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="item">${a.item?esc(a.item):(locked?"":msrPlaceholder("Action item arising from demonstration"))}</span>`+
@@ -3297,6 +3319,7 @@ function renderMsReport(){
       `<div class="msr-meta"><div class="msr-lbl">Date achieved</div><div class="msr-val">${actual!=null?esc(dayToIso(actual)):"—"}</div></div>`+
       `<div class="msr-meta"><div class="msr-lbl">Author</div><div class="msr-val">${ed("author", msrDraft.author, "Name")}</div></div>`+
       `<div class="msr-meta"><div class="msr-lbl">Version</div><div class="msr-val">${ed("version", msrDraft.version, "v1.0")}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">TRL / MRL</div><div class="msr-val">${(ms.trl!=null&&ms.trl!=="")?esc(String(ms.trl)):"\u2014"} / ${(ms.mrl!=null&&ms.mrl!=="")?esc(String(ms.mrl)):"\u2014"}</div></div>`+
     `</div></div>`+
     // ---- what was demonstrated ----
     `<div class="msr-sec"><div class="msr-sect">What was demonstrated</div>`+
@@ -3309,12 +3332,12 @@ function renderMsReport(){
     `<div class="msr-two">`+
       `<div class="msr-sec"><div class="msr-sect">Key findings &amp; learnings</div>${findingsHtml}</div>`+
       `<div class="msr-sec"><div class="msr-sect">Milestone context</div>`+
-        stat("Planned date", planned!=null?esc(dayToIso(planned)):"—")+
-        stat("Actual date", actual!=null?esc(dayToIso(actual)):"—")+
-        stat("Variance", esc(varTxt), variance!=null&&variance>0?"msr-late":(variance!=null&&variance<0?"msr-early":""))+
-        stat("Budget spent", ctxEd("budget","$42k / $50k"))+
-        stat("Prototype build no.", ctxEd("buildNo","Build #3"))+
-        stat("Linked OKR", ctxEd("linkedOkr","KR 1.3"))+
+        stat("Planned date", planned!=null?esc(dayToIso(planned)):"\u2014")+
+        stat("Actual date", actual!=null?esc(dayToIso(actual)):"\u2014")+
+        stat("TRL achieved", ms.trl!=null&&ms.trl!==""?("TRL "+esc(String(ms.trl))):"\u2014")+
+        stat("MRL achieved", ms.mrl!=null&&ms.mrl!==""?("MRL "+esc(String(ms.mrl))):"\u2014")+
+        `<div class="msr-stat msr-objs"><span class="msr-slbl">Linked objectives</span>`+
+        `<span class="msr-sval">${linkedObjs.length?linkedObjs.map(o=>`<span class="msr-obj">${esc(o.statement||o.id)}${o.quarter?` <span class="msr-oq">(${esc(o.quarter)})</span>`:""}</span>`).join(""):"\u2014"}</span></div>`+
       `</div>`+
     `</div>`+
     // ---- actions ----
@@ -3339,7 +3362,6 @@ function msrTxt(el){ const t=(el.textContent||"").trim(); return (t==="—"||el.
 function collectMsReport(){
   const body=document.getElementById("msrBody"); if(!body||!msrDraft) return;
   body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=msrTxt(el); });
-  body.querySelectorAll('[data-msr="result"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).result=el.value; });
   body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ msrDraft.findings[Number(el.dataset.idx)]=msrTxt(el); });
   ["project","author","version","demonstrated"].forEach(fk=>{ const el=body.querySelector(`[data-msr="${fk}"]`); if(el) msrDraft[fk]=msrTxt(el); });
   body.querySelectorAll('[data-msr="ctx"]').forEach(el=>{ msrDraft.context[el.dataset.key]=msrTxt(el); });
