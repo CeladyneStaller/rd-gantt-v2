@@ -1283,12 +1283,21 @@
   // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
   // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
   // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  // owner was free text and is now a list of roster emails. Read BOTH shapes: a legacy string is a
+  // one-element list, so nothing needs migrating and old data keeps grouping exactly as it did.
+  function ownersOf(rec) {
+    if (!rec) return [];
+    var v = rec.owner;
+    if (v == null || v === '') return [];
+    if (Array.isArray(v)) return v.filter(function (x) { return x != null && x !== ''; });
+    return [v];
+  }
   function _dimKey(o, dim, portfolio) {
     if (dim === 'division') return o.divisionId || '';
     if (dim === 'product') return effProduct(o, portfolio) || '';
     if (dim === 'model') return effModel(o, portfolio) || '';
     if (dim === 'quarter') return o.quarter || '';
-    if (dim === 'owner') return o.owner || '';
+    if (dim === 'owner') { var ow = ownersOf(o); return ow.length ? ow : ''; }   // array = fan out (see _groupBy)
     if (dim === 'initiative') return o.initiativeId || '';
     return '';
   }
@@ -1317,8 +1326,17 @@
   function _groupBy(items, dims, portfolio, keyFn) {
     if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
-      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    // A key function may return an ARRAY to FAN OUT: the item lands in every one of those buckets. Owner does
+    // this, so an objective owned by two people appears under both. Consequence, by design: groups overlap, so
+    // each group's own score is right but a total ACROSS groups counts a shared objective once per owner.
+    (items || []).forEach(function (o) {
+      var k = keyFn(o, dim, portfolio);
+      var ks = Array.isArray(k) ? (k.length ? k : ['']) : [k];
+      ks.forEach(function (key) {
+        if (!buckets[key]) { buckets[key] = []; seen.push(key); }
+        if (buckets[key].indexOf(o) < 0) buckets[key].push(o);   // a dupe key must not double-list the item
+      });
+    });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
       if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
@@ -1847,6 +1865,7 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    ownersOf: ownersOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
@@ -1981,6 +2000,7 @@ function clearMsg(){ document.getElementById("msg").classList.remove("show"); }
 function watchedDocs(){ return ["portfolio","gantt-view", ...portfolio.divisions.map(d=>execIdFor(d.id)), ...portfolio.divisions.map(d=>"SPEC-"+d.id)]; }
 
 async function loadAll(){
+  await loadRoster();
   if(!tok()){ setMsg("No broker token yet — add one in Settings to load live data. Showing local scratch.", "info"); return; }
   try{
     const p = await apiGet("portfolio");
@@ -2179,7 +2199,32 @@ function scoreColor(v){ const b=RD.band(v);
   return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
 
 /* ---------------- PORTFOLIO tab (generic editor) ---------------- */
+// GET /roster is a broker projection: {email, orgRole, leadOf, disabled} only — pinHash/salt never leave the
+// server. Read-only; the planning app never writes the users bin and ignores assignedObjectives (objective
+// ownership lives here, in the portfolio doc).
+let roster = [];
+async function loadRoster(){
+  try{
+    const r = await fetch(`${BROKER}/roster`, {headers:auth()});
+    if(!r.ok) return;                                   // 503 = USERS_BIN unset: fall back to stored values
+    const j = await r.json();
+    roster = (j && j.users) || [];
+  }catch(e){ roster = []; }
+}
+// Options for the owner picker: live roster first, then any value already stored that the roster doesn't know
+// (legacy free text, or someone who left). A ref picker shows only what it can resolve, so without this an
+// unrecognised owner would silently blank on the next save.
+function ownerOptions(){
+  const known = roster.filter(u=>!u.disabled && u.email).map(u=>u.email);
+  const extra = [];
+  (portfolio.objectives||[]).forEach(o=>RD.ownersOf(o).forEach(v=>{
+    if(known.indexOf(v)<0 && extra.indexOf(v)<0) extra.push(v);
+  }));
+  return known.map(e=>({id:e, name:e}))
+    .concat(extra.map(e=>({id:e, name:e+" \u2014 not in roster"})));
+}
 const SEL = { division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+  user:ownerOptions,
   initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
 const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
 const SCHEMAS = {
@@ -2194,7 +2239,7 @@ const SCHEMAS = {
                ["trl","TRL achieved","number"],["mrl","MRL achieved","number"],["order","Order","number"]],
   objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
                ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter","quarter"],
-               ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
+               ["owner","Owner","multiref:user"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["milestoneIds","Linked milestones","multiref:milestone"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
 };
@@ -2236,7 +2281,8 @@ function openEditor(id, entityOverride, prefill){
         SEL[kind]().map(o=>`<option value="${o.id}" ${rec[k]===o.id?'selected':''}>${esc(o.name||o.statement||o.id)}</option>`).join("")+`</select>`;
     } else if(type.startsWith("multiref:")){
       const kind = type.slice(9);
-      const cur = rec[k]||[];
+      // a legacy scalar must not reach .indexOf() as a STRING — "Corey".indexOf("Co") is a substring match
+      const cur = Array.isArray(rec[k]) ? rec[k] : (rec[k]!=null && rec[k]!=="" ? [rec[k]] : []);
       html += `<select data-f="${k}" multiple size="3">`+
         SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
     } else if(type==="quarter"){
@@ -2857,7 +2903,7 @@ function groupPrefill(pathPairs){
   pathPairs.forEach(p=>{ const dim=p[0], key=p[1]; if(key===""||key==="__all__") return;
     if(dim==="division") pre.divisionId=key; else if(dim==="product") pre.productId=key;
     else if(dim==="model") pre.modelId=key; else if(dim==="quarter") pre.quarter=key;
-    else if(dim==="owner") pre.owner=key; else if(dim==="initiative") pre.initiativeId=key; });
+    else if(dim==="owner") pre.owner=key?[key]:[]; else if(dim==="initiative") pre.initiativeId=key; });
   return pre;
 }
 function gnewBtn(entity, pre, label){ return `<button class="tact" title="${esc(label)}" data-gnew="${esc(JSON.stringify({e:entity,p:pre}))}">${esc(label)}</button>`; }
@@ -2891,7 +2937,7 @@ function renderGroupNodes(nodes, em, depth, path){
   return h;
 }
 function objLeafHtml(o,indent){
-  const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
+  const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(RD.ownersOf(o).length?["owner "+RD.ownersOf(o).join(", ")]:[]).join(" · ");
   return `<div class="tleaf" style="padding-left:${indent*14+14}px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`;
 }
 function renderPortfolioTree(){
