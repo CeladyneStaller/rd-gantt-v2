@@ -3200,7 +3200,9 @@ function openPendingTgtEdit(idx){
   const t=pendingGateTargets[idx]; if(!t) return;
   pendingTgtEditIdx=idx;
   draftTgtHost={hostType:"stageGate", hostId:"__pending__", pending:true}; draftTgtId=null;
-  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"", readsFrom:t.readsFrom||"" };
+  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="range")?"range":(t.direction==="down")?"decrease":"increase", target:(t.target!=null&&typeof t.target!=="object")?t.target:"",
+    rangeLo:(t.target&&typeof t.target==="object"&&t.target.lo!=null)?t.target.lo:"", rangeHi:(t.target&&typeof t.target==="object"&&t.target.hi!=null)?t.target.hi:"",
+    rangeMode:(t.rangeSpec&&t.rangeSpec.mode==="pct")?"pct":"minmax", rangeCenter:(t.rangeSpec&&t.rangeSpec.center!=null)?t.rangeSpec.center:"", rangePct:(t.rangeSpec&&t.rangeSpec.pct!=null)?t.rangeSpec.pct:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"", readsFrom:t.readsFrom||"" };
   document.getElementById("kpiTgtTitle").textContent="Edit gate target";
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
@@ -3436,7 +3438,7 @@ function saveSubKrModal(){
     if(d.trackingType==="binary"){
       k.current = (d.metFlag===""||d.metFlag==null) ? null : Number(d.metFlag);
     } else {
-      k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
+      applyDirTarget(k, d); k.unit=d.unit||null;
       if(d.trackingType==="statistical"){
         k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
         if(d.readsFrom) k.readsFrom=d.readsFrom; else delete k.readsFrom;
@@ -3464,8 +3466,13 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   draftTgt={
     name:pk?(pk.name||""):"",
     type:pk?(pk.targetType||"demonstration"):"demonstration",
-    dir:(pk&&pk.direction==="down")?"decrease":"increase",
-    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",   // range objects don't fit this modal
+    dir:(pk&&pk.direction==="range")?"range":(pk&&pk.direction==="down")?"decrease":"increase",
+    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",
+    rangeLo:(pk&&pk.target&&typeof pk.target==="object"&&pk.target.lo!=null)?pk.target.lo:"",
+    rangeHi:(pk&&pk.target&&typeof pk.target==="object"&&pk.target.hi!=null)?pk.target.hi:"",
+    rangeMode:(pk&&pk.rangeSpec&&pk.rangeSpec.mode==="pct")?"pct":"minmax",
+    rangeCenter:(pk&&pk.rangeSpec&&pk.rangeSpec.center!=null)?pk.rangeSpec.center:"",
+    rangePct:(pk&&pk.rangeSpec&&pk.rangeSpec.pct!=null)?pk.rangeSpec.pct:"",
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
     readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
@@ -3478,8 +3485,44 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   wireTgtModal();
 }
 function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; pendingTgtEditIdx=null; }
+// A range target is direction:'range' with target={lo,hi} — core's progressRange() scores 100 inside the band
+// and falls off linearly to 0 one full band-width outside. rangeSpec is an OPTIONAL record of how the author
+// expressed it ("average +/- width%"), kept only so the editor can round-trip the intent. {lo,hi} always wins.
+// Writes direction/target/rangeSpec onto a kpi from the draft. {lo,hi} is what scoring reads; rangeSpec only
+// records "average +/- width%" so the editor can round-trip it. An unparseable range leaves target null
+// (an unscored KPI) rather than inventing a band.
+function applyDirTarget(k, d){
+  if(d.dir==="range"){
+    const r=rangeFromDraft(d);
+    k.direction="range";
+    k.target = r ? { lo:r.lo, hi:r.hi } : null;
+    if(r && r.spec) k.rangeSpec=r.spec; else delete k.rangeSpec;
+    return;
+  }
+  k.direction=(d.dir==="decrease")?"down":"up";
+  k.target=parseTargetNum(d.target);
+  delete k.rangeSpec;
+}
+function redrawTgtBody(){ const b=document.getElementById("kpiTgtBody"); if(!b) return; b.innerHTML=tgtModalBody(); wireTgtModal(); }
+function rangeFromDraft(d){
+  if(d.rangeMode==="pct"){
+    const c=Number(d.rangeCenter), p=Number(d.rangePct);
+    if(d.rangeCenter===""||d.rangePct===""||isNaN(c)||isNaN(p)) return null;
+    const half=Math.abs(c*p/100)/2;                       // width = pct% OF the average; the band straddles it
+    return { lo:c-half, hi:c+half, spec:{ mode:"pct", center:c, pct:p } };
+  }
+  const lo=Number(d.rangeLo), hi=Number(d.rangeHi);
+  if(d.rangeLo===""||d.rangeHi===""||isNaN(lo)||isNaN(hi)) return null;
+  return { lo:Math.min(lo,hi), hi:Math.max(lo,hi), spec:null };
+}
+function rangePreview(d){
+  const r=rangeFromDraft(d);
+  if(!r) return "enter both values";
+  const w=r.hi-r.lo;
+  return `full credit ${fmtTarget(r.lo,"")} to ${fmtTarget(r.hi,"")}${w?` (width ${fmtTarget(w,"")})`:""}; zero one width outside`;
+}
 function tgtModalBody(){
-  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isRange=d.dir==="range", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   return `
     <div class="modal-field"><span class="lbl">Target name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Power density"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
@@ -3487,8 +3530,20 @@ function tgtModalBody(){
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-tf="readsFrom">`+readsFromOptions(d.readsFrom, draftTgtId)+`</select><div class="hint" style="margin-top:3px">Borrow another statistical target's sample so one set of readings feeds several statistics.</div></div>`+
     `
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"],["range","↔ Range"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${(isBin||isRange)?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${isRange?"block":"none"}"><span class="lbl">Range</span>
+      ${segHtml([["minmax","Min / max"],["pct","Average \u00b1 width%"]], d.rangeMode||"minmax", "tgtrmode")}
+      <div style="display:${(d.rangeMode||"minmax")==="minmax"?"flex":"none"};gap:8px;margin-top:6px">
+        <input type="number" data-tf="rangeLo" value="${esc(d.rangeLo)}" placeholder="min" style="flex:1">
+        <input type="number" data-tf="rangeHi" value="${esc(d.rangeHi)}" placeholder="max" style="flex:1">
+      </div>
+      <div style="display:${(d.rangeMode||"minmax")==="pct"?"flex":"none"};gap:8px;margin-top:6px">
+        <input type="number" data-tf="rangeCenter" value="${esc(d.rangeCenter)}" placeholder="average" style="flex:1">
+        <input type="number" data-tf="rangePct" value="${esc(d.rangePct)}" placeholder="width %" style="flex:1">
+      </div>
+      <div class="hint" data-rpreview style="margin-top:5px">${esc(rangePreview(d))}</div>
+    </div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
     <div class="hint" style="margin:0 0 12px">readings are posted from ${isGate?"the gate\'s target table":"this key result\'s KPI table"}; statistical targets aggregate the latest reads</div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update target":"Save target"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
@@ -3497,7 +3552,10 @@ function wireTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
   body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
-  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; redrawTgtBody(); });
+  body.querySelectorAll("[data-tgtrmode]").forEach(b=>b.onclick=()=>{ draftTgt.rangeMode=b.dataset.tgtrmode; redrawTgtBody(); });
+  body.querySelectorAll('[data-tf="rangeLo"],[data-tf="rangeHi"],[data-tf="rangeCenter"],[data-tf="rangePct"]').forEach(el=>el.addEventListener("input",()=>{
+    const p=body.querySelector("[data-rpreview]"); if(p) p.textContent=rangePreview(draftTgt); }));
   const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
   const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
 }
@@ -3509,7 +3567,7 @@ function saveTgtModal(){
   if(draftTgtHost&&draftTgtHost.pending){   // ADDING a gate: stash the target; it becomes a KPI when the gate is saved
     const t={ name:String(d.name).trim(), targetType:d.type };
     if(d.type==="binary"){ t.direction=null; t.target=null; t.unit=null; }
-    else { t.direction=(d.dir==="decrease")?"down":"up"; t.target=parseTargetNum(d.target); t.unit=d.unit||null;
+    else { applyDirTarget(t, d); t.unit=d.unit||null;
       if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
         if(d.readsFrom) t.readsFrom=d.readsFrom; else delete t.readsFrom; } }
     const editing=(pendingTgtEditIdx!=null && pendingGateTargets[pendingTgtEditIdx]);
@@ -3523,7 +3581,7 @@ function saveTgtModal(){
   if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:draftTgtHost.hostType, hostId:draftTgtHost.hostId, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
-  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
+  else { applyDirTarget(pk, d); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
       if(d.readsFrom) pk.readsFrom=d.readsFrom; else delete pk.readsFrom; } else { delete pk.statistic; delete pk.readCount; } }
   closeTgtModal(); renderAll(); setMsg((isGate?"Gate target":"KPI")+" saved","ok");
