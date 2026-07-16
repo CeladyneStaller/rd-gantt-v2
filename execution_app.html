@@ -4113,7 +4113,7 @@ function wireExec(host){
   });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
-  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } if(k&&k.hostType==="keyResult" && !isMemberKpi(k)){ openKpiTgtModal("keyResult", k.hostId, id); return; } } subOpenEdit(t,id); });
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } if(k&&k.hostType==="keyResult" && !isMemberKpi(k)){ openKpiTgtModal("keyResult", k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
