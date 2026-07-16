@@ -2856,11 +2856,45 @@ function sampleOwnerId(kpiId){                                           // whos
   const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
   return k ? RD.readingSourceId(k, AK) : kpiId;
 }
-function readsFromCandidates(selfId){
-  return allKpisPool().filter(k=>k.id!==selfId && !k.readsFrom
-      && (k.targetType==="statistical" || (RD.definerOf(k, allKpisPool())||{}).targetType==="statistical")
-      && (exec.kpis||[]).some(x=>x.id===k.id))
-    .map(k=>({ id:k.id, name:RD.kpiName(k, allKpisPool())||k.id }));
+// Sample candidates, scoped to the CURRENT OBJECTIVE and grouped the way the board reads:
+//   Key results / KR1 - <statement> / <kpi name>      Stage-gates / SG1 - <name> / <kpi name>
+// Only KPIs that hold their own readings are offered (a borrower is not a sample), and never the KPI being
+// edited. A <select> allows one level of <optgroup>, so the section headers are disabled options.
+function readsFromGroups(selfId){
+  const AK=allKpisPool();
+  // scoping comes from the HOST: only this objective's KRs/gates are walked below, so a second
+  // k.objectiveId filter would be a duplicated source of truth (and it is not set on every KPI).
+  const holders=(exec.kpis||[]).filter(k=>k.id!==selfId && !k.readsFrom
+    && (k.targetType==="statistical" || ((RD.definerOf(k, AK)||{}).targetType==="statistical")));
+  const nm=k=>({ id:k.id, name:RD.kpiName(k, AK)||k.id });
+  const out=[];
+  const krG=[];
+  (exec.keyResults||[]).filter(x=>x.objectiveId===selectedObj).forEach(kr=>{
+    const ks=holders.filter(k=>k.hostType==="keyResult" && k.hostId===kr.id);
+    if(ks.length) krG.push({ label:krTreeLabel(kr.id, selectedObj), kpis:ks.map(nm) });   // already "KR1 — <statement>"
+  });
+  if(krG.length) out.push({ section:"Key results", groups:krG });
+  const sgG=[];
+  (exec.stageGates||[]).filter(x=>x.objectiveId===selectedObj).forEach(g=>{
+    const ks=holders.filter(k=>k.hostType==="stageGate" && k.hostId===g.id);
+    if(ks.length) sgG.push({ label:`${gateLabel(g.id)} \u2014 ${g.name||g.id}`, kpis:ks.map(nm) });   // gateLabel is the tag only
+  });
+  if(sgG.length) out.push({ section:"Stage-gates", groups:sgG });
+  return out;
+}
+function readsFromCandidates(selfId){                                    // flat view of the same set
+  const out=[];
+  readsFromGroups(selfId).forEach(sec=>sec.groups.forEach(g=>g.kpis.forEach(k=>out.push({ id:k.id, name:k.name, group:g.label }))));
+  return out;
+}
+function readsFromOptions(sel, selfId){
+  return `<option value=""${sel?"":" selected"}>Own readings</option>`+
+    readsFromGroups(selfId).map(sec=>
+      `<option disabled>${esc(sec.section)}</option>`+
+      sec.groups.map(g=>`<optgroup label="${esc(g.label)}">`+
+        g.kpis.map(k=>`<option value="${esc(k.id)}"${sel===k.id?" selected":""}>${esc(k.name)}</option>`).join("")+
+      `</optgroup>`).join("")
+    ).join("");
 }
 function samplePopReads(kpiId){                                          // the SAMPLE's readings, newest first
   const src=sampleOwnerId(kpiId);
@@ -3227,10 +3261,7 @@ function krModalBody(){
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
     // STOPGAP for a first-class sample entity: borrow another statistical KPI's readings so one sample can
     // feed several statistics (average + CoV over the same 10 points, entered once).
-    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+
-      `<option value=""${d.kpiReadsFrom?"":" selected"}>Own readings</option>`+
-      readsFromCandidates(d.kpiId).map(c=>`<option value="${esc(c.id)}"${d.kpiReadsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
-    `</select></div>`+
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+readsFromOptions(d.kpiReadsFrom, d.kpiId)+`</select></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
@@ -3420,10 +3451,7 @@ function tgtModalBody(){
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
-    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-tf="readsFrom">`+
-      `<option value=""${d.readsFrom?"":" selected"}>Own readings</option>`+
-      readsFromCandidates(draftTgtId).map(c=>`<option value="${esc(c.id)}"${d.readsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
-    `</select><div class="hint" style="margin-top:3px">Borrow another statistical target's sample so one set of readings feeds several statistics.</div></div>`+
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-tf="readsFrom">`+readsFromOptions(d.readsFrom, draftTgtId)+`</select><div class="hint" style="margin-top:3px">Borrow another statistical target's sample so one set of readings feeds several statistics.</div></div>`+
     `
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
@@ -3700,7 +3728,7 @@ function kpiTable(hostType, hostId, objScope){
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
     const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
     const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
-    const nReads = expReads ? RD.readingCount(k.id, EM) : 0, complete = !expReads || nReads>=expReads;
+    const nReads = expReads ? RD.readingCount(RD.readingSourceId(k, AK), EM) : 0, complete = !expReads || nReads>=expReads;   // a borrowed sample is counted where it lives
     const statSub = expReads ? `<span class="m-cur-sub ${complete?'ok':'warn'}">${STAT_SHORT[dk.statistic||'average']} \u00b7 ${nReads}/${expReads} ${complete?'\u2713':'\u26a0'}</span>` : '';
     const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
     const metOk = (s!=null && s>=100 && complete);   // statistical: "met" needs the target reached AND a complete sample
