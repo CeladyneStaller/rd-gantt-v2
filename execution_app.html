@@ -3132,7 +3132,7 @@ function openPendingTgtEdit(idx){
   const t=pendingGateTargets[idx]; if(!t) return;
   pendingTgtEditIdx=idx;
   draftTgtHost={hostType:"stageGate", hostId:"__pending__", pending:true}; draftTgtId=null;
-  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"" };
+  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"", readsFrom:t.readsFrom||"" };
   document.getElementById("kpiTgtTitle").textContent="Edit gate target";
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
@@ -3374,6 +3374,7 @@ function saveSubKrModal(){
       k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
       if(d.trackingType==="statistical"){
         k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        if(d.readsFrom) k.readsFrom=d.readsFrom; else delete k.readsFrom;
         k.readings=String(d.readings||"").trim();
         const nums=parseNums(d.readings);
         k.current = nums.length ? RD.computeStat(k.statistic, nums) : null;
@@ -3402,7 +3403,8 @@ function openKpiTgtModal(hostType, hostId, kpiId){
     target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",   // range objects don't fit this modal
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
-    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    readsFrom:(pk&&pk.readsFrom)?pk.readsFrom:""
   };
   const isGate=hostType==="stageGate";
   document.getElementById("kpiTgtTitle").textContent=kpiId?(isGate?"Edit gate target":"Edit KPI"):(isGate?"Add gate target":"Add KPI");
@@ -3418,6 +3420,11 @@ function tgtModalBody(){
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-tf="readsFrom">`+
+      `<option value=""${d.readsFrom?"":" selected"}>Own readings</option>`+
+      readsFromCandidates(draftTgtId).map(c=>`<option value="${esc(c.id)}"${d.readsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
+    `</select><div class="hint" style="margin-top:3px">Borrow another statistical target's sample so one set of readings feeds several statistics.</div></div>`+
+    `
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
@@ -3441,7 +3448,8 @@ function saveTgtModal(){
     const t={ name:String(d.name).trim(), targetType:d.type };
     if(d.type==="binary"){ t.direction=null; t.target=null; t.unit=null; }
     else { t.direction=(d.dir==="decrease")?"down":"up"; t.target=parseTargetNum(d.target); t.unit=d.unit||null;
-      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
+      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        if(d.readsFrom) t.readsFrom=d.readsFrom; else delete t.readsFrom; } }
     const editing=(pendingTgtEditIdx!=null && pendingGateTargets[pendingTgtEditIdx]);
     if(editing) pendingGateTargets[pendingTgtEditIdx]=t; else pendingGateTargets.push(t);
     closeTgtModal();
@@ -3454,7 +3462,8 @@ function saveTgtModal(){
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
-    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
+    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+      if(d.readsFrom) pk.readsFrom=d.readsFrom; else delete pk.readsFrom; } else { delete pk.statistic; delete pk.readCount; } }
   closeTgtModal(); renderAll(); setMsg((isGate?"Gate target":"KPI")+" saved","ok");
 }
 
