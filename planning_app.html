@@ -379,6 +379,12 @@
   .gdia.done{background:var(--ok);border-color:var(--ok)}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
+  .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+  .lvlb{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:5px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+  .lvlb:hover{border-color:var(--accent);color:var(--accent)}
+  .lvlb.ghosty{color:var(--muted)}
   .glegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
   .glegend span{display:flex;align-items:center;gap:7px}
   .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
@@ -519,6 +525,7 @@
   </section>
   <section class="tabsec" id="tab-gantt">
     <div id="ganttFilterBar" class="filterbar"></div>
+    <div id="ganttLevelBar"></div>
     <div class="legend">
       <span><i class="swatch" style="background:#2c4a63"></i> baseline</span>
       <span><i class="swatch" style="background:var(--accent)"></i> projected</span>
@@ -3166,6 +3173,35 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
+// The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
+// (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
+// the deepest level a tab offers — collapsing to it hides that node's children (e.g. an objective's gates).
+function pfLevels(tab){
+  const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
+  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="milestones"?[]:[{id:"objective",label:"Objectives"}]);
+  if(tab==="milestones") return [];                // milestones have no hierarchy of their own
+  return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
+}
+function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
+// Collapse everything to `level`: every node AT that level is collapsed (its children hidden) and every
+// ancestor is left open, so the view reads down to exactly that level. null = expand all.
+function collapseTreeTo(roots, level, set){
+  set.clear();
+  if(level==null) return set;
+  (function walk(list){ list.forEach(n=>{
+    if(nodeLevel(n)===level){ if(n.kids && n.kids.length) set.add(n.key); }
+    else if(n.kids) walk(n.kids);
+  }); })(roots);
+  return set;
+}
+function ganttCollapseTo(level){ collapseTreeTo(ganttRoots, level, ganttCollapsed); renderGantt(); }
+function levelBarHtml(tab){
+  const lv=pfLevels(tab); if(!lv.length) return "";
+  return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
+    lv.map(l=>`<button class="lvlb" data-lvl="${esc(l.id)}" data-lvltab="${tab}">${esc(l.label)}</button>`).join("")+
+    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button></div>`;
+}
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
 function prodAbbrev(prodId){ const p=byId("product",prodId); if(!p) return "MS";
@@ -3520,7 +3556,7 @@ function renderGantt(){
       (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
         else { const gg=node.g; if(gg.ds!=null)dss.push(gg.ds); const e=gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); if(e!=null)des.push(e); } }); })(kids);
       const under=collectObjs(n), vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
-      out.push({ synthetic:true, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
+      out.push({ synthetic:true, dim:n.dim, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
         g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
     });
     return out;
@@ -3613,6 +3649,10 @@ function renderGantt(){
   });
   html+=`</div>`;
   if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span><span><i style="background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)"></i>cancelled</span><span><i style="background:repeating-linear-gradient(45deg,var(--bad) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--bad)"></i>missed</span></div>`;
+  ganttRoots = roots;
+  const lb=document.getElementById("ganttLevelBar");
+  if(lb){ lb.innerHTML=levelBarHtml("gantt");
+    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null)); }
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
