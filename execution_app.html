@@ -3199,6 +3199,7 @@ function initDraftKr(kr){
     kpiUnit:(pk&&pk.unit)?pk.unit:"",
     kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
     kpiReadsFrom:(pk&&pk.readsFrom)?pk.readsFrom:"",
+    kpiId:(pk&&pk.id)?pk.id:"",           // for the sample picker: exclude self, and only in krModalBody scope
     kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
     subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
   };
@@ -3228,7 +3229,7 @@ function krModalBody(){
     // feed several statistics (average + CoV over the same 10 points, entered once).
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+
       `<option value=""${d.kpiReadsFrom?"":" selected"}>Own readings</option>`+
-      readsFromCandidates(pk&&pk.id).map(c=>`<option value="${esc(c.id)}"${d.kpiReadsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
+      readsFromCandidates(d.kpiId).map(c=>`<option value="${esc(c.id)}"${d.kpiReadsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
     `</select></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
