@@ -3190,12 +3190,15 @@ let ganttRoots = [];                               // last-built tree, so the co
 // (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
 // the deepest level a tab offers — collapsing to it hides that node's children (e.g. an objective's gates).
 function pfLevels(tab){
+  // The milestones tab groups by pfGroupDims in BOTH modes — renderMilestones never consults pfGroupMode — so
+  // its levels are always the dims, and it must keep its bar in hierarchy mode too.
+  if(tab==="milestones") return (pfGroupDims||[]).map(d=>({ id:d, label:dimLabel(d,null)||d }));
   const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
   // Only the Gantt draws anything BENEATH an objective (its stage-gates), so only there does "collapse to
-  // objectives" differ from expanding everything. Structure's objectives are leaves; Milestones has none.
+  // objectives" differ from expanding everything. Structure's objectives are leaves.
   if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="gantt"?[{id:"objective",label:"Objectives"}]:[]);
-  // hierarchy mode: only the Gantt draws an entity tree. Structure falls back to flat per-entity tables and
-  // Milestones to a flat list, so neither has levels to collapse.
+  // hierarchy mode: only the Gantt draws an entity tree. Structure falls back to renderStructTables(), which is
+  // a flat table per entity type — there is no nesting there to collapse.
   if(tab!=="gantt") return [];
   return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
 }
