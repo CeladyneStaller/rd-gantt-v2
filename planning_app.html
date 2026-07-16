@@ -142,6 +142,10 @@
   .card .sub{color:var(--muted);font-size:12px;font-family:var(--mono)}
   .score{font-size:34px;font-weight:700;line-height:1.1;margin:10px 0 2px}
   .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  /* the pill echoes the marker vocabulary: capsule = spans time, square = stage-gate, pointed = milestone */
+  .band.sq{border-radius:3px}
+  .band.dia{border-radius:0;padding-left:13px;padding-right:13px;
+    clip-path:polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%)}
   .band.on-track{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .band.at-risk{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
   .band.off-track{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .band.no-band{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
   .counts{display:flex;gap:10px;margin-top:12px;font-size:12px;font-family:var(--mono)}
@@ -325,7 +329,7 @@
   .pfgrp-acts{display:inline-flex;gap:4px;margin-left:8px;flex:none}   /* per-group add buttons, inline with the group label */
   .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
   .tact:hover{color:var(--ink);border-color:var(--accent)}
-  .mdia{color:var(--accent2);font-size:11px;text-align:center}
+  .mdia{font-size:11px;text-align:center}   /* colour is set inline from the milestone's band */
   .tname.muted{color:var(--muted)}
   .tname.muted:hover{color:var(--accent)}
   .obj-ended{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap;vertical-align:middle}
@@ -364,7 +368,11 @@
   .gbar.derived{border-style:dashed}
   .gbar.derived .gbarfill{opacity:.16}
   .gslip{position:absolute;top:9px;height:12px;border-radius:3px;background:var(--bad);opacity:.85}
+  /* Shape says WHAT it is, colour says how it's doing. Both are point-in-time markers, so they share
+     .gdia's geometry and status classes; only the rotation distinguishes them.
+     .gdia = milestone (diamond)   .gdia.gsq = stage-gate (square) */
   .gdia{position:absolute;top:10px;width:10px;height:10px;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+  .gdia.gsq{transform:translateX(-50%);border-radius:2px}
   .gdia.planned{background:transparent;border:1.5px solid var(--muted)}
   .gdia.eff{background:var(--warn)}
   .gdia.passed{background:var(--ok);border:1.5px solid var(--ok)}
@@ -732,6 +740,23 @@
     }
     return statAverage(xs);
   }
+  // A KPI may BORROW another KPI's readings (kpi.readsFrom) so that one sample feeds several statistics —
+  // e.g. an average target and a CoV target over the same 10 points, entered once. The statistic still comes
+  // from each KPI's own definer, so only the data is shared. Follows the chain to whoever actually holds the
+  // readings; cycle-safe, and a KPI without readsFrom resolves to itself (unchanged).
+  // NOTE: this is a deliberate stopgap for a first-class sample entity — the data still lives on a privileged
+  // KPI rather than on the sample it belongs to.
+  function readingSourceId(kpi, kpis){
+    if(!kpi) return null;
+    var seen={}, cur=kpi;
+    while(cur && cur.readsFrom && !seen[cur.id]){
+      seen[cur.id]=1;
+      var nx=kpiById(cur.readsFrom, kpis||[]);
+      if(!nx || nx.id===cur.id) break;
+      cur=nx;
+    }
+    return cur.id;
+  }
   // all readings posted to a kpi id, newest first
   function readingsFor(kpiId, execDocs){
     var out=[];
@@ -909,7 +934,7 @@
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
-    var ownV=resolvedReadingValue(kpi.id, root, execDocs);
+    var ownV=resolvedReadingValue(readingSourceId(kpi, kpis), root, execDocs);   // borrowed sample, own statistic
     if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
     var ex=sourcesOf(kpi, kpis);
@@ -1820,6 +1845,7 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
     readingCount: readingCount,
@@ -2040,7 +2066,8 @@ async function pollOnce(){
 function quartersAll(){ const s={}; portfolio.objectives.forEach(o=>{ if(o.quarter) s[o.quarter]=1; });
   return Object.keys(s).sort(); }
 function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
-function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.replace("-"," ")}</span>`; }
+function bandShape(kind){ return kind==="stagegate"?" sq":kind==="milestone"?" dia":""; }   // shape by kind; colour still from band()
+function bandHtml(v, kind){ const b=RD.band(v); return `<span class="band ${b}${bandShape(kind)}">${b.replace("-"," ")}</span>`; }
 
 /* ---------------- COMPANY tab ---------------- */
 function companyHtml(){
@@ -2402,7 +2429,7 @@ function msStatusHtml(id){
   const s=RD.milestoneScore(id,em), ach=RD.milestoneAchieved(ms,em);
   let left;
   if(ach) left=`<span class="band on-track">achieved</span>`+(ms.completedDate!=null?`<span class="hint" style="margin-left:8px">marked complete ${dayToIso(ms.completedDate)}</span>`:`<span class="hint" style="margin-left:8px">KPI target met</span>`);
-  else if(s!=null) left=bandHtml(s);
+  else if(s!=null) left=bandHtml(s, "milestone");
   else left=`<span class="hint">no reading yet — set a completed date, or link a Key Result / stage-gate to a milestone KPI in the execution app</span>`;
   const sc=(s!=null)?`<span style="margin-left:auto;font-family:var(--mono);font-weight:600;color:${scoreColor(s)}">${Math.round(s)}</span>`:"";
   return `<div class="pftargets"><div class="pft-head"><span>Milestone status</span><button class="ghost" id="msOpenReport">📄 Report</button></div>`+
@@ -2419,7 +2446,7 @@ function milestonesHtml(initId){
     h+=`<div class="pft-list">`;
     list.forEach(m=>{
       const armed=pfMsArmed===m.id;
-      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia">◆</span>`+
+      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia" style="color:${bandColor(nodeBand("milestone", m.id))}" title="${esc(nodeBand("milestone", m.id).replace("-"," "))}">◆</span>`+
         `<span class="pft-name">${esc(m.name||m.id)}</span>`+
         `<span class="pft-sum mono">${m.plannedDate!=null?dayToIso(m.plannedDate):'no date'}</span>`+
         `<span class="pft-cur"></span>`+
@@ -3278,7 +3305,7 @@ function renderMilestones(){
       const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
       const msRepSlip=(!done && eff!=null && ms.plannedDate!=null)?eff-ms.plannedDate:null;
       const effCell = effTxt + ((msRepSlip!=null&&msRepSlip>0)?` <span class="ms-slip">+${msRepSlip}d</span>`:"");
-      const stCell = done ? `<span class="band on-track">achieved</span>` : `<span class="band ${bnd}">${bnd.replace("-"," ")}</span>`;
+      const stCell = done ? `<span class="band on-track dia">achieved</span>` : `<span class="band ${bnd} dia">${bnd.replace("-"," ")}</span>`;
       h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
         `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
         `<td><b>${esc(ms.name||ms.id)}</b></td>`+
@@ -3659,13 +3686,13 @@ function renderGantt(){
       if(!_cnl && g.slipped && g.baseline!=null){
         const bx=x(g.baseline);
         html+=`<div class="gconn committed" style="left:${Math.min(bx,ex)}px;width:${Math.max(2,Math.abs(ex-bx))}px"></div>`;
-        html+=`<div class="gdia ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
+        html+=`<div class="gdia gsq ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
       } else if(!_cnl && g.eff!=null && g.planned!=null && g.eff!==g.planned){
         const px=x(g.planned);
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
-        html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
+        html+=`<div class="gdia gsq ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+      html+=`<div class="gdia gsq ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
       // Milestones read exactly like stage-gates: a grey ghost at the planned date, a connector, and a status
       // marker at the actual date (or the projection when it hasn't happened yet).
