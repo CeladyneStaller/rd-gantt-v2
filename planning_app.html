@@ -3191,7 +3191,9 @@ let ganttRoots = [];                               // last-built tree, so the co
 // the deepest level a tab offers — collapsing to it hides that node's children (e.g. an objective's gates).
 function pfLevels(tab){
   const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
-  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="milestones"?[]:[{id:"objective",label:"Objectives"}]);
+  // Only the Gantt draws anything BENEATH an objective (its stage-gates), so only there does "collapse to
+  // objectives" differ from expanding everything. Structure's objectives are leaves; Milestones has none.
+  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="gantt"?[{id:"objective",label:"Objectives"}]:[]);
   // hierarchy mode: only the Gantt draws an entity tree. Structure falls back to flat per-entity tables and
   // Milestones to a flat list, so neither has levels to collapse.
   if(tab!=="gantt") return [];
@@ -3208,6 +3210,13 @@ function collapseTreeTo(roots, level, set){
     else if(n.kids) walk(n.kids);
   }); })(roots);
   return set;
+}
+// mirrors core's classifyGate; a milestone can additionally be achieved on its KPIs with no date recorded
+function msDiaClass(ms, em){
+  if(ms.completedDate!=null) return (ms.plannedDate!=null && ms.completedDate>ms.plannedDate) ? "passed-late" : "passed";
+  if(RD.milestoneAchieved(ms,em)) return "passed";
+  if(ms.plannedDate!=null && ms.plannedDate<todayDay()) return "overdue";
+  return "pending";
 }
 function ganttCollapseTo(level){ collapseTreeTo(ganttRoots, level, ganttCollapsed); renderGantt(); }
 let structCollapsed = new Set();                   // per-tab: collapsing the Gantt must not reshape Structure
@@ -3486,7 +3495,7 @@ function renderGantt(){
   function geom(entity, r){
     if(entity==="stagegate"){ return {kind:"diamond", gate:true, planned:r.plannedDate, eff:gateDisplayEff(r), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
     if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(gateDisplayEff).filter(v=>v!=null); const _obj=byId("objective", r.objectiveId); const _objDs=_obj?geom("objective",_obj).ds:null; const ds=_objDs!=null?_objDs:(planned.length?Math.min.apply(null,planned):null); const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
-    if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
+    if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id], actual:r.completedDate};   // eff is the PROJECTION; the completion date is separate
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
       const peRaw=casc.objectiveProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
@@ -3687,9 +3696,19 @@ function renderGantt(){
       }
       html+=`<div class="gdia ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
     } else {
-      const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
-      html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
-      if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff${dn}" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
+      // Milestones read exactly like stage-gates: a grey ghost at the planned date, a connector, and a status
+      // marker at the actual date (or the projection when it hasn't happened yet).
+      const st=msDiaClass(n.rec, em);
+      const mark=(g.actual!=null)?g.actual:g.eff;
+      const px=x(g.planned), ex=(mark!=null?x(mark):px);
+      if(mark!=null && g.planned!=null && mark!==g.planned){
+        html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
+        html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
+      }
+      const slip=(g.actual!=null&&g.planned!=null)?g.actual-g.planned:null;
+      const ttl=(g.actual!=null?`completed ${dayToIso(g.actual)}`:(mark!=null?`projected ${dayToIso(mark)}`:"planned"))+
+                (slip!=null&&slip!==0?` (${slip>0?"+":""}${slip}d)`:"");
+      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${esc(ttl)}"></div>`;
     }
     html+=`</div></div>`;
   });
