@@ -379,6 +379,8 @@
   .gdia.done{background:var(--ok);border-color:var(--ok)}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
+  .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
+  .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
   .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
   .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
   .lvlb{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:5px;cursor:pointer;
@@ -521,6 +523,7 @@
   </section>
   <section class="tabsec" id="tab-portfolio">
     <div id="pfFilterBar" class="filterbar"></div>
+    <div id="structLevelBar"></div>
     <div id="structTables"></div>
   </section>
   <section class="tabsec" id="tab-gantt">
@@ -536,6 +539,7 @@
   </section>
   <section class="tabsec" id="tab-milestones">
     <div id="msFilterBar" class="filterbar"></div>
+    <div id="msLevelBar"></div>
     <div id="msBody"></div>
   </section>
   <section class="tabsec settings" id="tab-settings">
@@ -2178,12 +2182,18 @@ function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
   if(pfGroupMode==="dims"){                                    // custom grouping → objectives nested under the chosen dimensions
     treeCtx="portfolio";                                        // ensure treeActs renders editable row actions (not the read-only lineage mode)
+    const slb=document.getElementById("structLevelBar");
+    if(slb){ slb.innerHTML=levelBarHtml("structure");
+      slb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>structCollapseTo(b.dataset.lvl||null)); }
     const host=document.getElementById("structTables");
     if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host);
+      host.querySelectorAll("[data-ptoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.ptoggle;
+        structCollapsed.has(k)?structCollapsed.delete(k):structCollapsed.add(k); renderPortfolio(); });
       host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
       host.querySelectorAll("[data-gnew]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const d=JSON.parse(b.dataset.gnew); armedDelete=null; openEditor(null, d.e, d.p); });
     }
-  } else renderStructTables();                                 // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
+  } else { const slb2=document.getElementById("structLevelBar"); if(slb2) slb2.innerHTML="";
+    renderStructTables(); }                                   // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
@@ -2846,8 +2856,10 @@ function renderGroupNodes(nodes, em, depth, path){
     if(n.key===""){ h += n.children ? renderGroupNodes(n.children, em, depth, path) : n.objs.map(o=>objLeafHtml(o,depth)).join(""); return; }
     const nodePath=path.concat([[n.dim,n.key]]), pre=groupPrefill(nodePath);
     const under=collectObjs(n);
+    const gk=pathKey(nodePath), col=structCollapsed.has(gk);
     const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
-    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
+    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="gtri" data-ptoggle="${esc(gk)}">${col?"\u25B8":"\u25BE"}</span><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
+    if(col){ h+=`</div>`; return; }
     if(n.children) h+=renderGroupNodes(n.children, em, depth+1, nodePath);
     else h+=n.objs.map(o=>objLeafHtml(o,depth+1)).join("");
     h+=`</div>`;
@@ -3180,7 +3192,9 @@ let ganttRoots = [];                               // last-built tree, so the co
 function pfLevels(tab){
   const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
   if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="milestones"?[]:[{id:"objective",label:"Objectives"}]);
-  if(tab==="milestones") return [];                // milestones have no hierarchy of their own
+  // hierarchy mode: only the Gantt draws an entity tree. Structure falls back to flat per-entity tables and
+  // Milestones to a flat list, so neither has levels to collapse.
+  if(tab!=="gantt") return [];
   return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
 }
 function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
@@ -3196,6 +3210,30 @@ function collapseTreeTo(roots, level, set){
   return set;
 }
 function ganttCollapseTo(level){ collapseTreeTo(ganttRoots, level, ganttCollapsed); renderGantt(); }
+let structCollapsed = new Set();                   // per-tab: collapsing the Gantt must not reshape Structure
+let msCollapsed = new Set();
+// A core group node's own `key` is only the dimension VALUE, which repeats across branches — the collapse key
+// must be the whole path. A key:'' / '__all__' node is transparent (no level of its own) so it never gets one.
+function pathKey(path){ return path.map(function(p){ return p[0]+":"+p[1]; }).join("/"); }
+function groupCollapseTo(nodes, level, set){
+  set.clear();
+  if(level==null) return set;
+  (function walk(list, path){ list.forEach(n=>{
+    if(n.key===""||n.key==="__all__"){ if(n.children) walk(n.children, path); return; }
+    const np=path.concat([[n.dim,n.key]]);
+    if(n.dim===level) set.add(pathKey(np));
+    else if(n.children) walk(n.children, np);
+  }); })(nodes, []);
+  return set;
+}
+function structCollapseTo(level){
+  groupCollapseTo(RD.groupObjectives(portfolio.objectives.filter(o=>!pfAnyFilter()||objMatches(o)), pfGroupDims, portfolio), level, structCollapsed);
+  renderPortfolio();
+}
+function msCollapseTo(level){
+  groupCollapseTo(RD.groupMilestones(portfolio.milestones.filter(msMatches), pfGroupDims, portfolio), level, msCollapsed);
+  renderMilestones();
+}
 function levelBarHtml(tab){
   const lv=pfLevels(tab); if(!lv.length) return "";
   return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
@@ -3239,13 +3277,16 @@ function renderMilestones(){
   let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th><th></th></tr></thead><tbody>`;
   const msSort=(list)=>list.slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
   const collectMs=(n)=> n.children ? n.children.reduce((acc,c)=>acc.concat(collectMs(c)),[]) : (n.objs||[]);
-  const msGroups=(nodes, depth)=>{
+  const msGroups=(nodes, depth, path)=>{
   nodes.forEach(n=>{
     const under=collectMs(n); if(!under.length) return;
     // "— none —" is not a group: no header, and the rows read at the parent's depth (first, per _dimOrder)
     const bare=(n.key===""||n.key==="__all__");
-    if(!bare) h+=`<tr class="grouphead"><td colspan="10" style="padding-left:${6+depth*16}px">${esc(dimLabel(n.dim,n.key))} <span class="tsub" style="margin-left:6px">${under.length}</span></td></tr>`;
-    if(n.children){ msGroups(n.children, bare?depth:depth+1); return; }
+    const np = bare ? path : path.concat([[n.dim,n.key]]);
+    const gk = bare ? "" : pathKey(np), col = !bare && msCollapsed.has(gk);
+    if(!bare) h+=`<tr class="grouphead"><td colspan="10" style="padding-left:${6+depth*16}px"><span class="gtri" data-mstoggle="${esc(gk)}">${col?"\u25B8":"\u25BE"}</span> ${esc(dimLabel(n.dim,n.key))} <span class="tsub" style="margin-left:6px">${under.length}</span></td></tr>`;
+    if(col) return;                                   // collapsed: header only, nothing beneath it
+    if(n.children){ msGroups(n.children, bare?depth:depth+1, np); return; }
     msSort(n.objs).forEach(ms=>{
       const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
       const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
@@ -3270,9 +3311,14 @@ function renderMilestones(){
     });
   });
   };
-  msGroups(RD.groupMilestones(rows, pfGroupDims, portfolio), 0);
+  msGroups(RD.groupMilestones(rows, pfGroupDims, portfolio), 0, []);
   h+=`</tbody></table>`;
   el.innerHTML=h;
+  const mlb=document.getElementById("msLevelBar");
+  if(mlb){ mlb.innerHTML=levelBarHtml("milestones");
+    mlb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>msCollapseTo(b.dataset.lvl||null)); }
+  el.querySelectorAll("[data-mstoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.mstoggle;
+    msCollapsed.has(k)?msCollapsed.delete(k):msCollapsed.add(k); renderMilestones(); });
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
   el.querySelectorAll("[data-msreport]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openMilestoneReport(b.dataset.msreport); });
   el.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const t=b.dataset.sdel,i=t.indexOf(":"); armedDelete=null; structDelete(t.slice(0,i), t.slice(i+1)); });
