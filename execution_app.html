@@ -1074,6 +1074,23 @@ html[data-theme="dark"] #etb-view{
     }
     return statAverage(xs);
   }
+  // A KPI may BORROW another KPI's readings (kpi.readsFrom) so that one sample feeds several statistics —
+  // e.g. an average target and a CoV target over the same 10 points, entered once. The statistic still comes
+  // from each KPI's own definer, so only the data is shared. Follows the chain to whoever actually holds the
+  // readings; cycle-safe, and a KPI without readsFrom resolves to itself (unchanged).
+  // NOTE: this is a deliberate stopgap for a first-class sample entity — the data still lives on a privileged
+  // KPI rather than on the sample it belongs to.
+  function readingSourceId(kpi, kpis){
+    if(!kpi) return null;
+    var seen={}, cur=kpi;
+    while(cur && cur.readsFrom && !seen[cur.id]){
+      seen[cur.id]=1;
+      var nx=kpiById(cur.readsFrom, kpis||[]);
+      if(!nx || nx.id===cur.id) break;
+      cur=nx;
+    }
+    return cur.id;
+  }
   // all readings posted to a kpi id, newest first
   function readingsFor(kpiId, execDocs){
     var out=[];
@@ -1251,7 +1268,7 @@ html[data-theme="dark"] #etb-view{
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
-    var ownV=resolvedReadingValue(kpi.id, root, execDocs);
+    var ownV=resolvedReadingValue(readingSourceId(kpi, kpis), root, execDocs);   // borrowed sample, own statistic
     if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
     var ex=sourcesOf(kpi, kpis);
@@ -2162,6 +2179,7 @@ html[data-theme="dark"] #etb-view{
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
     readingCount: readingCount,
@@ -2834,8 +2852,19 @@ function openPostCell(td){
    completeness; lets a mis-keyed reading be removed. Writes only to exec.kpiUpdates (this app's only
    writable doc). Anchored position:fixed off the cell rect — .hostcard and .m-cur both clip overflow. ---- */
 let samplePopKpi = null, samplePopArmed = null;
-function samplePopReads(kpiId){                                          // this KPI's own readings, newest first
-  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId && !isNaN(Number(u.value)))
+function sampleOwnerId(kpiId){                                           // whose readings this KPI actually reads
+  const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
+  return k ? RD.readingSourceId(k, AK) : kpiId;
+}
+function readsFromCandidates(selfId){
+  return allKpisPool().filter(k=>k.id!==selfId && !k.readsFrom
+      && (k.targetType==="statistical" || (RD.definerOf(k, allKpisPool())||{}).targetType==="statistical")
+      && (exec.kpis||[]).some(x=>x.id===k.id))
+    .map(k=>({ id:k.id, name:RD.kpiName(k, allKpisPool())||k.id }));
+}
+function samplePopReads(kpiId){                                          // the SAMPLE's readings, newest first
+  const src=sampleOwnerId(kpiId);
+  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===src && !isNaN(Number(u.value)))
     .slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
 }
 function fmtReadTs(ts){ if(!ts) return ""; const d=new Date(ts); return isNaN(d.getTime())?"":d.toISOString().slice(0,16).replace("T"," "); }
@@ -2869,7 +2898,8 @@ function renderSamplePop(){
   const inp=pop.querySelector("[data-sp-in]"), addB=pop.querySelector("[data-sp-add]");
   const add=()=>{ const v=inp.value;
     if(v==="" || isNaN(Number(v))){ inp.focus(); return; }               // no ===cur guard: a repeat reading is a real reading
-    exec.kpiUpdates.push({ id:"UPD-"+samplePopKpi+"-"+Date.now(), kpiId:samplePopKpi, value:Number(v), timestamp:Date.now(), note:"" });
+    const _src=sampleOwnerId(samplePopKpi);   // a borrowed sample is written where the data actually lives
+    exec.kpiUpdates.push({ id:"UPD-"+_src+"-"+Date.now(), kpiId:_src, value:Number(v), timestamp:Date.now(), note:"" });
     samplePopArmed=null; renderAll(); renderSamplePop();
     const i2=document.querySelector("#samplePop [data-sp-in]"); if(i2) i2.focus();
     setMsg("Reading added","ok"); };
@@ -3168,6 +3198,7 @@ function initDraftKr(kr){
     kpiTarget:(pk&&pk.target!=null)?pk.target:"",
     kpiUnit:(pk&&pk.unit)?pk.unit:"",
     kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
+    kpiReadsFrom:(pk&&pk.readsFrom)?pk.readsFrom:"",
     kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
     subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
   };
@@ -3193,6 +3224,12 @@ function krModalBody(){
     `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.kpiType,"krktype")}</div>`+
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-f="kpiReadCount" value="${esc(d.kpiReadCount)}" placeholder="e.g. 10"></div>`+
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
+    // STOPGAP for a first-class sample entity: borrow another statistical KPI's readings so one sample can
+    // feed several statistics (average + CoV over the same 10 points, entered once).
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+
+      `<option value=""${d.kpiReadsFrom?"":" selected"}>Own readings</option>`+
+      readsFromCandidates(pk&&pk.id).map(c=>`<option value="${esc(c.id)}"${d.kpiReadsFrom===c.id?" selected":""}>Same data as: ${esc(c.name)}</option>`).join("")+
+    `</select></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
@@ -3254,8 +3291,9 @@ function saveKrModal(thenLink){
       pk.direction=(d.kpiDir==="decrease")?"down":"up";
       pk.target=parseTargetNum(d.kpiTarget);
       pk.unit=d.kpiUnit||null;
-      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount); }
-      else { delete pk.statistic; delete pk.readCount; }
+      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount);
+        if(d.kpiReadsFrom) pk.readsFrom=d.kpiReadsFrom; else delete pk.readsFrom; }
+      else { delete pk.statistic; delete pk.readCount; delete pk.readsFrom; }
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
