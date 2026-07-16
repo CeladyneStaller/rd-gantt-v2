@@ -142,6 +142,51 @@ class StatePut(BaseModel):
 
 
 # ---- routes ----------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# GET /roster -> [{email, orgRole, leadOf, disabled}]
+#
+# The users bin also holds pinHash / salt / iterations for every user. Those are
+# PIN credentials: the keyspace is tiny, so anyone holding hash+salt recovers the
+# PIN offline regardless of the 200k iteration count. They must never reach a
+# browser, and filtering client-side would not help -- by then they have already
+# crossed the wire.
+#
+# So this endpoint is a strict WHITELIST, not a blacklist: it names the four
+# fields it emits and drops everything else. A new secret added to the users bin
+# tomorrow is excluded by default rather than leaking until someone notices.
+# assignedObjectives is deliberately NOT exposed -- the planning app owns
+# objective ownership in its own portfolio doc, and mirroring that relationship
+# here would give one fact two homes.
+#
+# Read-only by design: there is no write path to the users bin in this broker.
+# ---------------------------------------------------------------------------
+ROSTER_FIELDS = ("email", "orgRole", "leadOf", "disabled")
+USERS_BIN = os.environ.get("USERS_BIN")
+
+
+def _project_user(u: Dict[str, Any]) -> Dict[str, Any]:
+    out = {
+        "email": u.get("email"),
+        "orgRole": u.get("orgRole"),
+        "leadOf": list(u.get("leadOf") or []),
+        "disabled": bool(u.get("disabled")),
+    }
+    assert set(out) == set(ROSTER_FIELDS)      # a field added above must be declared above
+    return out
+
+
+@state_router.get("/roster")
+def get_roster():
+    """Users for the objective-owner picker. Never emits credential material."""
+    if not USERS_BIN:
+        raise HTTPException(status_code=503, detail="USERS_BIN is not configured")
+    raw = _jsonbin_get(USERS_BIN)
+    if raw is None:
+        raise HTTPException(status_code=502, detail="users bin unavailable")
+    users = (raw.get("record") or raw).get("users") or []
+    return {"users": [_project_user(u) for u in users if u.get("email")]}
+
+
 @state_router.get("/state/{doc_id}/version")
 def get_version(doc_id: str):
     """Cheap polling endpoint. 404 if the document does not exist yet."""
