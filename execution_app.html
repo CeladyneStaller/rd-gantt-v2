@@ -3554,24 +3554,18 @@ function nextLinkPriority(parentId){
 function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
-  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in a portfolio/spec doc (read-only here)
-  if(isTargetKpi(def) || portfolioDef){   // product/model/initiative/milestone definer → link up via linkParent (a group link can't attach to a read-only definer)
-    const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
-    const objScope = hostType==="initiative" ? null : selectedObj;
-    const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-    if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(definerId),
-                     name:null, direction:null, unit:null, target:null, order:0 });
-    addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
-  }
-  // exec-local definer: group link (safe to stamp a groupId on a doc we own)
-  let g = def.groupId;
-  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  // Every link is TYPED now. Exec-local definers (a KR KPI, say) used to fall through to a groupId link,
+  // which had nowhere to record a relationship — linkOf() hardcodes 'contribute' for those — so the
+  // relationship selector had to be hidden for them. Routing everything through linkParent/linkType makes
+  // contribute/direct/specification available on every link, including stage-gate -> key-result.
+  // Existing groupId data still resolves through linkOf's legacy branch; nothing migrates.
+  const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false, linkPriority:nextLinkPriority(def.id),
+  if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(def.id),
                    name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok");
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
@@ -3588,7 +3582,7 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const pool = allKpisPool();
   const O = hostType==="initiative" ? null : selectedObj;
-  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent -> relationship applies
+  const showRel = d => !!d;   // every link is typed now, so the relationship applies to all of them
   const IND = String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160);
   const pad = n => { let z=""; for(let x=0;x<Math.max(0,n);x++) z+=IND; return z; };
   const kpiText = d => { const u=RD.kpiUnit(d,pool); return (RD.kpiName(d,pool)||d.id)+(u?(" ("+u+")"):""); };
