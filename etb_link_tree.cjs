@@ -3,7 +3,7 @@
 // Sibling Stack B and a Fuel Cell family also exist in scope. Stack A must see its own + System A (ancestor)
 // metrics, but NOT Stack B (sibling) or Fuel Cell (other family). Tree renders nested headers + indented rows.
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__T={ linkCandidates:linkCandidates, renderLinkEditor:renderLinkEditor, familyOfObjective:familyOfObjective, refreshTargetIds:refreshTargetIds, setState:function(st){ if('selectedObj' in st) selectedObj=st.selectedObj; if(st.exec) exec=st.exec; if(st.portfolio) portfolio=st.portfolio; if(st.refDocs) refDocs=st.refDocs; if('divisionId' in st) divisionId=st.divisionId; } };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

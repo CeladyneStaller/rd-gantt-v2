@@ -1,7 +1,8 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port Phase 1 — module mounts in #subEXP, per-objective scoping, brokered ETB-<div> load, tasks panel kept (10 assertions)
 // usage: NODE_PATH=<jsdom> node etb_phase1_mount.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const errs=[]; const vc=new VirtualConsole(); vc.on("jsdomError",e=>{ if(!/fetch|network|broker|Failed to|cytoscape|Graph library/i.test(e.message)) errs.push(e.message); });
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:vc,url:"https://x.test/",pretendToBeVisual:true});
@@ -49,7 +50,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['setActiveProject stamps the active objective',o.scopeStamp],
      ['objective tree loads from the exec doc',o.treeLoaded],['loaded experiment shows in the Outline',o.outlineHasExp],
      ['Experiments section present in the objective view',o.expSectionPresent],['tasks panel retired (E5, #subTASK empty)',o.tasksRetired]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB phase-1 mount assertions green');   // count so sweep.py can guard it
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB port Phase 1 all passed"));
   },400);
 },400);

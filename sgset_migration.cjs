@@ -1,6 +1,6 @@
 const fs=require('fs'); const RD=require('./core.js');
 let pass=0, fail=0; function ok(c,m){ if(c) pass++; else { fail++; console.error('FAIL: '+m); } }
-const html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 const m=html.match(/function migrateStageGateSets\(x\)\{([\s\S]*?)\n\}/);
 if(!m){ console.error('migrateStageGateSets not found in built file'); process.exit(1); }
 const migrate=new Function('RD','x', m[1]);

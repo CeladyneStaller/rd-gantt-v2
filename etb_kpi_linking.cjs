@@ -1,7 +1,7 @@
 // Verifies the 5-group KPI linking: rank model, component-level surfacing (new), strict up-only
 // filtering (KR never sees stage-gates; stage-gate sees KRs), optgroup rendering, key-read grouping.
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__L={ rankOf:rankOf, linkRank:linkRank, linkGroupLabel:linkGroupLabel, linkCandidates:linkCandidates, renderLinkEditor:renderLinkEditor, componentTargetsInScope:componentTargetsInScope, linkTargetKpis:linkTargetKpis, hubProjectKpis:function(){return window.hubProjectKpis();}, refreshTargetIds:refreshTargetIds, setState:function(st){ if('selectedObj' in st) selectedObj=st.selectedObj; if(st.exec) exec=st.exec; if(st.refDocs) refDocs=st.refDocs; if(st.portfolio) portfolio=st.portfolio; if('divisionId' in st) divisionId=st.divisionId; } };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -57,14 +57,14 @@ function load(){ const vc=new VirtualConsole(); const errs=[]; vc.on("jsdomError
   ok(!sgCands.includes("SGK"), "3: stage-gate link does NOT offer a same-level stage-gate");
   ok(sgCands.includes("CMP") && sgCands.includes("PF1"), "3: stage-gate link also offers Component + Product");
 
-  // 4) optgroup rendering, in display order, filtered per source
+  // 4) nested indented tree, filtered per source (optgroups replaced by header rows)
   const krHtml=L.renderLinkEditor("keyResult","KR1");
-  ok(krHtml.includes('label="Product"') && krHtml.includes('label="Component"'), "4: KR editor groups Product + Component");
-  ok(!krHtml.includes('label="Stage-gates"') && !krHtml.includes('label="Key results"'), "4: KR editor omits Stage-gate/KR groups");
+  ok(krHtml.includes("Product:") && krHtml.includes("Model:") && krHtml.includes("Component:"), "4: KR editor nests Product > Model > Component headers");
+  ok(!krHtml.includes("Objective:"), "4: KR editor hides the Objective (KR/stage-gate) branch (up-only)");
+  ok(krHtml.indexOf("Component:") > krHtml.indexOf("Model:") && krHtml.indexOf("Model:") > krHtml.indexOf("Product:"), "4: depth order Product > Model > Component");
   const sgHtml=L.renderLinkEditor("stageGate","SG1");
-  ok(sgHtml.includes('label="Key results"') && sgHtml.includes('label="Product"') && sgHtml.includes('label="Component"'), "4: stage-gate editor groups Key results + Product + Component");
-  ok(!sgHtml.includes('label="Stage-gates"'), "4: stage-gate editor omits the same-level Stage-gate group");
-  ok(sgHtml.indexOf('label="Product"') < sgHtml.indexOf('label="Component"') && sgHtml.indexOf('label="Component"') < sgHtml.indexOf('label="Key results"'), "4: groups render top-down Product > Component > KR");
+  ok(sgHtml.includes("Product:") && sgHtml.includes("Component:"), "4: stage-gate editor nests Product + Component");
+  ok(sgHtml.includes("Objective:"), "4: stage-gate editor shows the Objective branch (KR above a gate)");
 
   // 5) key-read picker grouping (host->ETB bridge tags each KPI)
   const hub=L.hubProjectKpis();

@@ -1,7 +1,7 @@
 // Theme system: OS-seed, saved-choice precedence, toggle flip+persist, palette completeness. (12 assertions)
 // usage: NODE_PATH=<jsdom> node theme_toggle.test.js [path/to/execution_app.html]
 const {JSDOM}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 let pass=0, fail=0;
 function ok(name,cond){ if(cond){pass++;console.log('  \u2713 '+name);} else {fail++;console.log('  \u2717 FAIL '+name);} }
@@ -54,6 +54,7 @@ ok('no saved + OS(light) seeds light',        seed(null,   false).window.documen
     }
 
     console.log(fail? "\u2717 theme system FAILED" : "\u2705 theme: OS-seed + saved-wins + toggle persist + full palettes + ETB on toggle");
+    console.log('\nPASS - '+(pass+fail)+' theme-toggle assertions green');   // total so sweep.py can guard it
     process.exitCode = fail?1:0;
   }, 400);
 })();

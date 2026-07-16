@@ -1,6 +1,6 @@
 const {JSDOM}=require("jsdom");
 const fs=require("fs");
-const html=fs.readFileSync('/mnt/user-data/outputs/planning_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/planning_app.html','utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>new Promise(()=>{});
@@ -43,7 +43,8 @@ const h1=T.gth();
 ok(h1.includes('FuelCell')&&h1.includes('Electrolyzer'),'structure: both divisions render');
 ok(h1.includes('StackA'),'structure: product level (StackA)');
 ok(h1.includes('ModelX'),'structure: model level (ModelX)');
-ok((h1.match(/pfgrp-head/g)||[]).length>=5,'structure: >=5 nested group headers ('+((h1.match(/pfgrp-head/g)||[]).length)+')');
+ok((h1.match(/pfgrp-head/g)||[]).length>=4,'structure: nested group headers render ('+((h1.match(/pfgrp-head/g)||[]).length)+')');
+ok(!h1.includes('\u2014 none \u2014'),'structure: no "\u2014 none \u2014" header — items with no value for a dimension skip that level');
 ok(h1.indexOf('obj one')>0,'structure: objective leaves render');
 
 T.setG('dims',['owner']);
@@ -80,6 +81,24 @@ const sp1=T.renderP();
 ok(!sp1.startsWith('ERR:'),'structure tab: renderPortfolio no error ('+(sp1.startsWith('ERR:')?sp1:'ok')+')');
 ok(sp1.includes('pfgrp-head')&&sp1.includes('StackA')&&sp1.includes('ModelX'),'structure tab: custom grouping renders the nested grouped tree');
 ok(sp1.includes('obj one'),'structure tab: objective leaves present under groups');
+ok(!sp1.includes('data-addnew='),'structure grouped: no flat top toolbar when grouped');
+ok((sp1.match(/data-gnew=/g)||[]).length>=3,'structure grouped: per-group add buttons present ('+((sp1.match(/data-gnew=/g)||[]).length)+')');
+ok(/data-tedit="objective:/.test(sp1),'structure grouped: per-objective edit button present (treeCtx fixed)');
+const gbtns=[...w.document.querySelectorAll('#structTables [data-gnew]')].map(b=>JSON.parse(b.getAttribute('data-gnew')));
+ok(gbtns.some(d=>d.e==='initiative'&&d.p.divisionId&&!d.p.productId),'structure grouped: division group offers + init prefilled with divisionId only');
+ok(gbtns.some(d=>d.e==='model'&&d.p.productId),'structure grouped: product group offers + model prefilled with productId');
+ok(gbtns.some(d=>d.e==='objective'&&d.p.modelId==='M1'&&d.p.divisionId==='D1'),'structure grouped: model-level + obj prefilled with divisionId+modelId');
+const modelObjBtn=[...w.document.querySelectorAll('#structTables [data-gnew]')].find(b=>{const d=JSON.parse(b.getAttribute('data-gnew'));return d.e==='objective'&&d.p.modelId==='M1';});
+if(modelObjBtn) modelObjBtn.click();
+const mb=w.document.getElementById('pfModalBody').innerHTML;
+ok(/data-f="quarter"/.test(mb)&&/data-f="statement"/.test(mb),'structure grouped: + obj opens the objective editor');
+ok(/value="M1"[^>]*selected/.test(mb),'structure grouped: + obj on a model group preselects that model (M1)');
+// flat case (no dims): minimal top toolbar returns, no per-group buttons
+T.setG('dims',[]);
+const spFlat=T.renderP();
+ok(spFlat.includes('data-addnew="objective"')&&spFlat.includes('data-addnew="initiative"'),'structure flat (no dims): top toolbar + New objective/initiative');
+ok(!spFlat.includes('data-gnew='),'structure flat: no per-group add buttons');
+
 T.setG('hierarchy',[]);
 const sp2=T.renderP();
 ok(sp2.includes('struct-section')&&sp2.includes('Divisions')&&sp2.includes('Initiatives'),'structure tab: Hierarchy renders the full structure tables');

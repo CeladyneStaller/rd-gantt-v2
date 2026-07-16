@@ -1,8 +1,9 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port — persistence over the broker: manual save-with-warning, debounced auto-save,
 // objective-switch flush (no data loss), and refresh-restore. (9 assertions)
 // usage: NODE_PATH=<jsdom> node etb_persistence.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:new VirtualConsole(),url:"https://x.test/",pretendToBeVisual:true});
 try{ dom.window.localStorage.setItem('rd_broker_token','t'); }catch(e){}
@@ -64,7 +65,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['refresh restores manually-saved experiment',R.refreshRestoresA1],
      ['refresh restores auto-saved/flushed experiment',R.refreshRestoresA3],
      ['refresh follows the persist store (exec.etbTrees authoritative)',R.refreshDropsLocal]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB persistence assertions green');   // count so sweep.py can guard it
     console.log(process.exitCode?"\u2717 persistence FAILED":"\u2705 ETB persists: manual + auto + switch-safe + refresh-restore");
   },2600);
 },400);

@@ -1,7 +1,8 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port Phase 3 — hubProjectKpis bridge, key-read reading posts to the objective KPI, KR rollup, decrease-KPI mapping (11 assertions)
 // usage: NODE_PATH=<jsdom> node etb_phase3_kpi.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const errs=[]; const vc=new VirtualConsole(); vc.on("jsdomError",e=>{ if(!/fetch|network|broker|Failed to|cytoscape|Graph library/i.test(e.message)) errs.push(e.message); });
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:vc,url:"https://x.test/",pretendToBeVisual:true});
@@ -65,7 +66,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['reading is for the linked KPI at the measured value',o.readingForKpi1],['unlinked key-read is not posted',o.unlinkedIgnored],
      ['KR score rolls up from the posted reading',o.rollupMoved],['summary still renders',o.summaryOk],
      ['tasks panel retired (E5)',o.tasksRetired],['#etb-view still mounted',o.etbMounted]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB phase-3 KPI assertions green');   // count so sweep.py can guard it
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB Phase 3 all passed"));
   },400);
 },400);

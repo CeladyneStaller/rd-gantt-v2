@@ -2,7 +2,7 @@
 // The ETB no longer owns a broker debounce; it syncs the active tree into exec.etbTrees and
 // lets the host's persist() flush EXEC-<div>. This asserts that contract.
 const fs=require("fs");
-const block=fs.readFileSync('/tmp/etb_plumbing.js','utf8');
+const block=fs.readFileSync((process.env.RD_TMP||'/tmp')+'/etb_plumbing.js','utf8');
 let persistCalls=0; global.persist=function(){persistCalls++;};
 global.exec={etbTrees:{}};
 let activeTree={experiments:{X:1}}; let activePid="O1";

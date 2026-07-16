@@ -3,7 +3,7 @@
 // so we mock it to count constructions. Before the fix, renderAll's `cy && ...` guard meant
 // cy was never created until showView() ran; now it builds whenever the graph view is visible.
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__H={ addExp:function(){return addExperiment(state.tree,{});}, softRefresh:softRefresh, graphHidden:function(){return $('#view-graph').hidden;}, cyExists:function(){return !!cy;} };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

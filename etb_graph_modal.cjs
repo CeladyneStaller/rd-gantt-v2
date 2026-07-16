@@ -2,7 +2,7 @@
 // (2) buildGraphElements emits a "No next step" node for dead-end results; (3) openExpDetailModal
 // renders a read-only detail modal for completed experiments. Cytoscape is mocked (CDN-only in browser).
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__H={ setTree:function(tr){state.tree=tr;try{normalizeTree(state.tree);}catch(e){}}, build:function(){var reach=computeReachability(state.tree);return buildGraphElements(state.tree,reach);}, openModal:function(id){openExpDetailModal(id);}, overlay:function(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');return ov?ov.outerHTML:null;}, closeModal:function(){closeExpDetailModal();}, openPanel:function(id){openPanel(id);}, drawerOpen:function(){return $('#drawer').classList.contains('open');}, openKpiPicker:function(id){try{openKeyReadKpiPicker(state.tree,id);}catch(e){return 'ERR:'+e.message;}}, pickerOpen:function(){return !!ETB_ROOT.querySelector('#kr-kpi-overlay.open');} };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

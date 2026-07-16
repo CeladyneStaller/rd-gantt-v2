@@ -1,7 +1,8 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port — current-step panel refresh hook: ETB-internal edits (renderAll/softRefresh) fire window.__etbOnChange -> renderExpSummary (4 assertions)
 // usage: NODE_PATH=<jsdom> node etb_refresh_hook.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:new VirtualConsole(),url:"https://x.test/",pretendToBeVisual:true});
 try{ dom.window.localStorage.setItem('rd_broker_token','t'); }catch(e){}
@@ -29,7 +30,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
   setTimeout(()=>{ const o=JSON.parse(d.body.getAttribute('data-out')||'{}');
     [['__etbOnChange hook is registered',o.hookSet],['panel shows the first current experiment',o.showsFirst],
      ['ETB-internal record refreshes the panel (no renderAll)',o.refreshedToSecond],['advanced-past experiment no longer shown',o.firstGone]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB refresh-hook assertions green');   // count so sweep.py can guard it
     console.log(process.exitCode?"\u2717 still broken":"\u2705 current-step panel now refreshes on ETB edits");
   },300);
 },400);

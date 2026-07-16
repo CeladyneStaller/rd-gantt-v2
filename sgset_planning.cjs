@@ -2,7 +2,7 @@
 // internal Gantt's set tier (objective -> set -> gates), tree grouping, SetLabel-N labels, and the overview
 // gate-health chip. runScripts:outside-only + manual eval + a hook on the main script (fetch is a no-op here).
 const {JSDOM}=require("jsdom"); const fs=require("fs");
-const html=fs.readFileSync('/mnt/user-data/outputs/planning_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/planning_app.html','utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>new Promise(()=>{});
@@ -38,16 +38,16 @@ T.setExec({ "EXEC-D1":{
 
 let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++;console.error('FAIL:',m);} else console.log('ok:',m);};
 
-// labels: SetLabel-N (index within the set)
-ok(T.gateLabel({id:'SG-1',objectiveId:'O1'})==="MEA-1", "gateLabel SG-1 = MEA-1 ("+T.gateLabel({id:'SG-1',objectiveId:'O1'})+")");
-ok(T.gateLabel({id:'SG-2',objectiveId:'O1'})==="MEA-2", "gateLabel SG-2 = MEA-2");
-ok(T.gateLabel({id:'SG-3',objectiveId:'O1'})==="Stack-1", "gateLabel SG-3 = Stack-1");
+// labels: SG-N per workstream, by due date
+ok(T.gateLabel({id:'SG-1',objectiveId:'O1'})==="SG-A1", "SG-1 (MEA=A, earliest) = SG-A1 ("+T.gateLabel({id:'SG-1',objectiveId:'O1'})+")");
+ok(T.gateLabel({id:'SG-2',objectiveId:'O1'})==="SG-A2", "SG-2 (MEA=A, later) = SG-A2");
+ok(T.gateLabel({id:'SG-3',objectiveId:'O1'})==="SG-B1", "SG-3 (Stack=B, first) = SG-B1 — letter distinguishes workstreams");
 
 // internal Gantt: set tier
 const g=T.renderG();
 ok(!g.startsWith('ERR:'), "renderGantt ran ("+g.slice(0,50)+")");
 ok(g.includes("MEA") && g.includes("Stack"), "Gantt renders both set swimlane rows (MEA, Stack)");
-ok(g.includes("MEA-1") && g.includes("MEA-2") && g.includes("Stack-1"), "Gantt gate rows use SetLabel-N");
+ok((g.match(/gsetnum">SG-[A-Z]\d/g)||[]).length===3, "Gantt gate rows use SG-{letter}{n} labels (3 gates)");
 ok(g.includes("gsetbar"), "set roll-up bar rendered (.gsetbar)");
 ok(g.includes("gsetnum"), "gate label prefix rendered (.gsetnum)");
 
@@ -55,7 +55,7 @@ ok(g.includes("gsetnum"), "gate label prefix rendered (.gsetnum)");
 const t=T.treeHtml('O1');
 ok(!t.startsWith('ERR:'), "objectiveExecHtml ran");
 ok((t.match(/tsethead/g)||[]).length===2, "two set sub-headers in the tree");
-ok(t.includes("MEA-1") && t.includes("MEA-2") && t.includes("Stack-1"), "tree gate leaves labeled per set");
+ok((t.match(/texlab">SG-[A-Z]\d/g)||[]).length===3, "tree gate leaves use SG-{letter}{n} labels (3 gates)");
 ok(t.indexOf("KR")>=0 && t.indexOf("KR")<t.indexOf("MEA"), "KRs listed before the set groups");
 
 // Overview: gate-health chip = min set % passed = min(MEA 50, Stack 0) = 0%

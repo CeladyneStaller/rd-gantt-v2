@@ -1,7 +1,7 @@
 // P4: the delay cascade reaches MILESTONES in the planning app — a gate slip -> objective projEnd ->
 // milestoneEffective, surfaced as slip in the milestone reporting table and the Active-section milestone tile.
 const {JSDOM}=require("jsdom"); const fs=require("fs");
-const html=fs.readFileSync('/mnt/user-data/outputs/planning_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/planning_app.html','utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>new Promise(()=>{});

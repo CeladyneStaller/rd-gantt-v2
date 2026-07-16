@@ -1,0 +1,17 @@
+const C=require('./core.js'); let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; console.log('FAIL:',m);}};
+const pb=C.keyResultPaceBand;
+ok(pb(null,0,100,50)==='no-band','null attainment -> no-band');
+ok(pb(100,0,100,20)==='on-track','attainment 100 -> on-track (met, regardless of time)');
+ok(pb(80,null,null,50)==='at-risk','no objective dates -> score band (80 -> at-risk)');
+ok(pb(95,null,null,50)==='on-track','no dates, 95 -> on-track (score band)');
+ok(pb(80,0,100,100)==='off-track','deadline reached + unmet -> off-track');
+ok(pb(70,0,100,75)==='on-track','gap 5 (att70 / elapsed75) -> on-track');
+ok(pb(60,0,100,85)==='at-risk','gap 25 -> at-risk (behind pace)');
+ok(pb(40,0,100,96)==='off-track','gap 56 -> off-track (well behind, near deadline)');
+ok(pb(60,0,100,65)==='on-track','gap 5 (att60 / elapsed65) -> on-track');
+const ex={ D:{ keyResults:[{id:'kr1',objectiveId:'O'}], kpis:[{id:'k1',hostType:'keyResult',hostId:'kr1',objectiveId:'O',direction:'up',target:10}], kpiUpdates:[{kpiId:'k1',value:6,timestamp:1}], stageGates:[], tasks:[] } };
+const p=C.keyResultPace('kr1', {id:'O',plannedStart:0,plannedEnd:100}, ex, 85);
+ok(p.attainment===60 && p.elapsed===85 && p.gap===25 && p.band==='at-risk','keyResultPace returns {att60, elapsed85, gap25, at-risk}');
+const p2=C.keyResultPace('kr1', {id:'O',plannedStart:null,plannedEnd:null}, ex, 85);
+ok(p2.elapsed===null && p2.band==='off-track','no objective dates -> elapsed null, band falls back to score (60 -> off-track)');
+console.log(f?`\n${f}/${n} FAILED`:`\nPASS — ${n} KR pace-aware engine assertions green`); process.exit(f?1:0);

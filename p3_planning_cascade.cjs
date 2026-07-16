@@ -1,7 +1,7 @@
 // P3: the planning app reflects delay propagation (Phase 0) — Gantt gate diamonds move to their propagated
-// gateEffective, the objective bar slips, and the overview tile shows +Nd slip / Nd faster possible.
+// gateEffective, the objective bar slips, and the overview tile shows the +Nd slip chip.
 const {JSDOM}=require("jsdom"); const fs=require("fs");
-const html=fs.readFileSync('/mnt/user-data/outputs/planning_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/planning_app.html','utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>new Promise(()=>{});
@@ -22,7 +22,7 @@ P.divisions=[{id:'D1',name:'FC',order:0}];
 P.initiatives=[{id:'I1',name:'I',divisionId:'D1',plannedStart:TD-40,plannedEnd:TD+70,order:0}];
 P.objectives=[
   {id:'O1',statement:'Delay obj',divisionId:'D1',initiativeId:'I1',quarter:'2026Q1',milestoneIds:[],plannedStart:TD-40,plannedEnd:TD+70,order:0},
-  {id:'O2',statement:'Accel obj',divisionId:'D1',initiativeId:'I1',quarter:'2026Q1',milestoneIds:[],plannedStart:TD-10,plannedEnd:TD+40,order:1}];
+  {id:'O2',statement:'On-plan obj',divisionId:'D1',initiativeId:'I1',quarter:'2026Q1',milestoneIds:[],plannedStart:TD-10,plannedEnd:TD+120,order:1}];
 T.setP(P);
 T.setExec({ "EXEC-D1":{
   keyResults:[],
@@ -30,8 +30,8 @@ T.setExec({ "EXEC-D1":{
     {id:'g1',objectiveId:'O1',setId:'SA',name:'Freeze',plannedDate:TD-30,actualDate:TD},    // 30 late
     {id:'g2',objectiveId:'O1',setId:'SA',name:'Fab',plannedDate:TD+20},                      // pushed +30 -> eff TD+50
     {id:'g3',objectiveId:'O1',setId:'SA',name:'Test',plannedDate:TD+70},                     // pushed +30 -> eff TD+100
-    {id:'h1',objectiveId:'O2',setId:'SB',name:'Load',plannedDate:TD-10,actualDate:TD-40},    // 30 early
-    {id:'h2',objectiveId:'O2',setId:'SB',name:'Cost',plannedDate:TD+40} ],                   // accel 30
+    {id:'h1',objectiveId:'O2',setId:'SB',name:'Load',plannedDate:TD+30},                     // on plan, undone
+    {id:'h2',objectiveId:'O2',setId:'SB',name:'Cost',plannedDate:TD+100} ],                  // on plan, undone
   stageGateSets:[ {id:'SA',objectiveId:'O1',name:'Qual',order:0,chained:true}, {id:'SB',objectiveId:'O2',name:'Cost',order:1,chained:true} ],
   kpis:[],tasks:[],kpiUpdates:[],stageGateEdges:[] } });
 
@@ -48,9 +48,9 @@ ok(/class="gslip"/.test(G), "Gantt: objective O1 bar draws a slip extension");
 const t1=T.objTile('O1'), t2=T.objTile('O2');
 ok(/\+30d slip/.test(t1), "overview tile O1 shows '+30d slip' (objective shifted by propagation)");
 ok(/ov-slip/.test(t1), "O1 slip uses the ov-slip (red) class");
-ok(/30d faster possible/.test(t2), "overview tile O2 shows '30d faster possible' (acceleration)");
-ok(/ov-accel/.test(t2), "O2 acceleration uses the ov-accel (green) class");
-ok(!/slip/.test(t2), "O2 shows no slip (it is on plan)");
+ok(t2.indexOf('ERR:')!==0, "on-plan objective tile rendered");
+ok(!/ov-slip/.test(t2), "on-plan objective tile shows no slip chip");
+ok(!/faster possible/.test(t2), "on-plan objective tile shows no phantom acceleration chip (fixed)");
 
 console.log(f?('\n'+f+' / '+n+' FAILED'):('\nPASS — '+n+' P3 planning-app propagation + tile assertions green'));
 process.exit(f?1:0);

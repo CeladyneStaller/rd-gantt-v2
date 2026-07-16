@@ -1,7 +1,7 @@
 // Overall-tab tiled view: boots planning_app with portfolio + exec docs (KRs/gates/KPIs/FMEA) + spec docs
 // (model specs/components/sub-products), renders the tiled overview, and opens all 4 read-only modals.
 const {JSDOM}=require("jsdom"); const fs=require("fs");
-const html=fs.readFileSync('/mnt/user-data/outputs/planning_app.html','utf8');
+const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/planning_app.html','utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>new Promise(()=>{});
@@ -75,5 +75,35 @@ d=T.openDet('milestone','MS1');
 ok(/KPIs/.test(d.body)&&/BOM/.test(d.body)&&/Schedule/.test(d.body), "milestone modal: KPIs + schedule");
 d=T.openDet('division','D1');
 ok(/Summary/.test(d.body)&&/Models/.test(d.body)&&/Gen3 MEA/.test(d.body), "division modal: summary + models");
+
+// ---- products/models tile by OWNING division, not by whoever references them ----
+// P3 is owned by D1 and has NO objective this quarter; O4 sits in D2 but points at D1's product P1.
+const P2t=T.blank();
+P2t.divisions=[{id:'D1',name:'FuelCell',order:0},{id:'D2',name:'Electrolyzer',order:1}];
+P2t.products=[{id:'P1',name:'MEA Stack',divisionId:'D1',order:0},{id:'P2',name:'PEM Cell',divisionId:'D2',order:1},{id:'P3',name:'Idle Product',divisionId:'D1',order:2}];
+P2t.models=[{id:'M1',name:'Gen3 MEA',productId:'P1',order:0},{id:'M9',name:'Idle Model',productId:'P3',order:1}];
+P2t.initiatives=[{id:'I1',name:'InitA',divisionId:'D1',modelId:'M1',plannedStart:TD-200,plannedEnd:TD+200,order:0},
+                 {id:'IX',name:'CrossInit',divisionId:'D1',productId:'P1',plannedStart:TD-200,plannedEnd:TD+200,order:1}];
+P2t.objectives=[
+  {id:'O1',statement:'FC work',divisionId:'D1',initiativeId:'I1',modelId:'M1',quarter:'2026Q3',milestoneIds:[],plannedStart:TD-80,plannedEnd:TD+80,order:0},
+  {id:'O4',statement:'EL objective on FC product',divisionId:'D2',initiativeId:'IX',quarter:'2026Q3',milestoneIds:[],plannedStart:TD-80,plannedEnd:TD+80,order:1}];
+P2t.milestones=[];
+T.setP(P2t);
+const h2=T.renderOv();
+const dg=h2.split('divgroup'), fcBlock=dg[1]||'', elBlock=dg[2]||'';
+ok(/Idle Product/.test(h2), "a product with no objective this quarter still gets a tile");
+ok(/Idle Model/.test(h2), "...and its models tile with it");
+ok(/Idle Product/.test(fcBlock) && !/Idle Product/.test(elBlock), "the idle product tiles only under the division that owns it");
+ok(/MEA Stack/.test(fcBlock), "MEA Stack tiles under its owning division (FuelCell)");
+// a division whose work points at another division's product gets a LABELLED block, not "unclassified"
+ok(/MEA Stack/.test(elBlock), "a borrowed product still gets a labelled block in the borrowing division");
+ok(!/unclassified/.test(elBlock), "...so its objectives are NOT dumped into the unclassified bucket");
+ok(/D1 \u2014 MEA Stack/.test(elBlock), "the borrowed block is prefixed with the owning division's code");
+ok(!/D1 \u2014 MEA Stack/.test(fcBlock), "...while the owning division shows the bare product name");
+ok(/EL objective on FC product/.test(elBlock), "the borrowing objective reads under that product block");
+// scorecards (model tiles) belong to the owning division only
+ok(/Gen3 MEA/.test(fcBlock), "model scorecards render under the owning division");
+ok(!/Gen3 MEA/.test(elBlock), "...and NOT under the borrowing division");
+
 console.log(f?('\n'+f+'/'+n+' FAILED'):('\nPASS — '+n+' overview-tiles assertions green'));
 process.exit(f?1:0);

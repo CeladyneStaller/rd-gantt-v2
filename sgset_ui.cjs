@@ -2,7 +2,7 @@
 // per-set grouping + "SetLabel-N" numbering in the rendered DOM, the objective-strip gate-health pill,
 // and set-management ops (add / move gate / rename / delete-with-reassign). Broker + cytoscape mocked.
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 // expose host set functions/state via a trailing classic script (host vars are top-level lets)
 html=html.replace("</body>", `<script>
 window.__T={ renderGates: (typeof renderGates!=='undefined')?renderGates:null, objMetricStrip:(typeof objMetricStrip!=='undefined')?objMetricStrip:null,
@@ -38,14 +38,15 @@ const execNoSets=()=>({ objectiveState:[],keyResults:[],kpis:[],tasks:[],kpiUpda
   ok(sets.length===1 && sets[0].name==="General" && sets[0].chained===true, "migration created one default 'General' set, chained on");
   ok(ex.stageGates.every(g=>g.setId===sets[0].id), "every gate assigned to the default set");
 
-  // per-set "SetLabel-N" numbering
-  ok(T.gateLabel("SG-1")==="General-1" && T.gateLabel("SG-4")==="General-4", "gateLabel = SetName-index ("+T.gateLabel("SG-1")+","+T.gateLabel("SG-4")+")");
+  // global "SG-N" numbering by due date
+  ok(T.gateLabel("SG-1")==="SG-A1" && T.gateLabel("SG-4")==="SG-A4", "gateLabel = SG-{letter}{n} per workstream ("+T.gateLabel("SG-1")+","+T.gateLabel("SG-4")+")");
+  (function(){ const g=ex.stageGates.find(x=>x.id==="SG-4"); const save=g.plannedDate; g.plannedDate=2100; ok(T.gateLabel("SG-4")==="SG-A1" && T.gateLabel("SG-1")==="SG-A2", "re-dating a gate re-ranks the tags by due date"); g.plannedDate=save; })();
 
   // rendered DOM: set sub-section, labels, score, controls
   let sg=w.document.getElementById("subSG").innerHTML;
   ok(/class="sgset"/.test(sg), "renders a set sub-section (.sgset)");
   ok(sg.includes(">General<") || sg.includes("General"), "set header shows the set name");
-  ok(sg.includes("General-1") && sg.includes("General-4"), "gate cards use per-set labels");
+  ok(sg.includes(">SG-A1</span>") && sg.includes(">SG-A4</span>"), "gate chips use SG-{letter}{n} labels");
   ok(sg.includes("50%"), "set score shows % passed (2 of 4 = 50%)");
   ok(/data-addset/.test(sg) && /data-addsg-set/.test(sg), "panel has '+ add set' and per-set '+ gate' controls");
 
@@ -53,14 +54,14 @@ const execNoSets=()=>({ objectiveState:[],keyResults:[],kpis:[],tasks:[],kpiUpda
   const strip = T.objMetricStrip ? T.objMetricStrip(pf().objectives[0]) : (w.document.getElementById("objHeadWrap")||{}).innerHTML||"";
   ok(/Gate health/.test(strip) && /50%/.test(strip), "objective strip shows a Gate-health pill at 50%");
 
-  // set-management: add a second set, move a gate into it -> labels re-derive per set
+  // set-management: add a second set, move a gate into it -> per-workstream SG-N re-derives by due date
   T.addSet("MEA"); const sets2=T.objSetsOrdered(); ok(sets2.length===2, "addSet created a second set");
   const mea=sets2.find(s=>s.name==="MEA"); T.moveGate("SG-2", mea.id);
-  ok(T.gateLabel("SG-2")==="MEA-1", "moved gate re-labels under its new set (MEA-1)");
-  ok(T.gateLabel("SG-1")==="General-1" && T.gateLabel("SG-3")==="General-2", "remaining gates renumber within their set (General-1, General-2)");
+  ok(T.gateLabel("SG-2")==="SG-B1", "moved gate takes workstream B, first slot (SG-B1)");
+  ok(T.gateLabel("SG-1")==="SG-A1" && T.gateLabel("SG-3")==="SG-A2", "origin workstream A renumbers by due date (SG-A1, SG-A2)");
   T.renderGates(); sg=w.document.getElementById("subSG").innerHTML;
   ok((sg.match(/class="sgset"/g)||[]).length===2, "two set sub-sections render");
-  ok(sg.includes("MEA-1"), "the MEA set renders its moved gate as MEA-1");
+  ok(sg.includes(">SG-A1</span>") && sg.includes(">SG-B1</span>"), "each workstream carries its own letter — SG-A1 (General) and SG-B1 (MEA)");
 
   // delete a set with gates -> gates reassigned, not orphaned
   T.delSet(mea.id); T.delSet(mea.id);  // two-click arm+confirm

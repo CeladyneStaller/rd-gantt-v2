@@ -46,6 +46,8 @@
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
   header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
   header h1 .dot{color:var(--accent)}
+  header .home{color:var(--muted);text-decoration:none;font-size:17px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .12s,background .12s;flex:none}
+  header .home:hover{color:var(--accent);background:var(--panel2)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
   body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
@@ -82,6 +84,8 @@
   .row-actions{display:flex;gap:6px;align-items:center}
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  .ed textarea{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px;resize:vertical;min-height:44px}
+  .icard-intent{font-size:12.5px;color:var(--muted);line-height:1.5;margin:1px 0 9px 2px;max-width:74ch}
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
@@ -98,6 +102,149 @@
   table.kpitable{margin:0}
   table.kpitable td,table.kpitable th{padding:6px 14px}
   table.kpitable tbody tr:last-child td{border-bottom:none}
+  table.mtbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;margin:0}
+  table.mtbl thead th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel2)}
+  table.mtbl th.num,table.mtbl td.num{text-align:right}
+  table.mtbl th.ctr,table.mtbl td.ctr{text-align:center}
+  table.mtbl tbody td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.mtbl tbody tr:last-child td{border-bottom:none}
+  table.mtbl .m-name a.rowedit{color:var(--ink);font-weight:500;text-decoration:none;cursor:pointer}
+  table.mtbl .m-name a.rowedit:hover{color:var(--accent);text-decoration:underline}
+  table.mtbl .m-name{overflow-wrap:anywhere;word-break:break-word}
+  table.mtbl .m-crit,table.mtbl .m-cur,table.mtbl .m-unit{overflow:hidden;text-overflow:ellipsis}
+  table.mtbl .m-crit,table.mtbl .m-cur,table.mtbl .m-unit{font-family:var(--mono);white-space:nowrap}
+  table.mtbl .m-crit{color:var(--ink)}
+  table.mtbl .m-unit{color:var(--muted);font-size:11.5px}
+  table.mtbl .m-cur{font-weight:600}
+  table.mtbl .m-cur.met{color:var(--ok)} table.mtbl .m-cur.near{color:var(--warn)} table.mtbl .m-cur.miss{color:var(--bad)} table.mtbl .m-cur.none{color:var(--muted);font-weight:400}
+  table.mtbl .m-cur-sub{display:block;font-size:9px;font-weight:400;letter-spacing:.02em;margin-top:2px;font-family:var(--mono)}
+  table.mtbl .m-cur-sub.ok{color:var(--ok)} table.mtbl .m-cur-sub.warn{color:var(--warn)}
+  table.mtbl .m-noread{color:var(--muted);font-weight:400;font-style:italic}
+  table.mtbl td.m-cur[data-postcell]{cursor:pointer}
+  table.mtbl td.m-cur[data-postcell]:hover{text-decoration:underline dotted;text-underline-offset:3px}
+  .spop{position:fixed;z-index:120;width:252px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:10px;font-size:12px}
+  .spop .sp-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .spop .sp-name{font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spop .sp-x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px}
+  .spop .sp-x:hover{color:var(--ink);background:var(--panel2)}
+  .spop .sp-sum{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px}
+  .spop .sp-cnt{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+  .spop .sp-cnt.ok{color:var(--ok)} .spop .sp-cnt.warn{color:var(--warn)}
+  .spop .sp-tgt{font-family:var(--mono);font-size:10px;color:var(--muted);margin:2px 0 8px}
+  .spop .sp-list{max-height:168px;overflow-y:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .spop .sp-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .spop .sp-row:last-child{border-bottom:0}
+  .spop .sp-v{font-family:var(--mono);font-weight:600;min-width:44px;text-align:right}
+  .spop .sp-ts{flex:1;min-width:0;font-size:9.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spop .sp-rm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:10px;padding:2px 5px;border-radius:4px;flex:none}
+  .spop .sp-rm:hover{color:var(--bad);background:var(--pill-bad-bg)}
+  .spop .sp-rm.armed{color:var(--bad);background:var(--pill-bad-bg);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+  .spop .sp-none{padding:8px 0;color:var(--muted);font-size:11px;text-align:center}
+  .spop .sp-add{display:flex;gap:6px;margin-top:8px}
+  .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
+  .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
+  .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
+  .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .m-badge .d{width:5px;height:5px;border-radius:50%}
+  .m-badge.met{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .m-badge.met .d{background:var(--ok)}
+  .m-badge.near{background:var(--pill-warn-bg);color:var(--pill-warn-fg)} .m-badge.near .d{background:var(--warn)}
+  .m-badge.miss{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .m-badge.miss .d{background:var(--bad)}
+  .m-badge.none{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)} .m-badge.none .d{background:var(--none)}
+  table.mtbl .m-post{white-space:nowrap}
+  table.mtbl .m-post .tiny{width:62px}
+  table.mtbl .m-acts{text-align:right;white-space:nowrap}
+  table.mtbl .ovr{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+  td.mtbl-empty{color:var(--muted);font-style:italic;text-align:center;padding:12px 14px}
+  /* ---- pass 2: gate rows + workstream header + collapse + chaining modal ---- */
+  #modalBody .modal-field input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
+  .ws-head{display:flex;align-items:center;gap:11px;padding:11px 12px 10px;flex-wrap:wrap}
+  .ws-name{font-weight:600;font-size:13px;letter-spacing:.005em}
+  .ws-name.click{cursor:pointer}
+  .ws-name.click:hover{color:var(--accent)}
+  .chain-ic{display:inline-flex;align-items:center;justify-content:center;width:23px;height:21px;border-radius:5px;cursor:help}
+  .chain-ic.on{color:var(--accent);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd)}
+  .chain-ic.off{color:var(--none);border:1px solid var(--line)}
+  .ws-meter{display:flex;align-items:center;gap:9px;margin-left:auto;font-family:var(--mono)}
+  .ws-bar{width:96px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .ws-fill{height:100%;border-radius:2px}
+  .ws-pct{font-size:12px;font-weight:600;min-width:32px;text-align:right}
+  .ws-cnt{font-size:11px;color:var(--muted)}
+  .ws-acts{display:flex;gap:6px;align-items:center}
+  .btn-ico{padding:3px 7px !important;line-height:1}
+  .gate-block{position:relative;border-top:1px solid var(--line);padding:12px;transition:background .12s}
+  .ws-head + .gate-block{border-top:none}
+  .gate-block:hover{background:var(--panel2)}
+  .gate-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .gate-block.st-passed{--rail:var(--ok)} .gate-block.st-passed-late{--rail:var(--warn)} .gate-block.st-overdue{--rail:var(--bad)} .gate-block.st-pending{--rail:var(--none)}
+  .grow{display:grid;grid-template-columns:1fr 116px 124px 250px;align-items:start;column-gap:16px}
+  .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+  .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
+  .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
+  .g-name.click{cursor:pointer}
+  .g-name.click:hover{color:var(--accent)}
+  .g-committed{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);border-radius:4px;padding:1px 6px}
+  .g-intent{flex-basis:100%;display:flex;gap:9px;align-items:baseline;margin-top:5px;max-width:64ch}
+  .g-intent .lab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);flex:none}
+  .g-intent .txt{font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .g-status-cell{padding-top:1px}
+  .g-ready .r-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .g-ready .r-lab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .g-ready .r-val{font-family:var(--mono);font-size:13px;font-weight:700}
+  .g-ready .r-val .u{font-size:10px;color:var(--muted);font-weight:400}
+  .g-ready .r-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .g-ready .r-fill{height:100%;border-radius:2px}
+  .g-ready.empty .r-val{color:var(--muted)}
+  .g-sched{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;align-items:center;line-height:1.35}
+  .g-sched .gs-c{min-width:0}
+  .g-sched .gs-k{color:var(--muted);opacity:.8}
+  .g-sched .fc-est,.g-sched .fc-badge,.g-sched .passed-label,.g-sched .markbtn{font-size:10.5px}
+  .g-acts{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap;opacity:0;transition:opacity .12s}
+  .gate-block:hover .g-acts,.kr-block:hover .g-acts{opacity:1}
+  .g-acts .setmove{font-size:11px;max-width:90px}
+  .g-tgt{margin-top:10px}
+  .tgt-toggle{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-transform:uppercase}
+  .tgt-toggle:hover{border-color:var(--muted);color:var(--ink)}
+  .tgt-toggle .cnt{color:var(--ink);letter-spacing:0}
+  .tgt-toggle .arw{font-size:8px;transition:transform .15s}
+  .tgt-toggle[aria-expanded="true"] .arw{transform:rotate(90deg)}
+  .tgt-toggle.add{border-style:dashed}
+  .tgt-toggle.add:hover{border-color:var(--accent);color:var(--accent)}
+  .tgt-toggle + .tgt-toggle{margin-left:6px}
+  .tgt-panel{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+  .tgt-foot{padding:8px 12px;border-top:1px solid var(--line);background:var(--panel2);display:flex;gap:8px}
+  .ws-choice{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px}
+  .ws-opt{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;background:var(--panel);transition:border-color .12s,background .12s}
+  .ws-opt:hover{border-color:var(--muted)}
+  .ws-opt.sel{border-color:var(--accent);background:var(--pill-active-bg)}
+  .ws-radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line);flex:none;margin-top:2px;position:relative}
+  .ws-opt.sel .ws-radio{border-color:var(--accent)}
+  .ws-opt.sel .ws-radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+  .ws-otxt{display:flex;flex-direction:column}
+  .ws-ot{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .ws-od{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .ws-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--none)}
+  #modalBody .row-actions.gate-foot{justify-content:space-between;align-items:center}
+  .ra-right{display:flex;gap:8px;align-items:center}
+  /* ---- pass 3: Key Result pace rows ---- */
+  .kr-block{position:relative;border-top:1px solid var(--line);padding:12px;transition:background .12s}
+  .item-list>.kr-block:first-child{border-top:none}
+  .kr-block:hover{background:var(--panel2)}
+  .kr-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
+  .kr-block.b-on{--rail:var(--ok)} .kr-block.b-risk{--rail:var(--warn)} .kr-block.b-behind{--rail:var(--bad)} .kr-block.b-none{--rail:var(--none)}
+  .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px}
+  .kr-band{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:3px 8px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .kr-band .d{width:5px;height:5px;border-radius:50%}
+  .kr-band.on{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .kr-band.on .d{background:var(--ok)}
+  .kr-band.risk{background:var(--pill-warn-bg);color:var(--pill-warn-fg)} .kr-band.risk .d{background:var(--warn)}
+  .kr-band.behind{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .kr-band.behind .d{background:var(--bad)}
+  .kr-band.none{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)} .kr-band.none .d{background:var(--none)}
+  .pace-bar{position:relative;height:5px;border-radius:3px;background:var(--line);margin-top:2px}
+  .pace-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px}
+  .pace-mark{position:absolute;top:-3px;height:11px;width:2px;border-radius:1px;background:var(--muted);box-shadow:0 0 0 1.5px var(--panel)}
+  .pace-cap{margin-top:7px;font-family:var(--mono);font-size:10px;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+  .pace-cap .ico{font-size:9px}
+  .pace-cap.ok{color:var(--muted)} .pace-cap.risk{color:var(--warn)} .pace-cap.behind{color:var(--bad)}
+  .pace-cap .el{color:var(--none)}
   .linkbadge{font-family:var(--mono);font-size:10px;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:5px;padding:1px 5px;margin-left:4px;white-space:nowrap}
   .inherited{grid-column:1/-1;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6}
   .gate-sched{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
@@ -107,9 +254,67 @@
   .dep-chip button{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;line-height:1;padding:0}
   .dep-chip button:hover{color:var(--bad)}
   .committed-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--warn);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:5px;padding:2px 7px}
+  .fc-est{font-family:var(--mono);font-size:12px} .fc-est.late{color:var(--bad)} .fc-est.onplan{color:var(--muted)}
+  .fc-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;border-radius:5px;padding:2px 7px;white-space:nowrap;font-weight:600}
+  .fc-badge.slip{color:var(--pill-bad-fg);background:var(--pill-bad-bg);border:1px solid var(--pill-bad-bd)}
+  .fc-badge.pushed{color:var(--pill-warn-fg);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd)}
+  .fc-badge.accel{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border:1px solid var(--pill-ok-bd)}
+  .mc-accel{font-size:11px;font-family:var(--mono);margin-top:6px;color:var(--ok)}
+  .mc.sched-alarm{border-color:var(--bad);background:linear-gradient(180deg,rgba(248,113,113,.12),var(--panel) 62%);box-shadow:0 0 0 1px var(--bad),0 0 18px 2px rgba(248,113,113,.42);animation:schedpulse 2.1s ease-in-out infinite;position:relative}
+  @keyframes schedpulse{0%,100%{box-shadow:0 0 0 1px var(--bad),0 0 12px 1px rgba(248,113,113,.32)}50%{box-shadow:0 0 0 1px var(--bad),0 0 26px 5px rgba(248,113,113,.62)}}
+  .mc.sched-alarm .mc-label,.mc.sched-alarm .mc-val{color:var(--bad)}
+  .alarm-tag{position:absolute;top:11px;right:12px;display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--pill-bad-fg);border:1px solid var(--pill-bad-bd);background:var(--pill-bad-bg);border-radius:4px;padding:1px 6px}
+  .catchup-btn{margin-top:11px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:var(--sans);font-size:12px;font-weight:600;color:#fff;background:linear-gradient(180deg,#e8615f,#d0403e);border:1px solid #b83533;border-radius:8px;padding:8px 10px;cursor:pointer}
+  .catchup-btn:hover{filter:brightness(1.06)}
+  .catchup-btn.calm{background:transparent;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd)}
+  .cu-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,rgba(251,191,36,.10),transparent);border:1px solid var(--pill-warn-bd);border-left:3px solid var(--warn);border-radius:9px;padding:9px 13px;margin:0 0 10px}
+  .cu-banner .ic{font-size:15px;color:var(--warn)} .cu-banner .txt{font-size:12.5px} .cu-banner .txt b{color:var(--pill-warn-fg)}
+  .cu-banner .meta{color:var(--muted);font-family:var(--mono);font-size:11px} .cu-banner .sp{flex:1}
+  .cu-banner button{font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
+  .cu-banner button:hover{color:var(--ink);border-color:var(--muted)}
+  .cu-tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);border-radius:4px;padding:1px 5px}
+  .gs-recommit{grid-column:1/-1;display:flex;align-items:center;gap:7px;margin-top:3px;padding-top:5px;border-top:1px dashed var(--line);font-size:10px}
+  .gs-recommit .was{color:var(--muted);text-decoration:line-through} .gs-recommit .arrow{color:var(--muted)}
+  .gs-recommit .now{color:var(--warn);font-weight:600}
+  .gs-recommit .lab{color:var(--none);text-transform:uppercase;letter-spacing:.05em;font-size:8.5px}
+  .cu-intro{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 12px} .cu-intro b{color:var(--ink)}
+  .cu-req{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--pill-warn-fg);background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:5px;padding:2px 8px;margin-bottom:10px}
+  .cu-req.ok{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border-color:var(--pill-ok-bd)}
+  .cu-tbl{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .cu-hrow,.cu-row{display:grid;grid-template-columns:1fr 96px 104px 132px;align-items:center;gap:10px;padding:9px 12px}
+  .cu-hrow{background:var(--panel2);font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .cu-row{border-top:1px solid var(--line)}
+  .cu-g{display:flex;align-items:center;gap:8px;min-width:0} .cu-g .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cu-cur{font-family:var(--mono);font-size:11px;color:var(--muted)} .cu-fc{font-family:var(--mono);font-size:11px;color:var(--warn)}
+  .cu-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
+  .cu-in.filled{border-color:var(--pill-warn-bd)}
+  .cu-foot{display:flex;align-items:center;gap:10px;margin-top:14px} .cu-foot .note{color:var(--muted);font-size:11px;font-family:var(--mono)} .cu-foot .sp{flex:1}
+  #modalBody .act[disabled]{opacity:.45;cursor:not-allowed}
+  .cu-clear-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;margin:0 0 4px;box-sizing:border-box}
+  .cu-clear-in:focus{border-color:var(--bad);outline:none}
+  .act.danger{background:var(--bad);color:var(--on-danger);border-color:transparent}
+  .obj-title .obj-endbtn{margin-left:auto;font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
+  .obj-title .obj-endbtn:hover{color:var(--ink);border-color:var(--muted)}
+  .obj-title .obj-endbtn.reopen{color:var(--accent2);border-color:var(--pill-active-bd)}
+  .obj-ended{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:2px 8px}
+  .obj-ended.abandoned{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg);border:1px solid var(--line)}
+  .obj-ended.achieved{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .gate-block.st-cancelled{--rail:var(--none);opacity:.62}
+  .gate-block.st-cancelled .g-name{text-decoration:line-through;color:var(--muted)}
+  .statepill.cancelled{background:var(--pill-neutral-bg);color:var(--muted)}
+  .g-sched .fc-est.cnl{color:var(--muted);font-style:italic}
   select.edgepick{font-size:12px;padding:4px 6px;min-width:130px}
   input.laginp{width:56px}
   .chain-toggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0}
+  .sgset{border:1px solid var(--line);border-radius:9px;margin:0 0 12px;background:var(--panel);overflow:hidden}
+  .sgset-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .setname{font-weight:700;font-size:13px;color:var(--ink);cursor:pointer;border-bottom:1px dashed transparent}
+  .setname:hover{border-bottom-color:var(--line-strong)}
+  .setname-inp{font-size:13px;padding:3px 7px;border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--ink);min-width:150px}
+  .sgset-score{font-family:var(--mono);font-size:12px;font-weight:700}
+  .chain-toggle.mini{margin-left:0;font-size:10px}
+  .sgset-acts{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .setmove{font-family:var(--mono);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--muted)}
   .chain-toggle input{width:auto;padding:0;margin:0}
   /* dashboard layout (tracker QT pattern, dark theme) */
   .obj-title{font-size:14px;color:var(--ink);margin:14px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -145,6 +350,34 @@
   .statepill.passed-late{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
   .statepill.overdue{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
   .statepill.pending{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
+  .markbtn{background:var(--pill-ok-bg);border:1px solid var(--pill-ok-bd);color:var(--pill-ok-fg);border-radius:6px;padding:3px 10px;font-family:var(--mono);font-size:11px;cursor:pointer}
+  .markbtn:hover{filter:brightness(1.12)}
+  .passed-label{font-family:var(--mono);font-size:12px;border-radius:5px;padding:2px 8px;cursor:pointer;border:1px solid transparent}
+  .passed-label.ok{color:var(--pill-ok-fg);background:var(--pill-ok-bg);border-color:var(--pill-ok-bd)}
+  .passed-label.late{color:var(--pill-warn-fg);background:var(--pill-warn-bg);border-color:var(--pill-warn-bd)}
+  .passed-label:hover{filter:brightness(1.12);text-decoration:underline}
+  #modalBody .modal-field input[type=date],#modalBody .modal-field textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
+  #modalBody .modal-field textarea{resize:vertical;min-height:56px}
+  .modal-field .opt{color:var(--none)}
+  .gc-method{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;border-radius:6px;padding:5px 10px}
+  .gc-method.auto{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .gc-method.manual{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd)}
+  .gc-justi{font-size:12px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:6px;padding:8px 10px;margin-top:8px}
+  table.gc-kpi{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  table.gc-kpi th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line)}
+  table.gc-kpi td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--mono)}
+  table.gc-kpi tr:last-child td{border-bottom:none}
+  .gc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .gc-empty{color:var(--muted);font-style:italic}
+  .gc-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .gc-actions .right{display:flex;gap:10px}
+  .gc-uncomplete{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
+  .gc-uncomplete:hover{color:var(--bad)}
+  .pending-tgt{display:flex;align-items:center;gap:10px;padding:6px 9px;border:1px solid var(--line);border-radius:7px;margin-top:6px;background:var(--panel2)}
+  .pending-tgt .pt-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer;padding:2px 4px;border-radius:5px}
+  .pending-tgt .pt-main:hover{background:var(--panel)}
+  .pending-tgt .pt-name{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pending-tgt .pt-desc{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
   /* modal */
   /* FMEA / risk register */
   .rpn-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap}
@@ -378,13 +611,42 @@ html[data-theme="dark"] #etb-view{
 #etb-view .test .err{font-family:var(--mono);font-size:11.5px;color:var(--stop-fg);margin-top:2px}
 #etb-view .muted{color:var(--muted)}
 #etb-view .hint{color:var(--faint);font-size:12px}
-#etb-view .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;z-index:20;padding:60px 16px}
+#etb-view .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;z-index:40;padding:60px 16px}
 #etb-view .overlay.open{display:flex}
+#etb-view .exp-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#etb-view .exp-modal-head h3{margin:0;font-size:15px;font-weight:600}
+#etb-view .exp-modal-sec{margin-top:14px}
+#etb-view .exp-modal-sec>.p-lab{margin-bottom:6px;font-weight:600}
+#etb-view .exp-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+#etb-view .nonext-tag{color:var(--stop-fg);font-weight:600;border:1px solid var(--stop-fg);border-radius:6px;padding:1px 7px;font-size:11px}
+#etb-view .exp-kr{margin-top:6px}
+#etb-view .exp-kr .meta.small{padding-left:8px;color:var(--muted)}
+#etb-view .exp-modal-sec .lab{color:var(--faint)}
+#etb-view .exp-modal-sec .outcome-line{font-size:13px;line-height:1.5}
 #etb-view .sheet{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;max-width:460px;width:100%;padding:20px 22px}
 #etb-view .sheet h3{margin:0 0 4px}
 #etb-view .field{margin:12px 0}
 #etb-view .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
 #etb-view .sheet .row{display:flex;gap:8px;margin-top:14px}
+#etb-view .issues-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#etb-view .issues-head h3{margin:0;font-size:15px}
+#etb-view .issue-group{margin-bottom:14px}
+#etb-view .issue-group:last-child{margin-bottom:0}
+#etb-view .issue-h{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
+#etb-view .issue-row{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--surface-2)}
+#etb-view .issue-row:last-child{margin-bottom:0}
+#etb-view .issue-row.error{border-left:3px solid var(--stop-fg)}
+#etb-view .issue-row.warning{border-left:3px solid var(--amber-fg)}
+#etb-view .issue-ic{font-size:13px;line-height:1.4}
+#etb-view .issue-row.error .issue-ic{color:var(--stop-fg)}
+#etb-view .issue-row.warning .issue-ic{color:var(--amber-fg)}
+#etb-view .issue-txt{flex:1;font-size:13px}
+#etb-view .issue-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+#etb-view .issue-ref{background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--mono);font-size:11px;padding:0;text-decoration:underline}
+#etb-view .status-issues{cursor:pointer}
+#etb-view .status-issues:hover{text-decoration:none}
+#etb-view .status-issues .issues-view{color:var(--accent);text-decoration:underline;font-size:11px;margin-left:5px}
+#etb-view .acc-legacy{margin:1px 0 7px 26px;font-style:italic}
 #etb-view .keynote{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.45}
 #etb-view .graph-controls{display:flex;gap:7px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
 #etb-view #cy{width:100%;height:560px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
@@ -532,6 +794,7 @@ html[data-theme="dark"] #etb-view{
 </head>
 <body>
 <header>
+  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
   <div class="spacer"></div>
   <select class="obj" id="divSelect"><option>loading…</option></select>
@@ -644,6 +907,13 @@ html[data-theme="dark"] #etb-view{
     </aside>
   </div>
 
+  <div class="overlay" id="etbIssuesOverlay">
+    <div class="sheet">
+      <div class="issues-head"><h3 id="etbIssuesTitle">Validation issues</h3><button class="mini" data-close-issues aria-label="Close">✕</button></div>
+      <div id="etbIssuesBody"></div>
+    </div>
+  </div>
+
   <div class="overlay" id="settings">
     <div class="sheet">
       <h3>Storage settings</h3>
@@ -690,7 +960,7 @@ const URLP = (function(){
   const t = p.get("token");
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"" };
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -706,6 +976,7 @@ const EPOCH = Date.UTC(2020,0,1);
 const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
 const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().slice(0,10);
 const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
+const CATCHUP_SLIP_THRESHOLD = 10;   // objective slip (days) that trips the schedule alarm
 
 /* ---------------- state ---------------- */
 let portfolio = null;            // read-only
@@ -858,9 +1129,10 @@ function writeKpiUpdatesFromReads(expId, readings){
 }
 let selectedQuarter = URLP.quarter;   // seeded from ?quarter= (seed-on-load); "" = all quarters
 let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "" = all products
+let pendingObjective = URLP.objective;   // ?objective=<id> deep-link (robust-resolve); consumed once by fillObjSelect
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],etbTrees:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -980,13 +1252,28 @@ function resolveDivision(){
 
 /* ---------------- load / save ---------------- */
 // single adopt path: whole-doc replace + risks shape-normalize, so no load site can drift
-function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
+function migrateStageGateSets(x){
+  if(!x) return;
+  if(!Array.isArray(x.stageGateSets)) x.stageGateSets=[];
+  const gates=x.stageGates||[];
+  const objIds=[]; gates.forEach(g=>{ if(objIds.indexOf(g.objectiveId)<0) objIds.push(g.objectiveId); });
+  objIds.forEach(objId=>{
+    let sets=x.stageGateSets.filter(s=>s.objectiveId===objId);
+    if(!sets.length){ const set={ id:RD.allocId("stageGateSet", objId, x.stageGateSets.map(s=>s.id)), objectiveId:objId, name:"General", order:0, chained:true }; x.stageGateSets.push(set); sets=[set]; }
+    const ids=new Set(sets.map(s=>s.id)), defId=sets[0].id;
+    gates.filter(g=>g.objectiveId===objId).forEach(g=>{ if(!g.setId || !ids.has(g.setId)) g.setId=defId; });
+  });
+  x.stageGateSets.forEach(s=>{ s.chained=true; });   // force chaining ON for every workstream
+}
+function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); migrateStageGateSets(exec); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
 async function loadAll(){
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
   try{
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio doc on the broker yet — create it from the Planning app first.", "err"); return; }
     portfolio = p.doc; portfolioVersion = p.version;
+    if(pendingObjective){ const _to=(portfolio.objectives||[]).find(o=>o.id===pendingObjective);
+      if(_to) divisionId=_to.divisionId; else pendingObjective=""; }   // ?objective= robust-resolve: switch to its division; drop an unknown id
     if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
     if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
@@ -1060,7 +1347,11 @@ async function pollOnce(){
 
 /* ---------------- lookups ---------------- */
 function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); return d?d.name:id; }
-function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId && o.layer!=="roadmap"); }
+// Every objective in this division, regardless of `layer`. The old `&& o.layer!=="roadmap"` clause hid
+// roadmap-layer objectives here; nothing in this suite writes `layer` (it comes from outside), planning
+// showed both layers with no way to tell them apart, and the roadmap/execution split is no longer wanted.
+// To restore the split, re-add the clause — no data was changed.
+function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId); }
 async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
@@ -1103,7 +1394,13 @@ function fillProductSelect(){
 function fillObjSelect(){
   fillQtrSelect(); fillProductSelect();
   const s=document.getElementById("objSelect");
-  const objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  const want=pendingObjective; pendingObjective="";   // ?objective= deep-link, consumed once per load
+  let objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  if(want && myObjectives().some(o=>o.id===want) && !objs.some(o=>o.id===want)){   // target is in this division but a quarter/product filter hides it -> drop the filters
+    selectedQuarter=""; selectedProduct=""; fillQtrSelect(); fillProductSelect();
+    objs=myObjectives().filter(o=>(!selectedQuarter || (o.quarter||"")===selectedQuarter) && (!selectedProduct || effProductOf(o)===selectedProduct));
+  }
+  if(want && objs.some(o=>o.id===want)) selectedObj=want;
   s.innerHTML = objs.length ? objs.map(o=>`<option value="${o.id}">${esc((o.statement||o.id))} · ${o.quarter||'—'}</option>`).join("")
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
@@ -1126,13 +1423,16 @@ const SUB = {
 };
 // addingFor: null | {type, hostType?, hostId?}   editingSub: null | {type, id}
 let addingFor = null, editingSub = null, armedDel = null;
+let armedDelSet = null, sgSetEditor = null, pendingGateSet = null;   // stage-gate SET (parallel workstream) management state
+let expandedGates = new Set();   // which gate rows have their target table expanded (survives re-render)
+let expandedKRs = new Set();   // which KR rows have their KPI table expanded
 let subReturn = null;  // when a KPI/link editor is launched from inside the gate modal, return here on close
 function captureReturn(forType){ subReturn = ((forType==="kpi"||forType==="link") && editingSub && editingSub.type==="stageGate") ? {type:"stageGate", id:editingSub.id} : null; }
 function restoreReturn(){ if(subReturn){ editingSub = subReturn; addingFor = null; subReturn = null; return true; } return false; }
 
-function subOpenAdd(type, hostType, hostId){ captureReturn(type); addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
+function subOpenAdd(type, hostType, hostId){ captureReturn(type); pendingGateTargets=[]; addingFor = {type, hostType, hostId}; editingSub = null; armedDel = null; renderAll(); }
 function subOpenEdit(type, id){ captureReturn(type); editingSub = {type, id}; addingFor = null; armedDel = null; renderAll(); }
-function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
+function subCancel(){ addingFor = null; editingSub = null; draftKr = null; draftKrFor = null; pendingGateSet = null; pendingGateTargets=[]; closeSubKrModal(); closeTgtModal(); restoreReturn(); renderAll(); }
 
 function renderSubEditor(type, rec){
   const cfg = SUB[type]; rec = rec || {};
@@ -1191,7 +1491,12 @@ function saveSub(thenLink){
     const id = RD.allocId(SUB[type].idType, parent, arr.map(x=>x.id)); newId=id;
     const base = { id, objectiveId:objScope };
     if(type==="kpi"){ base.hostType=a.hostType; base.hostId=a.hostId; base.groupId=null; base.isDefiner=true; }
+    if(type==="stageGate"){ base.setId = pendingGateSet || ensureDefaultSet(); pendingGateSet=null; }
     arr.push(Object.assign(base, data));
+    if(type==="stageGate" && pendingGateTargets.length){   // commit draft targets as KPIs on the just-created gate
+      pendingGateTargets.forEach(t=>{ const kid=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); exec.kpis.push(Object.assign({ id:kid, objectiveId:selectedObj, hostType:"stageGate", hostId:newId, groupId:null, isDefiner:true }, t)); });
+      pendingGateTargets=[];
+    }
   }
   addingFor=null; editingSub=null;
   if(thenLink===true && newId && type==="stageGate"){ addingFor={type:"link", hostType:"stageGate", hostId:newId}; renderAll(); return; }   // save, then link the new gate directly
@@ -1223,10 +1528,107 @@ function postRead(host, kpiId){
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
   renderAll(); setMsg("Reading posted","ok");
 }
+function openPostCell(td){
+  if(td.querySelector("input")) return;                                  // already editing this cell
+  const kpiId=td.dataset.postcell, saved=td.innerHTML;
+  const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
+  // statistical targets take a SAMPLE, not a value -> open the sample popover instead of an inline value input
+  if(k && RD.definerOf(k, AK).targetType==="statistical"){ openSamplePop(td, kpiId); return; }
+  const cur=k?RD.effValue(k, AK, emForCore()):null;
+  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="value"/>`;
+  const inp=td.querySelector("input"); inp.focus(); inp.select();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; const v=inp.value;
+    if(v==="" || isNaN(Number(v)) || Number(v)===cur){ td.innerHTML=saved; return; }   // blank / invalid / unchanged -> no post
+    exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(v), timestamp:Date.now(), note:"" });
+    renderAll(); setMsg("Reading posted","ok"); };
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; td.innerHTML=saved; } };
+  inp.onblur=commit;
+}
+
+
+/* ---- statistical sample popover: a statistical target aggregates a SAMPLE, so the check-in adds one
+   measurement rather than setting the value. Shows the live sample, what it computes to, and its
+   completeness; lets a mis-keyed reading be removed. Writes only to exec.kpiUpdates (this app's only
+   writable doc). Anchored position:fixed off the cell rect — .hostcard and .m-cur both clip overflow. ---- */
+let samplePopKpi = null, samplePopArmed = null;
+function samplePopReads(kpiId){                                          // this KPI's own readings, newest first
+  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId && !isNaN(Number(u.value)))
+    .slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+}
+function fmtReadTs(ts){ if(!ts) return ""; const d=new Date(ts); return isNaN(d.getTime())?"":d.toISOString().slice(0,16).replace("T"," "); }
+function samplePopHtml(kpiId){
+  const AK=allKpisPool(), EM=emForCore(), k=AK.find(x=>x.id===kpiId);
+  if(!k) return "";
+  const dk=RD.definerOf(k, AK), stat=dk.statistic||"average", statLbl=STAT_SHORT[stat]||stat;
+  const unit=(stat==="cv")?"%":(RD.kpiUnit(k,AK)||"");
+  const dir=RD.kpiDirection(k,AK), tgt=RD.effTarget(k,AK,EM);
+  const reads=samplePopReads(kpiId), xs=reads.map(u=>Number(u.value));
+  const computed=xs.length?RD.computeStat(stat, xs):null;
+  const exp=Number(dk.readCount)>0?Number(dk.readCount):0, n=xs.length, complete=!exp||n>=exp;
+  const cntTxt=exp?`${n} / ${exp} ${complete?"\u2713":"\u26a0"}`:`${n} read${n===1?"":"s"}`;
+  const critTxt=(dk.targetType==="binary")?"pass":((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"")+fmtTarget(tgt,"")+(unit?" "+unit:""));
+  const rows=reads.length ? reads.map((u,i)=>{
+      const armed=samplePopArmed===i;
+      return `<div class="sp-row"><span class="sp-v">${esc(String(u.value))}</span><span class="sp-ts">${esc(fmtReadTs(u.timestamp))}${u.note?" \u00b7 "+esc(u.note):""}</span><button class="sp-rm${armed?" armed":""}" data-sp-rm="${i}" title="Remove this reading">${armed?"confirm":"\u2715"}</button></div>`;
+    }).join("")
+    : `<div class="sp-none">no readings yet \u2014 add the first measurement below</div>`;
+  return `<div class="sp-h"><span class="sp-name">${esc(RD.kpiName(k,AK)||"")}</span><button class="sp-x" data-sp-close title="Close">\u2715</button></div>`+
+    `<div class="sp-sum"><span class="sp-stat">${esc(statLbl)} = <b>${computed==null?"\u2014":esc(String(Math.round(computed*1000)/1000))}</b>${computed!=null&&unit?" "+esc(unit):""}</span><span class="sp-cnt ${complete?"ok":"warn"}">${cntTxt}</span></div>`+
+    `<div class="sp-tgt">target ${esc(critTxt)}</div>`+
+    `<div class="sp-list">${rows}</div>`+
+    `<div class="sp-add"><input type="number" step="any" class="sp-in" placeholder="new reading" data-sp-in/><button class="act mini" data-sp-add>Add</button></div>`+
+    `<div class="sp-hint">each entry is one measurement \u2014 the ${esc(statLbl)} above is computed from all of them</div>`;
+}
+function renderSamplePop(){
+  const pop=document.getElementById("samplePop"); if(!pop||!samplePopKpi) return;
+  pop.innerHTML=samplePopHtml(samplePopKpi);
+  pop.querySelector("[data-sp-close]").onclick=()=>closeSamplePop();
+  const inp=pop.querySelector("[data-sp-in]"), addB=pop.querySelector("[data-sp-add]");
+  const add=()=>{ const v=inp.value;
+    if(v==="" || isNaN(Number(v))){ inp.focus(); return; }               // no ===cur guard: a repeat reading is a real reading
+    exec.kpiUpdates.push({ id:"UPD-"+samplePopKpi+"-"+Date.now(), kpiId:samplePopKpi, value:Number(v), timestamp:Date.now(), note:"" });
+    samplePopArmed=null; renderAll(); renderSamplePop();
+    const i2=document.querySelector("#samplePop [data-sp-in]"); if(i2) i2.focus();
+    setMsg("Reading added","ok"); };
+  addB.onclick=add;
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } };
+  pop.querySelectorAll("[data-sp-rm]").forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.spRm);
+    if(samplePopArmed!==i){ samplePopArmed=i; renderSamplePop(); return; }   // arm first (house convention for destructive)
+    const u=samplePopReads(samplePopKpi)[i]; if(!u){ samplePopArmed=null; renderSamplePop(); return; }
+    const at=exec.kpiUpdates.indexOf(u);                                     // by reference: ETB-written readings have no id
+    if(at>=0) exec.kpiUpdates.splice(at,1);
+    samplePopArmed=null; renderAll(); renderSamplePop(); setMsg("Reading removed","ok");
+  });
+}
+function openSamplePop(td, kpiId){
+  closeSamplePop();
+  samplePopKpi=kpiId; samplePopArmed=null;
+  const pop=document.createElement("div"); pop.className="spop"; pop.id="samplePop";
+  document.body.appendChild(pop);
+  renderSamplePop();
+  const r=td.getBoundingClientRect(), pw=pop.offsetWidth||240, ph=pop.offsetHeight||0;
+  let left=r.right-pw, top=r.bottom+6;
+  if(left<8) left=8;
+  if(ph && top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);       // flip above when it would overflow
+  pop.style.left=left+"px"; pop.style.top=top+"px";
+  const inp=pop.querySelector("[data-sp-in]"); if(inp) inp.focus();
+}
+function closeSamplePop(){
+  const pop=document.getElementById("samplePop"); if(pop) pop.remove();
+  samplePopKpi=null; samplePopArmed=null;
+}
+/* dismissal loses nothing (every add/remove commits immediately), so click-away + Escape close it.
+   This is a popover, not one of the .overlay modals gated by CLICKOFF_OK. */
+document.addEventListener("mousedown", (e)=>{ const pop=document.getElementById("samplePop");
+  if(pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest("[data-postcell]"))) closeSamplePop(); });
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && document.getElementById("samplePop")) closeSamplePop(); });
 
 /* ---------------- render: objective header + sub-tables ---------------- */
 function renderAll(){
   if(!portfolio){ document.getElementById("objHeadWrap").innerHTML='<p class="hint">Not loaded.</p>'; clearSubs(); return; }
+  autoCompleteGates();   // a gate at 100% readiness completes itself (Targets achieved); idempotent, 0/0-guarded
   if(divisionId) renderInitPanel(); else document.getElementById("initPanel").innerHTML="";
   const objs = myObjectives();
   if(!objs.length || !selectedObj){
@@ -1235,6 +1637,9 @@ function renderAll(){
     ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
+  document.getElementById("objHeadWrap").querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  document.getElementById("objHeadWrap").querySelectorAll("[data-endobj]").forEach(b=>b.onclick=()=>openEndObjectiveModal(b.dataset.endobj));
+  document.getElementById("objHeadWrap").querySelectorAll("[data-reopenobj]").forEach(b=>b.onclick=()=>reopenObjective(b.dataset.reopenobj));
   renderKRs(); renderGates(); renderRisks(); renderModal(); renderExpSummary();
   if(divisionId){ ensureSpecDocs(); persist(); }   // fetch in-scope product/model spec docs (fire-and-forget) + autosave
 }
@@ -1256,14 +1661,27 @@ function objMetricStrip(o){
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const gSt=gates.map(g=>RD.classifyGate(g, td));
   const gPass=gSt.filter(s=>s==="passed"||s==="passed-late").length, gOver=gSt.filter(s=>s==="overdue").length;
-  let projEnd=null, slip=null;
-  try{ const casc=RD.cascade(portfolio, em, td); projEnd=casc.objectiveProjectedEnd[selectedObj];
-    if(o.plannedEnd!=null && projEnd!=null) slip=projEnd-o.plannedEnd; }catch(e){}
+  const gateHealth=RD.objectiveGateReadiness(selectedObj, em, td);
+  const ghTxt=gateHealth==null?"—":Math.round(gateHealth)+"%", ghCol=gateHealth==null?"var(--muted)":col(RD.band(gateHealth));
+  const nSets=(exec.stageGateSets||[]).filter(x=>x.objectiveId===selectedObj).length;
+  let workEnd=null, slip=null, accel=0;
+  try{ const casc=RD.cascade(portfolio, em, td);
+    workEnd=casc.objectiveWorkForecast[selectedObj];
+    slip=casc.objectiveScheduleSlip[selectedObj];
+    accel=casc.objectiveAcceleration[selectedObj]||0; }catch(e){}
   const tasks=exec.tasks.filter(r=>r.objectiveId===selectedObj);
   const tAvg=tasks.length?Math.round(tasks.reduce((a,t)=>a+(t.percentComplete||0),0)/tasks.length):null;
-  const schedVal=projEnd!=null?dayToIso(projEnd):"—";
-  const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d slip`:"on plan");
+  const schedVal=workEnd!=null?dayToIso(workEnd):"—";
+  const schedSub=slip==null?(o.plannedEnd==null?"no planned end":"—"):(slip>0?`+${slip}d behind schedule`:"on schedule");
   const schedColor=(slip!=null&&slip>0)?"var(--bad)":(slip===0?"var(--ok)":"var(--muted)");
+  const objES = objEndState(selectedObj);
+  const cuActiveObj = !objES && !!RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
+  const schedAlarm = !objES && (slip!=null && slip > CATCHUP_SLIP_THRESHOLD);
+  const cuBtn = objES ? "" : (schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build catch-up plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb catch-up plan active \u00b7 revise</button>` : ""));
+  const _eoOver = (objES && objES.endedDay!=null && o.plannedEnd!=null) ? objES.endedDay-o.plannedEnd : null;
+  const eoVal = objES ? (objES.status==='abandoned'?'Abandoned':'Achieved') : schedVal;
+  const eoCol = objES ? (objES.status==='abandoned'?'var(--none)':'var(--ok)') : schedColor;
+  const eoSub = objES ? (`ended ${dayToIso(objES.endedDay)}`+(_eoOver!=null&&_eoOver>0?` · was +${_eoOver}d over at close`:"")) : `${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}`;
   const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
   const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
   const riskColor = roll.openHigh>0?"var(--bad)":roll.openMed>0?"var(--warn)":roll.total?"var(--ok)":"var(--muted)";
@@ -1272,7 +1690,8 @@ function objMetricStrip(o){
     <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
     <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
-    <div class="mc"><div class="mc-label">Schedule</div><div class="mc-val small" style="color:${schedColor}">${schedVal}</div><div class="mc-sub">${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}</div></div>
+    <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
+    <div class="mc${schedAlarm?' sched-alarm':''}${objES?' sched-ended':''}">${schedAlarm?`<span class="alarm-tag">\u25cf +${slip}d</span>`:""}<div class="mc-label">Schedule</div><div class="mc-val small" style="color:${eoCol}">${eoVal}</div><div class="mc-sub">${eoSub}</div>${!objES&&accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}${cuBtn}</div>
     <div class="mc"><div class="mc-label">Open high-risk</div><div class="mc-val" style="color:${riskColor}">${roll.openHigh}</div><div class="mc-sub">${riskSub}</div></div>
   </div>`;
 }
@@ -1287,7 +1706,9 @@ function parseQuarter(q){
   return { qn, yr, start, label:"Q"+qn+" "+yr };
 }
 function quarterHeader(o){
-  const title=`<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span></div>`;
+  const _es=objEndState(o.id);
+  const _endCtl = _es ? `<span class="obj-ended ${_es.status}"${_es.note?` title="${esc(_es.note)}"`:''}>${_es.status==='abandoned'?'Abandoned':'Achieved'} ${dayToIso(_es.endedDay)}</span><button class="obj-endbtn reopen" data-reopenobj="${o.id}">Reopen</button>` : `<button class="obj-endbtn" data-endobj="${o.id}">End objective</button>`;
+  const title=`<div class="obj-title">${esc(o.statement||o.id)} <span class="pill mono">${o.id}</span>${_endCtl}</div>`;
   const td=todayDay();
   const q=parseQuarter(o.quarter);
   if(q){
@@ -1332,6 +1753,13 @@ function closeModal(){
 function wireModalBody(body){
   wireExec(body);
   const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
+  const apt = body.querySelector("[data-addpendingtarget]"); if(apt) apt.onclick=()=>openTgtModal("__pending__", null);
+  wirePendingTgt(body);
+  const gd = body.querySelector("[data-gatedel]");
+  if(gd) gd.onclick=()=>{
+    if(gd.getAttribute("data-armed")!=="1"){ gd.setAttribute("data-armed","1"); gd.textContent="Confirm delete"; return; }
+    const id=gd.dataset.gatedel; editingSub=null; pendingGateTargets=[]; armedDel=id; delSub("stageGate", id);
+  };
   const seg = body.querySelector("[data-seg]");
   if(seg){
     const statusInp = body.querySelector('[data-f="status"]');
@@ -1377,15 +1805,39 @@ function renderModal(){
   if(body==null){ closeModal(); return; }
   openModal(title, body);
 }
+function pendingTgtRows(){
+  if(!pendingGateTargets.length) return '<div class="hint" style="margin:6px 0 0">No targets yet — click “+ target” to add measurable pass criteria.</div>';
+  return pendingGateTargets.map((t,i)=>{
+    const desc = t.targetType==="binary" ? "binary (met / not met)" : ((t.direction==="down"?"↓ ":"↑ ")+((t.target!=null&&t.target!=="")?t.target:"—")+(t.unit?(" "+t.unit):""));
+    return `<div class="pending-tgt"><span class="pt-main" data-editpending="${i}" title="Edit target"><span class="pt-name">${esc(t.name)}</span><span class="pt-desc mono">${esc(desc)}</span></span><button type="button" class="ghost mini" data-rmpending="${i}" title="Remove">✕</button></div>`;
+  }).join("");
+}
+function wirePendingTgt(scope){ const root=scope||document;
+  root.querySelectorAll("[data-editpending]").forEach(b=>b.onclick=()=>openPendingTgtEdit(Number(b.dataset.editpending)));
+  root.querySelectorAll("[data-rmpending]").forEach(b=>b.onclick=()=>{ pendingGateTargets.splice(Number(b.dataset.rmpending),1); const list=document.getElementById("pendingTgtList"); if(list){ list.innerHTML=pendingTgtRows(); wirePendingTgt(); } });
+}
+function openPendingTgtEdit(idx){
+  const t=pendingGateTargets[idx]; if(!t) return;
+  pendingTgtEditIdx=idx;
+  draftTgtHost={hostType:"stageGate", hostId:"__pending__", pending:true}; draftTgtId=null;
+  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"" };
+  document.getElementById("kpiTgtTitle").textContent="Edit gate target";
+  document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
+  document.getElementById("kpiTgtOverlay").classList.add("open");
+  wireTgtModal();
+}
 function gateModalBody(g){
   g = g || {};
   const isEdit = !!g.id;
+  const multi = objSetsOrdered().length > 1;
   const statuses=[["pending","Pending"],["active","In progress"],["hit","Passed"],["missed","Failed"]];
   const cur = g.status || (g.actualDate!=null?"hit":"pending");
   const segBtns = statuses.map(function(p){ return `<button type="button" class="seg-btn${cur===p[0]?' seg-'+p[0]:''}" data-gstatus="${p[0]}">${p[1]}</button>`; }).join("");
   let h=`<div class="ed">
     <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}"/></label>
+    <label style="grid-column:1/-1">Intention<textarea data-f="intention" rows="2" placeholder="What is this gate meant to prove?">${esc(g.intention||'')}</textarea></label>
     <label>Gate id (optional)<input data-f="gate_id" type="text" value="${esc(g.gate_id||'')}"/></label>
+    ${(isEdit && multi) ? `<label>Workstream<select data-f="setId">${objSetsOrdered().map(s2=>`<option value="${esc(s2.id)}"${s2.id===g.setId?' selected':''}>${esc(s2.name||'workstream')}</option>`).join('')}</select></label>` : ''}
     <label>Planned date<input data-f="plannedDate" type="date" value="${dayToIso(g.plannedDate)}"/></label>
     <label>Passed / actual date<input data-f="actualDate" type="date" value="${dayToIso(g.actualDate)}"/></label>
     <input type="hidden" data-f="status" value="${cur}"/>
@@ -1399,17 +1851,25 @@ function gateModalBody(g){
       ${kpiTable("stageGate", g.id, selectedObj)}
       <span class="modal-section-lbl">Scheduling</span>${gateSchedRow(g)}`;
   } else {
-    h+=`<p class="hint" style="margin:14px 0 0">Add the gate, or Link it straight to a product / model / initiative metric. You can reopen it later to add more targets and predecessors.</p>`;
+    h+=`<span class="modal-section-lbl">Targets / pass criteria</span>
+      <div class="gt-head"><span class="hint" style="margin:0">measurable criteria — added to the gate when you click Add</span>
+        <span class="gt-acts"><button class="ghost mini" data-addpendingtarget="1">+ target</button></span></div>
+      <div id="pendingTgtList">${pendingTgtRows()}</div>
+      <p class="hint" style="margin:12px 0 0">Or Link the gate straight to a product / model / initiative metric; predecessors can be added after saving.</p>`;
   }
   const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
-  h+=`<div class="row-actions"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></div>`;
+  const gateDel = isEdit ? `<button class="gc-uncomplete" data-gatedel="${g.id}" title="delete this gate">Delete gate</button>` : '';
+  h+=`<div class="row-actions${isEdit?' gate-foot':''}">${gateDel}<span class="ra-right"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></span></div>`;
   return h;
 }
 
 /* ---------------- KR modal (tracker-cloned tracking modes) ---------------- */
 let draftKr=null, draftKrFor=null;          // KR modal draft + which KR it's for
+let pendingGateTargets=[];                  // draft gate targets while ADDING a gate; committed as KPIs on save
+let pendingTgtEditIdx=null;                 // which draft target is being edited in place (null = adding a new one)
 let draftSubKr=null, draftSubKrIdx=null;    // sub-KR sub-modal draft
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
+const STAT_SHORT={average:"avg",median:"median",stddev:"std dev",cv:"CV",range:"range",max:"max",min:"min"};
 function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
 function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
 function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
@@ -1612,7 +2072,7 @@ function parseNums(str){ return String(str||"").split(/[\s,;]+/).map(x=>Number(x
 function statPreview(d){ const nums=parseNums(d.readings); if(!nums.length) return "no readings yet"; const v=RD.computeStat(d.statistic||"average", nums); return "→ "+(d.statistic||"average")+": "+(v==null?"—":(Math.round(v*1000)/1000))+" ("+nums.length+" reads)"; }
 function openTgtModal(gateId, kpiId){ openKpiTgtModal("stageGate", gateId, kpiId); }   // stage-gate target (back-compat)
 function openKpiTgtModal(hostType, hostId, kpiId){
-  draftTgtHost={hostType:hostType, hostId:hostId}; draftTgtId=kpiId||null;
+  pendingTgtEditIdx=null; draftTgtHost={hostType:hostType, hostId:hostId, pending:(hostId==="__pending__")}; draftTgtId=kpiId||null;
   const pk=kpiId?exec.kpis.find(k=>k.id===kpiId):null;
   draftTgt={
     name:pk?(pk.name||""):"",
@@ -1629,7 +2089,7 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   document.getElementById("kpiTgtOverlay").classList.add("open");
   wireTgtModal();
 }
-function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; }
+function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; pendingTgtEditIdx=null; }
 function tgtModalBody(){
   const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   return `
@@ -1656,6 +2116,17 @@ function saveTgtModal(){
   body.querySelectorAll("[data-tf]").forEach(el=>{ draftTgt[el.dataset.tf]=el.value; });
   const d=draftTgt;
   if(!String(d.name||"").trim()){ const n=body.querySelector('[data-tf="name"]'); if(n) n.focus(); return; }
+  if(draftTgtHost&&draftTgtHost.pending){   // ADDING a gate: stash the target; it becomes a KPI when the gate is saved
+    const t={ name:String(d.name).trim(), targetType:d.type };
+    if(d.type==="binary"){ t.direction=null; t.target=null; t.unit=null; }
+    else { t.direction=(d.dir==="decrease")?"down":"up"; t.target=parseTargetNum(d.target); t.unit=d.unit||null;
+      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
+    const editing=(pendingTgtEditIdx!=null && pendingGateTargets[pendingTgtEditIdx]);
+    if(editing) pendingGateTargets[pendingTgtEditIdx]=t; else pendingGateTargets.push(t);
+    closeTgtModal();
+    const list=document.getElementById("pendingTgtList"); if(list){ list.innerHTML=pendingTgtRows(); wirePendingTgt(); }
+    setMsg(editing?"Target updated":"Target added — saved with the gate","ok"); return;
+  }
   const isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   let pk=draftTgtId?exec.kpis.find(k=>k.id===draftTgtId):null;
   if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:draftTgtHost.hostType, hostId:draftTgtHost.hostId, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
@@ -1669,6 +2140,7 @@ function saveTgtModal(){
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
 const LEVEL = { initiative:3, milestone:3, keyResult:2, stageGate:1, task:0 };
 function objById(id){ return (portfolio.objectives||[]).find(o=>o.id===id); }
+function objEndState(objId){ return RD.objectiveEndState(exec.objectiveState, objId); }
 function initiativeIdOf(objId){ const o=objById(objId); return o?o.initiativeId:null; }
 function divInitiatives(){ return (portfolio.initiatives||[]).filter(i=>i.divisionId===divisionId); }
 function initName(id){ const i=(portfolio.initiatives||[]).find(x=>x.id===id); return i?(i.name||i.id):id; }
@@ -1704,7 +2176,7 @@ function linkCandidates(hostType, hostId){
   const pool = allKpisPool();
   const fam = familyOfObjective(O);                                       // this objective's product/model lineage
   // groups this host already links to, keyed by root-definer id (handles both groupId and linkParent members)
-  const occupied = new Set(exec.kpis.filter(k=>LEVEL[k.hostType]===here && k.objectiveId===O).map(k=>RD.definerOf(k, pool).id));
+  const occupied = new Set(exec.kpis.filter(k=>k.hostType===hostType && k.hostId===hostId).map(k=>RD.definerOf(k, pool).id));  // per-host: a host can't double-link the same metric, but siblings may link it too
   const seen=new Set(), out=[];
   pool.forEach(k=>{
     const def = RD.definerOf(k, pool);                                    // the link TARGET is the group's definer
@@ -1716,6 +2188,11 @@ function linkCandidates(hostType, hostId){
   });
   return out;
 }
+function nextLinkPriority(parentId){
+  const parent=allKpisPool().find(k=>k.id===parentId); let mx=0;
+  (exec.kpis||[]).forEach(k=>{ if(k.id===parentId) return; const isChild=(k.linkParent===parentId)||(parent&&parent.groupId&&k.groupId===parent.groupId&&!k.isDefiner); if(isChild) mx=Math.max(mx, k.linkPriority||0); });
+  return mx+1;
+}
 function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
@@ -1725,7 +2202,7 @@ function makeLinkMember(hostType, hostId, definerId, linkType){
     const objScope = hostType==="initiative" ? null : selectedObj;
     const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
     if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:0,
+    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(definerId),
                      name:null, direction:null, unit:null, target:null, order:0 });
     addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
   }
@@ -1734,7 +2211,7 @@ function makeLinkMember(hostType, hostId, definerId, linkType){
   if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false,
+  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false, linkPriority:nextLinkPriority(def.id),
                    name:null, direction:null, unit:null, target:null, order:0 });
   addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
 }
@@ -1880,26 +2357,31 @@ function initKpiTableRO(initId){
 function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
-  let h = `<table class="kpitable"><thead><tr><th>KPI</th><th>dir</th><th>target</th><th>current</th><th>score</th><th>post reading</th><th></th></tr></thead><tbody>`;
-  if(!rows.length) h += `<tr><td colspan="7" class="hint">no KPIs yet — add or link a measurement</td></tr>`;
+  const isGate = hostType==="stageGate";
+  let h = `<table class="mtbl"><colgroup><col style="width:32%"/><col style="width:14%"/><col style="width:11%"/><col style="width:13%"/><col style="width:15%"/><col style="width:15%"/></colgroup><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
+  if(!rows.length) h += `<tr><td colspan="6" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
     const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
     const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = RD.kpiScoreResolved(k, AK, EM);
     const member = isMemberKpi(k), defLinks = isDefinerWithLinks(k);
-    const tgtCell = fmtTarget(tgt, unit) + (member ? (k.target!=null?' <span class="pill">override</span>':' <span class="pill">inherited</span>') : '');
-    let badge = '';
-    if(member) badge = `<span class="linkbadge" title="inherits from ${hostLabel(RD.definerOf(k,AK))}">🔗 linked</span>`;
-    else if(defLinks) badge = `<span class="linkbadge" title="defines a linked metric">🔗 defines ${groupMemberCount(k.groupId)-1}</span>`;
-    const acts = member
-      ? `<button class="ghost mini" data-unlink="${k.id}">unlink</button>`
-      : ``;
-    h += `<tr><td><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
-      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
-      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
-      <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
-        <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
-      <td class="row-actions">${acts}
-        <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
+    const crit = (k.targetType==="binary") ? "pass" : ((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"") + fmtTarget(tgt, ""));
+    const ovr = member ? (k.target!=null?'<span class="ovr">override</span>':'<span class="ovr">inherited</span>') : '';
+    const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}">linked</span>`
+                : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
+    const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
+    const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
+    const nReads = expReads ? RD.readingCount(k.id, EM) : 0, complete = !expReads || nReads>=expReads;
+    const statSub = expReads ? `<span class="m-cur-sub ${complete?'ok':'warn'}">${STAT_SHORT[dk.statistic||'average']} \u00b7 ${nReads}/${expReads} ${complete?'\u2713':'\u26a0'}</span>` : '';
+    const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
+    const metOk = (s!=null && s>=100 && complete);   // statistical: "met" needs the target reached AND a complete sample
+    const stTxt = s==null?'open':(metOk?'met':(s>=100?'on track':bnd==='on-track'?'on track':bnd==='at-risk'?'near':'below'));
+    h += `<tr>
+      <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
+      <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
+      <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
+      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}</td>
+      <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
+      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
   return h;
@@ -1907,22 +2389,50 @@ function kpiTable(hostType, hostId, objScope){
 function renderKRs(){
   const host=document.getElementById("subKR");
   const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
+  const EM=emForCore(), AK=allKpisPool(), obj=objById(selectedObj), td=todayDay();
+  const bandMap={'on-track':['On track','on'],'at-risk':['At risk','risk'],'off-track':['Behind','behind'],'no-band':['No data','none']};
   let inner="";
-  if(!krs.length) inner+=`<p class="hint">none yet — a Key Result groups the KPIs that score this objective (no Key Result ⇒ no objective score)</p>`;
+  if(!krs.length) inner+=`<p class="hint">none yet \u2014 a Key Result groups the KPIs that score this objective (no Key Result \u21d2 no objective score)</p>`;
   krs.forEach((kr,idx)=>{
-    const s=RD.keyResultScore(kr.id, emForCore());
-    inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span>
-      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
-      <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
-      <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
-        <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
-        <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedObj)}</div></div>`;
+    const pace=RD.keyResultPace(kr.id, obj, EM, td);
+    const att=pace.attainment, el=pace.elapsed, band=pace.band;
+    const bm=bandMap[band]||['No data','none'], bTxt=bm[0], bCls=bm[1], c=col(band);
+    const attTxt=att==null?'\u2014':Math.round(att);
+    let cap='';
+    if(att!=null && att>=100){ cap=`<div class="pace-cap ok"><span class="ico">\u25b2</span>target met${el!=null?` <span class="el">\u00b7 ${Math.round(el)}% elapsed</span>`:''}</div>`; }
+    else if(att!=null && el!=null){ const gap=Math.round(el-att);
+      cap = gap<=0 ? `<div class="pace-cap ok"><span class="ico">\u25b2</span>${gap===0?'on pace':'ahead of pace'} <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`
+                   : `<div class="pace-cap ${band==='off-track'?'behind':'risk'}"><span class="ico">\u25bc</span>${gap} pts behind pace <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`; }
+    else if(att!=null){ cap=`<div class="pace-cap ok"><span class="el">no objective dates \u2014 score only</span></div>`; }
+    const kk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="keyResult" && k.hostId===kr.id);
+    const metCnt=kk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
+    const open=expandedKRs.has(kr.id);
+    const toggle = kk.length
+      ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
+      : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
+    const panel = open ? `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>` : '';
+    inner+=`<div class="kr-block b-${bCls}"><div class="krow">
+      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
+      <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
+      <div class="g-ready">
+        <div class="r-top"><span class="r-lab">Attainment</span><span class="r-val" style="color:${c}">${attTxt}${att==null?'':'<span class="u">%</span>'}</span></div>
+        <div class="pace-bar"><span class="pace-fill" style="width:${att==null?0:Math.round(att)}%;background:${c}"></span>${el!=null?`<span class="pace-mark" style="left:${Math.round(el)}%"></span>`:''}</div>
+        ${cap}
+      </div>
+      <div class="g-acts"><button class="ghost mini btn-ico" data-edit="keyResult:${kr.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}" title="delete">${armedDel===kr.id?'\u2713':'\u00d7'}</button></div>
+      </div>
+      <div class="g-tgt">${toggle}${panel}</div>
+    </div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add key result</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Key Results",krs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
   wireExec(host);
+}
+function gateOptsByObjective(cand){
+  const byObj={}; cand.forEach(x=>{ (byObj[x.objectiveId||'']=byObj[x.objectiveId||'']||[]).push(x); });
+  const keys=Object.keys(byObj).sort((a,b)=> a===selectedObj?-1 : b===selectedObj?1 : 0);   // current objective first
+  return keys.map(oid=>{ const o=(portfolio.objectives||[]).find(oo=>oo.id===oid); const lab=o?(o.statement||o.id):(oid||'(no objective)');
+    return `<optgroup label="${esc(lab)}">`+byObj[oid].map(x=>`<option value="${x.id}">${esc(gateLabel(x.id))} — ${esc(x.name||x.id)}</option>`).join('')+`</optgroup>`; }).join('');
 }
 function gateSchedRow(g){
   const committed = g.baselineDate!=null;
@@ -1936,39 +2446,201 @@ function gateSchedRow(g){
   else h+=`<button class="ghost mini" data-commit="${g.id}"${g.plannedDate==null?' disabled title="set a planned date first"':''}>commit baseline</button>`;
   h+=`<span class="sched-sep">|</span><span class="lbl">after</span>`;
   if(!preds.length) h+=`<span class="hint" style="margin:0">—</span>`;
-  preds.forEach(e=>{ h+=`<span class="dep-chip">${esc(gateName(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
+  preds.forEach(e=>{ h+=`<span class="dep-chip" title="${esc(gateName(e.fromGate))}">${esc(gateLabel(e.fromGate))}${e.lagDays?` +${e.lagDays}d`:''}<button data-edgefrom="${e.fromGate}" data-edgeto="${g.id}" title="remove">×</button></span>`; });
   if(cand.length){
     h+=`<select class="edgepick" data-edgepick="${g.id}"><option value="">+ predecessor…</option>`+
-       cand.map(x=>`<option value="${x.id}">${esc(x.name||x.id)}</option>`).join('')+`</select>`+
+       gateOptsByObjective(cand)+`</select>`+
        `<input class="laginp" type="number" min="0" placeholder="lag d" data-edgelag="${g.id}"/>`+
        `<button class="ghost mini" data-addedge="${g.id}">add</button>`;
   }
   h+=`</div>`;
   return h;
 }
+// P2: per-gate forecast surfacing. gEff/gEarly/gAcc come from RD.cascade (committed + optimistic + acceleration).
+function gateDriverOf(g, setGates, td){
+  const earlier=(setGates||[]).filter(x=>x.plannedDate!=null && g.plannedDate!=null && x.plannedDate<g.plannedDate).sort((a,b)=>a.plannedDate-b.plannedDate);
+  for(let i=0;i<earlier.length;i++){ const x=earlier[i];
+    const xLate=(x.actualDate!=null && x.plannedDate!=null && x.actualDate>x.plannedDate) || (x.actualDate==null && x.plannedDate!=null && x.plannedDate<td);
+    if(xLate) return x; }
+  return null;
+}
+function gateForecastMeta(g, gEff, gEarly, gAcc, td, setGates){
+  if(g.actualDate!=null){
+    const d=(g.plannedDate!=null)?g.actualDate-g.plannedDate:0;
+    if(d>0) return {est:"", delta:`<span class="fc-badge slip" title="finished after its planned date">finished +${d}d late</span>`};
+    if(d<0) return {est:"", delta:`<span class="fc-badge accel" title="finished ahead of its planned date">finished ${-d}d early</span>`};
+    return {est:"", delta:""};
+  }
+  const planned=g.plannedDate, eff=gEff[g.id];
+  if(planned==null || eff==null) return {est:"", delta:""};
+  const fcSlip=eff-planned;
+  if(fcSlip>0){
+    const est=`<span class="fc-est late">est ${dayToIso(eff)}</span>`;
+    if(planned<td) return {est, delta:`<span class="fc-badge slip" title="overdue — forecast to at least today, pushed further by any upstream slip">+${fcSlip}d late</span>`};
+    const drv=gateDriverOf(g, setGates, td);
+    return {est, delta:`<span class="fc-badge pushed" title="moved by an upstream slip">→ pushed +${fcSlip}d${drv?` by ${esc(gateLabel(drv.id))}`:" upstream"}</span>`};
+  }
+  const acc=gAcc[g.id]||0;
+  if(acc>0){
+    const early=gEarly[g.id];
+    return {est:`<span class="fc-est onplan">est ${dayToIso(eff)}</span>`, delta:`<span class="fc-badge accel" title="committed date holds; could pull in if downstream is re-planned">↑ could finish ${dayToIso(early)} (${acc}d earlier)</span>`};
+  }
+  return {est:"", delta:""};
+}
+function autoCompleteGates(){
+  const em=emForCore(), td=todayDay(); let changed=0;
+  (exec.stageGates||[]).forEach(g=>{ if(g.actualDate==null && RD.gateAtTarget(g.id, em)){ g.actualDate=td; g.completionMethod="auto"; changed++; } });
+  return changed;
+}
+function gateCompletionControl(g, st){
+  if(g.actualDate!=null){
+    const late=(st==='passed-late');
+    return `<span class="passed-label ${late?'late':'ok'} click" data-completion="${g.id}" title="view / edit completion">passed ${dayToIso(g.actualDate)}</span> `;
+  }
+  return `<button class="markbtn" data-markcomplete="${g.id}" title="mark this gate complete">Mark complete \u25be</button> `;
+}
+function gateKpiRows(gateId, objScope){
+  const AK=allKpisPool(), EM=emForCore();
+  const rows=AK.filter(k=>k.objectiveId===objScope && k.hostType==="stageGate" && k.hostId===gateId);
+  if(!rows.length) return `<tr><td colspan="3" class="gc-empty">no KPIs on this gate</td></tr>`;
+  return rows.map(k=>{
+    const name=RD.kpiName(k,AK), unit=RD.kpiUnit(k,AK);
+    const tgt=RD.effTarget(k,AK), cv=RD.effValue(k,AK,EM), s=RD.kpiScoreResolved(k,AK,EM);
+    const c=col(RD.band(s)), cur=(cv==null)?'no read':(esc(String(cv))+(unit?' '+esc(unit):''));
+    return `<tr><td>${esc(name||'(unnamed)')}</td><td>${fmtTarget(tgt,unit)}</td><td style="color:${c}"><span class="gc-dot" style="background:${c}"></span>${cur}</td></tr>`;
+  }).join('');
+}
+function openMarkComplete(gateId){
+  const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return;
+  openModal("Mark complete \u2014 "+(g.name||g.id),
+    `<div class="modal-field"><span class="lbl">Completed date</span><input type="date" id="mcDate" value="${dayToIso(todayDay())}"></div>`+
+    `<div class="modal-field"><span class="lbl">Override justification <span class="opt">\u2014 optional</span></span><textarea id="mcJust" placeholder="Why is this gate being marked complete manually\u2026"></textarea></div>`+
+    `<div class="gc-actions"><span></span><div class="right"><button class="ghost" data-mc-cancel>Cancel</button><button class="primary" data-mc-save="${g.id}">Mark complete</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  mb.querySelector("[data-mc-cancel]").onclick=closeModal;
+  mb.querySelector("[data-mc-save]").onclick=()=>{
+    const d=isoToDay(mb.querySelector("#mcDate").value);
+    g.actualDate=(d!=null)?d:todayDay(); g.completionMethod="manual";
+    g.overrideJustification=(mb.querySelector("#mcJust").value||"").trim();
+    closeModal(); persist(); renderAll(); setMsg("Gate marked complete","ok");
+  };
+}
+function openGateDetail(gateId){
+  const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return;
+  const method=g.completionMethod||"manual";
+  const methodHtml=(method==="auto")
+    ? `<span class="gc-method auto">\u2713 Targets achieved</span>`
+    : `<span class="gc-method manual">\u2691 Manual override</span>`+(g.overrideJustification?`<div class="gc-justi">${esc(g.overrideJustification)}</div>`:``);
+  const justField=(method==="manual")
+    ? `<div class="modal-field" style="margin-top:10px"><span class="lbl">Justification <span class="opt">\u2014 optional</span></span><textarea id="gcJust">${esc(g.overrideJustification||"")}</textarea></div>` : ``;
+  openModal("Completion \u2014 "+(g.name||g.id),
+    `<div class="modal-field"><span class="lbl">Passed date</span><input type="date" id="gcDate" value="${dayToIso(g.actualDate)}"></div>`+
+    `<span class="modal-section-lbl">Completion method</span>${methodHtml}${justField}`+
+    `<span class="modal-section-lbl">Stage-gate KPIs</span><table class="gc-kpi"><thead><tr><th>KPI</th><th>target</th><th>current</th></tr></thead><tbody>${gateKpiRows(gateId, g.objectiveId)}</tbody></table>`+
+    `<div class="gc-actions"><button class="gc-uncomplete" data-gc-uncomplete="${g.id}">Un-complete gate</button><div class="right"><button class="ghost" data-gc-cancel>Cancel</button><button class="primary" data-gc-save="${g.id}">Save</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  mb.querySelector("[data-gc-cancel]").onclick=closeModal;
+  mb.querySelector("[data-gc-save]").onclick=()=>{
+    const d=isoToDay(mb.querySelector("#gcDate").value);
+    if(d==null){ g.actualDate=null; g.completionMethod=null; g.overrideJustification=null; }
+    else { g.actualDate=d; const jt=mb.querySelector("#gcJust"); if(jt) g.overrideJustification=(jt.value||"").trim(); }
+    closeModal(); persist(); renderAll(); setMsg("Completion updated","ok");
+  };
+  mb.querySelector("[data-gc-uncomplete]").onclick=()=>{
+    g.actualDate=null; g.completionMethod=null; g.overrideJustification=null;
+    closeModal(); persist(); renderAll(); setMsg("Gate un-completed","ok");
+  };
+}
+function chainSymbol(chained){
+  return chained
+    ? `<span class="chain-ic on" title="Chained \u2014 a gate finishing late pushes the next gate"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg></span>`
+    : `<span class="chain-ic off" title="Independent \u2014 gates keep their own planned dates"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l1.5-1.5a4.5 4.5 0 0 0-6.4-6.4"/><path d="M7 16l-1.5 1.5a4.5 4.5 0 0 0 6.4 6.4"/><line x1="4" y1="4" x2="20" y2="20"/></svg></span>`;
+}
+function openWorkstreamModal(setId){
+  const set = setId ? (exec.stageGateSets||[]).find(x=>x.id===setId) : null;
+  const chained = set ? (set.chained!==false) : true;
+  const opt=(mode,sel,label,desc)=>`<label class="ws-opt ${sel?'sel':''}" data-wschoice="${mode}"><span class="ws-radio"></span><span class="ws-otxt"><span class="ws-ot">${chainSymbol(mode==="chained")} ${label}</span><span class="ws-od">${desc}</span></span></label>`;
+  openModal(set?"Edit workstream":"New workstream",
+    `<div class="modal-field"><span class="lbl">Name</span><input type="text" id="wsName" value="${esc(set?(set.name||''):'')}" placeholder="e.g. Balance of plant"></div>`+
+    `<span class="modal-section-lbl">Scheduling</span><div class="ws-choice">${opt("chained",chained,"Chained","A gate finishing late pushes the next gate's forecast date.")}${opt("independent",!chained,"Independent","Gates keep their own planned dates; a slip on one doesn't move the others.")}</div>`+
+    `<div class="gc-actions">${set?`<button class="gc-uncomplete" data-wsdel="${set.id}">Delete workstream</button>`:'<span></span>'}<div class="right"><button class="ghost" data-ws-cancel>Cancel</button><button class="act" data-ws-save>${set?'Save':'Create workstream'}</button></div></div>`);
+  const mb=document.getElementById("modalBody");
+  let mode = chained?"chained":"independent";
+  mb.querySelectorAll("[data-wschoice]").forEach(o=>o.onclick=()=>{ mode=o.dataset.wschoice; mb.querySelectorAll(".ws-opt").forEach(x=>x.classList.remove("sel")); o.classList.add("sel"); });
+  mb.querySelector("[data-ws-cancel]").onclick=closeModal;
+  mb.querySelector("[data-ws-save]").onclick=()=>{
+    const nm=(mb.querySelector("#wsName").value||"").trim(); if(!nm){ mb.querySelector("#wsName").focus(); return; }
+    const ch = mode==="chained";
+    if(set){ set.name=nm; set.chained=ch; }
+    else { const ns={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(x=>x.id)), objectiveId:selectedObj, name:nm, order:objSetsOrdered().length, chained:ch }; (exec.stageGateSets=exec.stageGateSets||[]).push(ns); }
+    closeModal(); persist(); renderAll(); setMsg(set?"Workstream updated":"Workstream added","ok");
+  };
+  const dl=mb.querySelector("[data-wsdel]");
+  if(dl){ let armed=false; dl.onclick=()=>{
+    if(!armed){ armed=true; dl.textContent="Confirm delete"; return; }
+    const id=dl.dataset.wsdel, others=objSetsOrdered().filter(x=>x.id!==id), gts=gatesOfSet(id);
+    if(gts.length && !others.length){ setMsg("Can't delete the only workstream while it holds gates \u2014 add another first.","err"); return; }
+    if(gts.length){ const to=others[0].id; gts.forEach(g=>{ g.setId=to; }); }
+    exec.stageGateSets=(exec.stageGateSets||[]).filter(x=>x.id!==id);
+    closeModal(); persist(); renderAll(); setMsg("Workstream deleted"+(gts.length?" \u2014 gates moved to "+esc(others[0].name||'another'):""),"ok");
+  }; }
+}
 function renderGates(){
   const host=document.getElementById("subSG");
-  const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
+  const sets=objSetsOrdered();
+  const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
+  const objEnded=!!objEndState(selectedObj);
   const td=todayDay();
+  let gEff={}, gEarly={}, gAcc={};
+  try{ const casc=RD.cascade(portfolio, emForCore(), td); gEff=casc.gateEffective||{}; gEarly=casc.gateForecastEarliest||{}; gAcc=casc.gateAcceleration||{}; }catch(e){}
+  const AK=allKpisPool(), EM=emForCore();
   let inner="";
-  if(!gates.length) inner+=`<p class="hint">none yet</p>`;
-  gates.forEach((g,idx)=>{
-    const s=RD.stageGateScore(g.id, emForCore()), st=RD.classifyGate(g, td);
-    const cmt = g.baselineDate!=null?`<span class="committed-badge" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
-    inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">G${idx+1}</span>
-      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
-      <span class="statepill ${st}" title="${st}">${st.replace('-',' ')}</span>${cmt}
-      <span class="icard-score" style="color:${col(RD.band(s))}" title="gate readiness">${s==null?'—':Math.round(s)}</span>
-      <span class="icard-actions"><span class="gate-meta">planned ${dayToIso(g.plannedDate)||'—'} · passed <input class="sm" type="date" data-pass="${g.id}" value="${dayToIso(g.actualDate)}"/></span>
-        <button class="ghost mini" data-addkpi="stageGate:${g.id}">+ KPI</button>
-        <button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button>
-        <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("stageGate", g.id, selectedObj)}</div></div>`;
+  sets.forEach((set, si)=>{
+    const gates=gatesOfSet(set.id);
+    const pct=setScorePct(set.id);
+    const pctTxt=pct==null?'\u2014':Math.round(pct)+'%';
+    const pctCol=pct==null?'var(--muted)':col(RD.band(pct));
+    const chained=set.chained!==false;
+    const passed=gates.filter(g=>g.actualDate!=null).length;
+    inner+=`<div class="sgset"><div class="ws-head">
+      <span class="ws-eyebrow">Workstream ${String.fromCharCode(65+si)}</span><span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
+      <span class="ws-meter"><span class="ws-bar"><span class="ws-fill" style="width:${pct==null?0:Math.round(pct)}%;background:${pctCol}"></span></span><span class="ws-pct" style="color:${pctCol}">${pctTxt}</span><span class="ws-cnt">${passed} / ${gates.length}</span></span>
+      <span class="ws-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini btn-ico" data-wsedit="${set.id}" title="edit workstream">\u270e</button></span>
+    </div>`;
+    if(!gates.length) inner+=`<p class="hint" style="margin:0 0 10px 12px">no gates in this workstream</p>`;
+    gates.forEach(g=>{
+      const sc=RD.stageGateScore(g.id, EM); let st=RD.classifyGate(g, td); const cancelled=objEnded && g.actualDate==null; if(cancelled) st='cancelled';
+      const cmt=g.baselineDate!=null?`<span class="g-committed" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
+      const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
+      const open=expandedGates.has(g.id);
+      const tk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="stageGate" && k.hostId===g.id);
+      const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
+      const toggle = tk.length
+        ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
+        : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
+      const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
+      const fc=cancelled?{est:'<span class="fc-est cnl">cancelled</span>', delta:''}:gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
+      const cuEntry=RD.catchupEntry(exec.catchupPlans, selectedObj, g.id);
+      const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
+      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
+      inner+=`<div class="gate-block st-${st}"><div class="grow">
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
+        <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
+        <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
+        </div>
+        <div class="g-tgt">${toggle}${panel}</div>
+      </div>`;
+    });
+    inner+=`</div>`;
   });
-  const chainOn=(exec.chainGatesByDate&&exec.chainGatesByDate[selectedObj])?'checked':'';
-  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><label class="chain-toggle" title="When on, gates chain in planned-date order — a slipping gate pushes the next."><input type="checkbox" data-chainobj ${chainOn}/> chain by date</label>`;
-  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",gates.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
+  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
+  const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
+  let cuBanner="";
+  if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
+    cuBanner=`<div class="cu-banner"><span class="ic">\u21bb</span><span class="txt"><b>Catch-up plan active</b> \u2014 ${cuPlan.gates.length} gate${cuPlan.gates.length===1?"":"s"} re-committed <span class="meta">\u00b7 enacted ${dayToIso(cuPlan.enactedDay)}${slipNow!=null?" \u00b7 now "+(slipNow>0?"+"+slipNow+"d behind":"on schedule"):""}</span></span><span class="sp"></span><button data-catchup="${selectedObj}">Revise</button><button data-catchup-clear="${selectedObj}">Clear plan</button></div>`; }
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
 function renderTasks(){
@@ -1992,9 +2664,92 @@ function renderTasks(){
   host.innerHTML=`<div class="panel">${panelHead("TASK","Execution tasks",rows.length,acts)}<div class="item-list${listOpen("TASK")}">${inner}</div></div>`;
   wireExec(host);
 }
+function enactCatchup(objId, dateMap){
+  const prev=RD.activeCatchupPlan(exec.catchupPlans, objId);
+  const prevOrig={}; if(prev) prev.gates.forEach(e=>{ prevOrig[e.gateId]=e.originalDate; });
+  const prevVer={}; if(prev) prev.gates.forEach(e=>{ prevVer[e.gateId]=e.version||0; });
+  const gates=exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null);
+  const entries=[];
+  gates.forEach(g=>{ const nd=dateMap[g.id]; if(nd==null) return; const orig=(g.id in prevOrig)?prevOrig[g.id]:g.plannedDate; const ver=(prevVer[g.id]||0)+1; entries.push({gateId:g.id, originalDate:orig, newDate:nd, version:ver}); g.plannedDate=nd; });
+  exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
+  exec.catchupPlans.push({ id:"catchup:"+objId, objectiveId:objId, enactedDay:todayDay(), gates:entries });
+  closeModal(); renderAll(); setMsg("Catch-up plan enacted \u2014 "+entries.length+" gate"+(entries.length===1?"":"s")+" re-committed","ok");
+}
+function clearCatchup(objId){
+  exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
+  renderAll(); setMsg("Catch-up plan cleared","ok");
+}
+function confirmClearCatchup(objId){
+  openModal("Clear catch-up plan",
+    `<p class="cu-intro">This discards the active catch-up plan and its version history for this objective. The re-committed dates stay on the gates, but the original\u2192new tracking is removed. This can\u2019t be undone.</p>`+
+    `<p class="cu-intro" style="margin:0 0 6px">Type <b>CLEAR</b> to confirm.</p>`+
+    `<input type="text" class="cu-clear-in" data-cu-clearword placeholder="CLEAR" autocomplete="off" spellcheck="false">`+
+    `<div class="cu-foot"><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act danger" data-cu-clearok disabled>Clear plan</button></div>`);
+  const mb=document.getElementById("modalBody");
+  const inp=mb.querySelector("[data-cu-clearword]"), okb=mb.querySelector("[data-cu-clearok]");
+  inp.oninput=()=>{ okb.disabled = inp.value.trim()!=="CLEAR"; };
+  mb.querySelector("[data-cu-cancel]").onclick=closeModal;
+  okb.onclick=()=>{ if(inp.value.trim()!=="CLEAR") return; closeModal(); clearCatchup(objId); };
+  try{ inp.focus(); }catch(e){}
+}
+function openCatchupModal(objId){
+  const o=objById(objId); if(!o) return;
+  const em=emForCore(), td=todayDay();
+  let gEff={}, slip=null; try{ const casc=RD.cascade(portfolio, em, td); gEff=casc.gateEffective||{}; slip=casc.objectiveScheduleSlip[objId]; }catch(e){}
+  const gates=sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null));
+  if(!gates.length){ setMsg("No unfinished stage-gates to re-commit.","err"); return; }
+  const rows=gates.map(g=>{
+    const cur=dayToIso(g.plannedDate)||"";
+    const fc=gEff[g.id]!=null?dayToIso(gEff[g.id]):"";
+    const preset = fc || cur;   // committed + delay (the forecast) — makes the user actively pull dates in
+    return `<div class="cu-row"><div class="cu-g"><span class="g-chip">${esc(gateLabel(g.id))}</span><span class="nm">${esc(g.name||g.id)}</span></div><div class="cu-cur">${cur||'\u2014'}</div><div class="cu-fc">${fc||'\u2014'}</div><div><input type="date" class="cu-in${preset?' filled':''}" data-cu-date="${g.id}" value="${preset}"></div></div>`;
+  }).join("");
+  openModal("Build catch-up plan",
+    `<p class="cu-intro">This objective is <b>${slip!=null&&slip>0?"+"+slip+" days behind":"off schedule"}</b>. Re-commit every <b>unfinished</b> stage-gate to a new date. Passed gates aren't listed \u2014 new dates may match the current date.</p>`+
+    `<div class="cu-req" data-cu-reqnote>All ${gates.length} dates required to enact</div>`+
+    `<div class="cu-tbl"><div class="cu-hrow"><div>Gate</div><div>Committed</div><div>Forecast</div><div>New commitment</div></div>${rows}</div>`+
+    `<div class="cu-foot"><span class="note" data-cu-count></span><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act" data-cu-enact>Enact catch-up plan</button></div>`);
+  const mb=document.getElementById("modalBody");
+  const inputs=Array.from(mb.querySelectorAll("[data-cu-date]"));
+  const enactBtn=mb.querySelector("[data-cu-enact]"), reqNote=mb.querySelector("[data-cu-reqnote]"), cnt=mb.querySelector("[data-cu-count]");
+  function refresh(){ const dated=inputs.filter(i=>i.value).length; inputs.forEach(i=>i.classList.toggle("filled",!!i.value)); const all=dated===inputs.length; enactBtn.disabled=!all; cnt.textContent=dated+" of "+inputs.length+" dated"; reqNote.classList.toggle("ok",all); reqNote.textContent=all?"Ready to enact":("All "+inputs.length+" dates required to enact"); }
+  inputs.forEach(i=>i.oninput=refresh);
+  mb.querySelector("[data-cu-cancel]").onclick=closeModal;
+  enactBtn.onclick=()=>{ const map={}; let all=true; inputs.forEach(i=>{ if(!i.value){all=false;return;} map[i.dataset.cuDate]=isoToDay(i.value); }); if(!all){ setMsg("Every gate needs a date.","err"); return; } enactCatchup(objId, map); };
+  refresh();
+}
+
+function openEndObjectiveModal(objId){
+  const o=objById(objId); if(!o) return;
+  const openGates=exec.stageGates.filter(g=>g.objectiveId===objId && g.actualDate==null).length;
+  const opt=(mode,sel,label,desc)=>`<label class="ws-opt ${sel?'sel':''}" data-eo="${mode}"><span class="ws-radio"></span><span class="ws-otxt"><span class="ws-ot">${label}</span><span class="ws-od">${desc}</span></span></label>`;
+  openModal("End objective",
+    `<p class="cu-intro">Ending an objective freezes its schedule so its delays stop extending into the next quarter.${openGates>0?` <b>${openGates}</b> unfinished stage-gate${openGates===1?'':'s'} will show as cancelled.`:''} You can reopen it later.</p>`+
+    `<span class="modal-section-lbl">Outcome</span><div class="ws-choice">${opt("abandoned",true,"Abandoned","Work stopped \u2014 remaining gates cancelled.")}${opt("achieved",false,"Achieved","Goals met \u2014 remaining gates are moot.")}</div>`+
+    `<div class="modal-field"><span class="lbl">End date</span><input type="date" id="eoDate" value="${dayToIso(todayDay())}"></div>`+
+    `<div class="modal-field"><span class="lbl">Note (optional)</span><textarea id="eoNote" rows="2" placeholder="Why is it ending?"></textarea></div>`+
+    `<div class="cu-foot"><span class="sp"></span><button class="ghost" data-eo-cancel>Cancel</button><button class="act" data-eo-save>End objective</button></div>`);
+  const mb=document.getElementById("modalBody");
+  let outcome="abandoned";
+  mb.querySelectorAll("[data-eo]").forEach(el=>el.onclick=()=>{ outcome=el.dataset.eo; mb.querySelectorAll(".ws-opt").forEach(x=>x.classList.remove("sel")); el.classList.add("sel"); });
+  mb.querySelector("[data-eo-cancel]").onclick=closeModal;
+  mb.querySelector("[data-eo-save]").onclick=()=>{ const dv=mb.querySelector("#eoDate").value; const day=dv?isoToDay(dv):todayDay(); const note=(mb.querySelector("#eoNote").value||"").trim(); endObjective(objId, outcome, day, note); };
+}
+function endObjective(objId, status, endedDay, note){
+  exec.objectiveState=(exec.objectiveState||[]).filter(r=>r.objectiveId!==objId);
+  exec.objectiveState.push({objectiveId:objId, status:status, endedDay:endedDay, note:note||""});
+  closeModal(); renderAll(); setMsg("Objective ended \u2014 "+status,"ok");
+}
+function reopenObjective(objId){
+  exec.objectiveState=(exec.objectiveState||[]).filter(r=>r.objectiveId!==objId);
+  renderAll(); setMsg("Objective reopened","ok");
+}
+
 function wireExec(host){
+  host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>confirmClearCatchup(b.dataset.catchupClear));
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
-  host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
+  host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else if(ht==="keyResult") openKpiTgtModal("keyResult", hid, null); else subOpenAdd("kpi",ht,hid); });
   host.querySelectorAll("[data-addlink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addlink.split(":"); captureReturn("link"); addingFor={type:"link",hostType:ht,hostId:hid}; editingSub=null; armedDel=null; renderAll(); });
@@ -2011,8 +2766,20 @@ function wireExec(host){
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());
   host.querySelectorAll("[data-postread]").forEach(b=>b.onclick=()=>postRead(host, b.dataset.postread));
-  host.querySelectorAll("[data-pass]").forEach(el=>el.onchange=()=>{ const r=exec.stageGates.find(x=>x.id===el.dataset.pass); r.actualDate=isoToDay(el.value)||null; persist(); setMsg("Gate updated","ok"); });
-  host.querySelectorAll("[data-chainobj]").forEach(el=>el.onchange=()=>{ if(!exec.chainGatesByDate) exec.chainGatesByDate={}; if(el.checked) exec.chainGatesByDate[selectedObj]=true; else delete exec.chainGatesByDate[selectedObj]; renderAll(); setMsg("Gate chaining "+(el.checked?"on":"off")+" for this objective","ok"); });
+  host.querySelectorAll("[data-postcell]").forEach(td=>td.onclick=()=>openPostCell(td));
+  host.querySelectorAll("[data-markcomplete]").forEach(b=>b.onclick=()=>openMarkComplete(b.dataset.markcomplete));
+  host.querySelectorAll("[data-completion]").forEach(b=>b.onclick=()=>openGateDetail(b.dataset.completion));
+  host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
+  host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>openWorkstreamModal(null));
+  host.querySelectorAll("[data-wsedit]").forEach(b=>b.onclick=()=>openWorkstreamModal(b.dataset.wsedit));
+  host.querySelectorAll("[data-gtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.gtoggle; if(expandedGates.has(id)) expandedGates.delete(id); else expandedGates.add(id); renderGates(); });
+  host.querySelectorAll("[data-krtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.krtoggle; if(expandedKRs.has(id)) expandedKRs.delete(id); else expandedKRs.add(id); renderKRs(); });
+  host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
+  host.querySelectorAll("[data-setsave]").forEach(b=>b.onclick=()=>{ const inp=host.querySelector("[data-setname]"); const nm=(inp?inp.value:"").trim(); if(!nm){ setMsg("Set name required","err"); return; } if(sgSetEditor&&sgSetEditor.mode==="add") addSet(nm); else if(sgSetEditor&&sgSetEditor.mode==="rename") renameSet(sgSetEditor.setId, nm); sgSetEditor=null; renderAll(); });
+  host.querySelectorAll("[data-setcancel]").forEach(b=>b.onclick=()=>{ sgSetEditor=null; renderAll(); });
+  host.querySelectorAll("[data-setname]").forEach(el=>{ el.onkeydown=(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); const sb=host.querySelector("[data-setsave]"); if(sb) sb.click(); } else if(ev.key==="Escape"){ sgSetEditor=null; renderAll(); } }; if(document.activeElement!==el){ el.focus(); const v=el.value; el.value=""; el.value=v; } });
+  host.querySelectorAll("[data-setchain]").forEach(el=>el.onchange=()=>{ const st=(exec.stageGateSets||[]).find(x=>x.id===el.dataset.setchain); if(st) st.chained=el.checked; renderAll(); setMsg("Set chaining "+(el.checked?"on":"off"),"ok"); });
+  host.querySelectorAll("[data-setdel]").forEach(b=>b.onclick=()=>delSet(b.dataset.setdel));
   host.querySelectorAll("[data-commit]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.commit); if(!g||g.plannedDate==null) return; g.baselineDate=g.plannedDate; g.locked=true; renderAll(); setMsg("Gate committed to "+dayToIso(g.baselineDate)+"","ok"); });
   host.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{ const g=exec.stageGates.find(x=>x.id===b.dataset.release); if(!g) return; g.baselineDate=null; g.locked=false; renderAll(); setMsg("Commitment released","ok"); });
   host.querySelectorAll("[data-addedge]").forEach(b=>b.onclick=()=>{ const to=b.dataset.addedge; const sel=host.querySelector('[data-edgepick="'+to+'"]'); const li=host.querySelector('[data-edgelag="'+to+'"]'); const from=sel&&sel.value; if(!from){ setMsg("Pick a predecessor gate.","err"); return; } if(from===to) return; if(!exec.stageGateEdges) exec.stageGateEdges=[]; if(exec.stageGateEdges.some(e=>e.fromGate===from&&e.toGate===to)) return; const lag=(li&&li.value!=="")?Math.max(0,Number(li.value)):0; exec.stageGateEdges.push({fromGate:from,toGate:to,lagDays:lag}); renderAll(); setMsg("Predecessor added","ok"); });
@@ -2029,11 +2796,23 @@ function wireExec(host){
 let draftRisk = null, editingRiskId = null, armedDelRisk = null;
 
 function execGatePassed(gateId){ if(!gateId) return false; const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return false; const s=RD.classifyGate(g, todayDay()); return s==="passed"||s==="passed-late"; }
-function objGatesOrdered(){ return exec.stageGates.filter(r=>r.objectiveId===selectedObj); }
+function sortGatesByDue(list){ return list.slice().sort((a,b)=>{ const pa=a.plannedDate==null?Infinity:a.plannedDate, pb=b.plannedDate==null?Infinity:b.plannedDate; return (pa-pb)||String(a.name||'').localeCompare(String(b.name||''))||String(a.id).localeCompare(String(b.id)); }); }
+function objGatesOrdered(){ return sortGatesByDue(exec.stageGates.filter(r=>r.objectiveId===selectedObj)); }
+/* ---- stage-gate SETS: helpers ---- */
+function objSetsOrdered(){ return (exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
+function setOfGate(g){ return (exec.stageGateSets||[]).find(s=>s.id===(g&&g.setId))||null; }
+function gatesOfSet(setId){ return sortGatesByDue(exec.stageGates.filter(g=>g.objectiveId===selectedObj && g.setId===setId)); }
+function setLabelOf(set){ return set?(set.name||'Set'):'?'; }
+function gateLabel(gateId){ const g=exec.stageGates.find(x=>x.id===gateId); if(!g) return String(gateId); const peers=sortGatesByDue(exec.stageGates.filter(x=>x.objectiveId===g.objectiveId && x.setId===g.setId)); const n=peers.findIndex(x=>x.id===gateId)+1; if(n<1) return String(gateId); const sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===g.objectiveId).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); const si=sets.findIndex(s=>s.id===g.setId); return 'SG-'+(si>=0?String.fromCharCode(65+si):'')+n; }
+function setScorePct(setId){ return RD.setScore(setId, emForCore(), todayDay()); }
+function ensureDefaultSet(){ let sets=(exec.stageGateSets||[]).filter(s=>s.objectiveId===selectedObj); if(!sets.length){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:"General", order:0, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); sets=[set]; } return sets[0].id; }
+function addSet(name){ const set={ id:RD.allocId("stageGateSet", selectedObj, (exec.stageGateSets||[]).map(s=>s.id)), objectiveId:selectedObj, name:name, order:objSetsOrdered().length, chained:true }; (exec.stageGateSets=exec.stageGateSets||[]).push(set); setMsg("Set added","ok"); }
+function renameSet(setId,name){ const s2=(exec.stageGateSets||[]).find(x=>x.id===setId); if(s2){ s2.name=name; setMsg("Set renamed","ok"); } }
+function delSet(setId){ const sets=objSetsOrdered(); const set=sets.find(s=>s.id===setId); if(!set) return; const gates=gatesOfSet(setId), others=sets.filter(s=>s.id!==setId); if(gates.length && !others.length){ setMsg("Can't delete the only set while it holds gates — add another set first.","err"); armedDelSet=null; renderAll(); return; } if(armedDelSet!==setId){ armedDelSet=setId; renderAll(); return; } armedDelSet=null; if(gates.length){ const tgt=others[0].id; gates.forEach(g=>{ g.setId=tgt; }); } exec.stageGateSets=(exec.stageGateSets||[]).filter(s=>s.id!==setId); renderAll(); setMsg("Set deleted"+(gates.length?" — gates moved to "+setLabelOf(others[0]):""),"ok"); }
 function gateNumFor(gateId){ const gs=objGatesOrdered(); for(let i=0;i<gs.length;i++) if(gs[i].id===gateId) return i+1; return null; }
 const rpnCls = r => 'rpn-'+RD.rpnBand(r);
 function sodOptions(field, selected){ return RD.FMEA_SCALES[field].map((lbl,i)=>{ const v=i+1; return `<option value="${v}"${v===Number(selected)?' selected':''}>${v} — ${esc(lbl)}</option>`; }).join(''); }
-function populateGateSelect(selectedGid){ const sel=document.getElementById('f-gate'); sel.innerHTML='<option value="">— No gate association —</option>'+objGatesOrdered().map((g,n)=>`<option value="${esc(g.id)}"${g.id===selectedGid?' selected':''}>G${n+1} — ${esc(g.name||g.id)}</option>`).join(''); }
+function populateGateSelect(selectedGid){ const sel=document.getElementById('f-gate'); sel.innerHTML='<option value="">— No gate association —</option>'+objGatesOrdered().map(g=>`<option value="${esc(g.id)}"${g.id===selectedGid?' selected':''}>${esc(gateLabel(g.id))} — ${esc(g.name||g.id)}</option>`).join(''); }
 
 /* ---- add/edit modal (draft is a self-contained copy → index addressing is safe here) ---- */
 function fmeaModalShell(){
@@ -2159,7 +2938,7 @@ function renderRisks(){
   inner += sorted.map(entry=>{
     const r=entry.p, rid=r.rid, probResolved=r.status==='resolved';
     const topRpn = entry.u>0 ? entry.u : (probResolved?0:RD.worstRpn(r));
-    const gNum=r.gateId?gateNumFor(r.gateId):null, gTag=gNum?`<span class="gate-tag" title="linked to gate G${gNum}">G${gNum}</span>`:'';
+    const gTag=r.gateId?`<span class="gate-tag" title="linked to gate ${esc(gateLabel(r.gateId))}">${esc(gateLabel(r.gateId))}</span>`:'';
     const rows=[];
     (r.modes||[]).forEach(mode=>{
       const modeResolved=mode.status==='resolved';
@@ -2211,6 +2990,13 @@ document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getEleme
   sync();
   if(window.matchMedia){ try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(e){ try{ if(!localStorage.getItem('rd_theme')){ document.documentElement.setAttribute('data-theme', e.matches?'dark':'light'); sync(); } }catch(_){} }); }catch(e){} }
 })();
+/* --- modal click-off: dismissal on backdrop click is DISABLED globally. To restore it for a
+   specific modal, add its overlay id to CLICKOFF_OK (e.g. CLICKOFF_OK.add("modalOverlay")).
+   Escape-to-close and the ✕ button are unaffected. --- */
+const CLICKOFF_OK = new Set();
+document.addEventListener("click", function(e){ const ov=e.target;
+  if(ov && ov.classList && ov.classList.contains("overlay") && !CLICKOFF_OK.has(ov.id)) e.stopImmediatePropagation();
+}, true);
 document.getElementById("modalX").onclick = subCancel;
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay") subCancel(); };
 document.getElementById("subkrX").onclick = closeSubKrModal;
@@ -2360,6 +3146,10 @@ function buildGraphElements(tree,reach){
       } else if(nextId){
         const lbl=(exps[nextId]&&exps[nextId].repeat_of===eid)?"repeat":(r.label||"");
         edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nextId,source:eid,target:nextId,label:lbl,viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+      } else {
+        const nn="nonext_"+eid+"_"+r.id;
+        nodes.push({data:{id:nn,kind:"nonext",label:"No next step",branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nn,source:eid,target:nn,label:r.label||"",viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
       }
     }
     if(ao&&isSentinel(ao.result_id)){
@@ -2371,6 +3161,10 @@ function buildGraphElements(tree,reach){
         edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+tid,source:eid,target:tid,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
       } else if(nextId){
         edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+nextId,source:eid,target:nextId,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
+      } else {
+        const nn="nonext_"+eid+"_"+ao.result_id;
+        nodes.push({data:{id:nn,kind:"nonext",label:"No next step",branchState:bs}});
+        edges.push({data:{id:"edge_"+eid+"_"+ao.result_id+"_"+nn,source:eid,target:nn,label:ao.result_id,viaKind:"sentinel",branchState:bs,observed:true}});
       }
     }
   }
@@ -2673,7 +3467,9 @@ function renderStatus(){
   add(`<span class="dot" style="background:var(--accent)"></span>${counts.active} active · ${counts.pending} pending · ${counts.not_pursued} not pursued`);
   add(term.reached?`Outcome so far: <b>${esc(term.label)}</b>`:`Plan in progress`);
   const ic=errs?`<span style="color:var(--stop-fg)">${errs} error${errs===1?"":"s"}</span>`:`<span style="color:var(--ok-fg)">no errors</span>`;
-  add(`${ic}${warns?` · ${warns} warning${warns===1?"":"s"}`:""}`);
+  const issuesHtml=`${ic}${warns?` · ${warns} warning${warns===1?"":"s"}`:""}`;
+  if(errs+warns>0){ const di=el("span","status-issues"); di.innerHTML=issuesHtml+'<span class="issues-view">view</span>'; di.title="View validation issues"; di.addEventListener("click",openEtbIssues); s.appendChild(di); }
+  else add(issuesHtml);
   const srcLabel={sample:"sample data",cache:"local cache",bin:"JSONBin",fresh:"new tree"}[state.source]||state.source;
   let when="";
   if(state.savedAt) when=` · saved ${state.savedAt}`;
@@ -2681,6 +3477,19 @@ function renderStatus(){
   add(`<span class="muted">source: ${srcLabel}${when}</span>`);
 }
 
+function openEtbIssues(){
+  const issues=validateTree(state.tree);
+  const errs=issues.filter(i=>i.level==="error"), warns=issues.filter(i=>i.level==="warning");
+  $("#etbIssuesTitle").textContent = issues.length ? `Validation issues — ${errs.length} error${errs.length===1?"":"s"}${warns.length?", "+warns.length+" warning"+(warns.length===1?"":"s"):""}` : "Validation issues";
+  const refBtn=(ref)=>{ const e=ref&&state.tree.experiments&&state.tree.experiments[ref]; return e?`<button class="issue-ref" data-issue-ref="${esc(ref)}">${esc(e.code||ref)}</button>`:(ref?`<span class="muted">${esc(String(ref))}</span>`:""); };
+  const grp=(title,list)=> list.length?`<div class="issue-group"><div class="issue-h">${title}</div>`+list.map(i=>{const rb=refBtn(i.ref);return `<div class="issue-row ${i.level}"><span class="issue-ic">${i.level==="error"?"✕":"⚠"}</span><div class="issue-txt"><div>${esc(i.message)}</div><div class="issue-meta">rule ${i.rule}${rb?" · "+rb:""}</div></div></div>`;}).join("")+`</div>`:"";
+  $("#etbIssuesBody").innerHTML = issues.length ? grp(`${errs.length} error${errs.length===1?"":"s"}`,errs)+grp(`${warns.length} warning${warns.length===1?"":"s"}`,warns) : '<p class="hint" style="margin:0">No validation issues — the tree is clean.</p>';
+  $("#etbIssuesBody").querySelectorAll("[data-issue-ref]").forEach(b=>b.addEventListener("click",()=>{ closeEtbIssues(); openPanel(b.dataset.issueRef); }));
+  const ov=$("#etbIssuesOverlay");
+  if(!ov.__wired){ ov.__wired=true; ov.addEventListener("click",e=>{ if(e.target===ov||(e.target.closest&&e.target.closest("[data-close-issues]"))) closeEtbIssues(); }); }
+  ov.classList.add("open");
+}
+function closeEtbIssues(){ const ov=$("#etbIssuesOverlay"); if(ov) ov.classList.remove("open"); }
 function statusPill(status){const labels={complete:"Complete",in_progress:"In progress",planned:"Planned"};const p=el("span","pill "+status,labels[status]||status);return p;}
 function reachTag(r){const labels={active:"active",pending:"pending",not_pursued:"not pursued"};return el("span","tag reach-"+r,labels[r]||r);}
 function terminalPill(term,types){const kind=(types&&types[term.type]&&types[term.type].kind)||"stop";const p=el("span","pill "+kind);p.textContent=term.label||term.type;return p;}
@@ -2761,7 +3570,7 @@ function renderNode(eid,reach,types,visited){
   const r=reach[eid]; if(r) node.classList.add("reach-"+r);
 
   const head=el("div","node-head");
-  head.style.cursor="pointer";head.title="Open details";head.addEventListener("click",()=>openPanel(eid));
+  head.style.cursor="pointer";head.title="Open details";head.addEventListener("click",()=>{if(exp.actual_outcome)openExpDetailModal(eid);else openPanel(eid);});
   head.appendChild(el("span","code",exp.code||eid));
   head.appendChild(el("span","name",exp.name||""));
   head.appendChild(statusPill(exp.status||"planned"));
@@ -2880,6 +3689,8 @@ function cyStyle(p){
     {selector:'node[kind="terminal"][termType="conduct_fmea"]',style:{"background-color":p.amberBg,"color":p.amberFg,"border-color":p.amberFg}},
     {selector:'node[kind="terminal"][termType="halt"]',style:{"background-color":p.stopBg,"color":p.stopFg,"border-color":p.stopFg}},
     {selector:'node[kind="terminal"][branchState="not_pursued"]',style:{"opacity":0.5}},
+    {selector:'node[kind="nonext"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1.5,"border-color":p.stopFg,"color":p.stopFg,"width":(e)=>nodeDims(e.data("label"),10,120).w,"height":(e)=>nodeDims(e.data("label"),10,120).h,"font-size":10}},
+    {selector:'node[kind="nonext"][branchState="not_pursued"]',style:{"opacity":0.5,"border-style":"dashed"}},
     {selector:'node[kind="edgelabel"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
     {selector:'node[kind="edgelabel"][branchState="active"]',style:{"border-color":p.accent,"color":p.ink,"font-weight":600}},
     {selector:'node[kind="edgelabel"][branchState="pending"]',style:{"color":p.muted}},
@@ -2902,7 +3713,7 @@ function renderGraph(){
   const p=resolvePalette();
   if(cy){try{cy.destroy();}catch(e){}cy=null;}
   cy=cytoscape({container:host,elements:[...R.nodes,...R.edges],style:cyStyle(p),layout:DAGRE_LAYOUT,minZoom:0.2,maxZoom:2.5});
-  cy.on("tap",'node[kind="experiment"]',(evt)=>openPanel(evt.target.id()));
+  cy.on("tap",'node[kind="experiment"]',(evt)=>{const __id=evt.target.id();const __e=state.tree.experiments[__id];if(__e&&__e.actual_outcome)openExpDetailModal(__id);else openPanel(__id);});
   cy.ready(()=>cy.fit(undefined,28));
   if(typeof requestAnimationFrame==="function") requestAnimationFrame(function(){ if(cy){ try{ cy.resize(); cy.fit(undefined,28); }catch(e){} } });   // iframe: correct size/frame once layout settles
   if(state.panelExpId){const n=cy.getElementById(state.panelExpId);if(n&&n.length)n.select();}
@@ -2925,6 +3736,64 @@ function closePanel(){
   state.panelExpId=null;
   const d=$("#drawer");d.classList.remove("open");d.setAttribute("aria-hidden","true");
   if(cy)cy.$(":selected").unselect();
+}
+// Read-only detail modal for a completed experiment (has an actual_outcome). Edit button hands off to the panel.
+function closeExpDetailModal(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');if(ov){ov.classList.remove('open');if(ov.parentNode)ov.parentNode.removeChild(ov);}}
+function openExpDetailModal(expId){
+  closeExpDetailModal();
+  const t=state.tree;const exp=t.experiments[expId];if(!exp)return;
+  const types=t.terminal_types||{};const reach=computeReachability(t);const rr=reach[expId];
+  const out=resolveOutcome(exp);const ao=exp.actual_outcome;
+  const ov=el('div','overlay');ov.id='exp-detail-overlay';
+  const sheet=el('div','sheet');sheet.style.maxWidth='560px';
+  const hd=el('div','exp-modal-head');
+  hd.appendChild(Object.assign(el('h3'),{innerHTML:`<span class="mono" style="font-weight:600">${esc(exp.code||expId)}</span> <span style="font-weight:400">${esc(exp.name||"")}</span>`}));
+  const hx=el('button','modal-x','\u2715');hx.title='Close';hx.addEventListener('click',closeExpDetailModal);hd.appendChild(hx);
+  sheet.appendChild(hd);
+  const meta=el('div','p-meta');meta.appendChild(statusPill(exp.status||"planned"));if(rr)meta.appendChild(reachTag(rr));if(exp.hypothesis_verdict)meta.appendChild(Object.assign(el('span','verdict'),{textContent:"hypothesis "+exp.hypothesis_verdict}));sheet.appendChild(meta);
+  const det=el('div','exp-modal-sec');det.appendChild(el('div','p-lab','Experiment details'));
+  if(exp.hypothesis)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Hypothesis</span> ${esc(exp.hypothesis)}`}));
+  if(exp.toggle)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Toggle</span> ${esc(exp.toggle)}`}));
+  if(exp.test)det.appendChild(Object.assign(el('div','meta'),{innerHTML:`<span class="lab">Experiment</span> ${esc(exp.test)}`}));
+  if((exp.key_reads||[]).length){const kb=el('div','exp-kr');kb.appendChild(el('span','lab','Key reads'));(exp.key_reads||[]).forEach(k=>{const row=el('div','meta small');row.textContent=`${k.name||"(unnamed)"} ${k.direction||""} ${(k.critical_value!==""&&k.critical_value!=null)?k.critical_value:""}${k.unit?(" "+k.unit):""}`;kb.appendChild(row);});det.appendChild(kb);}
+  sheet.appendChild(det);
+  if(ao){
+    const os=el('div','exp-modal-sec');os.appendChild(el('div','p-lab','Result'));
+    const line=el('div','outcome-line');
+    if(out&&out.kind==="sentinel"){line.innerHTML=`<b>Outcome:</b> ${esc(out.label)}${ao.note?` \u2014 ${esc(ao.note)}`:""}${out.conclusion?`<br><span class="lab">Conclusion</span> ${esc(out.conclusion)}`:""}`;}
+    else{line.innerHTML=`<b>Observed:</b> ${esc(out?out.label:ao.result_id)}${ao.recorded_date?` \u00b7 recorded ${esc(ao.recorded_date)}`:""}${ao.recorded_by?` by ${esc(ao.recorded_by)}`:""}${ao.note?`<br><span class="lab">Note</span> ${esc(ao.note)}`:""}${(out&&out.conclusion)?`<br><span class="lab">Conclusion</span> ${esc(out.conclusion)}`:""}`;}
+    os.appendChild(line);
+    const nr=el('div','nextrow');nr.style.marginTop='8px';
+    if(out&&out.terminal){nr.appendChild(Object.assign(el('span','arr'),{textContent:'\u2192'}));nr.appendChild(Object.assign(el('span','lab'),{textContent:'Next step'}));nr.appendChild(terminalPill(out.terminal,types));}
+    else if(out&&out.nextId&&t.experiments[out.nextId]){const tgt=t.experiments[out.nextId];nr.innerHTML=`<span class="arr">\u2192</span> <span class="lab">Next step</span> <span class="mono">${esc(tgt.code||out.nextId)}</span> ${esc(tgt.name||"")}`;}
+    else{nr.innerHTML=`<span class="arr">\u2192</span> <span class="lab">Next step</span> <span class="nonext-tag">No next step</span>`;}
+    os.appendChild(nr);sheet.appendChild(os);
+  }
+  const results=exp.possible_results||[];
+  if(results.length){
+    const rs=el('div','exp-modal-sec');rs.appendChild(el('div','p-lab','Possible results'));
+    const rwrap=el('div','results');
+    results.forEach(res=>{
+      const observed=ao&&!isSentinel(ao.result_id)&&ao.result_id===res.id;
+      const card=el('div','result'+(observed?' observed':''));
+      const top=el('div','result-top');top.appendChild(el('span','lbl',res.label||res.id));if(observed)top.appendChild(Object.assign(el('span','observed-badge'),{textContent:'observed'}));card.appendChild(top);
+      const ct=criteriaText(res,exp.key_reads);if(ct)card.appendChild(el('div','crit',ct));
+      if(res.conclusion){const c=el('div','concl');c.innerHTML=`<b>Conclusion \u00b7 </b>${esc(res.conclusion)}`;card.appendChild(c);}
+      const nextId=(res.next_experiment_ids||[])[0];const nr2=el('div','nextrow');
+      if(res.terminal){nr2.appendChild(Object.assign(el('span','arr'),{textContent:'\u2192'}));nr2.appendChild(terminalPill(res.terminal,types));}
+      else if(nextId){const tgt=t.experiments[nextId];nr2.innerHTML=`<span class="arr">\u2192</span> Next: <span class="mono">${esc(tgt?tgt.code:nextId)}</span>`;}
+      else{nr2.innerHTML=`<span class="arr">\u2192</span> <span class="nonext-tag">No next step</span>`;}
+      card.appendChild(nr2);rwrap.appendChild(card);
+    });
+    rs.appendChild(rwrap);sheet.appendChild(rs);
+  }
+  const foot=el('div','exp-modal-foot');
+  foot.appendChild(Object.assign(el('span','muted small'),{textContent:'Read-only view'}));
+  const editB=el('button','primary','Edit results');editB.title='Open the editor to correct the results';editB.addEventListener('click',()=>{closeExpDetailModal();openPanel(expId);});foot.appendChild(editB);
+  sheet.appendChild(foot);
+  ov.appendChild(sheet);
+  ov.addEventListener('click',(e)=>{if(e.target===ov)closeExpDetailModal();});
+  ETB_ROOT.appendChild(ov);ov.classList.add('open');
 }
 function softRefresh(){syncRepeats(state.tree);cacheTree();renderStatus();renderOutline();if(!$("#view-graph").hidden)renderGraph();var __wv=$("#view-waterfall");if(__wv&&!__wv.hidden)renderWaterfall();if(typeof window!=="undefined"&&window.__etbOnChange){try{window.__etbOnChange();}catch(e){}}}
 function fRow(label,inputEl){const w=el("div","p-row");w.appendChild(el("div","p-lab",label));w.appendChild(inputEl);return w;}
@@ -2997,9 +3866,11 @@ function renderAccomplishments(t,expId,exp,res){
   accs.forEach(a=>{
     const row=el("div","acc-row");
     const flag=el("span","acc-flag"+(realized?" done":""));flag.textContent=realized?"\u2691\u2713":"\u2691";flag.title=realized?"Cleared — this result was recorded":"Would clear this gate";
-    const lab=fText(a.label,v=>{setAccomplishmentField(t,expId,res.id,a.id,"label",v);softRefresh();},{placeholder:"Stage-gate (e.g. SG-3: Cell design freeze)"});lab.classList.add("acc-in");
+    const gopts=[{value:"",label:"— select a stage-gate —"}].concat(exec.stageGates.filter(x=>x.objectiveId===selectedObj).map(g=>({value:g.id,label:sgTreeLabel(g.id,selectedObj)})));
+    const lab=fSelect(a.gate_id||"",gopts,gid=>{const g=exec.stageGates.find(x=>x.id===gid);setAccomplishmentField(t,expId,res.id,a.id,"gate_id",gid||null);setAccomplishmentField(t,expId,res.id,a.id,"label",g?(g.name||g.id):"");softRefresh();renderPanel(expId);});lab.classList.add("acc-in");
     const rm=el("button","mini","\u2715");rm.title="Remove flag";rm.addEventListener("click",()=>{removeAccomplishment(t,expId,res.id,a.id);softRefresh();renderPanel(expId);});
     row.appendChild(flag);row.appendChild(lab);row.appendChild(rm);box.appendChild(row);
+    if(!a.gate_id && a.label){const cap=el("div","acc-legacy muted small");cap.textContent="was: “"+a.label+"” — pick the matching stage-gate to link it";box.appendChild(cap);}
   });
   const add=el("button","mini2","+ stage-gate");add.title="Flag a stage-gate this result would satisfy";add.addEventListener("click",()=>{addAccomplishment(t,expId,res.id);softRefresh();renderPanel(expId);});add.style.marginTop="4px";box.appendChild(add);
   return box;

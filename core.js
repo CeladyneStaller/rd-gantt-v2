@@ -140,13 +140,18 @@
     var ups=readingsFor(kpiId, execDocs);
     if(!ups.length) return null;
     if(defn && defn.targetType==='statistical'){
-      var n=parseInt(defn.readCount,10);
-      var slice=(isNaN(n)||n<=0)?ups:ups.slice(0,n);
-      var xs=[]; for(var i=0;i<slice.length;i++){ var v=Number(slice[i].value); if(!isNaN(v)) xs.push(v); }
+      // aggregate ALL posted readings; readCount is the expected sample size (completeness), not a window
+      var xs=[]; for(var i=0;i<ups.length;i++){ var v=Number(ups[i].value); if(!isNaN(v)) xs.push(v); }
       if(!xs.length) return null;
       return computeStat(defn.statistic||'average', xs);
     }
     return ups[0].value;
+  }
+  // count of numeric readings posted to a kpi id — for statistical-target completeness (N / expected)
+  function readingCount(kpiId, execDocs){
+    var ups=readingsFor(kpiId, execDocs), n=0;
+    for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
+    return n;
   }
 
   // latest reading posted to a specific KPI id (the host where it was entered)
@@ -183,8 +188,9 @@
   // Legacy groupId/isDefiner is normalized on the fly by linkOf (definer/standalone
   // -> root, every member -> contribute-child of its definer), so existing data
   // resolves identically. Precedence among contributors to a parent (§7): the
-  // node's OWN reading ranks above its children; among children direct outranks
-  // contribute; then quarter (nulls last), then reading recency. linkPriority wins first.
+  // node's OWN reading (manual) ALWAYS ranks above its children; among children the
+  // latest link wins (higher linkPriority), then direct outranks contribute, then
+  // quarter (nulls last), then reading recency.
   var LINK_OWN_RANK = 3;                    // a node's own directly-posted reading
   function relationRank(type){ return type==='direct'?2 : type==='contribute'?1 : 0; }
   function kpiById(id, kpis){ for(var i=0;i<kpis.length;i++) if(kpis[i].id===id) return kpis[i]; return null; }
@@ -197,7 +203,7 @@
   function linkOf(kpi, kpis){
     if(kpi.linkParent !== undefined) return { parent:kpi.linkParent, type:kpi.linkType||'contribute', priority:kpi.linkPriority||0 };
     if(!kpi.groupId || kpi.isDefiner) return { parent:null, type:'contribute', priority:0 };
-    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:0 };
+    var def=legacyDefinerId(kpi, kpis); return { parent:(def===kpi.id?null:def), type:'contribute', priority:(kpi.linkPriority||0) };
   }
   function rootOf(kpi, kpis){ var seen={}, cur=kpi;
     while(cur){ if(seen[cur.id]) return cur; seen[cur.id]=1; var lk=linkOf(cur,kpis);
@@ -261,7 +267,9 @@
     return { priority:(kpi.linkPriority||0), rank:rank, quarter:objectiveQuarter(kpi.objectiveId, execDocs), ts:(reading?(reading.timestamp||0):0) };
   }
   function precCmp(x, y){                    // sort comparator: negative => x wins (ranks first)
-    if(x.priority!==y.priority) return y.priority-x.priority;
+    var xo=(x.rank===LINK_OWN_RANK)?1:0, yo=(y.rank===LINK_OWN_RANK)?1:0;
+    if(xo!==yo) return yo-xo;                 // a node's OWN reading (manual) always beats linked children
+    if(x.priority!==y.priority) return y.priority-x.priority;  // among children: higher linkPriority = latest link wins
     if(x.rank!==y.rank) return y.rank-x.rank;
     if(x.quarter!==y.quarter){ if(x.quarter==null) return 1; if(y.quarter==null) return -1; return x.quarter<y.quarter?1:-1; }
     return (y.ts||0)-(x.ts||0);
@@ -278,21 +286,57 @@
     return kpi.target!=null ? kpi.target : effectiveTarget(P, kpis, seen);
   }
   // effective VALUE — own reading + direct/contribute children, precedence winner (§6/§7)
-  function effectiveValue(kpi, kpis, execDocs, root, seen){
+  // A parent may name its value sources EXPLICITLY (kpi.sources = [kpiId,...]) instead of each child
+  // carrying linkParent. This exists because a milestone KPI lives in the portfolio doc while the KR KPIs
+  // that feed it live in EXEC-<div> docs, which the planning app cannot write — so the link has to be stored
+  // on the parent. sourcesOf is additive: a kpi with no `sources` behaves exactly as before.
+  function sourcesOf(kpi, kpis){
+    var out=[], ids=kpi.sources||[];
+    for(var i=0;i<ids.length;i++){ var k=kpiById(ids[i], kpis); if(k) out.push(k); }
+    return out;
+  }
+  // effectiveValueEntry: like effectiveValue but reports WHICH contributor won, so callers can name the
+  // source of a value. { value, src, own }.
+  function effectiveValueEntry(kpi, kpis, execDocs, root, seen){
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
     var ownV=resolvedReadingValue(kpi.id, root, execDocs);
-    if(ownV!=null) pool.push({ value:ownV, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
+    if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
+    var ex=sourcesOf(kpi, kpis);
+    for(var j=0;j<ex.length;j++) if(kids.indexOf(ex[j])===-1) kids.push(ex[j]);   // explicit sources join the children
     for(var i=0;i<kids.length;i++){ var lk=linkOf(kids[i],kpis);
       if(lk.type==='specification') continue;                          // firewall: value does not flow up
-      var v=effectiveValue(kids[i], kpis, execDocs, root, seen);
-      if(v!=null) pool.push({ value:v, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
+      var e=effectiveValueEntry(kids[i], kpis, execDocs, root, seen);
+      if(e!=null && e.value!=null) pool.push({ value:e.value, src:e.src, own:false, key:precKey(kids[i], latestReadingObj(kids[i].id, execDocs), relationRank(lk.type), execDocs) });
     }
     if(!pool.length) return null;
+    // A milestone KPI draws from several sources at once and asks "did ANY of them meet the milestone?", so
+    // the BEST-SCORING source wins — each contributor's value scored against THIS kpi's own target, not the
+    // contributor's. (Pressure >= 40 bar fed by a 10 bar KR and a 40 bar KR -> the 40 bar KR wins.) A value
+    // posted directly on the milestone KPI still overrides every source (LINK_OWN_RANK).
+    var hasOwn=false; for(var p=0;p<pool.length;p++) if(pool[p].own) hasOwn=true;
+    if(kpi.hostType==='milestone' && !hasOwn && pool.length>1){
+      var tgt=effectiveTarget(kpi, kpis);
+      var scored=kpi.targetType==='binary' || tgt!=null;
+      if(scored){
+        var probe={ targetType:kpi.targetType, target:tgt, direction:kpiDirection(kpi, kpis) };
+        pool.sort(function(a,b){
+          var sa=kpiScore(probe, a.value), sb=kpiScore(probe, b.value);
+          if(sa==null) sa=-1; if(sb==null) sb=-1;
+          if(sa!==sb) return sb-sa;                                     // best score first
+          return precCmp(a.key, b.key);                                 // tie -> the existing precedence
+        });
+        return pool[0];
+      }
+    }
     pool.sort(function(a,b){ return precCmp(a.key, b.key); });
-    return pool[0].value;                                              // highest precedence contributor that has a value
+    return pool[0];                                                     // highest precedence contributor that has a value
+  }
+  function effectiveValue(kpi, kpis, execDocs, root, seen){
+    var e=effectiveValueEntry(kpi, kpis, execDocs, root, seen);
+    return e?e.value:null;
   }
   // public 2/3-arg aliases (harness + shells call these)
   function effTarget(kpi, kpis){ return effectiveTarget(kpi, kpis); }
@@ -502,6 +546,8 @@
   function score(entityType, entityId, portfolio, execDocs, quarter) {
     var objs = objectivesInScope(entityType, entityId, portfolio);
     if (quarter != null) objs = objs.filter(function (o) { return o.quarter === quarter; });
+    // ended objectives (abandoned AND achieved) count in every rollup, quarterly and overall alike —
+    // an abandoned objective's score is part of the record, not something the aggregate forgets.
     var scores = [];
     for (var i = 0; i < objs.length; i++) {
       var s = objectiveScore(objs[i].id, execDocs);
@@ -619,21 +665,34 @@
       rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
         return ia - ib || (a < b ? -1 : a > b ? 1 : 0); });
     } else { rest.sort(); }
-    if (none) rest.push('');
+    if (none) rest.unshift('');   // no value for this dimension -> reads first
     return rest;
   }
-  function groupObjectives(objs, dims, portfolio) {
-    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (objs || []).slice() }];
+  // A milestone carries no divisionId/quarter/owner of its own — only initiativeId. Division comes from its
+  // initiative; product/model fall out of effProduct/effModel, which already inherit the initiative's class
+  // because a milestone is always class-agnostic. Dimensions a milestone simply doesn't have return '' and the
+  // renderers then skip that level entirely.
+  function _msDimKey(m, dim, portfolio) {
+    if (dim === 'initiative') return m.initiativeId || '';
+    if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'product') return effProduct(m, portfolio) || '';
+    if (dim === 'model') return effModel(m, portfolio) || '';
+    return '';
+  }
+  function _groupBy(items, dims, portfolio, keyFn) {
+    if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (objs || []).forEach(function (o) { var k = _dimKey(o, dim, portfolio);
+    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
       if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
-      if (rest.length) node.children = groupObjectives(buckets[k], rest, portfolio);
+      if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
       else node.objs = buckets[k];
       return node;
     });
   }
+  function groupObjectives(objs, dims, portfolio) { return _groupBy(objs, dims, portfolio, _dimKey); }
+  function groupMilestones(ms, dims, portfolio) { return _groupBy(ms, dims, portfolio, _msDimKey); }
 
   // validateClassification(obj, portfolio) -> {ok:true} | {ok:false, reason}
   // Enforces the node invariant (at most one of productId/modelId) and the
@@ -662,9 +721,19 @@
     }
 
     if (io.kind === 'model') {
-      // initiative is at the finest grain: objective must match exactly (no broaden)
-      if (oo.kind === 'model' && oo.modelId === io.modelId) return { ok: true };
-      return { ok: false, reason: 'initiative is model-specific; objective must match that model' };
+      // Initiative is at the finest grain. The objective must match that model, or narrow into one of its
+      // SUB-PRODUCTS — a composition descendant (portfolio.composition: parent model CONTAINS child model,
+      // e.g. a System model containing a Stack model). Narrowing is allowed; broadening or diverging is not.
+      // This is how the rest of the system already reasons: the in-scope-target resolver expands a classified
+      // model to its descendants too ("+ sub-products, transitively"). Product-pinned initiatives deliberately
+      // do NOT get this reach — they stay narrow, so initiatives point at specific models.
+      if (oo.kind === 'model') {
+        if (oo.modelId === io.modelId) return { ok: true };
+        return descendantModels(io.modelId, portfolio.composition).indexOf(oo.modelId) !== -1
+          ? { ok: true }
+          : { ok: false, reason: 'objective model is neither the initiative model nor one of its sub-products' };
+      }
+      return { ok: false, reason: 'initiative is model-specific; objective must match that model or one of its sub-products' };
     }
     return { ok: true };
   }
@@ -886,8 +955,14 @@
         fEnd = projEnd[o.id];
         pEnd = o.plannedEnd;
       }
-      objectiveWorkForecast[o.id] = fEnd;
-      objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      var endSt = objectiveEndState(execFor(o.divisionId).objectiveState, o.id);
+      if (endSt) {                                                    // ended objective: freeze the schedule, no ongoing slip
+        objectiveWorkForecast[o.id] = (endSt.endedDay != null) ? endSt.endedDay : fEnd;
+        objectiveScheduleSlip[o.id] = null;
+      } else {
+        objectiveWorkForecast[o.id] = fEnd;
+        objectiveScheduleSlip[o.id] = (pEnd != null && fEnd != null) ? Math.max(0, fEnd - pEnd) : null;
+      }
     });
 
     // objective earliest end: same OBJ->OBJ topology on the optimistic intrinsic, for the acceleration flag
@@ -1094,6 +1169,21 @@
   }
 
   // ---- exports --------------------------------------------------------------
+  function objectiveEndState(objectiveState, objId){
+    var arr = objectiveState || [];
+    for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
+    return null;
+  }
+  function activeCatchupPlan(catchupPlans, objId){
+    var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
+    if(!plans.length) return null;
+    return plans.reduce(function(a,b){ return (b.enactedDay||0)>=(a.enactedDay||0)?b:a; });
+  }
+  function catchupEntry(catchupPlans, objId, gateId){
+    var p=activeCatchupPlan(catchupPlans, objId); if(!p) return null;
+    var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
+    return null;
+  }
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1122,6 +1212,9 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
+    sourcesOf: sourcesOf,
+    readingCount: readingCount,
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
@@ -1154,9 +1247,11 @@
     quarterRange: quarterRange,
     quarterList: quarterList,
     groupObjectives: groupObjectives,
+    groupMilestones: groupMilestones,
     validateClassification: validateClassification,
     sliceScore: sliceScore,
     cascade: cascade,
+    activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,

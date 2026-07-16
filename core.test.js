@@ -308,11 +308,15 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
 (function () {
   var portfolio = {
     products: [{ id: 'P1' }, { id: 'P2' }],
-    models: [{ id: 'M1', productId: 'P1' }, { id: 'M1b', productId: 'P1' }, { id: 'M2', productId: 'P2' }],
+    models: [{ id: 'M1', productId: 'P1' }, { id: 'M1b', productId: 'P1' }, { id: 'M2', productId: 'P2' },
+             { id: 'MS', productId: 'P2' }, { id: 'MSS', productId: 'P2' }],
+    // System model M1 CONTAINS sub-product MS, which itself contains MSS (both live under a different product line)
+    composition: [{ id: 'c1', parent: 'M1', child: 'MS' }, { id: 'c2', parent: 'MS', child: 'MSS' }],
     initiatives: [
       { id: 'Iag', divisionId: 'D' },                       // agnostic
       { id: 'Iprod', divisionId: 'D', productId: 'P1' },    // product-specific
-      { id: 'Imod', divisionId: 'D', modelId: 'M1' }        // model-specific
+      { id: 'Imod', divisionId: 'D', modelId: 'M1' },       // model-specific
+      { id: 'Isub', divisionId: 'D', modelId: 'MS' }        // pinned to a sub-product
     ],
     objectives: []
   };
@@ -328,6 +332,19 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(C.validateClassification({ initiativeId: 'Iag', productId: 'P2' }, portfolio).ok, 'agnostic init allows any product');
   ok(C.validateClassification({ initiativeId: 'Iprod' }, portfolio).ok, 'product init: objective inherits');
   ok(C.validateClassification({ initiativeId: 'Iprod', modelId: 'M1' }, portfolio).ok, 'product init: model under it ok');
+  // a model-pinned initiative may narrow into a SUB-PRODUCT of its model (System init -> Stack objective)
+  ok(C.validateClassification({ initiativeId: 'Imod', modelId: 'MS' }, portfolio).ok, 'model init: objective may pin a sub-product of that model');
+  ok(C.validateClassification({ initiativeId: 'Imod', modelId: 'MSS' }, portfolio).ok, 'model init: sub-products resolve transitively');
+  ok(C.validateClassification({ initiativeId: 'Imod', modelId: 'M1' }, portfolio).ok, 'model init: the model itself still matches');
+  ok(!C.validateClassification({ initiativeId: 'Imod', modelId: 'M1b' }, portfolio).ok, 'model init: a sibling model is NOT a sub-product — still blocked');
+  ok(!C.validateClassification({ initiativeId: 'Imod', productId: 'P1' }, portfolio).ok, 'model init: broadening to a product is still blocked');
+  // the reach is one-directional: a sub-product initiative cannot host its PARENT's objective
+  ok(!C.validateClassification({ initiativeId: 'Isub', modelId: 'M1' }, portfolio).ok, 'sub-product init: cannot broaden up to the containing model');
+  // product-pinned initiatives deliberately keep the narrow window (Corey: initiatives stay focused)
+  ok(!C.validateClassification({ initiativeId: 'Iprod', modelId: 'MS' }, portfolio).ok, 'product init: composition does NOT widen its reach');
+  // with no composition edges the rule is exact-match, as before
+  var noComp = { products: portfolio.products, models: portfolio.models, objectives: [], initiatives: portfolio.initiatives };
+  ok(!C.validateClassification({ initiativeId: 'Imod', modelId: 'MS' }, noComp).ok, 'no composition -> exact match only (unchanged)');
   ok(C.validateClassification({ initiativeId: 'Iprod', modelId: 'M1b' }, portfolio).ok, 'product init: sibling model under it ok');
   ok(!C.validateClassification({ initiativeId: 'Iprod', productId: 'P2' }, portfolio).ok, 'product init: different product blocked');
   ok(!C.validateClassification({ initiativeId: 'Iprod', modelId: 'M2' }, portfolio).ok, 'product init: model under other product blocked');
@@ -596,16 +613,17 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   approx(C.computeStat('stddev', [10,20,30,40]), 12.909944, 'stat stddev (sample n-1)', 1e-4);
   approx(C.computeStat('cv', [10,20,30,40]), 51.639778, 'stat cv (%)', 1e-4);
 
-  // statistical KPI: aggregate latest readCount readings, then grade vs target
+  // statistical KPI: aggregate ALL posted readings (readCount no longer windows), then grade vs target
   var exStat = { D: {
     keyResults: [{ id:'KRs', objectiveId:'O', trackingType:'kpi' }],
     kpis: [{ id:'Ks', hostType:'keyResult', hostId:'KRs', objectiveId:'O', direction:'up', target:30, targetType:'statistical', statistic:'average', readCount:3, groupId:null }],
     kpiUpdates: [{kpiId:'Ks',value:10,timestamp:1},{kpiId:'Ks',value:20,timestamp:2},{kpiId:'Ks',value:30,timestamp:3},{kpiId:'Ks',value:40,timestamp:4}]
   }};
-  approx(C.keyResultScore('KRs', exStat), 100, 'statistical KPI: avg of latest 3 (40,30,20)=30 vs target 30 -> 100');
+  approx(C.keyResultScore('KRs', exStat), 100*25/30, 'statistical KPI: avg of ALL (10,20,30,40)=25 vs target 30 -> 83.3 (readCount does not window)', 1e-3);
   exStat.D.kpis[0].readCount = '';
   exStat.D.kpis[0].target = 25;
   approx(C.keyResultScore('KRs', exStat), 100, 'statistical readCount blank -> avg all (25) vs target 25 -> 100');
+  eq(C.readingCount('Ks', exStat), 4, 'readingCount: counts all numeric readings posted to the kpi');
 
   // binary KPI: met (>=1) -> 100, else 0
   var exBin = { D: {
@@ -690,7 +708,7 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   var ex2 = { keyResults:[{id:'KR1',objectiveId:'O1'}],
     kpis:[{ id:'EK2', hostType:'keyResult', hostId:'KR1', objectiveId:'O1', isDefiner:false, groupId:'G2' }],
     kpiUpdates:[{kpiId:'EK2',value:10,timestamp:1},{kpiId:'EK2',value:20,timestamp:2},{kpiId:'EK2',value:30,timestamp:3},{kpiId:'EK2',value:40,timestamp:4}] };
-  approx(C.keyResultScore('KR1', C.withPortfolio(pf2,{D:ex2})), 100, 'cross-doc statistical: avg latest 3 (40,30,20)=30 vs portfolio target 30 -> 100');
+  approx(C.keyResultScore('KR1', C.withPortfolio(pf2,{D:ex2})), 100*25/30, 'cross-doc statistical: avg ALL (10,20,30,40)=25 vs portfolio target 30 -> 83.3', 1e-3);
 
   // binary portfolio target met by exec reading
   var pf3 = { objectives:[{id:'O1',initiativeId:'INIT1',divisionId:'D',quarter:'Q1'}],
@@ -1057,7 +1075,7 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
     var d1=g2[0]; ok(d1.key==='D1' && d1.children.length===1 && d1.children[0].key==='P1', 'nested D1 › P1');
     var p1=d1.children[0], mk=p1.children.map(function(n){return n.key;});
     ok(mk.indexOf('M1')>=0 && mk.indexOf('')>=0, 'P1 splits into {M1, none}');
-    ok(p1.children[p1.children.length-1].key==='', 'none bucket ordered last');
+    ok(p1.children[0].key==='', 'none bucket ordered FIRST (renderers skip the level, so its items read on top)');
     var d2=g2[1]; ok(d2.key==='D2' && d2.children[0].key==='' && d2.children[0].children[0].key==='' && d2.children[0].children[0].objs[0].id==='oC', 'agnostic path D2 › none › none → oC');
   })();
 })();
@@ -1164,8 +1182,41 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   approx(early.gateForecastEarliest['G3'], 170, 'earliest: G3 could finish 30 early (120+50=170)');
   approx(early.gateAcceleration['G2'], 30, 'acceleration flag: G2 could move up 30 days');
   approx(early.gateAcceleration['G3'], 30, 'acceleration flag: G3 could move up 30 days');
-  approx(early.objectiveEarliestEnd['O'], 170, 'earliest objective end = 170');
-  approx(early.objectiveAcceleration['O'], 30, 'acceleration flag: objective could pull in 30 days');
+  approx(early.objectiveEarliestEnd['O'], 200, 'earliest objective end floors at the planned span (cs+dur=200): gates INSIDE the span cannot move the objective end');
+  approx(early.objectiveAcceleration['O'], 0, 'no OBJECTIVE acceleration when gates sit inside the span — only the per-GATE acceleration above applies');
+
+  // (4b) LEGIT objective acceleration appears ONLY when a gate binds BEYOND the objective span and an early
+  //      upstream pulls it in, so it necessarily coexists with slip (it recovers part of that slip).
+  var oacc = C.cascade(
+    { divisions:[{id:'D'}], initiatives:[], objectives:[{id:'O',divisionId:'D',plannedStart:100,plannedEnd:200}], milestones:[],stageGateEdges:[],objectiveEdges:[],milestoneEdges:[] },
+    { D:{ stageGates:[{id:'a',objectiveId:'O',setId:'S',plannedDate:150,actualDate:120},{id:'b',objectiveId:'O',setId:'S',plannedDate:280}], stageGateSets:[{id:'S',objectiveId:'O',chained:true}], tasks:[] } }, 80);
+  approx(oacc.objectiveProjectedEnd['O'], 280, 'legit accel: a gate past the span (280) binds the objective end');
+  approx(oacc.objectiveEarliestEnd['O'], 250, 'legit accel: the early upstream (120) pulls the binding gate in to 250');
+  approx(oacc.objectiveAcceleration['O'], 30, 'legit objective acceleration = 30d recoverable (coexists with slip)');
+
+  // (7) WORK-BASIS SCHEDULE SLIP (execution Schedule card): surfaces gate/task delays that the objective's
+  //     plannedEnd buffer hides from objectiveProjectedEnd (which is left unchanged).
+  function ss(obj, gates, today){
+    return C.cascade(
+      { divisions:[{id:'D'}], initiatives:[], objectives:[{id:'O',divisionId:'D',plannedStart:obj[0],plannedEnd:obj[1]}], milestones:[],stageGateEdges:[],objectiveEdges:[],milestoneEdges:[] },
+      { D:{ stageGates:gates.map((g,i)=>({id:'g'+i,objectiveId:'O',setId:'S',plannedDate:g.p,actualDate:g.a==null?null:g.a})), stageGateSets:[{id:'S',objectiveId:'O',chained:true}], tasks:[] } }, today);
+  }
+  var s1=ss([0,200],[{p:100,a:150}],160);
+  approx(s1.objectiveProjectedEnd['O'], 200, 'buffer case: projEnd still floors at plannedEnd (UNCHANGED by option A)');
+  approx(s1.objectiveScheduleSlip['O'], 50, 'work-slip surfaces the 50d-late gate that projEnd hid (150 vs planned 100)');
+  approx(s1.objectiveWorkForecast['O'], 150, 'work forecast = the late gate actual (150), not the buffered projEnd');
+  var s2=ss([0,200],[{p:100}],130);
+  approx(s2.objectiveScheduleSlip['O'], 30, 'overdue gate within buffer: 30d behind (today 130 vs planned 100)');
+  var s3=ss([0,200],[{p:100,a:100}],120);
+  approx(s3.objectiveScheduleSlip['O'], 0, 'on-time gate: 0d behind');
+  var s4=ss([0,100],[{p:30},{p:100}],50);
+  approx(s4.objectiveScheduleSlip['O'], 20, 'chained: a 20d-overdue upstream gate propagates to a 20d work-slip');
+  var s5=C.cascade(
+    { divisions:[{id:'D'}], initiatives:[], milestones:[],stageGateEdges:[],milestoneEdges:[],
+      objectives:[{id:'A',divisionId:'D',plannedStart:0,plannedEnd:100},{id:'B',divisionId:'D',plannedStart:100,plannedEnd:200}],
+      objectiveEdges:[{fromObj:'A',toObj:'B',lagDays:0}] },
+    { D:{ stageGates:[{id:'ga',objectiveId:'A',setId:'S',plannedDate:80,actualDate:null}], stageGateSets:[{id:'S',objectiveId:'A',chained:true}], tasks:[] } }, 150);
+  approx(s5.objectiveScheduleSlip['B'], 50, 'childless objective: a late-predecessor push (50d) still surfaces');
 
   // (5) LOCKED gate as a hard external date: it holds AND firewalls downstream from the propagated delay
   var lk = C.cascade(pkg(), { D: { stageGates: [
@@ -1175,6 +1226,16 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
     stageGateSets: [{ id: 'S', objectiveId: 'O', chained: true }], tasks: [] } }, 80);
   approx(lk.gateEffective['G2'], 150, 'locked G2 holds its committed 150 despite G1 +60');
   approx(lk.gateEffective['G3'], 200, 'locked G2 firewalls G3: G3 = 150 + 50 gap = 200, not 210+');
+
+  // (6) NO PHANTOM ACCELERATION: only a genuinely EARLY upstream actual creates an opportunity. An undone gate
+  //     merely planned in the future, the first gate, or a delayed chain must all report ZERO acceleration.
+  var onplan = C.cascade(pkg(), ex({}), 60);
+  ok(onplan.gateAcceleration['G1']===0 && onplan.gateAcceleration['G2']===0 && onplan.gateAcceleration['G3']===0, 'on-plan undone gates (incl. the first) report no acceleration');
+  ok(onplan.objectiveAcceleration['O']===0, 'on-plan objective reports no acceleration');
+  var odue = C.cascade(pkg(), ex({}), 130);
+  ok(odue.gateAcceleration['G1']===0 && odue.gateAcceleration['G2']===0, 'overdue-undone first gate + downstream report no acceleration');
+  var lateChain = C.cascade(pkg(), ex({actualDate:130}), 80);
+  ok(lateChain.gateAcceleration['G2']===0 && lateChain.gateAcceleration['G3']===0 && lateChain.objectiveAcceleration['O']===0, 'a delayed chain reports no acceleration');
 })();
 
 /* ---- summary ------------------------------------------------------------- */

@@ -2,7 +2,7 @@
 // segmented target-type + direction controls, creates a keyResult-hosted definer KPI, and that the
 // stage-gate path is unchanged (back-compat).
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__M={ openKpiTgtModal:openKpiTgtModal, openTgtModal:openTgtModal, saveTgtModal:saveTgtModal, execKpis:function(){return exec.kpis;}, setState:function(st){ if('selectedObj' in st) selectedObj=st.selectedObj; if(st.exec) exec=st.exec; if(st.portfolio) portfolio=st.portfolio; if('divisionId' in st) divisionId=st.divisionId; } };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

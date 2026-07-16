@@ -1,0 +1,7 @@
+{
+  "name": "rd-suite-harnesses",
+  "private": true,
+  "type": "commonjs",
+  "description": "Pins CommonJS. Without this, npm i creates a package.json that can default to type:module, which makes every .js load as ESM: require() disappears in the *.test.js harnesses, and core.js's UMD tail — })(typeof window !== 'undefined' ? window : this) — gets this===undefined and dies setting RDCore.",
+  "dependencies": { "jsdom": "^24.0.0" }
+}

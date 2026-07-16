@@ -1,7 +1,8 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port Phase 2 — current-step summary, result auto-matcher, outcome recorder advances reachability, graph fallback (15 assertions)
 // usage: NODE_PATH=<jsdom> node etb_phase2_summary.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const errs=[]; const vc=new VirtualConsole(); vc.on("jsdomError",e=>{ if(!/fetch|network|broker|Failed to|cytoscape|Graph library/i.test(e.message)) errs.push(e.message); });
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:vc,url:"https://x.test/",pretendToBeVisual:true});
@@ -63,7 +64,8 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
      ['entering a value auto-checks the matched result',o.autoChecked],['record button enables once a result is picked',o.recordEnabled],
      ['recording advances reachability to next experiment',o.advanced],['recorded experiment marked complete',o.exp1Complete],
      ['summary re-renders to the new current step',o.summaryAdvanced],['Phase-1: #etb-view still mounted',o.etbMounted],['Phase-1: tasks panel retired (E5)',o.tasksRetired]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB phase-2 summary assertions green');   // count so sweep.py can guard it
     console.log("\\n"+(process.exitCode?"\u2717 some failed":"\u2705 ETB Phase 2 all passed"));
   },400);
 },400);

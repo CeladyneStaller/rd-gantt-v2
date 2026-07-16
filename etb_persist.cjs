@@ -1,5 +1,5 @@
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-let html=fs.readFileSync('/mnt/user-data/outputs/execution_app.html','utf8');
+let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
  "\ninit(); window.__H={ get tree(){return state.tree;}, apid:function(){return state.activeProjectId;}, softRefresh:softRefresh, addExp:function(){return addExperiment(state.tree,{});}, hasCreds:function(){try{return ETB.hasCreds();}catch(e){return 'ERR:'+e.message;}}, execTrees:function(){try{return JSON.parse(JSON.stringify((typeof exec!=='undefined'&&exec&&exec.etbTrees)||{}));}catch(e){return {err:e.message};}} };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

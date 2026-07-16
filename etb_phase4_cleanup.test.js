@@ -1,7 +1,8 @@
+var __cnt=0;   // assertion counter: without a printed total sweep.py cannot guard this harness
 // ETB port Phase 4 — cleanup: empty init (no demo sample), task-KPI reconciliation, no product/model spec bleed (4 assertions)
 // usage: NODE_PATH=<jsdom> node etb_phase4_cleanup.test.js [path/to/execution_app.html]
 const {JSDOM,VirtualConsole}=require('jsdom'); const fs=require('fs');
-const HTML_PATH=process.argv[2]||'/mnt/user-data/outputs/execution_app.html';
+const HTML_PATH=process.argv[2]||(process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html';
 const html=fs.readFileSync(HTML_PATH,'utf8');
 const dom=new JSDOM(html,{runScripts:"dangerously",virtualConsole:new VirtualConsole(),url:"https://x.test/",pretendToBeVisual:true});
 try{ dom.window.localStorage.setItem('rd_broker_token','tkn'); }catch(e){}
@@ -20,15 +21,16 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     selectedObj='O1';
     var kp=window.hubProjectKpis(); var gids=kp.map(function(k){return k.gid;});
     o.hasKrKpi = gids.indexOf('kKR')>=0;
-    o.hasTaskKpi = gids.indexOf('kT')>=0;           // task KPIs remain linkable while tasks exist
+    o.taskKpiExcluded = gids.indexOf('kT')<0;       // (E5+b) task KPIs no longer offered as experiment targets
     o.noForeignHost = kp.every(function(k){ return k.gid==='kKR'||k.gid==='kT'; });  // only in-objective exec KPIs, no product/model spec bleed
     document.body.setAttribute('data-out',JSON.stringify(o));
   }catch(e){ document.body.setAttribute('data-out','ERR: '+e.message); } })();`;
   d.body.appendChild(s);
   setTimeout(()=>{ const o=JSON.parse(d.body.getAttribute('data-out')||'{}');
     [['ETB starts empty at init (no demo sample)',o.emptyAtInit],['KR-hosted KPI is a link target',o.hasKrKpi],
-     ['task-hosted KPI still linkable (tasks kept)',o.hasTaskKpi],['only in-objective exec KPIs offered (no spec bleed)',o.noForeignHost]]
-    .forEach(([n,c])=>{console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+     ['task-hosted KPI NOT offered (E5+b)',o.taskKpiExcluded],['only in-objective exec KPIs offered (no spec bleed)',o.noForeignHost]]
+    .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
+    console.log('\nPASS - '+__cnt+' ETB phase-4 cleanup assertions green');   // count so sweep.py can guard it
     console.log(process.exitCode?"\u2717":"\u2705 Phase 4 cleanup checks passed");
   },300);
 },300);
