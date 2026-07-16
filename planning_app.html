@@ -523,7 +523,6 @@
   </section>
   <section class="tabsec" id="tab-portfolio">
     <div id="pfFilterBar" class="filterbar"></div>
-    <div id="structLevelBar"></div>
     <div id="structTables"></div>
   </section>
   <section class="tabsec" id="tab-gantt">
@@ -539,7 +538,6 @@
   </section>
   <section class="tabsec" id="tab-milestones">
     <div id="msFilterBar" class="filterbar"></div>
-    <div id="msLevelBar"></div>
     <div id="msBody"></div>
   </section>
   <section class="tabsec settings" id="tab-settings">
@@ -2182,9 +2180,6 @@ function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
   if(pfGroupMode==="dims"){                                    // custom grouping → objectives nested under the chosen dimensions
     treeCtx="portfolio";                                        // ensure treeActs renders editable row actions (not the read-only lineage mode)
-    const slb=document.getElementById("structLevelBar");
-    if(slb){ slb.innerHTML=levelBarHtml("structure");
-      slb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>structCollapseTo(b.dataset.lvl||null)); }
     const host=document.getElementById("structTables");
     if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host);
       host.querySelectorAll("[data-ptoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.ptoggle;
@@ -2192,8 +2187,7 @@ function renderPortfolio(){
       host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
       host.querySelectorAll("[data-gnew]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const d=JSON.parse(b.dataset.gnew); armedDelete=null; openEditor(null, d.e, d.p); });
     }
-  } else { const slb2=document.getElementById("structLevelBar"); if(slb2) slb2.innerHTML="";
-    renderStructTables(); }                                   // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
+  } else renderStructTables();                                // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
@@ -3189,19 +3183,15 @@ let ganttRoots = [];                               // last-built tree, so the co
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
 // (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
 // the deepest level a tab offers — collapsing to it hides that node's children (e.g. an objective's gates).
+// Only the Gantt has levels to collapse TO: it is the one tab drawing a nested tree in both modes. Structure
+// and Milestones keep their per-node toggles instead — no level bar.
 function pfLevels(tab){
-  // The milestones tab groups by pfGroupDims in BOTH modes — renderMilestones never consults pfGroupMode — so
-  // its levels are always the dims, and it must keep its bar in hierarchy mode too.
-  if(tab==="milestones") return (pfGroupDims||[]).map(d=>({ id:d, label:dimLabel(d,null)||d }));
-  const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
-  // Only the Gantt draws anything BENEATH an objective (its stage-gates), so only there does "collapse to
-  // objectives" differ from expanding everything. Structure's objectives are leaves.
-  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat(tab==="gantt"?[{id:"objective",label:"Objectives"}]:[]);
-  // hierarchy mode: only the Gantt draws an entity tree. Structure falls back to renderStructTables(), which is
-  // a flat table per entity type — there is no nesting there to collapse.
   if(tab!=="gantt") return [];
+  const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
+  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat([{id:"objective",label:"Objectives"}]);
   return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
 }
+
 function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
 // Collapse everything to `level`: every node AT that level is collapsed (its children hidden) and every
 // ancestor is left open, so the view reads down to exactly that level. null = expand all.
@@ -3227,25 +3217,6 @@ let msCollapsed = new Set();
 // A core group node's own `key` is only the dimension VALUE, which repeats across branches — the collapse key
 // must be the whole path. A key:'' / '__all__' node is transparent (no level of its own) so it never gets one.
 function pathKey(path){ return path.map(function(p){ return p[0]+":"+p[1]; }).join("/"); }
-function groupCollapseTo(nodes, level, set){
-  set.clear();
-  if(level==null) return set;
-  (function walk(list, path){ list.forEach(n=>{
-    if(n.key===""||n.key==="__all__"){ if(n.children) walk(n.children, path); return; }
-    const np=path.concat([[n.dim,n.key]]);
-    if(n.dim===level) set.add(pathKey(np));
-    else if(n.children) walk(n.children, np);
-  }); })(nodes, []);
-  return set;
-}
-function structCollapseTo(level){
-  groupCollapseTo(RD.groupObjectives(portfolio.objectives.filter(o=>!pfAnyFilter()||objMatches(o)), pfGroupDims, portfolio), level, structCollapsed);
-  renderPortfolio();
-}
-function msCollapseTo(level){
-  groupCollapseTo(RD.groupMilestones(portfolio.milestones.filter(msMatches), pfGroupDims, portfolio), level, msCollapsed);
-  renderMilestones();
-}
 function levelBarHtml(tab){
   const lv=pfLevels(tab); if(!lv.length) return "";
   return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
@@ -3326,9 +3297,6 @@ function renderMilestones(){
   msGroups(RD.groupMilestones(rows, pfGroupDims, portfolio), 0, []);
   h+=`</tbody></table>`;
   el.innerHTML=h;
-  const mlb=document.getElementById("msLevelBar");
-  if(mlb){ mlb.innerHTML=levelBarHtml("milestones");
-    mlb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>msCollapseTo(b.dataset.lvl||null)); }
   el.querySelectorAll("[data-mstoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.mstoggle;
     msCollapsed.has(k)?msCollapsed.delete(k):msCollapsed.add(k); renderMilestones(); });
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
