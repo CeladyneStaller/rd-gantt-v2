@@ -397,6 +397,9 @@
     background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
   .lvlb:hover{border-color:var(--accent);color:var(--accent)}
   .lvlb.ghosty{color:var(--muted)}
+  /* one row per stage-gate set on an overview tile; the letter matches the Gantt's SG-A / SG-B labelling */
+  .gdots + .gdots{margin-top:3px}
+  .wslbl{font-family:var(--mono);font-size:9px;color:var(--muted);min-width:9px;flex:none;margin-right:2px}
   .glegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
   .glegend span{display:flex;align-items:center;gap:7px}
   .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
@@ -3987,7 +3990,16 @@ function ovObjTile(o, em, pool, casc){
   // Objective acceleration only ever occurs together with slip (a gate binding past the objective's span), so a
   // standalone "faster possible" chip here is unreachable; the slip chip carries the schedule signal on the tile.
   const schedChip= _oe ? "" : ((oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>':'');
-  const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
+  // One LANE PER WORKSTREAM (stage-gate set), stacked: A on top of B. A lone workstream keeps the old
+  // single unlabelled strip, so the common case is unchanged.
+  const grps=planGroupGates(doc, o.id).filter(function(grp){return grp.gates.length;});
+  const lanes=grps.map(function(grp,gi){
+    const lbl=grps.length>1
+      ? '<span class="wslbl" title="'+esc(grp.set.name||'Set')+'">'+String.fromCharCode(65+gi)+'</span>'
+      : '';
+    return '<div class="gdots">'+lbl+ovGateDots(grp.gates)+'</div>';
+  }).join('');
+  const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div>'+lanes+'</div>':'';
   return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
     +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+schedChip+'</div></div><div class="cbadges">'+objEndBadge(o)+ovBadge(score)+'</div></div>'
