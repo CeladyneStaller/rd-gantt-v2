@@ -293,6 +293,9 @@
   .cu-clear-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;margin:0 0 4px;box-sizing:border-box}
   .cu-clear-in:focus{border-color:var(--bad);outline:none}
   .act.danger{background:var(--bad);color:var(--on-danger);border-color:transparent}
+  /* owners are authored in the planning app; read-only here */
+  .obj-owners{font-size:11px;color:var(--muted);font-family:var(--mono);margin-left:8px}
+  .obj-owners:empty{display:none}
   .obj-title .obj-endbtn{margin-left:auto;font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
   .obj-title .obj-endbtn:hover{color:var(--ink);border-color:var(--muted)}
   .obj-title .obj-endbtn.reopen{color:var(--accent2);border-color:var(--pill-active-bd)}
@@ -801,6 +804,7 @@ html[data-theme="dark"] #etb-view{
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
   <select class="obj" id="objSelect" style="margin-left:6px"><option>loading…</option></select>
+  <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <span class="ro-badge">● read-only</span>
   <button class="act" id="saveBtn" style="margin-left:12px">Save</button>
   <button class="ghost" id="settingsBtn" style="margin-left:6px">⚙</button>
@@ -1615,12 +1619,21 @@ html[data-theme="dark"] #etb-view{
   // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
   // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
   // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  // owner was free text and is now a list of roster emails. Read BOTH shapes: a legacy string is a
+  // one-element list, so nothing needs migrating and old data keeps grouping exactly as it did.
+  function ownersOf(rec) {
+    if (!rec) return [];
+    var v = rec.owner;
+    if (v == null || v === '') return [];
+    if (Array.isArray(v)) return v.filter(function (x) { return x != null && x !== ''; });
+    return [v];
+  }
   function _dimKey(o, dim, portfolio) {
     if (dim === 'division') return o.divisionId || '';
     if (dim === 'product') return effProduct(o, portfolio) || '';
     if (dim === 'model') return effModel(o, portfolio) || '';
     if (dim === 'quarter') return o.quarter || '';
-    if (dim === 'owner') return o.owner || '';
+    if (dim === 'owner') { var ow = ownersOf(o); return ow.length ? ow : ''; }   // array = fan out (see _groupBy)
     if (dim === 'initiative') return o.initiativeId || '';
     return '';
   }
@@ -1649,8 +1662,17 @@ html[data-theme="dark"] #etb-view{
   function _groupBy(items, dims, portfolio, keyFn) {
     if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
-      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    // A key function may return an ARRAY to FAN OUT: the item lands in every one of those buckets. Owner does
+    // this, so an objective owned by two people appears under both. Consequence, by design: groups overlap, so
+    // each group's own score is right but a total ACROSS groups counts a shared objective once per owner.
+    (items || []).forEach(function (o) {
+      var k = keyFn(o, dim, portfolio);
+      var ks = Array.isArray(k) ? (k.length ? k : ['']) : [k];
+      ks.forEach(function (key) {
+        if (!buckets[key]) { buckets[key] = []; seen.push(key); }
+        if (buckets[key].indexOf(o) < 0) buckets[key].push(o);   // a dupe key must not double-list the item
+      });
+    });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
       if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
@@ -2179,6 +2201,7 @@ html[data-theme="dark"] #etb-view{
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    ownersOf: ownersOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
@@ -2260,7 +2283,8 @@ const URLP = (function(){
   const t = p.get("token");
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"" };
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"",
+           owner: (p.get("owner")||"").trim().toLowerCase() };   // ?owner=<email> narrows to that person's objectives
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -2651,7 +2675,20 @@ function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); retu
 // roadmap-layer objectives here; nothing in this suite writes `layer` (it comes from outside), planning
 // showed both layers with no way to tell them apart, and the roadmap/execution split is no longer wanted.
 // To restore the split, re-add the clause — no data was changed.
-function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId); }
+function myObjectives(){
+  const objs=(portfolio.objectives||[]).filter(o=>o.divisionId===divisionId);
+  if(!URLP.owner) return objs;
+  return objs.filter(o=>RD.ownersOf(o).some(v=>String(v).trim().toLowerCase()===URLP.owner));
+}
+function paintOwners(){
+  const ol=document.getElementById("objOwners"); if(!ol) return;
+  const ow=selectedObj?ownerLine(selectedObj):"";
+  ol.textContent = ow ? "\u25cf "+ow : "";
+}
+function ownerLine(objId){
+  const o=(portfolio.objectives||[]).find(x=>x.id===objId), ow=RD.ownersOf(o);
+  return ow.length ? ow.join(", ") : "";
+}
 async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
@@ -2705,7 +2742,8 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); renderAll(); __etbSuppressSave=false; };
+  paintOwners();
+  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); paintOwners(); renderAll(); __etbSuppressSave=false; };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
