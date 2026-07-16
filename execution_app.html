@@ -2822,19 +2822,17 @@ function delSub(type, id){
   }
   renderAll(); setMsg("Deleted","ok");
 }
-// Removes a KPI's NEWEST own reading. Its own reading carries LINK_OWN_RANK, which outranks its links, so
-// clearing the last one is what lets a linked KPI read its link again. Returns how many own readings remain,
-// or -1 if there were none. Single source of truth: both the inline cell and postRead() call this.
-function clearNewestOwnReading(kpiId){
-  const own=(exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId);
+// A KPI's own readings carry LINK_OWN_RANK, which outranks its links, so ALL of them must go for a linked KPI
+// to read its link again. Returns how many were removed, or -1 if there were none. Single source of truth:
+// both the inline cell and postRead() call this.
+function ownReadingsOf(kpiId){ return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId); }
+function clearOwnReadings(kpiId){
+  const own=ownReadingsOf(kpiId);
   if(!own.length) return -1;
-  let newest=own[0];
-  own.forEach(u=>{ if((u.timestamp||0) >= (newest.timestamp||0)) newest=u; });
-  exec.kpiUpdates.splice(exec.kpiUpdates.indexOf(newest), 1);   // by reference: ETB-written readings have no id
-  return own.length-1;
+  own.forEach(u=>{ const i=exec.kpiUpdates.indexOf(u); if(i>=0) exec.kpiUpdates.splice(i,1); });   // by reference: ETB readings have no id
+  return own.length;
 }
-function clearedMsg(left){ return left ? `Reading cleared \u2014 ${left} own reading${left===1?"":"s"} still ahead of the link`
-                                       : "Reading cleared \u2014 reading the link again"; }
+function clearedMsg(n){ return `Cleared ${n} reading${n===1?"":"s"} \u2014 reading the link again`; }
 function postRead(host, kpiId){
   const inp = host.querySelector(`[data-read="${kpiId}"]`);
   if(!inp) return;
@@ -2842,9 +2840,9 @@ function postRead(host, kpiId){
   // wins permanently and there was no way to take it back. Submitting an empty value now removes this KPI's
   // NEWEST own reading; clear the last one and a linked KPI falls back to reading its link again.
   if(inp.value===""){
-    const left=clearNewestOwnReading(kpiId);
-    if(left<0){ setMsg("Enter a value to post.","err"); return; }
-    renderAll(); setMsg(clearedMsg(left),"ok"); return;
+    const n=clearOwnReadings(kpiId);
+    if(n<0){ setMsg("Enter a value to post.","err"); return; }
+    renderAll(); setMsg(clearedMsg(n),"ok"); return;
   }
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
   renderAll(); setMsg("Reading posted","ok");
@@ -2861,18 +2859,25 @@ function openPostCell(td){
   const hasOwn=(exec.kpiUpdates||[]).some(u=>u.kpiId===kpiId);
   td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="${hasOwn?'blank = clear':'value'}"/>`;
   const inp=td.querySelector("input"); inp.focus(); inp.select();
-  let done=false;
+  let done=false, armed=false;
   const commit=()=>{ if(done) return; done=true; const v=inp.value;
-    if(v===""){                                    // blank = CLEAR this KPI's newest own reading (not a cancel)
-      const left=clearNewestOwnReading(kpiId);
-      if(left<0){ td.innerHTML=saved; return; }    // nothing of our own to clear -> just close the cell
-      renderAll(); setMsg(clearedMsg(left),"ok"); return;
+    if(v===""){                                    // blank = CLEAR every own reading, so the link takes over
+      const own=ownReadingsOf(kpiId);
+      if(!own.length){ td.innerHTML=saved; return; }             // nothing of ours -> just close the cell
+      if(own.length>1 && !armed){                                // history at stake -> arm first (house convention)
+        armed=true; done=false;
+        inp.placeholder=`Enter again to clear ${own.length} readings`; inp.classList.add("armed"); inp.focus();
+        setMsg(`This clears all ${own.length} readings on this KPI \u2014 press Enter again to confirm.`,"err");
+        return;
+      }
+      const n=clearOwnReadings(kpiId);
+      renderAll(); setMsg(clearedMsg(n),"ok"); return;
     }
     if(isNaN(Number(v)) || Number(v)===cur){ td.innerHTML=saved; return; }   // invalid / unchanged -> no post
     exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(v), timestamp:Date.now(), note:"" });
     renderAll(); setMsg("Reading posted","ok"); };
   inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; td.innerHTML=saved; } };
-  inp.onblur=commit;
+  inp.onblur=()=>{ if(armed){ done=true; td.innerHTML=saved; return; } commit(); };   // clicking away cancels an armed clear
 }
 
 
