@@ -351,6 +351,8 @@
   .gtri:hover{color:var(--ink);opacity:1}
   .gspacer{width:14px;flex:none}
   .gdot{width:7px;height:7px;border-radius:50%;flex:none;margin-right:8px}
+  /* same vocabulary as the markers: a milestone is a point in time, so its dot is a diamond */
+  .gdot.dia{border-radius:1px;transform:rotate(45deg)}
   .gname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gname:hover{color:var(--accent);text-decoration:underline}
   .gname.dim{color:var(--muted)}
@@ -2067,6 +2069,7 @@ function quartersAll(){ const s={}; portfolio.objectives.forEach(o=>{ if(o.quart
   return Object.keys(s).sort(); }
 function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
 function bandShape(kind){ return kind==="stagegate"?" sq":kind==="milestone"?" dia":""; }   // shape by kind; colour still from band()
+function dotShape(kind){ return kind==="milestone"?" dia":""; }                             // tree/Gantt dots follow the same rule
 function bandHtml(v, kind){ const b=RD.band(v); return `<span class="band ${b}${bandShape(kind)}">${b.replace("-"," ")}</span>`; }
 
 /* ---------------- COMPANY tab ---------------- */
@@ -3181,7 +3184,7 @@ function renderStructTables(){
         html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}${objEndBadge(o)}${objDivBadge(o)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
       });
       byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
-        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
+        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent"><span class="mdia" style="color:${bandColor(nodeBand("milestone",m.id))}" title="${esc(nodeBand("milestone",m.id).replace("-"," "))}">◆</span> ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
       });
     });
     html+=`</tbody></table>`;
@@ -3666,7 +3669,7 @@ function renderGantt(){
       return;
     }
     const name=esc(nameOf(n.entity,n.rec));
-    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
+    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot${dotShape(n.entity)}" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
