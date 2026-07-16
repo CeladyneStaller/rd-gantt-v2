@@ -34,13 +34,46 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional
+from collections import defaultdict
+from typing import Any, Dict, Optional, Tuple
 
 from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel
 
 state_router = APIRouter()
-_LOCK = threading.RLock()
+
+# ---- concurrency + cache ---------------------------------------------------
+# Locks are PER DOC, mirroring the per-bin lock Store already uses in broker.py.
+# A single global lock (what this file used to do) meant a slow write to one doc
+# blocked reads of every other doc, and every reader serialized behind a network
+# round-trip. That was survivable with a handful of editors; it is not once the
+# R&D Hub adds ~10 readers polling every doc.
+#
+# _CACHE holds the last-known wrapper per STATE doc and is AUTHORITATIVE: this
+# broker is the only writer to those bins, so a cached wrapper cannot go stale
+# behind our backs — our own writes refresh it. That turns GET /state/{id} and
+# GET /state/{id}/version into memory reads with no JSONBin traffic at all,
+# which is what makes Hub polling free.
+#
+# Scope matters: this does NOT cover the users bin behind /roster. The Hub writes
+# that bin (PINs, leadOf, configuredTiles), so the broker is NOT its only writer
+# and caching it would serve stale rosters. /roster reads through every time.
+#
+# Only positive lookups are cached. A miss may be a genuinely absent doc or a
+# transient JSONBin failure, and the two are indistinguishable here — caching the
+# negative would risk pinning a blip as "this document does not exist" forever.
+#
+# The cache lives in process memory, so a redeploy clears it. That is also the
+# escape hatch if a bin is ever changed out-of-band during a migration: restart.
+_CACHE: Dict[str, Dict[str, Any]] = {}
+_LOCKS: Dict[str, threading.RLock] = defaultdict(threading.RLock)
+_LOCK_GUARD = threading.Lock()
+
+
+def _lock_for(doc_id: str) -> threading.RLock:
+    # Guard the defaultdict so two threads racing on a new doc id share one lock.
+    with _LOCK_GUARD:
+        return _LOCKS[doc_id]
 
 # ---- JSONBin storage -------------------------------------------------------
 # The unified app's documents live in NEW, isolated JSONBin bins, one per doc:
@@ -99,15 +132,30 @@ def _jsonbin_put(bin_id: str, payload: Dict[str, Any]) -> None:
 
 
 def _load_raw(doc_id: str) -> Optional[Dict[str, Any]]:
-    """Return the stored wrapper for a doc, or None if the bin is unset/empty/new."""
+    """Return the stored wrapper for a doc, or None if the bin is unset/empty/new.
+
+    Served from _CACHE when present — see the cache note above for why that is
+    safe. The fast path takes no lock: wrappers are swapped whole on write, so a
+    reader sees either the old wrapper or the new one, never a torn mix.
+    """
+    cached = _CACHE.get(doc_id)
+    if cached is not None:
+        return cached
     bin_id = BIN_FOR.get(doc_id)
     if not bin_id:
         return None
-    resp = _jsonbin_get(bin_id)
-    if not resp:
-        return None
-    record = resp.get("record")  # JSONBin returns the stored payload under "record"
-    return record if isinstance(record, dict) and "version" in record else None
+    with _lock_for(doc_id):
+        cached = _CACHE.get(doc_id)      # double-checked: another thread may have filled it
+        if cached is not None:
+            return cached
+        resp = _jsonbin_get(bin_id)
+        if not resp:
+            return None                  # miss/failure: uncached, so it retries next call
+        record = resp.get("record")      # JSONBin returns the stored payload under "record"
+        if not (isinstance(record, dict) and "version" in record):
+            return None
+        _CACHE[doc_id] = record
+        return record
 
 
 def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
@@ -121,6 +169,10 @@ def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
                     f"(and add the division to UNIFIED_DIVISIONS)"),
         )
     _jsonbin_put(bin_id, wrapped)
+    # Our write is now the truth; refresh the cache rather than invalidating it,
+    # so the next reader is served from memory instead of re-fetching what we
+    # just sent.
+    _CACHE[doc_id] = wrapped
 
 
 # ---- helpers ---------------------------------------------------------------
@@ -187,11 +239,72 @@ def get_roster():
     return {"users": [_project_user(u) for u in users if u.get("email")]}
 
 
+# ---------------------------------------------------------------------------
+# GET /rdcore.js        -> the canonical scoring/banding engine
+# GET /rdcore/version   -> its content hash
+#
+# RDCore decides what "on-track" means. It must exist once, or the tools quietly
+# disagree. The single source of truth is rdcore.js in this repo; build_rdcore.py
+# inlines that same file into the three app shells (they keep an offline scratch
+# mode that a <script src> would break) and the broker serves it here for the
+# R&D Hub, which cannot render without broker data anyway and so pays nothing for
+# the dependency. The Hub therefore picks up engine changes — including band
+# threshold changes — on reload, with no Hub redeploy.
+#
+# The ETag is the same sha256[:16] that build_rdcore.py stamps into each app's
+# ==RDCORE_START== marker, so "is that app's inlined copy current?" is a string
+# compare against GET /rdcore/version.
+#
+# Cache-Control: no-cache means the browser revalidates every load and gets a
+# ~200-byte 304 when nothing changed. Freshness is the whole point; 65KB only
+# crosses the wire when the engine actually moved.
+# ---------------------------------------------------------------------------
+_RDCORE_PATH = os.environ.get("RDCORE_PATH") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "rdcore.js")
+_RDCORE: Optional[Tuple[str, str]] = None
+
+
+def _rdcore() -> Tuple[str, str]:
+    """(source, etag). Read once and held — the file only changes on deploy."""
+    global _RDCORE
+    if _RDCORE is None:
+        with open(_RDCORE_PATH, encoding="utf-8") as fh:
+            text = fh.read()
+        _RDCORE = (text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:16])
+    return _RDCORE
+
+
+@state_router.get("/rdcore.js")
+def get_rdcore(if_none_match: Optional[str] = Header(default=None, alias="If-None-Match")):
+    try:
+        text, etag = _rdcore()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail=f"rdcore.js not found at {_RDCORE_PATH} — commit it beside broker.py, "
+                   f"or point RDCORE_PATH at it",
+        )
+    headers = {"ETag": etag, "Cache-Control": "no-cache"}
+    if if_none_match and if_none_match.strip('"') == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=text, media_type="application/javascript", headers=headers)
+
+
+@state_router.get("/rdcore/version")
+def get_rdcore_version():
+    """Engine hash — compare against an app's ==RDCORE_START== marker to spot drift."""
+    try:
+        _, etag = _rdcore()
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail=f"rdcore.js not found at {_RDCORE_PATH}")
+    return {"etag": etag}
+
+
 @state_router.get("/state/{doc_id}/version")
 def get_version(doc_id: str):
-    """Cheap polling endpoint. 404 if the document does not exist yet."""
-    with _LOCK:
-        wrapped = _load_raw(doc_id)
+    """Cheap polling endpoint — and now cheap on the JSONBin side too, not just in
+    response size. This is the call the Hub makes most, so it must not fetch."""
+    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network
     if wrapped is None:
         # A not-yet-created doc reports version 0 so a fresh client can seed it.
         return {"version": 0, "etag": _etag_for(0, doc_id), "updatedAt": None}
@@ -200,8 +313,7 @@ def get_version(doc_id: str):
 
 @state_router.get("/state/{doc_id}")
 def get_state(doc_id: str, response: Response):
-    with _LOCK:
-        wrapped = _load_raw(doc_id)
+    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network
     if wrapped is None:
         raise HTTPException(status_code=404, detail="document not found")
     response.headers["ETag"] = _etag_for(wrapped["version"], doc_id)
@@ -219,8 +331,13 @@ def put_state(
     Optimistic write. The client must send If-Match with the etag it last read.
     - First write of a brand-new doc: send If-Match: "0" (or the etag of version 0).
     - 412 on mismatch -> client re-pulls, re-applies, retries once.
+
+    The lock is held across the read-modify-write, including the JSONBin PUT —
+    that IS the serialization guarantee, and it is why the Procfile pins
+    --workers 1. It is now a per-doc lock, so writers to different documents no
+    longer queue behind each other, and no reader waits on any of it.
     """
-    with _LOCK:
+    with _lock_for(doc_id):
         wrapped = _load_raw(doc_id)
         current_version = wrapped["version"] if wrapped else 0
         current_etag = _etag_for(current_version, doc_id)
@@ -247,31 +364,122 @@ def put_state(
 
 # ---- self-check (run: python broker_patch.py) ------------------------------
 if __name__ == "__main__":
-    # Exercise the route + concurrency logic against an in-memory backend so this
-    # runs offline (no JSONBin, no env). The routes resolve _load_raw / _save_raw
-    # from module globals at call time, so overriding them here is sufficient.
-    _mem: Dict[str, Dict[str, Any]] = {}
-    globals()["_load_raw"] = lambda doc_id: _mem.get(doc_id)
-    globals()["_save_raw"] = lambda doc_id, wrapped: _mem.__setitem__(doc_id, wrapped)
+    # Runs offline (no JSONBin, no env). The mock sits at the JSONBin layer, not
+    # at _load_raw/_save_raw as it used to — otherwise the cache under test would
+    # be bypassed and the fetch counts below would prove nothing.
+    _bins: Dict[str, Dict[str, Any]] = {}          # bin_id -> stored payload
+    _fetches = {"n": 0}
+    _puts = {"n": 0}
+
+    def _fake_get(bin_id):
+        _fetches["n"] += 1
+        return {"record": _bins[bin_id]} if bin_id in _bins else None
+
+    def _fake_put(bin_id, payload):
+        _puts["n"] += 1
+        _bins[bin_id] = payload
+
+    globals()["_jsonbin_get"] = _fake_get
+    globals()["_jsonbin_put"] = _fake_put
+    BIN_FOR["portfolio"] = "bin_pf"
+    BIN_FOR["EXEC-DIV-FC"] = "bin_fc"
 
     class _Resp:
         def __init__(self): self.headers = {}
 
-    # seed (first write of a new doc uses If-Match "0")
+    ok = lambda m: print("  ok   " + m)
+
+    # --- write path + optimistic concurrency (unchanged behaviour) ------------
     r = put_state("portfolio", StatePut(doc={"divisions": []}), _Resp(), if_match="0")
     assert r["version"] == 1, r
     v = get_version("portfolio")
     assert v["version"] == 1, v
-    # stale write rejected
+    ok("seed write + version read")
+
     rejected = False
     try:
         put_state("portfolio", StatePut(doc={"divisions": [1]}), _Resp(), if_match="0")
     except HTTPException as e:
         rejected = e.status_code == 412
     assert rejected, "stale write should 412"
-    # correct write accepted
+    ok("stale write rejected (412)")
+
     r2 = put_state("portfolio", StatePut(doc={"divisions": [1]}), _Resp(), if_match=v["etag"])
     assert r2["version"] == 2, r2
-    # an unknown / unconfigured doc reads as version 0 (load returns None)
-    assert get_version("EXEC-DIV-XX")["version"] == 0
-    print("broker_patch self-check OK (route + concurrency logic; storage mocked)")
+    ok("correct write accepted")
+
+    missing = 428
+    try:
+        put_state("portfolio", StatePut(doc={}), _Resp(), if_match=None)
+    except HTTPException as e:
+        missing = e.status_code
+    assert missing == 428, "missing If-Match should 428"
+    ok("missing If-Match rejected (428)")
+
+    # --- the cache: this is what makes Hub polling affordable ----------------
+    # Our own writes populate the cache, so reads after a write fetch nothing.
+    before = _fetches["n"]
+    for _ in range(50):
+        get_version("portfolio")
+        get_state("portfolio", _Resp())
+    assert _fetches["n"] == before, f"cached reads must not fetch (fetched {_fetches['n']-before}x)"
+    ok("100 reads after a write -> 0 JSONBin fetches")
+
+    # A cold doc (written out-of-band, cache empty) fetches exactly once, then caches.
+    _bins["bin_fc"] = {"version": 7, "updatedAt": 1.0, "doc": {"keyResults": []}}
+    before = _fetches["n"]
+    assert get_version("EXEC-DIV-FC")["version"] == 7
+    assert _fetches["n"] == before + 1, "cold read should fetch once"
+    for _ in range(20):
+        get_version("EXEC-DIV-FC")
+    assert _fetches["n"] == before + 1, "warm reads must not re-fetch"
+    ok("cold read fetches once, then serves from cache")
+
+    # Reads reflect our own writes immediately (cache refreshed, not invalidated).
+    put_state("EXEC-DIV-FC", StatePut(doc={"keyResults": ["kr1"]}), _Resp(), if_match="7")
+    assert get_state("EXEC-DIV-FC", _Resp())["doc"] == {"keyResults": ["kr1"]}
+    assert get_version("EXEC-DIV-FC")["version"] == 8
+    ok("write refreshes cache (read-after-write is current)")
+
+    # A miss is NOT cached: a transient failure must not pin "does not exist".
+    before = _fetches["n"]
+    assert get_version("SPEC-DIV-FC")["version"] == 0   # unconfigured -> no bin id, no fetch
+    assert _fetches["n"] == before, "unconfigured doc should not fetch at all"
+    BIN_FOR["SPEC-DIV-FC"] = "bin_spec"                 # configured, but bin empty
+    assert get_version("SPEC-DIV-FC")["version"] == 0
+    assert get_version("SPEC-DIV-FC")["version"] == 0
+    assert _fetches["n"] == before + 2, "misses must retry, not cache the negative"
+    ok("misses are not cached (transient failure can't pin absence)")
+
+    # --- per-doc locks --------------------------------------------------------
+    assert _lock_for("portfolio") is _lock_for("portfolio"), "same doc -> same lock"
+    assert _lock_for("portfolio") is not _lock_for("EXEC-DIV-FC"), "different docs -> different locks"
+    ok("locks are per-doc, and stable per doc")
+
+    # --- /rdcore.js -----------------------------------------------------------
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as fh:
+        fh.write("/* engine */ var x = 1;\n")
+        _tmp = fh.name
+    globals()["_RDCORE_PATH"] = _tmp
+    globals()["_RDCORE"] = None
+    body = get_rdcore(if_none_match=None)
+    etag = body.headers["etag"]
+    assert body.status_code == 200 and b"var x = 1" in body.body
+    assert get_rdcore_version()["etag"] == etag, "version endpoint must match the served ETag"
+    assert get_rdcore(if_none_match=etag).status_code == 304, "matching If-None-Match -> 304"
+    assert get_rdcore(if_none_match='"stale"').status_code == 200, "stale If-None-Match -> full body"
+    os.unlink(_tmp)
+    ok("rdcore.js served; ETag matches /rdcore/version; 304 on revalidate")
+
+    # A missing engine file fails loudly rather than serving nothing.
+    globals()["_RDCORE_PATH"] = "/nonexistent/rdcore.js"
+    globals()["_RDCORE"] = None
+    try:
+        get_rdcore(if_none_match=None)
+        raise AssertionError("missing rdcore.js should raise")
+    except HTTPException as e:
+        assert e.status_code == 500 and "rdcore.js not found" in str(e.detail)
+    ok("missing rdcore.js -> clear 500, not a silent empty body")
+
+    print("\nbroker_patch self-check OK — concurrency, cache, per-doc locks, rdcore serving")
