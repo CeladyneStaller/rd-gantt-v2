@@ -10,9 +10,9 @@ const portfolio = {
   initiatives:[{id:'INI-1', name:'Stack Cost Down', divisionId:'DIV-FC', productId:'PRD-RES'}],
   objectives: [
     {id:'OBJ-1', statement:'Cut MEA cost 30%', divisionId:'DIV-FC', initiativeId:'INI-1',
-     quarter:'2026-Q3', owner:'corey@celadynetech.com', modelId:'MDL-G2'},
+     quarter:'2026-Q3', owner:['corey@celadynetech.com','erin@celadynetech.com'], modelId:'MDL-G2'},   // SHARED: two owners
     {id:'OBJ-2', statement:'Raise stack durability', divisionId:'DIV-FC', initiativeId:'INI-1',
-     quarter:'2026-Q3', owner:'someone.else@celadynetech.com'},   // agnostic -> inherits initiative
+     quarter:'2026-Q3', owner:'someone.else@celadynetech.com'},   // LEGACY free-text owner, still supported
   ],
   milestones:[], milestoneEdges:[], objectiveEdges:[], kpis:[], kpiDefs:[], composition:[]
 };
@@ -63,8 +63,14 @@ t(`rollupCompany = 75 (got ${RD.rollupCompany(portfolio, pfMap)})`, RD.rollupCom
 t(`rollupDivision(DIV-EL) = null -> no-band`, RD.rollupDivision('DIV-EL', portfolio, pfMap) === null
    && RD.band(RD.rollupDivision('DIV-EL', portfolio, pfMap)) === 'no-band');
 
-console.log('\n6. Projects routing (owner === session email):');
-const mine = portfolio.objectives.filter(o => o.owner === 'corey@celadynetech.com');
+console.log('\n6. Projects routing (owner contains session email):');
+// NEVER compare o.owner directly: it is a LIST now, and legacy rows still hold a bare string.
+// RD.ownersOf() reads both shapes — that is what it is for.
+const mine = portfolio.objectives.filter(o => RD.ownersOf(o).includes('corey@celadynetech.com'));
+const hers = portfolio.objectives.filter(o => RD.ownersOf(o).includes('erin@celadynetech.com'));
+const legacy = portfolio.objectives.filter(o => RD.ownersOf(o).includes('someone.else@celadynetech.com'));
+console.log('   shared objective is visible to BOTH owners:', mine.length===1 && hers.length===1);
+console.log('   a legacy string owner still routes:', legacy.length===1);
 t('owner match yields OBJ-1 only', mine.length === 1 && mine[0].id === 'OBJ-1');
 
 console.log(`\n${pass}/${pass+fail} passed`);

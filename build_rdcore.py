@@ -1,45 +1,41 @@
 #!/usr/bin/env python3
 """
-build_rdcore.py — push the canonical RDCore into the app shells.
+rdcore_check.py — verify every copy of the engine agrees.
 
-Why this exists
----------------
-RDCore owns scoring, banding, and classification for every tool. It must exist
-in exactly ONE place or the tools silently disagree about what "on-track" means.
-That place is rdcore.js. This script is the only thing allowed to write the
-copy that lives inside each app's HTML.
+Why this is a CHECK and not a build
+-----------------------------------
+RDCore must exist in exactly ONE place or the tools silently disagree about what
+"on-track" means. That place is rdcore.js, and build.py is the ONLY thing that
+writes it into an app:
 
-Why the apps inline it at all
------------------------------
-The apps have a working offline mode ("no broker token yet ... showing local
-scratch"). Loading RDCore from the broker via <script src> would kill that mode
-whenever the broker is unreachable, so the apps keep a self-contained copy and
-this build keeps that copy honest.
+    rdcore.js + *_app.template.html  --build.py-->  *_app.html
 
-The R&D Hub is the opposite case: it cannot render anything without broker data,
-so a broker dependency for the engine costs it nothing. The Hub therefore loads
-<broker>/rdcore.js at runtime and picks up changes — including band threshold
-changes — with no redeploy. That is the whole point of the split.
+An earlier version of this script ALSO wrote *_app.html, in place, from its own
+copy of the engine. That made two writers with two sources for one file: whichever
+ran last won, and because this one edits the BUILT artifact while build.py
+regenerates it from the TEMPLATE, its edits were erased by the next build anyway.
+So it does not write any more. It answers one question build.py cannot:
 
-The workflow
-------------
-  1. edit rdcore.js                     (the single source of truth)
-  2. python build_rdcore.py             (inlines it into the apps)
-  3. commit rdcore.js + the apps; deploy the broker
-     -> apps carry the new copy; the Hub picks it up from the broker on reload
+    do the DEPLOYED copies still match the repo's rdcore.js?
 
-  python build_rdcore.py --check        (verify only; exit 1 on drift — CI/pre-commit)
+Three copies exist and can drift apart:
+  1. rdcore.js                 the canonical engine (source of truth)
+  2. *_app.html                inlined, so the apps keep working offline
+  3. <broker>/rdcore.js        fetched at runtime by the R&D Hub, which cannot
+                               render without broker data anyway
 
-Line endings
-------------
-planning_app.html and execution_app.html are CRLF; product_designer.html is LF.
-Each file's dominant convention is detected and preserved, so this never
-produces a whole-file diff.
+(2) drifts if someone hand-edits a built app or ships one without rebuilding.
+(3) drifts whenever rdcore.js is committed but the broker is not redeployed —
+and that is the dangerous one, because the Hub and the apps then band the same
+score differently with nothing on screen to say so.
 
-The inlined block is delimited by hash-carrying markers, mirroring the
-==CORE_START==/==CORE_END== convention already used in q-tracker-division.html.
-The first run adopts an existing unmarked block by locating `root.RDCore = API;`;
-later runs match on the markers.
+Usage
+-----
+  python rdcore_check.py                          # repo engine vs the inlined app copies
+  python rdcore_check.py --broker https://host    # also compare the deployed broker copy
+  exit 1 on any drift  (CI / pre-commit)
+
+To FIX drift: edit rdcore.js, run `python build.py`, commit, redeploy the broker.
 """
 
 import argparse
@@ -123,29 +119,38 @@ def make_block(core_text: str, digest: str) -> str:
 
 
 # ---------------------------------------------------------------------- main
-def process(app_path: str, core_text: str, digest: str, check_only: bool):
-    """Returns (status, detail). status in {'ok','updated','drift','missing','error'}."""
+def process(app_path: str, core_text: str):
+    """Compare an app's inlined engine against the canonical one. Never writes —
+    build.py owns that. Returns (status, detail); status in {'ok','drift','missing','error'}."""
     if not os.path.exists(app_path):
         return "missing", "file not found"
     text, eol = read_text(app_path)
-    span = find_block(text)
-    if not span:
+    if not find_block(text):
         return "error", "no RDCore block found (no markers, no `root.RDCore = API;`)"
-
     current = extract_core(text)
     if current == core_text.strip():
-        return "ok", f"already current ({eol_name(eol)})"
-    if check_only:
-        return "drift", f"inlined copy differs from {DEFAULT_CORE}"
+        return "ok", f"matches {DEFAULT_CORE} ({eol_name(eol)})"
+    return "drift", f"inlined copy differs from {DEFAULT_CORE} — run `python build.py`"
 
-    new_text = text[:span[0]] + make_block(core_text, digest) + text[span[1]:]
-    write_text(app_path, new_text, eol)
 
-    # Verify the round-trip: re-read and re-extract must equal the canonical.
-    back, _ = read_text(app_path)
-    if extract_core(back) != core_text.strip():
-        return "error", "post-write verification FAILED — file may be corrupt"
-    return "updated", f"inlined {len(core_text)} chars ({eol_name(eol)} preserved)"
+def check_broker(base: str, digest: str):
+    """Compare the DEPLOYED engine the Hub loads against the repo's. The broker's
+    etag is sha256(text.strip())[:16] — the same digest_of() computes, so the two
+    are directly comparable."""
+    import json as _json
+    import urllib.request
+    url = base.rstrip("/") + "/rdcore/version"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            etag = (_json.loads(r.read()) or {}).get("etag")
+    except Exception as e:
+        return "error", f"{url}: {e}"
+    if not etag:
+        return "error", f"{url}: no etag in response"
+    if etag == digest:
+        return "ok", f"broker serves the same engine (sha256:{etag})"
+    return "drift", (f"broker serves sha256:{etag}, repo has sha256:{digest} — "
+                     f"the Hub and the apps are running DIFFERENT engines; redeploy the broker")
 
 
 def eol_name(eol: str) -> str:
@@ -153,10 +158,12 @@ def eol_name(eol: str) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Inline the canonical RDCore into the app shells.")
+    ap = argparse.ArgumentParser(description="Verify every copy of RDCore matches rdcore.js. Never writes.")
     ap.add_argument("--core", default=DEFAULT_CORE, help="canonical engine (default: rdcore.js)")
-    ap.add_argument("--apps", nargs="*", default=DEFAULT_APPS, help="app HTML files to update")
-    ap.add_argument("--check", action="store_true", help="verify only; exit 1 on drift")
+    ap.add_argument("--apps", nargs="*", default=DEFAULT_APPS, help="app HTML files to check")
+    ap.add_argument("--broker", default=os.environ.get("RD_BROKER", ""),
+                    help="broker base URL; also compares the copy the Hub loads")
+    ap.add_argument("--check", action="store_true", help="accepted and ignored; this tool only ever checks")
     args = ap.parse_args()
 
     if not os.path.exists(args.core):
@@ -165,23 +172,37 @@ def main() -> int:
     core_text, _ = read_text(args.core)
     digest = digest_of(core_text)
 
-    print(f"{'checking' if args.check else 'building'} against {args.core}  sha256:{digest}\n")
+    print(f"checking against {args.core}  sha256:{digest}\n")
     worst = 0
+    checked = 0
     for app in args.apps:
-        status, detail = process(app, core_text, digest, args.check)
-        symbol = {"ok": "  ok  ", "updated": " wrote", "drift": " DRIFT",
-                  "missing": " skip ", "error": " ERROR"}[status]
+        status, detail = process(app, core_text)
+        symbol = {"ok": "  ok  ", "drift": " DRIFT", "missing": " skip ", "error": " ERROR"}[status]
         print(f"[{symbol}] {os.path.basename(app):26} {detail}")
         if status in ("drift", "error"):
             worst = 1
-        elif status == "missing" and worst == 0:
-            worst = 0  # a missing app is a warning, not a failure
+        if status != "missing":
+            checked += 1
+
+    if args.broker:
+        status, detail = check_broker(args.broker, digest)
+        symbol = {"ok": "  ok  ", "drift": " DRIFT", "error": " ERROR"}[status]
+        print(f"[{symbol}] {'broker (Hub loads this)':26} {detail}")
+        if status in ("drift", "error"):
+            worst = 1
+    else:
+        print("\n  note: broker not checked (pass --broker <url> or set RD_BROKER).")
+        print("        The Hub loads its engine from the broker, so a repo/broker mismatch")
+        print("        is invisible until the two band the same score differently.")
 
     print()
-    if args.check:
-        print("drift detected — run without --check to fix" if worst else "all inlined copies match rdcore.js")
-    else:
-        print("done — commit rdcore.js and the apps, then deploy the broker so the Hub picks it up")
+    if not checked and not args.broker:
+        # "all copies match" when zero copies were examined is the exact false green sweep.py exists to prevent
+        print("ERROR: no app files found to check — nothing was verified.", file=sys.stderr)
+        print(f"       looked for: {', '.join(DEFAULT_APPS)} in {os.getcwd()}", file=sys.stderr)
+        return 2
+    print("drift detected — edit rdcore.js, run `python build.py`, then redeploy the broker"
+          if worst else f"all {checked} inlined copies match rdcore.js")
     return worst
 
 
