@@ -2824,7 +2824,21 @@ function delSub(type, id){
 }
 function postRead(host, kpiId){
   const inp = host.querySelector(`[data-read="${kpiId}"]`);
-  if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
+  if(!inp) return;
+  // BLANK = CLEAR. A KPI's own reading outranks its links (LINK_OWN_RANK), so a manual value on a linked KPI
+  // wins permanently and there was no way to take it back. Submitting an empty value now removes this KPI's
+  // NEWEST own reading; clear the last one and a linked KPI falls back to reading its link again.
+  if(inp.value===""){
+    const own=(exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId);
+    if(!own.length){ setMsg("Enter a value to post.","err"); return; }
+    let newest=own[0];
+    own.forEach(u=>{ if((u.timestamp||0) >= (newest.timestamp||0)) newest=u; });
+    exec.kpiUpdates.splice(exec.kpiUpdates.indexOf(newest), 1);   // by reference: ETB-written readings have no id
+    const left=own.length-1;
+    renderAll();
+    setMsg(left ? `Reading cleared — ${left} own reading${left===1?"":"s"} still ahead of the link` : "Reading cleared — reading the link again","ok");
+    return;
+  }
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
   renderAll(); setMsg("Reading posted","ok");
 }
@@ -2835,7 +2849,10 @@ function openPostCell(td){
   // statistical targets take a SAMPLE, not a value -> open the sample popover instead of an inline value input
   if(k && RD.definerOf(k, AK).targetType==="statistical"){ openSamplePop(td, kpiId); return; }
   const cur=k?RD.effValue(k, AK, emForCore()):null;
-  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="value"/>`;
+  // The field is pre-filled, so the placeholder only surfaces once the value has been deleted — which is
+  // exactly when "blank = clear" is worth saying. Only advertise it when there is an own reading to clear.
+  const hasOwn=(exec.kpiUpdates||[]).some(u=>u.kpiId===kpiId);
+  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="${hasOwn?'blank = clear':'value'}"/>`;
   const inp=td.querySelector("input"); inp.focus(); inp.select();
   let done=false;
   const commit=()=>{ if(done) return; done=true; const v=inp.value;
