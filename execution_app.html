@@ -977,9 +977,13 @@ html[data-theme="dark"] #etb-view{
    - Scoring rolls up: KPI score -> Key Result score (mean of its KPIs) ->
      Objective score (mean of its Key Results). Stage-gate KPIs are gating only
      and never feed the objective OKR score (spec v1.3 §A, decision #1).
-   - Unscored: a KPI with a null target or no read yet is excluded from its KR's
-     mean (g1). A KR with no scorable KPIs is unscored; an objective with no
-     scorable KRs has no band, not zero. No synthesized KRs (decision #3).
+   - Unscored (g1'): a KPI with NO target is excluded from its KR's mean entirely
+     — it is not a target. A KPI that HAS a target but no read counts as 0, so a
+     group cannot score on the strength of the one member somebody measured. If
+     NOTHING in the group has been read the group is unscored (null), because
+     "not measured" is absence of information, not failure. A KR with no scorable
+     KPIs is unscored; an objective with no scorable KRs has no band, not zero.
+     No synthesized KRs (decision #3).
    - For direction 'range', score is 100 inside [lo,hi] and falls off linearly to
      0 at one full band-width outside the band.
    ============================================================================ */
@@ -1377,13 +1381,38 @@ html[data-theme="dark"] #etb-view{
     return out;
   }
 
+  // hasTarget -> is this KPI actually a target at all? Binary KPIs carry an implicit target; otherwise a
+  // target must be defined, either its own or inherited through a link. A KPI with NO target is not a target
+  // and must stay out of BOTH the numerator and the denominator — otherwise adding an unconfigured KPI would
+  // drag the score down.
+  function hasTarget(kpi, kpis) {
+    if (definerOf(kpi, kpis).targetType === 'binary') return true;
+    return effTarget(kpi, kpis) != null;
+  }
+
+  // meanScorable -> mean over every TARGET, counting an unread target as 0. (g1', supersedes g1.)
+  //
+  // This used to push only non-null scores, i.e. it silently dropped targets nobody had read. A stage-gate
+  // with three targets and one reading of 100 scored mean([100]) = 100, so gateAtTarget() called it complete
+  // while two of its three targets had never been measured. Same for a KR. The old comment on gateAtTarget
+  // already claimed "ALL at/above target" — the code only ever checked the ones that had been read.
+  //
+  // But "nobody has read ANY of these yet" is not failure, it is absence of information: scoring it 0 would
+  // paint every fresh KR red on day one and make "not measured" indistinguishable from "measured and missing".
+  // That distinction is what g1 protected and it is kept. So:
+  //     no targets at all        -> null (unscored, no band)
+  //     targets, none read       -> null (unscored, no band)  <- g1's intent, preserved
+  //     targets, >=1 read        -> mean over ALL targets, unread ones counting 0
   function meanScorable(kpis, execDocs) {
     var all = allKpis(execDocs);
-    var scores = [];
+    var scores = [], anyRead = false;
     for (var i = 0; i < kpis.length; i++) {
+      if (!hasTarget(kpis[i], all)) continue;
       var s = kpiScoreResolved(kpis[i], all, execDocs);
-      if (s != null) scores.push(s);
+      if (s != null) anyRead = true;
+      scores.push(s == null ? 0 : s);
     }
+    if (!anyRead) return null;
     return mean(scores);
   }
 
@@ -1459,7 +1488,8 @@ html[data-theme="dark"] #etb-view{
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
-  // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
+  // gateAtTarget -> true iff EVERY target on the gate has been read and is at/above target. Unread targets
+  // score 0 (see meanScorable), so a gate cannot pass on the strength of the one target somebody measured.
   // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
   function gateAtTarget(sgId, execDocs) { return stageGateScore(sgId, execDocs) === 100; }
 
@@ -2209,6 +2239,7 @@ html[data-theme="dark"] #etb-view{
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    hasTarget: hasTarget,
     ownersOf: ownersOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
