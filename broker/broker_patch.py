@@ -259,8 +259,41 @@ def get_roster():
 # ~200-byte 304 when nothing changed. Freshness is the whole point; 65KB only
 # crosses the wire when the engine actually moved.
 # ---------------------------------------------------------------------------
-_RDCORE_PATH = os.environ.get("RDCORE_PATH") or os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "rdcore.js")
+# The engine is FOUND, not configured. A single configured path is invisible state that is silently wrong
+# when it is wrong: a typo or a relative value 500s /rdcore.js and the Hub then renders nothing, with the
+# reason living only in a log. So try the places it plausibly is, in order, and use the first that exists.
+#
+# RDCORE_PATH remains an override for anything unusual, but it is now a hint rather than a requirement:
+#   1. RDCORE_PATH, if absolute
+#   2. RDCORE_PATH relative to THIS FILE   (what someone means by "../rdcore.js"; cwd is not dependable)
+#   3. RDCORE_PATH relative to the cwd     (what a shell would have done)
+#   4. beside broker.py
+#   5. one directory up             (repo root, with the broker in a subfolder — Corey's layout)
+# Surrounding quotes are stripped: a dashboard Variables field takes its value literally, so RDCORE_PATH
+# pasted as "/app/rdcore.js" would otherwise hunt for a file whose name includes the quote characters.
+_RDCORE_ENV = (os.environ.get("RDCORE_PATH") or "").strip().strip('"').strip("'")
+_RDCORE_HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _rdcore_candidates() -> list:
+    out = []
+    if _RDCORE_ENV:
+        if os.path.isabs(_RDCORE_ENV):
+            out.append(_RDCORE_ENV)
+        else:
+            out.append(os.path.normpath(os.path.join(_RDCORE_HERE, _RDCORE_ENV)))
+            out.append(os.path.abspath(_RDCORE_ENV))
+    out.append(os.path.join(_RDCORE_HERE, "rdcore.js"))
+    out.append(os.path.join(os.path.dirname(_RDCORE_HERE), "rdcore.js"))
+    seen = []
+    for p in out:                      # dedupe, preserving order
+        if p not in seen:
+            seen.append(p)
+    return seen
+
+
+# kept for compatibility: the first place we would look
+_RDCORE_PATH = _rdcore_candidates()[0]
 _RDCORE: Optional[Tuple[str, str]] = None
 
 
@@ -268,9 +301,21 @@ def _rdcore() -> Tuple[str, str]:
     """(source, etag). Read once and held — the file only changes on deploy."""
     global _RDCORE
     if _RDCORE is None:
-        with open(_RDCORE_PATH, encoding="utf-8") as fh:
-            text = fh.read()
-        _RDCORE = (text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:16])
+        tried = []
+        for p in _rdcore_candidates():
+            tried.append(p)
+            try:
+                with open(p, encoding="utf-8") as fh:
+                    text = fh.read()
+            except OSError:
+                continue
+            _RDCORE = (text, hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:16])
+            return _RDCORE
+        # Name EVERY path tried. "not found at X" sends you to fix X, which may not even be the right X.
+        raise FileNotFoundError(
+            "rdcore.js not found. Tried, in order:\n  " + "\n  ".join(tried)
+            + f"\n(cwd={os.getcwd()}; RDCORE_PATH={_RDCORE_ENV or 'unset'})"
+        )
     return _RDCORE
 
 
@@ -278,12 +323,8 @@ def _rdcore() -> Tuple[str, str]:
 def get_rdcore(if_none_match: Optional[str] = Header(default=None, alias="If-None-Match")):
     try:
         text, etag = _rdcore()
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"rdcore.js not found at {_RDCORE_PATH} — commit it beside broker.py, "
-                   f"or point RDCORE_PATH at it",
-        )
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     headers = {"ETag": etag, "Cache-Control": "no-cache"}
     if if_none_match and if_none_match.strip('"') == etag:
         return Response(status_code=304, headers=headers)
@@ -295,8 +336,8 @@ def get_rdcore_version():
     """Engine hash — compare against an app's ==RDCORE_START== marker to spot drift."""
     try:
         _, etag = _rdcore()
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail=f"rdcore.js not found at {_RDCORE_PATH}")
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"etag": etag}
 
 
