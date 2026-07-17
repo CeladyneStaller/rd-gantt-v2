@@ -3,9 +3,9 @@
 build.py — inline the shared core into the shell templates (frozen spec §12.3)
 =============================================================================
 
-Asserted string-replacement, in the established pipeline style: read core.js,
+Asserted string-replacement, in the established pipeline style: read rdcore.js,
 confirm the injection marker appears exactly once in each template, replace it,
-and write a single-file HTML to /mnt/user-data/outputs/. No surrounding code in
+and write a single-file HTML beside this script (RD_OUT overrides). No surrounding code in
 the templates is touched — only the marker line is replaced.
 
     python build.py            # build planning_app.html + execution_app.html
@@ -19,8 +19,11 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = "/mnt/user-data/outputs"
-CORE = os.path.join(HERE, "core.js")
+# OUT was hardcoded to the sandbox path, which on a Windows checkout resolves to C:\mnt\user-data\outputs.
+# Same convention sweep.py already uses: sandbox writes there, a real checkout writes beside the script.
+SANDBOX = os.path.isdir("/mnt/user-data/outputs") and os.path.isdir("/home/claude")
+OUT = os.environ.get("RD_OUT") or ("/mnt/user-data/outputs" if SANDBOX else HERE)
+CORE = os.path.join(HERE, "rdcore.js")
 MARKER = "/*__CORE__*/"
 
 TARGETS = [

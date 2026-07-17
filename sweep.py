@@ -18,6 +18,13 @@ Exit status alone cannot distinguish "all assertions passed" from "no assertions
 """
 import glob, json, os, re, shutil, subprocess, sys
 
+
+def _harness_paths(d):
+    """Every harness in d. *.test.py runs under python3 (the broker projection is Python)."""
+    return (sorted(glob.glob(f"{d}/*.cjs"))
+            + sorted(glob.glob(f"{d}/*.test.js"))
+            + sorted(glob.glob(f"{d}/*.test.py")))
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 SANDBOX = os.path.isdir("/mnt/user-data/outputs") and os.path.isdir("/home/claude")
 # Sandbox: harnesses live in outputs and run from /home/claude (which is NOT reliably empty between turns,
@@ -34,14 +41,23 @@ if os.path.isdir(_nm):
     ENV["NODE_PATH"] = _nm          # otherwise let node resolve node_modules itself
 
 
+DEPS = ("rdcore.js", "backfill.js")
+
+
 def refresh():
     """Never trust the run directory to hold the current harnesses. No-op when they already live there."""
     if os.path.abspath(OUT) == os.path.abspath(CWD):
-        return len(glob.glob(f"{OUT}/*.cjs") + glob.glob(f"{OUT}/*.test.js"))
-    for f in glob.glob(f"{CWD}/*.cjs") + glob.glob(f"{CWD}/*.test.js"):
+        return len(_harness_paths(OUT))
+    for f in _harness_paths(CWD):
         os.remove(f)
+    for d in DEPS:                       # refresh what the harnesses require, not just the harnesses
+        src, dst = os.path.join(OUT, d), os.path.join(CWD, d)
+        if os.path.exists(dst):
+            os.remove(dst)
+        if os.path.exists(src):
+            shutil.copy2(src, dst)
     n = 0
-    for p in glob.glob(f"{OUT}/*.cjs") + glob.glob(f"{OUT}/*.test.js"):
+    for p in _harness_paths(OUT):
         shutil.copy(p, CWD); n += 1
     return n
 
@@ -61,7 +77,8 @@ def etb_plumbing():
 
 
 def run(name):
-    p = subprocess.run(["node", name], capture_output=True, text=True, cwd=CWD, env=ENV,
+    runner = [sys.executable] if name.endswith(".py") else ["node"]
+    p = subprocess.run(runner + [name], capture_output=True, text=True, cwd=CWD, env=ENV,
                        encoding="utf-8", errors="replace")   # harness output is UTF-8, not the OS default
     out = (p.stdout or "") + (p.stderr or "")
     m = COUNT_RE.search(out)
@@ -72,7 +89,7 @@ def main():
     update = "--update" in sys.argv
     base = json.load(open(BASE, encoding="utf-8")) if os.path.exists(BASE) else {}
     copied = refresh(); etb_plumbing()
-    names = sorted(os.path.basename(p) for p in glob.glob(f"{OUT}/*.cjs") + glob.glob(f"{OUT}/*.test.js"))
+    names = sorted(os.path.basename(p) for p in _harness_paths(OUT))
     print(f"harness dir : {OUT}\nrun dir     : {CWD}\nfound       : {copied} harness file(s)\n")
     if not names:
         print(f"FAIL: no harnesses found in {OUT}\n"
