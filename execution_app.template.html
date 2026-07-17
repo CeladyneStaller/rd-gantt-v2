@@ -293,6 +293,9 @@
   .cu-clear-in{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:14px;letter-spacing:.12em;margin:0 0 4px;box-sizing:border-box}
   .cu-clear-in:focus{border-color:var(--bad);outline:none}
   .act.danger{background:var(--bad);color:var(--on-danger);border-color:transparent}
+  /* owners are authored in the planning app; read-only here */
+  .obj-owners{font-size:11px;color:var(--muted);font-family:var(--mono);margin-left:8px}
+  .obj-owners:empty{display:none}
   .obj-title .obj-endbtn{margin-left:auto;font-family:var(--sans);font-size:11px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
   .obj-title .obj-endbtn:hover{color:var(--ink);border-color:var(--muted)}
   .obj-title .obj-endbtn.reopen{color:var(--accent2);border-color:var(--pill-active-bd)}
@@ -796,6 +799,7 @@ html[data-theme="dark"] #etb-view{
 <header>
   <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
+  <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <div class="spacer"></div>
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
@@ -960,7 +964,8 @@ const URLP = (function(){
   const t = p.get("token");
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"" };
+  return { readonly: p.has("readonly"), product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""), objective: p.get("objective")||"",
+           owner: (p.get("owner")||"").trim().toLowerCase() };   // ?owner=<email> narrows to that person's objectives
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -1351,7 +1356,20 @@ function divName(id){ const d=(portfolio.divisions||[]).find(x=>x.id===id); retu
 // roadmap-layer objectives here; nothing in this suite writes `layer` (it comes from outside), planning
 // showed both layers with no way to tell them apart, and the roadmap/execution split is no longer wanted.
 // To restore the split, re-add the clause — no data was changed.
-function myObjectives(){ return (portfolio.objectives||[]).filter(o=>o.divisionId===divisionId); }
+function myObjectives(){
+  const objs=(portfolio.objectives||[]).filter(o=>o.divisionId===divisionId);
+  if(!URLP.owner) return objs;
+  return objs.filter(o=>RD.ownersOf(o).some(v=>String(v).trim().toLowerCase()===URLP.owner));
+}
+function paintOwners(){
+  const ol=document.getElementById("objOwners"); if(!ol) return;
+  const ow=selectedObj?ownerLine(selectedObj):"";
+  ol.textContent = ow ? "\u25cf "+ow : "";
+}
+function ownerLine(objId){
+  const o=(portfolio.objectives||[]).find(x=>x.id===objId), ow=RD.ownersOf(o);
+  return ow.length ? ow.join(", ") : "";
+}
 async function switchDivision(newDiv){
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
@@ -1405,7 +1423,8 @@ function fillObjSelect(){
                             : `<option value="">no objectives${selectedQuarter?" in "+esc(selectedQuarter):" for this division"}</option>`;
   if(objs.length){ if(!selectedObj || !objs.find(o=>o.id===selectedObj)) selectedObj=objs[0].id; s.value=selectedObj; }
   else selectedObj=null;
-  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); renderAll(); __etbSuppressSave=false; };
+  paintOwners();
+  s.onchange=async()=>{ await etbFlushSave(); selectedObj=s.value; __etbSuppressSave=true; etbSyncObjective(); paintOwners(); renderAll(); __etbSuppressSave=false; };
 }
 
 /* ---------------- generic sub-entity editor ---------------- */
@@ -1522,9 +1541,28 @@ function delSub(type, id){
   }
   renderAll(); setMsg("Deleted","ok");
 }
+// A KPI's own readings carry LINK_OWN_RANK, which outranks its links, so ALL of them must go for a linked KPI
+// to read its link again. Returns how many were removed, or -1 if there were none. Single source of truth:
+// both the inline cell and postRead() call this.
+function ownReadingsOf(kpiId){ return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId); }
+function clearOwnReadings(kpiId){
+  const own=ownReadingsOf(kpiId);
+  if(!own.length) return -1;
+  own.forEach(u=>{ const i=exec.kpiUpdates.indexOf(u); if(i>=0) exec.kpiUpdates.splice(i,1); });   // by reference: ETB readings have no id
+  return own.length;
+}
+function clearedMsg(n){ return `Cleared ${n} reading${n===1?"":"s"} \u2014 reading the link again`; }
 function postRead(host, kpiId){
   const inp = host.querySelector(`[data-read="${kpiId}"]`);
-  if(!inp || inp.value===""){ setMsg("Enter a value to post.","err"); return; }
+  if(!inp) return;
+  // BLANK = CLEAR. A KPI's own reading outranks its links (LINK_OWN_RANK), so a manual value on a linked KPI
+  // wins permanently and there was no way to take it back. Submitting an empty value now removes this KPI's
+  // NEWEST own reading; clear the last one and a linked KPI falls back to reading its link again.
+  if(inp.value===""){
+    const n=clearOwnReadings(kpiId);
+    if(n<0){ setMsg("Enter a value to post.","err"); return; }
+    renderAll(); setMsg(clearedMsg(n),"ok"); return;
+  }
   exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(inp.value), timestamp:Date.now(), note:"" });
   renderAll(); setMsg("Reading posted","ok");
 }
@@ -1535,15 +1573,30 @@ function openPostCell(td){
   // statistical targets take a SAMPLE, not a value -> open the sample popover instead of an inline value input
   if(k && RD.definerOf(k, AK).targetType==="statistical"){ openSamplePop(td, kpiId); return; }
   const cur=k?RD.effValue(k, AK, emForCore()):null;
-  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="value"/>`;
+  // The field is pre-filled, so the placeholder only surfaces once the value has been deleted — which is
+  // exactly when "blank = clear" is worth saying. Only advertise it when there is an own reading to clear.
+  const hasOwn=(exec.kpiUpdates||[]).some(u=>u.kpiId===kpiId);
+  td.innerHTML=`<input type="number" class="m-postin" value="${cur==null?'':cur}" placeholder="${hasOwn?'blank = clear':'value'}"/>`;
   const inp=td.querySelector("input"); inp.focus(); inp.select();
-  let done=false;
+  let done=false, armed=false;
   const commit=()=>{ if(done) return; done=true; const v=inp.value;
-    if(v==="" || isNaN(Number(v)) || Number(v)===cur){ td.innerHTML=saved; return; }   // blank / invalid / unchanged -> no post
+    if(v===""){                                    // blank = CLEAR every own reading, so the link takes over
+      const own=ownReadingsOf(kpiId);
+      if(!own.length){ td.innerHTML=saved; return; }             // nothing of ours -> just close the cell
+      if(own.length>1 && !armed){                                // history at stake -> arm first (house convention)
+        armed=true; done=false;
+        inp.placeholder=`Enter again to clear ${own.length} readings`; inp.classList.add("armed"); inp.focus();
+        setMsg(`This clears all ${own.length} readings on this KPI \u2014 press Enter again to confirm.`,"err");
+        return;
+      }
+      const n=clearOwnReadings(kpiId);
+      renderAll(); setMsg(clearedMsg(n),"ok"); return;
+    }
+    if(isNaN(Number(v)) || Number(v)===cur){ td.innerHTML=saved; return; }   // invalid / unchanged -> no post
     exec.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId, value:Number(v), timestamp:Date.now(), note:"" });
     renderAll(); setMsg("Reading posted","ok"); };
   inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; td.innerHTML=saved; } };
-  inp.onblur=commit;
+  inp.onblur=()=>{ if(armed){ done=true; td.innerHTML=saved; return; } commit(); };   // clicking away cancels an armed clear
 }
 
 
@@ -1552,8 +1605,53 @@ function openPostCell(td){
    completeness; lets a mis-keyed reading be removed. Writes only to exec.kpiUpdates (this app's only
    writable doc). Anchored position:fixed off the cell rect — .hostcard and .m-cur both clip overflow. ---- */
 let samplePopKpi = null, samplePopArmed = null;
-function samplePopReads(kpiId){                                          // this KPI's own readings, newest first
-  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId && !isNaN(Number(u.value)))
+function sampleOwnerId(kpiId){                                           // whose readings this KPI actually reads
+  const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
+  return k ? RD.readingSourceId(k, AK) : kpiId;
+}
+// Sample candidates, scoped to the CURRENT OBJECTIVE and grouped the way the board reads:
+//   Key results / KR1 - <statement> / <kpi name>      Stage-gates / SG1 - <name> / <kpi name>
+// Only KPIs that hold their own readings are offered (a borrower is not a sample), and never the KPI being
+// edited. A <select> allows one level of <optgroup>, so the section headers are disabled options.
+function readsFromGroups(selfId){
+  const AK=allKpisPool();
+  // scoping comes from the HOST: only this objective's KRs/gates are walked below, so a second
+  // k.objectiveId filter would be a duplicated source of truth (and it is not set on every KPI).
+  const holders=(exec.kpis||[]).filter(k=>k.id!==selfId && !k.readsFrom
+    && (k.targetType==="statistical" || ((RD.definerOf(k, AK)||{}).targetType==="statistical")));
+  const nm=k=>({ id:k.id, name:RD.kpiName(k, AK)||k.id });
+  const out=[];
+  const krG=[];
+  (exec.keyResults||[]).filter(x=>x.objectiveId===selectedObj).forEach(kr=>{
+    const ks=holders.filter(k=>k.hostType==="keyResult" && k.hostId===kr.id);
+    if(ks.length) krG.push({ label:krTreeLabel(kr.id, selectedObj), kpis:ks.map(nm) });   // already "KR1 — <statement>"
+  });
+  if(krG.length) out.push({ section:"Key results", groups:krG });
+  const sgG=[];
+  (exec.stageGates||[]).filter(x=>x.objectiveId===selectedObj).forEach(g=>{
+    const ks=holders.filter(k=>k.hostType==="stageGate" && k.hostId===g.id);
+    if(ks.length) sgG.push({ label:`${gateLabel(g.id)} \u2014 ${g.name||g.id}`, kpis:ks.map(nm) });   // gateLabel is the tag only
+  });
+  if(sgG.length) out.push({ section:"Stage-gates", groups:sgG });
+  return out;
+}
+function readsFromCandidates(selfId){                                    // flat view of the same set
+  const out=[];
+  readsFromGroups(selfId).forEach(sec=>sec.groups.forEach(g=>g.kpis.forEach(k=>out.push({ id:k.id, name:k.name, group:g.label }))));
+  return out;
+}
+function readsFromOptions(sel, selfId){
+  return `<option value=""${sel?"":" selected"}>Own readings</option>`+
+    readsFromGroups(selfId).map(sec=>
+      `<option disabled>${esc(sec.section)}</option>`+
+      sec.groups.map(g=>`<optgroup label="${esc(g.label)}">`+
+        g.kpis.map(k=>`<option value="${esc(k.id)}"${sel===k.id?" selected":""}>${esc(k.name)}</option>`).join("")+
+      `</optgroup>`).join("")
+    ).join("");
+}
+function samplePopReads(kpiId){                                          // the SAMPLE's readings, newest first
+  const src=sampleOwnerId(kpiId);
+  return (exec.kpiUpdates||[]).filter(u=>u.kpiId===src && !isNaN(Number(u.value)))
     .slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
 }
 function fmtReadTs(ts){ if(!ts) return ""; const d=new Date(ts); return isNaN(d.getTime())?"":d.toISOString().slice(0,16).replace("T"," "); }
@@ -1587,7 +1685,8 @@ function renderSamplePop(){
   const inp=pop.querySelector("[data-sp-in]"), addB=pop.querySelector("[data-sp-add]");
   const add=()=>{ const v=inp.value;
     if(v==="" || isNaN(Number(v))){ inp.focus(); return; }               // no ===cur guard: a repeat reading is a real reading
-    exec.kpiUpdates.push({ id:"UPD-"+samplePopKpi+"-"+Date.now(), kpiId:samplePopKpi, value:Number(v), timestamp:Date.now(), note:"" });
+    const _src=sampleOwnerId(samplePopKpi);   // a borrowed sample is written where the data actually lives
+    exec.kpiUpdates.push({ id:"UPD-"+_src+"-"+Date.now(), kpiId:_src, value:Number(v), timestamp:Date.now(), note:"" });
     samplePopArmed=null; renderAll(); renderSamplePop();
     const i2=document.querySelector("#samplePop [data-sp-in]"); if(i2) i2.focus();
     setMsg("Reading added","ok"); };
@@ -1820,7 +1919,9 @@ function openPendingTgtEdit(idx){
   const t=pendingGateTargets[idx]; if(!t) return;
   pendingTgtEditIdx=idx;
   draftTgtHost={hostType:"stageGate", hostId:"__pending__", pending:true}; draftTgtId=null;
-  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="down")?"decrease":"increase", target:(t.target!=null)?t.target:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"" };
+  draftTgt={ name:t.name||"", type:t.targetType||"demonstration", dir:(t.direction==="range")?"range":(t.direction==="down")?"decrease":"increase", target:(t.target!=null&&typeof t.target!=="object")?t.target:"",
+    rangeLo:(t.target&&typeof t.target==="object"&&t.target.lo!=null)?t.target.lo:"", rangeHi:(t.target&&typeof t.target==="object"&&t.target.hi!=null)?t.target.hi:"",
+    rangeMode:(t.rangeSpec&&t.rangeSpec.mode==="pct")?"pct":"minmax", rangeCenter:(t.rangeSpec&&t.rangeSpec.center!=null)?t.rangeSpec.center:"", rangePct:(t.rangeSpec&&t.rangeSpec.pct!=null)?t.rangeSpec.pct:"", unit:t.unit||"", statistic:t.statistic||"average", readCount:(t.readCount!=null)?t.readCount:"", readsFrom:t.readsFrom||"" };
   document.getElementById("kpiTgtTitle").textContent="Edit gate target";
   document.getElementById("kpiTgtBody").innerHTML=tgtModalBody();
   document.getElementById("kpiTgtOverlay").classList.add("open");
@@ -1886,6 +1987,8 @@ function initDraftKr(kr){
     kpiTarget:(pk&&pk.target!=null)?pk.target:"",
     kpiUnit:(pk&&pk.unit)?pk.unit:"",
     kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
+    kpiReadsFrom:(pk&&pk.readsFrom)?pk.readsFrom:"",
+    kpiId:(pk&&pk.id)?pk.id:"",           // for the sample picker: exclude self, and only in krModalBody scope
     kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
     subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
   };
@@ -1911,6 +2014,9 @@ function krModalBody(){
     `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.kpiType,"krktype")}</div>`+
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-f="kpiReadCount" value="${esc(d.kpiReadCount)}" placeholder="e.g. 10"></div>`+
     `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
+    // STOPGAP for a first-class sample entity: borrow another statistical KPI's readings so one sample can
+    // feed several statistics (average + CoV over the same 10 points, entered once).
+    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+readsFromOptions(d.kpiReadsFrom, d.kpiId)+`</select></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
     `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
@@ -1972,8 +2078,9 @@ function saveKrModal(thenLink){
       pk.direction=(d.kpiDir==="decrease")?"down":"up";
       pk.target=parseTargetNum(d.kpiTarget);
       pk.unit=d.kpiUnit||null;
-      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount); }
-      else { delete pk.statistic; delete pk.readCount; }
+      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount);
+        if(d.kpiReadsFrom) pk.readsFrom=d.kpiReadsFrom; else delete pk.readsFrom; }
+      else { delete pk.statistic; delete pk.readCount; delete pk.readsFrom; }
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
@@ -2050,9 +2157,10 @@ function saveSubKrModal(){
     if(d.trackingType==="binary"){
       k.current = (d.metFlag===""||d.metFlag==null) ? null : Number(d.metFlag);
     } else {
-      k.direction=(d.dir==="decrease")?"down":"up"; k.target=parseTargetNum(d.target); k.unit=d.unit||null;
+      applyDirTarget(k, d); k.unit=d.unit||null;
       if(d.trackingType==="statistical"){
         k.statistic=d.statistic||"average"; k.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        if(d.readsFrom) k.readsFrom=d.readsFrom; else delete k.readsFrom;
         k.readings=String(d.readings||"").trim();
         const nums=parseNums(d.readings);
         k.current = nums.length ? RD.computeStat(k.statistic, nums) : null;
@@ -2077,11 +2185,17 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   draftTgt={
     name:pk?(pk.name||""):"",
     type:pk?(pk.targetType||"demonstration"):"demonstration",
-    dir:(pk&&pk.direction==="down")?"decrease":"increase",
-    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",   // range objects don't fit this modal
+    dir:(pk&&pk.direction==="range")?"range":(pk&&pk.direction==="down")?"decrease":"increase",
+    target:(pk&&pk.target!=null&&typeof pk.target!=="object")?pk.target:"",
+    rangeLo:(pk&&pk.target&&typeof pk.target==="object"&&pk.target.lo!=null)?pk.target.lo:"",
+    rangeHi:(pk&&pk.target&&typeof pk.target==="object"&&pk.target.hi!=null)?pk.target.hi:"",
+    rangeMode:(pk&&pk.rangeSpec&&pk.rangeSpec.mode==="pct")?"pct":"minmax",
+    rangeCenter:(pk&&pk.rangeSpec&&pk.rangeSpec.center!=null)?pk.rangeSpec.center:"",
+    rangePct:(pk&&pk.rangeSpec&&pk.rangeSpec.pct!=null)?pk.rangeSpec.pct:"",
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
-    readCount:(pk&&pk.readCount!=null)?pk.readCount:""
+    readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    readsFrom:(pk&&pk.readsFrom)?pk.readsFrom:""
   };
   const isGate=hostType==="stageGate";
   document.getElementById("kpiTgtTitle").textContent=kpiId?(isGate?"Edit gate target":"Edit KPI"):(isGate?"Add gate target":"Add KPI");
@@ -2090,15 +2204,65 @@ function openKpiTgtModal(hostType, hostId, kpiId){
   wireTgtModal();
 }
 function closeTgtModal(){ document.getElementById("kpiTgtOverlay").classList.remove("open"); document.getElementById("kpiTgtBody").innerHTML=""; draftTgt=null; draftTgtHost=null; draftTgtId=null; pendingTgtEditIdx=null; }
+// A range target is direction:'range' with target={lo,hi} — core's progressRange() scores 100 inside the band
+// and falls off linearly to 0 one full band-width outside. rangeSpec is an OPTIONAL record of how the author
+// expressed it ("average +/- width%"), kept only so the editor can round-trip the intent. {lo,hi} always wins.
+// Writes direction/target/rangeSpec onto a kpi from the draft. {lo,hi} is what scoring reads; rangeSpec only
+// records "average +/- width%" so the editor can round-trip it. An unparseable range leaves target null
+// (an unscored KPI) rather than inventing a band.
+function applyDirTarget(k, d){
+  if(d.dir==="range"){
+    const r=rangeFromDraft(d);
+    k.direction="range";
+    k.target = r ? { lo:r.lo, hi:r.hi } : null;
+    if(r && r.spec) k.rangeSpec=r.spec; else delete k.rangeSpec;
+    return;
+  }
+  k.direction=(d.dir==="decrease")?"down":"up";
+  k.target=parseTargetNum(d.target);
+  delete k.rangeSpec;
+}
+function redrawTgtBody(){ const b=document.getElementById("kpiTgtBody"); if(!b) return; b.innerHTML=tgtModalBody(); wireTgtModal(); }
+function rangeFromDraft(d){
+  if(d.rangeMode==="pct"){
+    const c=Number(d.rangeCenter), p=Number(d.rangePct);
+    if(d.rangeCenter===""||d.rangePct===""||isNaN(c)||isNaN(p)) return null;
+    const half=Math.abs(c*p/100)/2;                       // width = pct% OF the average; the band straddles it
+    return { lo:c-half, hi:c+half, spec:{ mode:"pct", center:c, pct:p } };
+  }
+  const lo=Number(d.rangeLo), hi=Number(d.rangeHi);
+  if(d.rangeLo===""||d.rangeHi===""||isNaN(lo)||isNaN(hi)) return null;
+  return { lo:Math.min(lo,hi), hi:Math.max(lo,hi), spec:null };
+}
+function rangePreview(d){
+  const r=rangeFromDraft(d);
+  if(!r) return "enter both values";
+  const w=r.hi-r.lo;
+  return `full credit ${fmtTarget(r.lo,"")} to ${fmtTarget(r.hi,"")}${w?` (width ${fmtTarget(w,"")})`:""}; zero one width outside`;
+}
 function tgtModalBody(){
-  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
+  const d=draftTgt, isStat=d.type==="statistical", isBin=d.type==="binary", isRange=d.dir==="range", isGate=draftTgtHost&&draftTgtHost.hostType==="stageGate";
   return `
     <div class="modal-field"><span class="lbl">Target name</span><input type="text" data-tf="name" value="${esc(d.name)}" placeholder="e.g. Power density"></div>
     <div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.type,"tgttype")}</div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-tf="readCount" value="${esc(d.readCount)}" placeholder="e.g. 10"></div>
     <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-tf="statistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.statistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.dir,"tgtdir")}</div>
-    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-tf="readsFrom">`+readsFromOptions(d.readsFrom, draftTgtId)+`</select><div class="hint" style="margin-top:3px">Borrow another statistical target's sample so one set of readings feeds several statistics.</div></div>`+
+    `
+    <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"],["range","↔ Range"]],d.dir,"tgtdir")}</div>
+    <div class="modal-field" style="display:${(isBin||isRange)?"none":"block"}"><span class="lbl">Target</span><input type="text" data-tf="target" value="${esc(d.target)}" placeholder="e.g. 1.0"></div>
+    <div class="modal-field" style="display:${isRange?"block":"none"}"><span class="lbl">Range</span>
+      ${segHtml([["minmax","Min / max"],["pct","Average \u00b1 width%"]], d.rangeMode||"minmax", "tgtrmode")}
+      <div style="display:${(d.rangeMode||"minmax")==="minmax"?"flex":"none"};gap:8px;margin-top:6px">
+        <input type="number" data-tf="rangeLo" value="${esc(d.rangeLo)}" placeholder="min" style="flex:1">
+        <input type="number" data-tf="rangeHi" value="${esc(d.rangeHi)}" placeholder="max" style="flex:1">
+      </div>
+      <div style="display:${(d.rangeMode||"minmax")==="pct"?"flex":"none"};gap:8px;margin-top:6px">
+        <input type="number" data-tf="rangeCenter" value="${esc(d.rangeCenter)}" placeholder="average" style="flex:1">
+        <input type="number" data-tf="rangePct" value="${esc(d.rangePct)}" placeholder="width %" style="flex:1">
+      </div>
+      <div class="hint" data-rpreview style="margin-top:5px">${esc(rangePreview(d))}</div>
+    </div>
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. W/cm²"></div>
     <div class="hint" style="margin:0 0 12px">readings are posted from ${isGate?"the gate\'s target table":"this key result\'s KPI table"}; statistical targets aggregate the latest reads</div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update target":"Save target"}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
@@ -2107,7 +2271,10 @@ function wireTgtModal(){
   const body=document.getElementById("kpiTgtBody");
   body.querySelectorAll("[data-tf]").forEach(el=>el.oninput=()=>{ draftTgt[el.dataset.tf]=el.value; });
   body.querySelectorAll("[data-tgttype]").forEach(b=>b.onclick=()=>{ draftTgt.type=b.dataset.tgttype; document.getElementById("kpiTgtBody").innerHTML=tgtModalBody(); wireTgtModal(); });
-  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; body.querySelectorAll("[data-tgtdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  body.querySelectorAll("[data-tgtdir]").forEach(b=>b.onclick=()=>{ draftTgt.dir=b.dataset.tgtdir; redrawTgtBody(); });
+  body.querySelectorAll("[data-tgtrmode]").forEach(b=>b.onclick=()=>{ draftTgt.rangeMode=b.dataset.tgtrmode; redrawTgtBody(); });
+  body.querySelectorAll('[data-tf="rangeLo"],[data-tf="rangeHi"],[data-tf="rangeCenter"],[data-tf="rangePct"]').forEach(el=>el.addEventListener("input",()=>{
+    const p=body.querySelector("[data-rpreview]"); if(p) p.textContent=rangePreview(draftTgt); }));
   const sv=body.querySelector("[data-tgtsave]"); if(sv) sv.onclick=saveTgtModal;
   const cx=body.querySelector("[data-tgtcancel]"); if(cx) cx.onclick=closeTgtModal;
 }
@@ -2119,8 +2286,9 @@ function saveTgtModal(){
   if(draftTgtHost&&draftTgtHost.pending){   // ADDING a gate: stash the target; it becomes a KPI when the gate is saved
     const t={ name:String(d.name).trim(), targetType:d.type };
     if(d.type==="binary"){ t.direction=null; t.target=null; t.unit=null; }
-    else { t.direction=(d.dir==="decrease")?"down":"up"; t.target=parseTargetNum(d.target); t.unit=d.unit||null;
-      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } }
+    else { applyDirTarget(t, d); t.unit=d.unit||null;
+      if(d.type==="statistical"){ t.statistic=d.statistic||"average"; t.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+        if(d.readsFrom) t.readsFrom=d.readsFrom; else delete t.readsFrom; } }
     const editing=(pendingTgtEditIdx!=null && pendingGateTargets[pendingTgtEditIdx]);
     if(editing) pendingGateTargets[pendingTgtEditIdx]=t; else pendingGateTargets.push(t);
     closeTgtModal();
@@ -2132,8 +2300,9 @@ function saveTgtModal(){
   if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:draftTgtHost.hostType, hostId:draftTgtHost.hostId, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
-  else { pk.direction=(d.dir==="decrease")?"down":"up"; pk.target=parseTargetNum(d.target); pk.unit=d.unit||null;
-    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount); } else { delete pk.statistic; delete pk.readCount; } }
+  else { applyDirTarget(pk, d); pk.unit=d.unit||null;
+    if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
+      if(d.readsFrom) pk.readsFrom=d.readsFrom; else delete pk.readsFrom; } else { delete pk.statistic; delete pk.readCount; } }
   closeTgtModal(); renderAll(); setMsg((isGate?"Gate target":"KPI")+" saved","ok");
 }
 
@@ -2196,24 +2365,18 @@ function nextLinkPriority(parentId){
 function makeLinkMember(hostType, hostId, definerId, linkType){
   const pool = allKpisPool();
   const def = pool.find(k=>k.id===definerId); if(!def) return;
-  const portfolioDef = exec.kpis.indexOf(def) < 0;   // definer lives in a portfolio/spec doc (read-only here)
-  if(isTargetKpi(def) || portfolioDef){   // product/model/initiative/milestone definer → link up via linkParent (a group link can't attach to a read-only definer)
-    const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
-    const objScope = hostType==="initiative" ? null : selectedObj;
-    const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-    if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
-    exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(definerId),
-                     name:null, direction:null, unit:null, target:null, order:0 });
-    addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok"); return;
-  }
-  // exec-local definer: group link (safe to stamp a groupId on a doc we own)
-  let g = def.groupId;
-  if(!g){ g = RD.allocId("kpiGroup", divisionId, groupIdsInUse()); def.groupId=g; def.isDefiner=true; }
+  // Every link is TYPED now. Exec-local definers (a KR KPI, say) used to fall through to a groupId link,
+  // which had nowhere to record a relationship — linkOf() hardcodes 'contribute' for those — so the
+  // relationship selector had to be hidden for them. Routing everything through linkParent/linkType makes
+  // contribute/direct/specification available on every link, including stage-gate -> key-result.
+  // Existing groupId data still resolves through linkOf's legacy branch; nothing migrates.
+  const type = linkType || defaultLinkType(parentLevelOf(def), hostType);
   const objScope = hostType==="initiative" ? null : selectedObj;
   const id = RD.allocId("kpi", objScope || hostId, exec.kpis.map(x=>x.id));
-  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, groupId:g, isDefiner:false, linkPriority:nextLinkPriority(def.id),
+  if(RD.wouldCreateCycle(id, definerId, pool)){ setMsg("That link would create a cycle — choose a different target.","err"); return; }
+  exec.kpis.push({ id, objectiveId:objScope, hostType, hostId, linkParent:definerId, linkType:type, linkPriority:nextLinkPriority(def.id),
                    name:null, direction:null, unit:null, target:null, order:0 });
-  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked","ok");
+  addingFor=null; restoreReturn(); renderAll(); setMsg("Linked to "+hostLabel(def)+" ("+type+")","ok");
 }
 function unlinkKpi(id){
   const m = exec.kpis.find(k=>k.id===id); if(!m) return;
@@ -2230,7 +2393,7 @@ function renderLinkEditor(hostType, hostId){
     <div class="row-actions" style="margin:0 0 8px"><button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   const pool = allKpisPool();
   const O = hostType==="initiative" ? null : selectedObj;
-  const showRel = d => isTargetKpi(d) || exec.kpis.indexOf(d) < 0;   // portfolio/spec definers link via linkParent -> relationship applies
+  const showRel = d => !!d;   // every link is typed now, so the relationship applies to all of them
   const IND = String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160)+String.fromCharCode(160);
   const pad = n => { let z=""; for(let x=0;x<Math.max(0,n);x++) z+=IND; return z; };
   const kpiText = d => { const u=RD.kpiUnit(d,pool); return (RD.kpiName(d,pool)||d.id)+(u?(" ("+u+")"):""); };
@@ -2370,7 +2533,7 @@ function kpiTable(hostType, hostId, objScope){
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
     const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
     const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
-    const nReads = expReads ? RD.readingCount(k.id, EM) : 0, complete = !expReads || nReads>=expReads;
+    const nReads = expReads ? RD.readingCount(RD.readingSourceId(k, AK), EM) : 0, complete = !expReads || nReads>=expReads;   // a borrowed sample is counted where it lives
     const statSub = expReads ? `<span class="m-cur-sub ${complete?'ok':'warn'}">${STAT_SHORT[dk.statistic||'average']} \u00b7 ${nReads}/${expReads} ${complete?'\u2713':'\u26a0'}</span>` : '';
     const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
     const metOk = (s!=null && s>=100 && complete);   // statistical: "met" needs the target reached AND a complete sample
@@ -2761,7 +2924,7 @@ function wireExec(host){
   });
   host.querySelectorAll("[data-savelink]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.savelink.split(":"); const sel=host.querySelector("[data-linkdef]"); const rel=host.querySelector("[data-linkrel]"); if(sel) makeLinkMember(ht,hid,sel.value, rel?rel.value:null); });
   host.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>unlinkKpi(b.dataset.unlink));
-  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate"){ openTgtModal(k.hostId, id); return; } if(k&&k.hostType==="keyResult" && !isMemberKpi(k)){ openKpiTgtModal("keyResult", k.hostId, id); return; } } subOpenEdit(t,id); });
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.edit.split(":"); if(t==="kpi"){ const k=exec.kpis.find(x=>x.id===id); if(k&&k.hostType==="stageGate" && !isMemberKpi(k)){ openTgtModal(k.hostId, id); return; } if(k&&k.hostType==="keyResult" && !isMemberKpi(k)){ openKpiTgtModal("keyResult", k.hostId, id); return; } } subOpenEdit(t,id); });
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const [t,id]=b.dataset.del.split(":"); delSub(t,id); });
   host.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>saveSub());
   host.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>subCancel());

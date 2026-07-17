@@ -46,6 +46,8 @@
   header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
   header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
   header h1 .dot{color:var(--accent)}
+  header .home{color:var(--muted);text-decoration:none;font-size:17px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .12s,background .12s;flex:none}
+  header .home:hover{color:var(--accent);background:var(--panel2)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
   body.readonly [data-addkpi], body.readonly [data-addkr], body.readonly [data-addlink], body.readonly [data-addsg], body.readonly [data-addsub], body.readonly [data-addsubkr], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editmodel], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
@@ -240,6 +242,7 @@
 </head>
 <body>
 <header>
+  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▤</span> Product Specification</h1>
   <span class="div-pill" id="docPill">—</span>
   <div class="spacer"></div>
@@ -1783,6 +1786,13 @@ function renderProdList(){
 document.getElementById("saveBtn").onclick = persist;
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); const show=p.style.display==="none"; p.style.display=show?"block":"none"; if(show){ document.getElementById("tokenInput").value=tok(); renderProdList(); } };
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token", document.getElementById("tokenInput").value.trim()); setMsg("Saved.","ok"); loadAll(); };
+/* --- modal click-off: dismissal on backdrop click is DISABLED globally. To restore it for a
+   specific modal, add its overlay id to CLICKOFF_OK (e.g. CLICKOFF_OK.add("modalOverlay")).
+   Escape-to-close and the ✕ button are unaffected. --- */
+const CLICKOFF_OK = new Set();
+document.addEventListener("click", function(e){ const ov=e.target;
+  if(ov && ov.classList && ov.classList.contains("overlay") && !CLICKOFF_OK.has(ov.id)) e.stopImmediatePropagation();
+}, true);
 document.getElementById("modalX").onclick = ()=>{ if(modelEditing!=null) closeModelEditor(); else subCancel(); };
 document.getElementById("modalOverlay").onclick = (e)=>{ if(e.target.id==="modalOverlay"){ if(modelEditing!=null) closeModelEditor(); else subCancel(); } };
 document.getElementById("subkrX").onclick = closeSubKrModal;

@@ -49,6 +49,8 @@
   header{display:flex;align-items:center;gap:16px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
   header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em}
   header h1 .dot{color:var(--accent)}
+  header .home{color:var(--muted);text-decoration:none;font-size:17px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .12s,background .12s;flex:none}
+  header .home:hover{color:var(--accent);background:var(--panel2)}
   nav{display:flex;gap:4px;margin-left:8px}
   nav button{background:none;border:1px solid transparent;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--sans)}
   nav button.active{background:var(--panel2);color:var(--ink);border-color:var(--line)}
@@ -60,7 +62,11 @@
   .ov-controls{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:18px}
   .ov-ctl{display:flex;align-items:center;gap:9px}
   .ov-lab{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em}
-  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  body.readonly .tacts, body.readonly .gacts, body.readonly [data-del], body.readonly [data-sdel], body.readonly .pf-toolbar, body.readonly #lnEdit, body.readonly #saveBtn{display:none !important}
+  .obj-xdiv{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--panel2);border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+  .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
+  .gact.danger{color:var(--bad)} .gact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
+  .ms-tbl .gact + .gact{margin-left:4px}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
@@ -136,6 +142,10 @@
   .card .sub{color:var(--muted);font-size:12px;font-family:var(--mono)}
   .score{font-size:34px;font-weight:700;line-height:1.1;margin:10px 0 2px}
   .band{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  /* the pill echoes the marker vocabulary: capsule = spans time, square = stage-gate, pointed = milestone */
+  .band.sq{border-radius:3px}
+  .band.dia{border-radius:0;padding-left:13px;padding-right:13px;
+    clip-path:polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%)}
   .band.on-track{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .band.at-risk{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
   .band.off-track{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .band.no-band{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)}
   .counts{display:flex;gap:10px;margin-top:12px;font-size:12px;font-family:var(--mono)}
@@ -184,6 +194,82 @@
   .pft-name{font-weight:600;color:var(--ink)}
   .pft-sum{color:var(--muted);font-size:11.5px}
   .pft-cur{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+  /* The milestone report is a DOCUMENT: fixed light regardless of the app theme, so it prints correctly. */
+  .msr-doc{background:#fff;color:#1a1a1a;padding:22px 24px;font-size:13px;line-height:1.45;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .msr-doc *{box-sizing:border-box}
+  .msr-lbl{font-size:10px;letter-spacing:.08em;color:#666;text-transform:uppercase;margin-bottom:2px}
+  .msr-head{display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;
+    border-bottom:2px solid #185FA5;padding-bottom:12px;margin-bottom:16px}
+  .msr-proj{font-size:18px;font-weight:500}
+  .msr-tagrow{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .msr-tag{background:#E6F1FB;color:#0C447C;font-size:11px;font-weight:500;padding:3px 10px;border-radius:4px;font-family:var(--mono)}
+  .msr-msname{font-size:12px;color:#666}
+  .msr-metas{display:flex;gap:24px}
+  .msr-val{font-size:12px;font-weight:500;font-family:var(--mono)}
+  .msr-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;font-family:var(--mono);display:inline-block}
+  .msr-green{background:#EAF3DE;color:#3B6D11} .msr-red{background:#FCEBEB;color:#A32D2D}
+  .msr-amber{background:#FAEEDA;color:#854F0B} .msr-gray{background:#f0f0ee;color:#888}
+  .msr-sec{border:.5px solid #ddd;border-radius:8px;padding:12px 16px;margin-bottom:16px}
+  .msr-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .msr-two .msr-sec{margin-bottom:16px;height:calc(100% - 16px)}
+  .msr-sect{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#666;font-weight:500;
+    margin-bottom:8px;border-bottom:.5px solid #ddd;padding-bottom:6px}
+  .msr-body{font-size:12px;color:#555;line-height:1.7}
+  .msr-ph{color:#bbb}
+  .msr-doc [contenteditable]{outline:none;border-radius:3px}
+  .msr-doc [contenteditable]:hover,.msr-doc [contenteditable]:focus{background:#f5f5f3}
+  .msr-mhead,.msr-metric{display:grid;grid-template-columns:1fr 84px 84px 66px;gap:8px;align-items:center}
+  .msr-metric{padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-metric:last-child{border-bottom:none}
+  .msr-mhead{margin-bottom:3px}
+  .msr-col{font-size:10px;color:#888;text-align:center}
+  .msr-mono{font-family:var(--mono);font-size:12px;font-weight:500;text-align:center}
+  .msr-mname{display:flex;flex-direction:column;gap:1px}
+  .msr-src{font-size:9px;color:#999;font-family:var(--mono)}
+  .msr-sel{font-size:10px;font-family:var(--mono);border:1px solid #ddd;border-radius:3px;background:#fff;color:#1a1a1a;padding:1px 3px;width:100%}
+  .msr-empty{font-size:11px;color:#999;padding:6px 0}
+  .msr-finding{display:flex;gap:8px;padding:6px 0;border-bottom:.5px solid #eee;font-size:12px;align-items:flex-start}
+  .msr-finding:last-child{border-bottom:none}
+  .msr-fn{font-family:var(--mono);font-size:10px;color:#888;flex:none;width:18px;padding-top:1px}
+  .msr-finding>div:last-child{flex:1;line-height:1.5}
+  .msr-stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-stat:last-child{border-bottom:none}
+  .msr-slbl{color:#666} .msr-sval{font-family:var(--mono);font-size:12px;font-weight:500;text-align:right}
+  .msr-late{color:#854F0B} .msr-early{color:#3B6D11}
+  .msr-objs{align-items:flex-start}
+  .msr-objs .msr-sval{display:flex;flex-direction:column;gap:2px;text-align:right;font-family:inherit;font-size:11.5px}
+  .msr-obj{line-height:1.35}
+  .msr-oq{color:#888;font-family:var(--mono);font-size:10px}
+  .msr-ahead,.msr-action{display:grid;grid-template-columns:1fr 100px 92px;gap:8px;align-items:center}
+  .msr-action{padding:6px 0;border-bottom:.5px solid #eee;font-size:12px}
+  .msr-action:last-child{border-bottom:none}
+  .msr-amono{font-family:var(--mono);font-size:11px;text-align:center;color:#666}
+  .msr-foot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border-top:.5px solid #ddd;padding-top:12px}
+  .msr-sig{border-bottom:.5px solid #aaa;height:24px;margin-bottom:4px}
+  .msr-siglbl{font-size:10px;color:#888;letter-spacing:.05em;text-transform:uppercase}
+  @media print {
+    body *{visibility:hidden !important}
+    #msReportModal,#msReportModal *{visibility:visible !important}
+    #msReportModal{position:absolute !important;inset:0 !important;padding:0 !important;background:#fff !important;display:block !important}
+    #msReportModal .modal-card{width:100% !important;max-width:none !important;max-height:none !important;
+      border:0 !important;box-shadow:none !important;background:#fff !important}
+    #msReportModal .modal-head,#msrActions{display:none !important}
+    #msrBody{max-height:none !important;overflow:visible !important}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  .pfk-srcs{display:flex;flex-direction:column;margin-top:4px;max-height:190px;overflow-y:auto}
+  .pfk-og{margin-bottom:5px}
+  .pfk-obj{font-size:11.5px;font-weight:600;color:var(--ink);padding:2px 0}
+  .pfk-q{color:var(--muted);font-weight:400;font-family:var(--mono);font-size:10px}
+  .pfk-krg{margin-left:10px;padding:1px 0}
+  .pfk-kr{font-size:10px;color:var(--muted);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pfk-src{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:400;margin-left:12px;padding:1px 0}
+  .pft-srcrow{grid-column:1/-1;margin:-2px 0 4px 18px}
+  .pft-src{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
+  .pft-cur[data-tgtpost]{cursor:pointer;border-radius:4px}
+  .pft-cur[data-tgtpost]:hover{background:var(--panel2);box-shadow:0 0 0 1px var(--line)}
+  .pft-in{width:100%;max-width:90px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:2px 5px;font-family:var(--mono);font-size:11.5px;text-align:right}
   .pft-cur .muted{color:var(--muted);font-variant-numeric:normal}
   .pft-acts{display:flex;gap:5px;justify-content:flex-end}
   .pft-acts .ghost{padding:4px 9px;font-size:11px}
@@ -243,9 +329,13 @@
   .pfgrp-acts{display:inline-flex;gap:4px;margin-left:8px;flex:none}   /* per-group add buttons, inline with the group label */
   .tact{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.6;cursor:pointer;font-family:var(--sans);white-space:nowrap}
   .tact:hover{color:var(--ink);border-color:var(--accent)}
-  .mdia{color:var(--accent2);font-size:11px;text-align:center}
+  .mdia{font-size:11px;text-align:center}   /* colour is set inline from the milestone's band */
   .tname.muted{color:var(--muted)}
   .tname.muted:hover{color:var(--accent)}
+  .obj-ended{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+  .obj-ended.abandoned{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg);border:1px solid var(--line)}
+  .obj-ended.achieved{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+  .tname.obj-struck{text-decoration:line-through;color:var(--muted)}
   .tstatic{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tsub{font-size:11px;color:var(--muted);font-family:var(--mono);flex:none;margin-left:auto;padding-left:12px;opacity:.8}
   #ganttWrap{overflow-x:auto}
@@ -261,6 +351,8 @@
   .gtri:hover{color:var(--ink);opacity:1}
   .gspacer{width:14px;flex:none}
   .gdot{width:7px;height:7px;border-radius:50%;flex:none;margin-right:8px}
+  /* same vocabulary as the markers: a milestone is a point in time, so its dot is a diamond */
+  .gdot.dia{border-radius:1px;transform:rotate(45deg)}
   .gname{color:var(--ink);cursor:pointer;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gname:hover{color:var(--accent);text-decoration:underline}
   .gname.dim{color:var(--muted)}
@@ -278,7 +370,11 @@
   .gbar.derived{border-style:dashed}
   .gbar.derived .gbarfill{opacity:.16}
   .gslip{position:absolute;top:9px;height:12px;border-radius:3px;background:var(--bad);opacity:.85}
+  /* Shape says WHAT it is, colour says how it's doing. Both are point-in-time markers, so they share
+     .gdia's geometry and status classes; only the rotation distinguishes them.
+     .gdia = milestone (diamond)   .gdia.gsq = stage-gate (square) */
   .gdia{position:absolute;top:10px;width:10px;height:10px;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+  .gdia.gsq{transform:translateX(-50%);border-radius:2px}
   .gdia.planned{background:transparent;border:1.5px solid var(--muted)}
   .gdia.eff{background:var(--warn)}
   .gdia.passed{background:var(--ok);border:1.5px solid var(--ok)}
@@ -286,13 +382,32 @@
   .gdia.overdue{background:var(--bad);border:1.5px solid var(--bad)}
   .gdia.pending{background:transparent;border:1.5px solid var(--muted)}
   .gdia.ghost{background:transparent;border:1.5px dashed var(--muted);opacity:.55}
+  .gdia.cancelled{background:repeating-linear-gradient(45deg, var(--none) 0 1.5px, transparent 1.5px 3.5px);border:1px solid var(--none);opacity:.85}
+  .gdia.cancelled.missed{background:repeating-linear-gradient(45deg, var(--bad) 0 1.5px, transparent 1.5px 3.5px);border-color:var(--bad);opacity:1}
+  .gbar.gsetbar.cancelled{opacity:.42;border-color:var(--none)!important}
+  .gbar.gsetbar.cancelled .gbarfill{background:repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px)!important;opacity:.6}
   .gdia.done{background:var(--ok);border-color:var(--ok)}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
+  .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
+  .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
+  .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+  .lvlb{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:5px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+  .lvlb:hover{border-color:var(--accent);color:var(--accent)}
+  .lvlb.ghosty{color:var(--muted)}
+  /* one row per stage-gate set on an overview tile; the letter matches the Gantt's SG-A / SG-B labelling */
+  .gdots + .gdots{margin-top:3px}
+  .wslbl{font-family:var(--mono);font-size:9px;color:var(--muted);min-width:9px;flex:none;margin-right:2px}
   .glegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
   .glegend span{display:flex;align-items:center;gap:7px}
   .glegend i{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);display:inline-block;flex:none}
   .gtoday{position:absolute;top:0;bottom:0;border-left:1px solid var(--accent);opacity:.65;pointer-events:none}
+  .gended{position:absolute;top:2px;bottom:2px;border-left:2px dashed var(--bad);z-index:3;pointer-events:auto}
+  .gended.achieved{border-left-color:var(--ok)}
+  .gended::after{content:'';position:absolute;top:-2px;left:-4px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--panel)}
+  .gended.achieved::after{background:var(--ok)}
   .gtodaylbl{position:absolute;top:0;font-size:9px;color:var(--accent);font-family:var(--mono);pointer-events:none;opacity:.9}
   .tabsec{display:none} .tabsec.active{display:block}
   .entity-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
@@ -331,6 +446,9 @@
   .ovwrap .chead{display:flex;align-items:flex-start;gap:6px;margin-bottom:8px}
   .ovwrap .cname{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ovwrap .csub{font-size:10.5px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+  .ovwrap .csub .ov-slip{color:var(--bad)}
+  .ovwrap .csub .ov-accel{color:var(--ok)}
+  .ms-tbl .ms-slip{color:var(--bad);font-weight:600}
   .ovwrap .cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
   .ovwrap .kpit{display:grid;grid-template-columns:12px 1fr auto auto;gap:2px 8px;font-size:10.8px;align-items:center;margin-bottom:8px}
   .ovwrap .kh{color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);padding-bottom:3px;border-bottom:1px solid var(--line)}
@@ -393,6 +511,7 @@
 </head>
 <body>
 <header>
+  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">◆</span> R&amp;D Planning</h1>
   <nav id="nav">
     <button data-tab="overview" class="active">Overview</button>
@@ -421,6 +540,7 @@
   </section>
   <section class="tabsec" id="tab-gantt">
     <div id="ganttFilterBar" class="filterbar"></div>
+    <div id="ganttLevelBar"></div>
     <div class="legend">
       <span><i class="swatch" style="background:#2c4a63"></i> baseline</span>
       <span><i class="swatch" style="background:var(--accent)"></i> projected</span>
@@ -502,6 +622,14 @@
 <script>
 "use strict";
 const RD = window.RDCore;
+/* --- modal click-off: dismissal on backdrop click is DISABLED globally. To restore it for a
+   specific modal, add its overlay id to CLICKOFF_OK (e.g. CLICKOFF_OK.add("modalOverlay")).
+   Escape-to-close and the ✕ button are unaffected. --- */
+const CLICKOFF_OK = new Set();
+document.addEventListener("click", function(e){ const ov=e.target;
+  if(ov && ov.classList && ov.classList.contains("modal-overlay") && !CLICKOFF_OK.has(ov.id)) e.stopImmediatePropagation();
+}, true);
+
 
 /* ---------------- broker ---------------- */
 const BROKER = "https://web-production-b17a2.up.railway.app";
@@ -538,7 +666,7 @@ let knownVersions = {};          // docId -> version (ignore own echo)
 let pollTimer = null;
 
 function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
-  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],composition:[] }; }
+  milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
@@ -556,6 +684,7 @@ function clearMsg(){ document.getElementById("msg").classList.remove("show"); }
 function watchedDocs(){ return ["portfolio","gantt-view", ...portfolio.divisions.map(d=>execIdFor(d.id)), ...portfolio.divisions.map(d=>"SPEC-"+d.id)]; }
 
 async function loadAll(){
+  await loadRoster();
   if(!tok()){ setMsg("No broker token yet — add one in Settings to load live data. Showing local scratch.", "info"); return; }
   try{
     const p = await apiGet("portfolio");
@@ -643,7 +772,9 @@ async function pollOnce(){
 function quartersAll(){ const s={}; portfolio.objectives.forEach(o=>{ if(o.quarter) s[o.quarter]=1; });
   return Object.keys(s).sort(); }
 function fmtScore(v){ return v==null ? "—" : Math.round(v)+""; }
-function bandHtml(v){ const b=RD.band(v); return `<span class="band ${b}">${b.replace("-"," ")}</span>`; }
+function bandShape(kind){ return kind==="stagegate"?" sq":kind==="milestone"?" dia":""; }   // shape by kind; colour still from band()
+function dotShape(kind){ return kind==="milestone"?" dia":""; }                             // tree/Gantt dots follow the same rule
+function bandHtml(v, kind){ const b=RD.band(v); return `<span class="band ${b}${bandShape(kind)}">${b.replace("-"," ")}</span>`; }
 
 /* ---------------- COMPANY tab ---------------- */
 function companyHtml(){
@@ -683,11 +814,64 @@ function divCard(d, overall, qCells, counts, worst){
       <span><i class="pip" style="background:var(--none)"></i>${counts["no-band"]}</span></div>
     <div class="slip">${slipTxt}</div></div>`;
 }
+function pfObjEnd(o){ return o ? RD.objectiveEndState((execDocs["EXEC-"+o.divisionId]||{}).objectiveState, o.id) : null; }
+function endBadge(es){ return es?`<span class="obj-ended ${es.status}" title="${es.status==='abandoned'?'Abandoned':'Achieved'}${es.endedDay!=null?' '+dayToIso(es.endedDay):''}">${es.status==='abandoned'?'Abandoned':'Achieved'}</span>`:""; }
+function objEndBadge(o){ return endBadge(pfObjEnd(o)); }
+/* ---- cross-division objectives -------------------------------------------------------------------
+   An objective carries its OWN divisionId, and that id decides which EXEC-<div> bin holds its key
+   results, stage-gates and readings. Planning nests objectives under their INITIATIVE, so an objective
+   whose division differs from its initiative's shows here under one division but lives in another in
+   the execution app. That can be deliberate (a modelling division serving another division's
+   initiative), so this is reported neutrally, never as an error. ---- */
+function divName(id){ const d=byId("division", id); return (d && d.name) || id || ""; }
+function objXDiv(o){
+  if(!o || !o.initiativeId || !o.divisionId) return null;
+  const i=byId("initiative", o.initiativeId);
+  return (i && i.divisionId && i.divisionId!==o.divisionId) ? o.divisionId : null;
+}
+function objDivBadge(o){ const d=objXDiv(o); if(!d) return "";
+  return `<span class="obj-xdiv" title="Executed in ${esc(divName(d))} \u2014 this objective's key results and stage-gates live in that division's execution bin, while its initiative sits in ${esc(divName((byId("initiative",o.initiativeId)||{}).divisionId))}.">exec: ${esc(divName(d))}</span>`; }
+function objExecCounts(o){                                   // what lives in this objective's CURRENT bin
+  const doc=execDocs["EXEC-"+o.divisionId]; if(!doc) return null;
+  return { kr:(doc.keyResults||[]).filter(x=>x.objectiveId===o.id).length,
+           g:(doc.stageGates||[]).filter(x=>x.objectiveId===o.id).length };
+}
+/* Advisory guard on a division change. Planning can only write the portfolio bin, so it cannot migrate an
+   objective's execution payload between EXEC-<div> bins — the honest move is to warn, not to block or
+   silently "fix". Arming is per-move: re-picking a different division re-arms. */
+let moveArmed = null;
+function confirmDivisionMove(ent, id, rec, data){
+  if(ent!=="objective" && ent!=="initiative") return true;
+  if(data.divisionId===undefined || !rec.divisionId || data.divisionId===rec.divisionId) return true;
+  const sig=ent+":"+id+":"+rec.divisionId+">"+data.divisionId;
+  if(moveArmed===sig){ moveArmed=null; return true; }                    // already warned for exactly this move
+  const from=divName(rec.divisionId), to=divName(data.divisionId);
+  let msg;
+  if(ent==="objective"){
+    const c=objExecCounts(rec), bits=[];
+    if(c){ if(c.kr) bits.push(c.kr+" key result"+(c.kr>1?"s":"")); if(c.g) bits.push(c.g+" stage-gate"+(c.g>1?"s":"")); }
+    if(c && !bits.length) return true;                                   // nothing to strand -> move freely
+    const what=bits.length?bits.join(" and "):"any execution data";
+    msg=`Moving this objective from ${from} to ${to}. Its ${what} live in ${from}'s execution bin and will NOT move \u2014 they'll disappear from view until the division is set back. Click Save again to move anyway.`;
+  } else {
+    const stay=portfolio.objectives.filter(o=>o.initiativeId===id && o.divisionId===rec.divisionId);
+    if(!stay.length) return true;                                        // no aligned objectives -> nothing strands
+    msg=`Moving this initiative from ${from} to ${to}. Its ${stay.length} objective${stay.length>1?"s":""} stay in ${from} \u2014 they'll show under ${to} here but remain in ${from} in the execution app. Click Save again to move anyway.`;
+  }
+  moveArmed=sig; showEditorErr(msg); return false;
+}
 function statusCounts(type, id, em){
   const c={"on-track":0,"at-risk":0,"off-track":0,"no-band":0};
-  const objs = portfolio.objectives.filter(o=>type==="division"?o.divisionId===id:true);
+  const objs = portfolio.objectives.filter(o=>(type==="division"?o.divisionId===id:true));
   objs.forEach(o=>{ c[RD.band(RD.objectiveScore(o.id, em))]++; });
   return c;
+}
+function delayedInits(divId, casc, n){
+  return portfolio.initiatives.filter(i=>i.divisionId===divId)
+    .map(i=>({ i, slip:casc.longTermSlip[i.id], pe:casc.initiativeProjectedEnd[i.id] }))
+    .filter(r=>r.slip!=null && !isNaN(r.slip) && r.slip>0)          // only actually-delayed, dated initiatives
+    .sort((a,b)=>b.slip-a.slip)
+    .slice(0, n||3);
 }
 function worstSlip(divId, casc){
   let w=null;
@@ -699,7 +883,32 @@ function scoreColor(v){ const b=RD.band(v);
   return b==="on-track"?"var(--ok)":b==="at-risk"?"var(--warn)":b==="off-track"?"var(--bad)":"var(--none)"; }
 
 /* ---------------- PORTFOLIO tab (generic editor) ---------------- */
+// GET /roster is a broker projection: {email, orgRole, leadOf, disabled} only — pinHash/salt never leave the
+// server. Read-only; the planning app never writes the users bin and ignores assignedObjectives (objective
+// ownership lives here, in the portfolio doc).
+let roster = [];
+async function loadRoster(){
+  try{
+    const r = await fetch(`${BROKER}/roster`, {headers:auth()});
+    if(!r.ok) return;                                   // 503 = USERS_BIN unset: fall back to stored values
+    const j = await r.json();
+    roster = (j && j.users) || [];
+  }catch(e){ roster = []; }
+}
+// Options for the owner picker: live roster first, then any value already stored that the roster doesn't know
+// (legacy free text, or someone who left). A ref picker shows only what it can resolve, so without this an
+// unrecognised owner would silently blank on the next save.
+function ownerOptions(){
+  const known = roster.filter(u=>!u.disabled && u.email).map(u=>u.email);
+  const extra = [];
+  (portfolio.objectives||[]).forEach(o=>RD.ownersOf(o).forEach(v=>{
+    if(known.indexOf(v)<0 && extra.indexOf(v)<0) extra.push(v);
+  }));
+  return known.map(e=>({id:e, name:e}))
+    .concat(extra.map(e=>({id:e, name:e+" \u2014 not in roster"})));
+}
 const SEL = { division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+  user:ownerOptions,
   initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
 const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
 const SCHEMAS = {
@@ -710,10 +919,11 @@ const SCHEMAS = {
                ["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
   milestone:  [["name","Name","text"],["initiativeId","Initiative","ref:initiative"],
-               ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],["order","Order","number"]],
+               ["plannedDate","Planned date","date"],["completedDate","Completed date","date"],
+               ["trl","TRL achieved","number"],["mrl","MRL achieved","number"],["order","Order","number"]],
   objective:  [["statement","Statement","text"],["divisionId","Division","ref:division"],
                ["initiativeId","Initiative","ref:initiative"],["quarter","Quarter","quarter"],
-               ["owner","Owner","text"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
+               ["owner","Owner","multiref:user"],["plannedStart","Planned start","date"],["plannedEnd","Planned end","date"],
                ["milestoneIds","Linked milestones","multiref:milestone"],
                ["productId","Product (optional)","ref:product?"],["modelId","Model (optional)","ref:model?"],["order","Order","number"]],
 };
@@ -731,13 +941,16 @@ function renderPortfolio(){
     treeCtx="portfolio";                                        // ensure treeActs renders editable row actions (not the read-only lineage mode)
     const host=document.getElementById("structTables");
     if(host){ host.innerHTML=groupedTreeHtml(); wireTreeLinks(host);
+      host.querySelectorAll("[data-ptoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.ptoggle;
+        structCollapsed.has(k)?structCollapsed.delete(k):structCollapsed.add(k); renderPortfolio(); });
       host.querySelectorAll("[data-addnew]").forEach(b=>b.onclick=()=>{ armedDelete=null; openEditor(null, b.dataset.addnew); });
       host.querySelectorAll("[data-gnew]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const d=JSON.parse(b.dataset.gnew); armedDelete=null; openEditor(null, d.e, d.p); });
     }
-  } else renderStructTables();                                 // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
+  } else renderStructTables();                                // Hierarchy → the full structure tables (divisions / products·models / initiatives·objectives·milestones)
 }
 function openEditor(id, entityOverride, prefill){
   if(RO) return;   // read-only: no editing
+  moveArmed = null;
   if(entityOverride) activeEntity = entityOverride;
   editingId = id || null;
   const rec = editingId ? SEL[activeEntity]().find(x=>x.id===editingId) : (prefill || {});
@@ -752,7 +965,8 @@ function openEditor(id, entityOverride, prefill){
         SEL[kind]().map(o=>`<option value="${o.id}" ${rec[k]===o.id?'selected':''}>${esc(o.name||o.statement||o.id)}</option>`).join("")+`</select>`;
     } else if(type.startsWith("multiref:")){
       const kind = type.slice(9);
-      const cur = rec[k]||[];
+      // a legacy scalar must not reach .indexOf() as a STRING — "Corey".indexOf("Co") is a substring match
+      const cur = Array.isArray(rec[k]) ? rec[k] : (rec[k]!=null && rec[k]!=="" ? [rec[k]] : []);
       html += `<select data-f="${k}" multiple size="3">`+
         SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
     } else if(type==="quarter"){
@@ -855,6 +1069,57 @@ function classificationKpisHtml(node){
   return `<div class="pftargets"><div class="pft-head"><span>${ck.kind==="product"?"Product":"Model"} specifications — ${esc(ck.label)}</span>`+
     `<span class="hint" style="font-weight:400">read-only · from Product Designer</span></div>${body}</div>`;
 }
+// A milestone KPI can draw its current value from KR KPIs inside its own initiative. The link is stored on
+// the milestone KPI (kpi.sources) because the KR KPI lives in an EXEC-<div> doc this app cannot write.
+// The objectives this milestone actually draws from: every KPI named in a milestone target's `sources`,
+// resolved back through its Key Result to the owning objective.
+function msLinkedObjectives(msId){
+  const srcIds=[];
+  (portfolio.kpis||[]).filter(k=>k.hostType==="milestone" && k.hostId===msId)
+    .forEach(k=>(k.sources||[]).forEach(id=>{ if(srcIds.indexOf(id)<0) srcIds.push(id); }));
+  if(!srcIds.length) return [];
+  const objIds=[];
+  for(const key in execDocs){
+    const doc=execDocs[key]||{};
+    (doc.kpis||[]).forEach(k=>{
+      if(srcIds.indexOf(k.id)<0 || k.hostType!=="keyResult") return;
+      const kr=(doc.keyResults||[]).find(r=>r.id===k.hostId);
+      if(kr && kr.objectiveId && objIds.indexOf(kr.objectiveId)<0) objIds.push(kr.objectiveId);
+    });
+  }
+  return objIds.map(id=>byId("objective",id)).filter(Boolean);
+}
+function msSourceTree(msId){
+  const ms=byId("milestone", msId); if(!ms) return [];
+  const objs=(portfolio.objectives||[]).filter(o=>o.initiativeId===ms.initiativeId);
+  const tree=[];
+  objs.forEach(o=>{
+    const krs=[];
+    for(const key in execDocs){
+      const doc=execDocs[key]||{};
+      (doc.keyResults||[]).filter(r=>r.objectiveId===o.id).forEach(kr=>{
+        const kpis=(doc.kpis||[]).filter(k=>k.hostType==="keyResult" && k.hostId===kr.id).map(k=>({ id:k.id, label:(k.name||k.id) }));
+        if(kpis.length) krs.push({ id:kr.id, label:(kr.statement||kr.id), kpis:kpis });   // a KR with no KPIs has nothing to offer
+      });
+    }
+    if(krs.length) tree.push({ id:o.id, label:(o.statement||o.id), quarter:o.quarter||"", krs:krs });
+  });
+  return tree;
+}
+function msSourceCandidates(msId){                                   // flat view of the same set
+  const out=[];
+  msSourceTree(msId).forEach(o=>o.krs.forEach(kr=>kr.kpis.forEach(k=>out.push({ id:k.id, label:k.label, kr:kr.label }))));
+  return out;
+}
+function kpiSourceNote(k){
+  const pm=pfMap(), pool=poolOf(pm);
+  const e=RD.effValueSource(k, pool, pm);
+  if(!e) return "";
+  if(e.src===k.id) return `<span class="pft-src">source: manual entry</span>`;
+  const sk=pool.find(x=>x.id===e.src);
+  const n=(k.sources||[]).length;
+  return `<span class="pft-src">source: ${esc(sk?(sk.name||sk.id):e.src)}${n>1?` <span class="muted">(best of ${n})</span>`:""}</span>`;
+}
 function initTargetsHtml(hostId, hostType){
   hostType=hostType||"initiative";
   const list=(portfolio.kpis||[]).filter(k=>k.hostType===hostType && k.hostId===hostId);
@@ -873,10 +1138,11 @@ function initTargetsHtml(hostId, hostType){
         `<span class="tdot" style="background:${bandColor(bnd)}" title="${bnd}"></span>`+
         `<span class="pft-name">${esc(k.name||k.id)}</span>`+
         `<span class="pft-sum">${esc(targetSummary(k))}</span>`+
-        `<span class="pft-cur">${valTxt}</span>`+
+        `<span class="pft-cur"${RO?"":` data-tgtpost="${k.id}" title="Click to record a value"`}>${valTxt}</span>`+
         `<span class="pft-acts"><button class="ghost" data-tedit="${k.id}">edit</button>`+
         `<button class="ghost danger ${armed?'armed':''}" data-tdel="${k.id}">${armed?'confirm':'remove'}</button></span>`+
-      `</div>`;
+      `</div>`+
+      ((hostType==="milestone" && (val!=null || (k.sources||[]).length)) ? `<div class="pft-srcrow">${kpiSourceNote(k)}</div>` : "");
     });
     h+=`</div>`;
   }
@@ -896,7 +1162,7 @@ function msStatusHtml(id){
   const s=RD.milestoneScore(id,em), ach=RD.milestoneAchieved(ms,em);
   let left;
   if(ach) left=`<span class="band on-track">achieved</span>`+(ms.completedDate!=null?`<span class="hint" style="margin-left:8px">marked complete ${dayToIso(ms.completedDate)}</span>`:`<span class="hint" style="margin-left:8px">KPI target met</span>`);
-  else if(s!=null) left=bandHtml(s);
+  else if(s!=null) left=bandHtml(s, "milestone");
   else left=`<span class="hint">no reading yet — set a completed date, or link a Key Result / stage-gate to a milestone KPI in the execution app</span>`;
   const sc=(s!=null)?`<span style="margin-left:auto;font-family:var(--mono);font-weight:600;color:${scoreColor(s)}">${Math.round(s)}</span>`:"";
   return `<div class="pftargets"><div class="pft-head"><span>Milestone status</span><button class="ghost" id="msOpenReport">📄 Report</button></div>`+
@@ -913,7 +1179,7 @@ function milestonesHtml(initId){
     h+=`<div class="pft-list">`;
     list.forEach(m=>{
       const armed=pfMsArmed===m.id;
-      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia">◆</span>`+
+      h+=`<div class="pft-row" data-msid="${m.id}"><span class="mdia" style="color:${bandColor(nodeBand("milestone", m.id))}" title="${esc(nodeBand("milestone", m.id).replace("-"," "))}">◆</span>`+
         `<span class="pft-name">${esc(m.name||m.id)}</span>`+
         `<span class="pft-sum mono">${m.plannedDate!=null?dayToIso(m.plannedDate):'no date'}</span>`+
         `<span class="pft-cur"></span>`+
@@ -949,9 +1215,25 @@ function msDelete(id, initId){
   persistPortfolio(()=>{ const j=portfolio.milestones.findIndex(m=>m.id===id); if(j>=0) portfolio.milestones.splice(j,1);
     portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(x=>x!==id); }); }, "Milestone deleted.");
 }
+function postTargetValue(kpiId, hostId, hostType){
+  const el=document.querySelector(`#pfModalBody [data-tgtpost="${kpiId}"]`); if(!el || el.querySelector("input")) return;
+  const saved=el.innerHTML;
+  el.innerHTML=`<input type="number" step="any" class="pft-in" placeholder="value"/>`;
+  const inp=el.querySelector("input"); inp.focus();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; const v=inp.value;
+    if(v==="" || isNaN(Number(v))){ el.innerHTML=saved; return; }
+    portfolio.kpiUpdates=portfolio.kpiUpdates||[];                       // additive: older portfolio docs have no array
+    portfolio.kpiUpdates.push({ id:"UPD-"+kpiId+"-"+Date.now(), kpiId:kpiId, value:Number(v), timestamp:Date.now(), note:"" });
+    refreshInitTargets(hostId, hostType); renderAll();
+    persistPortfolio(null, "Value recorded."); };
+  inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ done=true; el.innerHTML=saved; } };
+  inp.onblur=commit;
+}
 function wireInitTargets(hostId, hostType){
   hostType=hostType||"initiative";
   const add=document.getElementById("pfAddTarget"); if(add) add.onclick=()=>openKpiEditor(hostId,null,hostType);
+  document.querySelectorAll("#pfModalBody [data-tgtpost]").forEach(c=>c.onclick=()=>postTargetValue(c.dataset.tgtpost, hostId, hostType));
   document.querySelectorAll("#pfModalBody [data-tedit]").forEach(b=>b.onclick=()=>openKpiEditor(hostId,b.dataset.tedit,hostType));
   document.querySelectorAll("#pfModalBody [data-tdel]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.tdel;
@@ -988,6 +1270,18 @@ function pfKpiFormHtml(d){
       `<label class="pffield"><span>Target value</span><input data-k="target" type="number" value="${d.target!=null?d.target:''}" placeholder="value"/></label></div>`;
     h+=`<label class="pffield"><span>Unit</span><input data-k="unit" type="text" value="${esc(d.unit||'')}" placeholder="e.g. A/g, %, mV"/></label>`;
   }
+  if(pfKpiHostType==="milestone"){
+    const tree=msSourceTree(pfKpiInit), cur=d.sources||[];
+    h+=`<div class="pfk-f" style="grid-column:1/-1"><label>Value sources <span class="hint" style="font-weight:400">— KR KPIs in this initiative; the best-scoring one sets the value</span></label>`;
+    h+= tree.length
+      ? `<div class="pfk-srcs">`+tree.map(o=>
+          `<div class="pfk-og"><div class="pfk-obj">${esc(o.label)}${o.quarter?` <span class="pfk-q">(${esc(o.quarter)})</span>`:""}</div>`+
+          o.krs.map(kr=>`<div class="pfk-krg"><div class="pfk-kr">${esc(kr.label)}</div>`+
+            kr.kpis.map(k=>`<label class="pfk-src"><input type="checkbox" data-src="${esc(k.id)}" ${cur.indexOf(k.id)>=0?"checked":""}/> <span>${esc(k.label)}</span></label>`).join("")+
+          `</div>`).join("")+`</div>`).join("")+`</div>`
+      : `<p class="hint" style="margin:4px 0 0">No Key Result KPIs in this initiative yet.</p>`;
+    h+=`</div>`;
+  }
   h+=`</div><div class="row-actions"><button class="act" id="pfKpiSave">Save target</button>`+
      `<button class="ghost" id="pfKpiCancel">Cancel</button></div>`;
   return h;
@@ -1020,6 +1314,11 @@ function saveKpiEditor(){
   const tt=d.targetType||"demonstration";
   const rec={ hostType:pfKpiHostType, hostId:initId, objectiveId:null, isDefiner:true, groupId:null,
     name:(d.name||"").trim(), targetType:tt };
+  if(pfKpiHostType==="milestone"){
+    const boxes=document.querySelectorAll('#pfKpiBody [data-src]');
+    if(boxes.length) rec.sources=Array.from(boxes).filter(b=>b.checked).map(b=>b.dataset.src);
+    else if(d.sources) rec.sources=d.sources.slice();      // picker not rendered -> keep what was there
+  }
   if(tt!=="binary"){
     rec.direction=(d.direction==="down")?"down":"up";
     rec.target=(d.target!=null&&d.target!=="")?Number(d.target):null;
@@ -1068,7 +1367,8 @@ function treeActs(entity, id){
                 initiative:[["objective","+ obj"],["milestone","+ milestone"]],
                 product:[["model","+ model"]] }[entity] || [];
   const addBtns = ADD.map(a=>`<button class="tact" title="Add ${a[0]} here" data-tadd="${a[0]}:${id}">${a[1]}</button>`).join("");
-  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}</span>`;
+  const delBtn=`<button class="tact danger" title="Delete this ${entity}" data-sdel="${entity}:${id}">✕</button>`;
+  return `<span class="tacts"><button class="tact" title="Edit this ${entity}" data-tedit="${entity}:${id}">✎ edit</button>${addBtns}${delBtn}</span>`;
 }
 function openTreeAdd(childEntity, parentId){
   let prefill = {};
@@ -1110,7 +1410,7 @@ const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegate
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
-function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; return `<a class="tname${mu}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>`; }
+function rowName(entity,r){ const st=TREE_NAME_STYLE[entity]||"", mu=TREE_MUTED[entity]?" muted":""; const _oe=entity==="objective"?pfObjEnd(r):null; const _sk=(_oe&&_oe.status==="abandoned")?" obj-struck":""; return `<a class="tname${mu}${_sk}" style="${st}" data-lineage="${entity}:${r.id}">${esc(nameOf(entity,r))}</a>${endBadge(_oe)}${entity==="objective"?objDivBadge(r):""}`; }
 function treeRow(entity,r){ const sub=subCount(entity,r); return `${rowDot(entity,r.id)}${rowName(entity,r)}${sub?`<span class="tsub">${esc(sub)}</span>`:''}${treeActs(entity,r.id)}`; }
 function leafRow(entity,r){ return `<div class="tleaf">${rowDot(entity,r.id)}${rowName(entity,r)}${treeActs(entity,r.id)}</div>`; }
 // read-only Product-Designer spec docs (Phase A): per-model conformance + metadata
@@ -1152,15 +1452,16 @@ function execLeaf(tag,label){ return `<div class="tleaf"><span class="texlab">${
 /* ---- stage-gate SETS (read from the exec doc; the exec app owns them) ---- */
 function planSetsForObj(doc, objId){ return ((doc&&doc.stageGateSets)||[]).filter(s=>s.objectiveId===objId).slice().sort((a,b)=>((a.order||0)-(b.order||0))||String(a.name||'').localeCompare(String(b.name||''))); }
 function planGroupGates(doc, objId){
+  const byDue=(a,b)=>{ const pa=a.plannedDate==null?Infinity:a.plannedDate, pb=b.plannedDate==null?Infinity:b.plannedDate; return (pa-pb)||String(a.name||'').localeCompare(String(b.name||''))||String(a.id).localeCompare(String(b.id)); };
   const gates=((doc&&doc.stageGates)||[]).filter(g=>g.objectiveId===objId);
   const sets=planSetsForObj(doc, objId);
-  const groups=sets.map(st=>({set:st, gates:gates.filter(g=>g.setId===st.id)}));
+  const groups=sets.map(st=>({set:st, gates:gates.filter(g=>g.setId===st.id).slice().sort(byDue)}));
   const valid=new Set(sets.map(st=>st.id));
-  const orphans=gates.filter(g=>!valid.has(g.setId));
+  const orphans=gates.filter(g=>!valid.has(g.setId)).slice().sort(byDue);
   if(orphans.length) groups.push({set:{id:"__ung__:"+objId, name:"Ungrouped"}, gates:orphans});
   return groups;
 }
-function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(const grp of groups){ const i=grp.gates.findIndex(x=>x.id===g.id); if(i>=0) return (grp.set.name||"Set")+"-"+(i+1); } return g.name||g.id; }
+function planGateLabel(doc, g){ if(!g) return ""; const groups=planGroupGates(doc, g.objectiveId); for(let gi=0; gi<groups.length; gi++){ const i=groups[gi].gates.findIndex(x=>x.id===g.id); if(i>=0) return "SG-"+String.fromCharCode(65+gi)+(i+1); } return g.name||g.id; }
 function ganttGateLabel(g){ const o=byId("objective", g.objectiveId); const doc=o&&execDocs["EXEC-"+o.divisionId]; return doc?planGateLabel(doc,g):(g.name||g.id); }
 function nodeHtml(entity,r){
   if(!hasArchChildren(entity,r.id)) return leafRow(entity,r);
@@ -1171,10 +1472,10 @@ function objectiveExecHtml(objId){
   if(!doc) return `<div class="tleaf"><span class="tstatic">no exec doc loaded for this division</span></div>`;
   let h="";
   (doc.keyResults||[]).filter(k=>k.objectiveId===objId).forEach(k=> h+=execLeaf("KR", k.statement||k.id));
-  planGroupGates(doc, objId).forEach(grp=>{
+  planGroupGates(doc, objId).forEach((grp,gi)=>{
     if(!grp.gates.length) return;
     h+=`<div class="tleaf tsethead"><span class="texlab">set</span><span class="tstatic"><b>${esc(grp.set.name||"Set")}</b></span></div>`;
-    grp.gates.forEach((g,i)=> h+=execLeaf((grp.set.name||"Set")+"-"+(i+1), g.name||g.id));
+    grp.gates.forEach((g,i)=> h+=execLeaf("SG-"+String.fromCharCode(65+gi)+(i+1), g.name||g.id));
   });
   return h || `<div class="tleaf"><span class="tstatic">no key results or stage-gates yet</span></div>`;
 }
@@ -1198,6 +1499,7 @@ function wireTreeLinks(root){
   root.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
   root.querySelectorAll("[data-tedit]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tedit,i=s.indexOf(":"); armedDelete=null; openEditor(s.slice(i+1), s.slice(0,i)); });
   root.querySelectorAll("[data-tadd]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.tadd,i=s.indexOf(":"); openTreeAdd(s.slice(0,i), s.slice(i+1)); });
+  root.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); armedDelete=null; structDelete(s.slice(0,i), s.slice(i+1)); });
 }
 /* ---------------- filter & group (Structure + Gantt) ---------------- */
 function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
@@ -1285,7 +1587,7 @@ function groupPrefill(pathPairs){
   pathPairs.forEach(p=>{ const dim=p[0], key=p[1]; if(key===""||key==="__all__") return;
     if(dim==="division") pre.divisionId=key; else if(dim==="product") pre.productId=key;
     else if(dim==="model") pre.modelId=key; else if(dim==="quarter") pre.quarter=key;
-    else if(dim==="owner") pre.owner=key; else if(dim==="initiative") pre.initiativeId=key; });
+    else if(dim==="owner") pre.owner=key?[key]:[]; else if(dim==="initiative") pre.initiativeId=key; });
   return pre;
 }
 function gnewBtn(entity, pre, label){ return `<button class="tact" title="${esc(label)}" data-gnew="${esc(JSON.stringify({e:entity,p:pre}))}">${esc(label)}</button>`; }
@@ -1303,10 +1605,15 @@ function renderGroupNodes(nodes, em, depth, path){
   if(nodes.length===1 && nodes[0].dim==null){ return nodes[0].objs.map(o=>objLeafHtml(o,0)).join(""); }   // no dims → flat, no header
   let h="";
   nodes.forEach(n=>{
+    // no value for this dimension -> no group level at all: the items read at the parent's depth, and
+    // _dimOrder puts them first, so they sit above the real groups
+    if(n.key===""){ h += n.children ? renderGroupNodes(n.children, em, depth, path) : n.objs.map(o=>objLeafHtml(o,depth)).join(""); return; }
     const nodePath=path.concat([[n.dim,n.key]]), pre=groupPrefill(nodePath);
     const under=collectObjs(n);
+    const gk=pathKey(nodePath), col=structCollapsed.has(gk);
     const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gs=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;
-    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
+    h+=`<div class="pfgrp"${depth?` style="margin-left:${depth*14}px"`:""}><div class="pfgrp-head"><span class="gtri" data-ptoggle="${esc(gk)}">${col?"\u25B8":"\u25BE"}</span><span class="tdot" style="background:${bandColor(RD.band(gs))}"></span>${esc(dimLabel(n.dim,n.key))}${groupAddButtons(n.dim, pre)} <span class="tsub">${under.length} obj</span></div>`;
+    if(col){ h+=`</div>`; return; }
     if(n.children) h+=renderGroupNodes(n.children, em, depth+1, nodePath);
     else h+=n.objs.map(o=>objLeafHtml(o,depth+1)).join("");
     h+=`</div>`;
@@ -1314,7 +1621,7 @@ function renderGroupNodes(nodes, em, depth, path){
   return h;
 }
 function objLeafHtml(o,indent){
-  const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(o.owner?["owner "+o.owner]:[]).join(" · ");
+  const ctx=[o.quarter, nameOf("initiative",byId("initiative",o.initiativeId))].filter(Boolean).concat(RD.ownersOf(o).length?["owner "+RD.ownersOf(o).join(", ")]:[]).join(" · ");
   return `<div class="tleaf" style="padding-left:${indent*14+14}px">${rowDot("objective",o.id)}${rowName("objective",o)}<span class="tsub">${esc(ctx)}</span>${treeActs("objective",o.id)}</div>`;
 }
 function renderPortfolioTree(){
@@ -1450,6 +1757,7 @@ function saveRecord(){
     const merged = Object.assign({}, rec, data);
     if(ent==="objective" && reconcileObjClass(merged)){ data.productId=null; data.modelId=null; cleared=true; }
     if(!validateAndWarn(ent, merged)) return;   // validate before mutating
+    if(!confirmDivisionMove(ent, id, rec, data)) return;   // advisory: a division move strands execution data
     Object.assign(rec, data);
     reapply = ()=>{ const r=SEL[ent]().find(x=>x.id===id); if(r) Object.assign(r, data); else SEL[ent]().push(Object.assign({id}, data)); };
   } else {
@@ -1461,7 +1769,7 @@ function saveRecord(){
     reapply = ()=>{ if(!SEL[ent]().some(x=>x.id===id)) SEL[ent]().push(rec); };
   }
   const ret = (ent==="milestone" && msReturn) ? msReturn : null;
-  closeEditor(); renderPortfolio(); renderOverview(); renderGantt();
+  closeEditor(); renderAll();
   if(ret) openEditor(ret, "initiative");
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
 }
@@ -1555,7 +1863,7 @@ function structDelete(ent, id){
     const n=targets.length-1;
     close();
     applyStructDelete(targets);
-    renderPortfolio(); renderOverview(); renderGantt();
+    renderAll();
     persistPortfolio(()=>applyStructDelete(targets), cap(ent)+(n>0?" and "+n+" item"+(n>1?"s":"")+" deleted.":" deleted."));
   });
   modal.hidden=false;
@@ -1603,10 +1911,10 @@ function renderStructTables(){
       html+=`<tr class="s-parent">`+idCell("initiative",i.id)+`<td><b>${esc(i.name)}</b></td><td>${structRefName("division",i.divisionId)}</td>`+acts("initiative",i.id,[["objective","+ obj"],["milestone","+ ms"]])+`</tr>`;
       structObjsOf(i).forEach(o=>{
         const b=nodeBand("objective",o.id);
-        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
+        html+=`<tr class="s-child">`+idCell("objective",o.id)+`<td class="s-indent">↳ ${esc(o.statement)}${objEndBadge(o)}${objDivBadge(o)}</td><td><span class="pill">${esc(o.quarter||"—")}</span> <i class="pip" style="background:${bandColor(b)}" title="${esc(b||"no band")}"></i></td>`+acts("objective",o.id)+`</tr>`;
       });
       byOrder(SEL.milestone().filter(m=>m.initiativeId===i.id)).forEach(m=>{
-        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent">◆ ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
+        html+=`<tr class="s-child s-ms">`+idCell("milestone",m.id)+`<td class="s-indent"><span class="mdia" style="color:${bandColor(nodeBand("milestone",m.id))}" title="${esc(nodeBand("milestone",m.id).replace("-"," "))}">◆</span> ${esc(m.name)}</td><td class="mono">${m.plannedDate?dayToIso(m.plannedDate):"—"}</td>`+acts("milestone",m.id)+`</tr>`;
       });
     });
     html+=`</tbody></table>`;
@@ -1631,6 +1939,50 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
+// The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
+// (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
+// the deepest level a tab offers — collapsing to it hides that node's children (e.g. an objective's gates).
+// Only the Gantt has levels to collapse TO: it is the one tab drawing a nested tree in both modes. Structure
+// and Milestones keep their per-node toggles instead — no level bar.
+function pfLevels(tab){
+  if(tab!=="gantt") return [];
+  const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
+  if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat([{id:"objective",label:"Objectives"}]);
+  return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
+}
+
+function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
+// Collapse everything to `level`: every node AT that level is collapsed (its children hidden) and every
+// ancestor is left open, so the view reads down to exactly that level. null = expand all.
+function collapseTreeTo(roots, level, set){
+  set.clear();
+  if(level==null) return set;
+  (function walk(list){ list.forEach(n=>{
+    if(nodeLevel(n)===level){ if(n.kids && n.kids.length) set.add(n.key); }
+    else if(n.kids) walk(n.kids);
+  }); })(roots);
+  return set;
+}
+// mirrors core's classifyGate; a milestone can additionally be achieved on its KPIs with no date recorded
+function msDiaClass(ms, em){
+  if(ms.completedDate!=null) return (ms.plannedDate!=null && ms.completedDate>ms.plannedDate) ? "passed-late" : "passed";
+  if(RD.milestoneAchieved(ms,em)) return "passed";
+  if(ms.plannedDate!=null && ms.plannedDate<todayDay()) return "overdue";
+  return "pending";
+}
+function ganttCollapseTo(level){ collapseTreeTo(ganttRoots, level, ganttCollapsed); renderGantt(); }
+let structCollapsed = new Set();                   // per-tab: collapsing the Gantt must not reshape Structure
+let msCollapsed = new Set();
+// A core group node's own `key` is only the dimension VALUE, which repeats across branches — the collapse key
+// must be the whole path. A key:'' / '__all__' node is transparent (no level of its own) so it never gets one.
+function pathKey(path){ return path.map(function(p){ return p[0]+":"+p[1]; }).join("/"); }
+function levelBarHtml(tab){
+  const lv=pfLevels(tab); if(!lv.length) return "";
+  return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
+    lv.map(l=>`<button class="lvlb" data-lvl="${esc(l.id)}" data-lvltab="${tab}">${esc(l.label)}</button>`).join("")+
+    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button></div>`;
+}
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
 function prodAbbrev(prodId){ const p=byId("product",prodId); if(!p) return "MS";
@@ -1660,108 +2012,188 @@ function msMatches(ms){ const f=pfFilters; const init=byId("initiative",ms.initi
   return true; }
 function renderMilestones(){
   const el=document.getElementById("msBody"); if(!el) return;
-  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(false); wireFilterBar(fbar); }
+  const fbar=document.getElementById("msFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em=pfMap(), casc=RD.cascade(portfolio, em, todayDay());
   const rows=portfolio.milestones.filter(msMatches);
   if(!rows.length){ el.innerHTML=`<p class="hint">${portfolio.milestones.length?"No milestones match the current filters.":"No milestones yet — add one from an initiative in the Structure tab."}</p>`; return; }
-  const groups={}; rows.forEach(ms=>{ const init=byId("initiative",ms.initiativeId); const div=init?init.divisionId:"—"; (groups[div]=groups[div]||[]).push(ms); });
-  const divOrder=portfolio.divisions.map(d=>d.id).filter(k=>groups[k]).concat(groups["—"]?["—"]:[]);
+
   let h=`<table class="ms-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th style="text-align:right">Score</th><th style="text-align:right">KPIs</th><th></th></tr></thead><tbody>`;
-  divOrder.forEach(div=>{
-    const list=groups[div].slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
-    const dname = div==="—" ? "— no division —" : (nameOf("division",byId("division",div))||div);
-    h+=`<tr class="grouphead"><td colspan="10">${esc(dname)} <span class="tsub" style="margin-left:6px">${list.length}</span></td></tr>`;
-    list.forEach(ms=>{
+  const msSort=(list)=>list.slice().sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
+  const collectMs=(n)=> n.children ? n.children.reduce((acc,c)=>acc.concat(collectMs(c)),[]) : (n.objs||[]);
+  const msGroups=(nodes, depth, path)=>{
+  nodes.forEach(n=>{
+    const under=collectMs(n); if(!under.length) return;
+    // "— none —" is not a group: no header, and the rows read at the parent's depth (first, per _dimOrder)
+    const bare=(n.key===""||n.key==="__all__");
+    const np = bare ? path : path.concat([[n.dim,n.key]]);
+    const gk = bare ? "" : pathKey(np), col = !bare && msCollapsed.has(gk);
+    if(!bare) h+=`<tr class="grouphead"><td colspan="10" style="padding-left:${6+depth*16}px"><span class="gtri" data-mstoggle="${esc(gk)}">${col?"\u25B8":"\u25BE"}</span> ${esc(dimLabel(n.dim,n.key))} <span class="tsub" style="margin-left:6px">${under.length}</span></td></tr>`;
+    if(col) return;                                   // collapsed: header only, nothing beneath it
+    if(n.children){ msGroups(n.children, bare?depth:depth+1, np); return; }
+    msSort(n.objs).forEach(ms=>{
       const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
       const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
       const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
       const nk=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id).length;
       const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
-      const stCell = done ? `<span class="band on-track">achieved</span>` : `<span class="band ${bnd}">${bnd.replace("-"," ")}</span>`;
+      const msRepSlip=(!done && eff!=null && ms.plannedDate!=null)?eff-ms.plannedDate:null;
+      const effCell = effTxt + ((msRepSlip!=null&&msRepSlip>0)?` <span class="ms-slip">+${msRepSlip}d</span>`:"");
+      const stCell = done ? `<span class="band on-track dia">achieved</span>` : `<span class="band ${bnd} dia">${bnd.replace("-"," ")}</span>`;
       h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
         `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
         `<td><b>${esc(ms.name||ms.id)}</b></td>`+
         `<td>${init?esc(init.name||init.id):"—"}</td>`+
         `<td>${prodId?esc(productName(prodId)):"—"}</td>`+
         `<td class="mono">${ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"}</td>`+
-        `<td class="mono">${effTxt}</td>`+
+        `<td class="mono">${effCell}</td>`+
         `<td style="white-space:nowrap">${stCell}</td>`+
         `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td>`+
         `<td class="mono" style="text-align:right">${nk||"—"}</td>`+
-        `<td style="text-align:center"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button></td>`+
+        `<td style="text-align:center;white-space:nowrap"><button class="gact" data-msreport="${ms.id}" title="${ms.milestoneReport?"Open report":"Create report"}">📄${ms.milestoneReport&&ms.milestoneReport.locked?"🔒":""}</button>${RO?"":`<button class="gact danger" data-sdel="milestone:${ms.id}" title="Delete this milestone">✕</button>`}</td>`+
       `</tr>`;
     });
   });
+  };
+  msGroups(RD.groupMilestones(rows, pfGroupDims, portfolio), 0, []);
   h+=`</tbody></table>`;
   el.innerHTML=h;
+  el.querySelectorAll("[data-mstoggle]").forEach(t=>t.onclick=(e)=>{ e.stopPropagation(); const k=t.dataset.mstoggle;
+    msCollapsed.has(k)?msCollapsed.delete(k):msCollapsed.add(k); renderMilestones(); });
   el.querySelectorAll("[data-msedit]").forEach(r=>r.onclick=()=>openEditor(r.dataset.msedit,"milestone"));
   el.querySelectorAll("[data-msreport]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openMilestoneReport(b.dataset.msreport); });
+  el.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const t=b.dataset.sdel,i=t.indexOf(":"); armedDelete=null; structDelete(t.slice(0,i), t.slice(i+1)); });
 }
 /* ---------------- milestone report modal (phase 3) ---------------- */
 let msrCurrent=null, msrDraft=null;
 function msKpiResult(score){ if(score==null) return "N/A"; if(score>=100) return "Met"; if(score>=70) return "Partial"; return "Missed"; }
 function resultBandCls(r){ return r==="Met"?"on-track":r==="Partial"?"at-risk":r==="Missed"?"off-track":"no-band"; }
+function msrBlank(){ return { kpiOverrides:{}, findings:["","","",""], project:"", author:"", version:"",
+  demonstrated:"", context:{ budget:"", buildNo:"", linkedOkr:"" },
+  actions:[{item:"",owner:"",due:""},{item:"",owner:"",due:""},{item:"",owner:"",due:""}], locked:false }; }
 function openMilestoneReport(msId){
   const ms=byId("milestone",msId); if(!ms) return;
   msrCurrent=msId;
-  const rep=ms.milestoneReport||{};
-  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})), findings:(rep.findings&&rep.findings.length?rep.findings.slice():["","","",""]), locked:!!rep.locked };
+  const rep=ms.milestoneReport||{}, bl=msrBlank();
+  // additive: reports saved before these fields existed simply come back blank
+  msrDraft={ kpiOverrides:JSON.parse(JSON.stringify(rep.kpiOverrides||{})),
+    findings:(rep.findings&&rep.findings.length?rep.findings.slice():bl.findings),
+    project:rep.project||"", author:rep.author||"", version:rep.version||"", demonstrated:rep.demonstrated||"",
+    context:Object.assign({}, bl.context, rep.context||{}),
+    actions:(rep.actions&&rep.actions.length?JSON.parse(JSON.stringify(rep.actions)):bl.actions).slice(0,3),
+    locked:!!rep.locked };
+  while(msrDraft.actions.length<3) msrDraft.actions.push({item:"",owner:"",due:""});
   renderMsReport();
   document.getElementById("msReportModal").hidden=false;
 }
+function msrPlaceholder(txt){ return `<span class="msr-ph">${esc(txt)}</span>`; }
 function renderMsReport(){
   const ms=byId("milestone",msrCurrent); if(!ms) return;
   const em=pfMap(), pool=poolOf(em), locked=msrDraft.locked, ce=locked?"":'contenteditable="true"';
   const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
-  const planned=ms.plannedDate, actual=ms.completedDate;
+  const planned=ms.plannedDate, actual=ms.completedDate, done=RD.milestoneAchieved(ms,em);
   const variance=(planned!=null&&actual!=null)?(actual-planned):null;
-  const varTxt=variance==null?"—":(variance>0?`+${variance} days late`:variance<0?`${-variance} days early`:"on time");
-  const varCls=variance==null?"no-band":(variance>0?"off-track":"on-track");
+  const varTxt=variance==null?"—":(variance>0?`+${variance} days`:variance<0?`${variance} days`:"on time");
   const dirSym=d=>(d==="down"||d==="decrease")?"≤":d==="maintain"?"~":"≥";
+  const ed=(field,val,ph)=>`<span class="msr-ed" ${ce} data-msr="${field}">${val?esc(val):(locked?"—":msrPlaceholder(ph))}</span>`;
+  // ---- performance vs targets (derived target; measured overridable; NO band/score, per the mockup) ----
   const kpis=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id);
-  let kpiRows;
+  let metricRows;
   if(kpis.length){
-    kpiRows=kpis.map(k=>{
+    metricRows=kpis.map(k=>{
       const s=RD.kpiScoreResolved(k,pool,em), val=RD.effValue(k,pool,em), tgt=RD.effTarget(k,pool,em), unit=RD.kpiUnit(k,pool)||k.unit||"";
       const ov=msrDraft.kpiOverrides[k.id]||{};
       const measured=(ov.measured!=null&&ov.measured!=="")?ov.measured:(val==null?"—":`${fmtNum(val)}${unit?" "+unit:""}`);
-      const result=ov.result||msKpiResult(s), bnd=RD.band(s);
+      const result=msKpiResult(s);   // assessed from current vs target — not a user choice
       const tgtTxt=tgt==null?"—":`${dirSym(k.direction)} ${fmtNum(typeof tgt==="object"?tgt.hi:tgt)}${unit?" "+unit:""}`;
-      const resCell=locked?`<span class="band ${resultBandCls(result)}">${result}</span>`
-        :`<select data-msr="result" data-kpiid="${esc(k.id)}">${["Met","Partial","Missed","N/A"].map(r=>`<option ${r===result?"selected":""}>${r}</option>`).join("")}</select>`;
-      return `<tr><td>${esc(RD.kpiName(k,pool)||k.id)}</td>`+
-        `<td class="mono">${esc(tgtTxt)}</td>`+
-        `<td class="mono" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</td>`+
-        `<td>${resCell}</td>`+
-        `<td><span class="band ${bnd}">${bnd.replace("-"," ")}</span></td>`+
-        `<td class="mono" style="text-align:right;color:${scoreColor(s)}">${s==null?"—":Math.round(s)}</td></tr>`;
+      const resCell=`<span class="msr-badge ${msrBadgeCls(result)}">${esc(result)}</span>`;
+      // where the current value came from (manual entry vs the best-scoring linked KR KPI)
+      let srcTxt="";
+      const e=RD.effValueSource(k,pool,em);
+      if(e){ if(e.src===k.id) srcTxt="manual entry";
+             else { const sk=pool.find(x=>x.id===e.src), n=(k.sources||[]).length;
+                    srcTxt=(sk?(sk.name||sk.id):e.src)+(n>1?` (best of ${n})`:""); } }
+      return `<div class="msr-metric">`+
+        `<span class="msr-mname">${esc(RD.kpiName(k,pool)||k.id)}${srcTxt?`<span class="msr-src">source: ${esc(srcTxt)}</span>`:""}</span>`+
+        `<span class="msr-mono">${esc(tgtTxt)}</span>`+
+        `<span class="msr-mono msr-ed" ${ce} data-msr="measured" data-kpiid="${esc(k.id)}">${esc(measured)}</span>`+
+        `<span style="text-align:center">${resCell}</span></div>`;
     }).join("");
-  } else kpiRows=`<tr><td colspan="6"><span class="hint">No KPIs on this milestone — add them in the editor's Targets section.</span></td></tr>`;
-  const findingsHtml=msrDraft.findings.map((f,i)=>`<div class="msr-finding"><span class="msr-fn">${String(i+1).padStart(2,"0")}</span><div ${ce} data-msr="finding" data-idx="${i}">${esc(f||"")}</div></div>`).join("");
-  document.getElementById("msrBody").innerHTML=
-    `<div class="msr-hd"><div><span class="msr-num mono">${esc(milestoneNumber(ms))}</span> <b>${esc(ms.name||ms.id)}</b></div>`+
-    `<div class="msr-meta">${init?esc(init.name||init.id):""}${prodId?" · "+esc(productName(prodId)):""}</div></div>`+
-    `<div class="msr-dates"><span>Planned <b>${planned!=null?dayToIso(planned):"—"}</b></span>`+
-    `<span>Actual <b>${actual!=null?dayToIso(actual):"—"}</b></span>`+
-    `<span>Variance <span class="band ${varCls}">${varTxt}</span></span></div>`+
-    `<div class="msr-sec-lbl">KPI results</div>`+
-    `<table class="msr-tbl"><thead><tr><th>KPI</th><th>Target</th><th>Measured</th><th>Result</th><th>Band</th><th style="text-align:right">Score</th></tr></thead><tbody>${kpiRows}</tbody></table>`+
-    `<div class="msr-sec-lbl">Findings &amp; learnings</div>${findingsHtml}`;
-  document.getElementById("msrActions").innerHTML=locked
-    ?`<span class="hint" style="margin-right:auto">🔒 Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
-    :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`;
-  document.getElementById("msrLock").textContent=locked?"🔒 Unlock":"Lock";
+  } else metricRows=`<div class="msr-empty">No targets on this milestone — add them in the editor's Targets section.</div>`;
+  const findingsHtml=msrDraft.findings.map((f,i)=>
+    `<div class="msr-finding"><div class="msr-fn">${String(i+1).padStart(2,"0")}</div>`+
+    `<div class="msr-ed" ${ce} data-msr="finding" data-idx="${i}">${f?esc(f):(locked?"":msrPlaceholder("Finding or learning from the demonstration."))}</div></div>`).join("");
+  const stat=(lbl,val,cls)=>`<div class="msr-stat"><span class="msr-slbl">${esc(lbl)}</span><span class="msr-sval ${cls||""}">${val}</span></div>`;
+  const linkedObjs=msLinkedObjectives(ms.id);
+  const actionsHtml=msrDraft.actions.map((a,i)=>
+    `<div class="msr-action">`+
+    `<span class="msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="item">${a.item?esc(a.item):(locked?"":msrPlaceholder("Action item arising from demonstration"))}</span>`+
+    `<span class="msr-amono msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="owner">${a.owner?esc(a.owner):(locked?"":msrPlaceholder("Name"))}</span>`+
+    `<span class="msr-amono msr-ed" ${ce} data-msr="act" data-idx="${i}" data-key="due">${a.due?esc(a.due):(locked?"":msrPlaceholder("2026-04-15"))}</span></div>`).join("");
+  document.getElementById("msrBody").innerHTML=`<div class="msr-doc" id="msrDoc">`+
+    // ---- header: project editable; tag / name / achieved / date derived ----
+    `<div class="msr-head"><div>`+
+      `<div class="msr-lbl">Project</div>`+
+      `<div class="msr-proj">${ed("project", msrDraft.project, prodId?productName(prodId):(init?(init.name||init.id):"Project / Product name"))}</div>`+
+      `<div class="msr-tagrow"><span class="msr-tag">${esc(milestoneNumber(ms))}</span>`+
+      `<span class="msr-msname">${esc(ms.name||ms.id)}</span>`+
+      `<span class="msr-badge ${done?"msr-green":"msr-gray"}">${done?"Achieved":"Not achieved"}</span></div>`+
+    `</div><div class="msr-metas">`+
+      `<div class="msr-meta"><div class="msr-lbl">Date achieved</div><div class="msr-val">${actual!=null?esc(dayToIso(actual)):"—"}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">Author</div><div class="msr-val">${ed("author", msrDraft.author, "Name")}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">Version</div><div class="msr-val">${ed("version", msrDraft.version, "v1.0")}</div></div>`+
+      `<div class="msr-meta"><div class="msr-lbl">TRL / MRL</div><div class="msr-val">${(ms.trl!=null&&ms.trl!=="")?esc(String(ms.trl)):"\u2014"} / ${(ms.mrl!=null&&ms.mrl!=="")?esc(String(ms.mrl)):"\u2014"}</div></div>`+
+    `</div></div>`+
+    // ---- what was demonstrated ----
+    `<div class="msr-sec"><div class="msr-sect">What was demonstrated</div>`+
+      `<div class="msr-body msr-ed" ${ce} data-msr="demonstrated">${msrDraft.demonstrated?esc(msrDraft.demonstrated):(locked?"—":msrPlaceholder("Describe what was physically demonstrated, tested, or shown — setup conditions, operating envelope, duration, and any observers present."))}</div></div>`+
+    // ---- performance vs targets ----
+    `<div class="msr-sec"><div class="msr-sect">Performance vs. targets</div>`+
+      `<div class="msr-mhead"><span></span><span class="msr-col">Target</span><span class="msr-col">Measured</span><span class="msr-col">Result</span></div>`+
+      metricRows+`</div>`+
+    // ---- findings + context ----
+    `<div class="msr-two">`+
+      `<div class="msr-sec"><div class="msr-sect">Key findings &amp; learnings</div>${findingsHtml}</div>`+
+      `<div class="msr-sec"><div class="msr-sect">Milestone context</div>`+
+        stat("Planned date", planned!=null?esc(dayToIso(planned)):"\u2014")+
+        stat("Actual date", actual!=null?esc(dayToIso(actual)):"\u2014")+
+        stat("TRL achieved", ms.trl!=null&&ms.trl!==""?("TRL "+esc(String(ms.trl))):"\u2014")+
+        stat("MRL achieved", ms.mrl!=null&&ms.mrl!==""?("MRL "+esc(String(ms.mrl))):"\u2014")+
+        `<div class="msr-stat msr-objs"><span class="msr-slbl">Linked objectives</span>`+
+        `<span class="msr-sval">${linkedObjs.length?linkedObjs.map(o=>`<span class="msr-obj">${esc(o.statement||o.id)}${o.quarter?` <span class="msr-oq">(${esc(o.quarter)})</span>`:""}</span>`).join(""):"\u2014"}</span></div>`+
+      `</div>`+
+    `</div>`+
+    // ---- actions ----
+    `<div class="msr-sec"><div class="msr-sect">Actions required before next milestone</div>`+
+      `<div class="msr-ahead"><span class="msr-col" style="text-align:left">Action item</span><span class="msr-col">Owner</span><span class="msr-col">Due</span></div>`+
+      actionsHtml+`</div>`+
+    // ---- signatures: ruled lines + labels only, printed blank for wet signing ----
+    `<div class="msr-foot">`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">Technical lead</div></div>`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">CTO / R&amp;D director</div></div>`+
+      `<div><div class="msr-sig"></div><div class="msr-siglbl">Reviewer / sponsor</div></div>`+
+    `</div></div>`;
+  document.getElementById("msrActions").innerHTML=
+    `<button class="ghost" id="msrPrint">Print / Save as PDF</button>`+
+    (locked?`<span class="hint" style="margin-right:auto">\u{1F512} Locked — unlock to edit</span><button class="ghost" id="msrCancel2">Close</button>`
+           :`<button class="ghost" id="msrCancel2">Close</button><button class="act" id="msrSave">Save report</button>`);
+  document.getElementById("msrLock").textContent=locked?"\u{1F512} Unlock":"Lock";
   wireMsReport();
 }
+function msrBadgeCls(r){ return r==="Met"?"msr-green":r==="Missed"?"msr-red":r==="Partial"?"msr-amber":"msr-gray"; }
+function msrTxt(el){ const t=(el.textContent||"").trim(); return (t==="—"||el.querySelector(".msr-ph"))?"":t; }
 function collectMsReport(){
   const body=document.getElementById("msrBody"); if(!body||!msrDraft) return;
-  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid, v=(el.textContent||"").trim(); (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=(v==="—"?"":v); });
-  body.querySelectorAll('[data-msr="result"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).result=el.value; });
-  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.findings[i]=(el.textContent||"").trim(); });
+  body.querySelectorAll('[data-msr="measured"]').forEach(el=>{ const id=el.dataset.kpiid; (msrDraft.kpiOverrides[id]=msrDraft.kpiOverrides[id]||{}).measured=msrTxt(el); });
+  body.querySelectorAll('[data-msr="finding"]').forEach(el=>{ msrDraft.findings[Number(el.dataset.idx)]=msrTxt(el); });
+  ["project","author","version","demonstrated"].forEach(fk=>{ const el=body.querySelector(`[data-msr="${fk}"]`); if(el) msrDraft[fk]=msrTxt(el); });
+  body.querySelectorAll('[data-msr="ctx"]').forEach(el=>{ msrDraft.context[el.dataset.key]=msrTxt(el); });
+  body.querySelectorAll('[data-msr="act"]').forEach(el=>{ const i=Number(el.dataset.idx); msrDraft.actions[i]=msrDraft.actions[i]||{item:"",owner:"",due:""}; msrDraft.actions[i][el.dataset.key]=msrTxt(el); });
 }
 function persistMsReport(msg){
   const ms=byId("milestone",msrCurrent); if(!ms) return;
-  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings, locked:msrDraft.locked, savedAt:Date.now() };
+  ms.milestoneReport={ kpiOverrides:msrDraft.kpiOverrides, findings:msrDraft.findings,
+    project:msrDraft.project, author:msrDraft.author, version:msrDraft.version, demonstrated:msrDraft.demonstrated,
+    context:msrDraft.context, actions:msrDraft.actions, locked:msrDraft.locked, savedAt:Date.now() };
   const id=ms.id, snap=JSON.parse(JSON.stringify(ms.milestoneReport));
   renderMilestones();
   persistPortfolio(()=>{ const m=byId("milestone",id); if(m) m.milestoneReport=snap; }, msg||"Report saved.");
@@ -1774,6 +2206,7 @@ function wireMsReport(){
   const c2=document.getElementById("msrCancel2"); if(c2) c2.onclick=closeMsReport;
   const sv=document.getElementById("msrSave"); if(sv) sv.onclick=saveMilestoneReport;
   document.getElementById("msrLock").onclick=toggleMsLock;
+  const pb=document.getElementById("msrPrint"); if(pb) pb.onclick=()=>{ collectMsReport(); window.print(); };
 }
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
@@ -1781,26 +2214,72 @@ function renderGantt(){
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
+  // An objective that closed a few days past its input end date is quarter-boundary noise, not a delay.
+  // Only a real overrun (strictly MORE than this many days) paints red.
+  const OBJ_END_GRACE_DAYS = 7;
+  function gateDisplayEff(g){
+    const st=RD.classifyGate(g, td), done=(st==='passed'||st==='passed-late');
+    if(!done){ const oe=pfObjEnd(byId("objective", g.objectiveId)); if(oe) return g.plannedDate; }   // ended objective: no forecast extension
+    const ge=casc.gateEffective[g.id];
+    return ge!=null?ge:(g.plannedDate==null?null:pfGate(g));
+  }
   function geom(entity, r){
-    if(entity==="stagegate"){ const ge=casc.gateEffective[r.id]; return {kind:"diamond", gate:true, planned:r.plannedDate, eff:(ge!=null?ge:(r.plannedDate==null?null:pfGate(r))), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
-    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(g=>{ const ge=casc.gateEffective[g.id]; return ge!=null?ge:(g.plannedDate==null?null:pfGate(g)); }).filter(v=>v!=null); const ds=planned.length?Math.min.apply(null,planned):null; const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
-    if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id]};
+    if(entity==="stagegate"){ return {kind:"diamond", gate:true, planned:r.plannedDate, eff:gateDisplayEff(r), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
+    if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(gateDisplayEff).filter(v=>v!=null); const _obj=byId("objective", r.objectiveId); const _objDs=_obj?geom("objective",_obj).ds:null; const ds=_objDs!=null?_objDs:(planned.length?Math.min.apply(null,planned):null); const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
+    if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id], actual:r.completedDate};   // eff is the PROJECTION; the completion date is separate
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
       const peRaw=casc.objectiveProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
       const de=r.plannedEnd!=null?r.plannedEnd:pe;
+      // Ended objective: the overrun runs to the day it actually closed (a fixed date), not to a live
+      // forecast — so the banded bar still stops at the input end and only the real overrun paints red.
+      const oe=pfObjEnd(r);
+      if(oe && oe.endedDay!=null){
+        const over=(r.plannedEnd!=null)?(oe.endedDay-r.plannedEnd):0;
+        // Closed EARLY -> the bar ends where the work actually stopped (same rule as a KPI-less initiative).
+        // No grace on this side: the grace exists to suppress false alarms, and a shorter bar isn't an alarm.
+        // Closed LATE -> the bar holds at the input end and only a real overrun paints red.
+        const endedDe=(r.plannedEnd!=null)?Math.min(r.plannedEnd, oe.endedDay):oe.endedDay;
+        return {kind:"bar", ds, de:endedDe, pe:oe.endedDay, slip:(over>OBJ_END_GRACE_DAYS?over:0), slipFrom:r.plannedEnd,
+                derived:(r.plannedStart==null||r.plannedEnd==null)};
+      }
       const slip=r.plannedEnd!=null?Math.max(0,(pe!=null?pe:r.plannedEnd)-r.plannedEnd):0;
-      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
+      return {kind:"bar", ds, de, pe, slip, slipFrom:r.plannedEnd, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     if(entity==="initiative"){
       const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=P.milestones.filter(m=>m.initiativeId===r.id);
       const starts=[]; objs.forEach(o=>{ const g=geom("objective",o); if(g.ds!=null) starts.push(g.ds); }); mils.forEach(m=>{ if(m.plannedDate!=null) starts.push(m.plannedDate); });
       const peRaw=casc.initiativeProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
+      // An initiative with no KPIs of its own is a pure container — its real end comes from the work
+      // underneath, taken as the EARLIER of (i) the day its last objective was closed out and (ii) its last
+      // stage-gate. (i) only counts once EVERY objective is ended; while any is still live there is no "last
+      // objective ended" yet, so the gate schedule governs. An initiative WITH KPIs is measured in its own
+      // right, so its own dates stand.
+      // The BASELINE is always the initiative's own input dates: the bar runs plannedStart -> plannedEnd
+      // (banded by OKR score), and anything past plannedEnd renders as red slip. If the work finishes EARLY
+      // the bar shrinks to the real end instead (26Q1+26Q2 objectives under a 26Q3 initiative -> ends 26Q2).
+      const hasKpis=(P.kpis||[]).some(k=>k.hostType==="initiative" && k.hostId===r.id);
+      let kidEnd=null;
+      if(!hasKpis && objs.length){
+        const cands=[];
+        const endDays=objs.map(o=>{ const es=pfObjEnd(o); return (es && es.endedDay!=null)?es.endedDay:null; });
+        if(endDays.every(v=>v!=null)) cands.push(Math.max.apply(null,endDays));            // (i) all objectives closed out
+        const gEnds=[];
+        objs.forEach(o=>{ const gs=gatesOf(o);
+          if(gs.length) gs.forEach(g=>{ const v=gateDisplayEff(g); if(v!=null) gEnds.push(v); });
+          else { const og=geom("objective",o); if(og.de!=null) gEnds.push(og.de); }         // gate-less objective: its own end
+        });
+        if(gEnds.length) cands.push(Math.max.apply(null,gEnds));                            // (ii) the last stage-gate
+        if(cands.length) kidEnd=Math.min.apply(null,cands);                                 // the EARLIER of the two
+      }
       const ds=r.plannedStart!=null?r.plannedStart:(starts.length?Math.min.apply(null,starts):null);
-      const de=r.plannedEnd!=null?r.plannedEnd:pe;
-      const slip=r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0;
-      return {kind:"bar", ds, de, pe, slip, derived:(r.plannedStart==null||r.plannedEnd==null)};
+      const base=(r.plannedEnd!=null?r.plannedEnd:pe);                                      // baseline end = the input date
+      const de  = kidEnd!=null ? (base!=null?Math.min(base,kidEnd):kidEnd) : base;          // shrink if the work ends early
+      const pEnd= kidEnd!=null ? kidEnd : pe;
+      const slip= (kidEnd!=null && base!=null) ? Math.max(0,kidEnd-base)                    // overrun past the baseline = slip
+                                              : (r.plannedEnd!=null?(casc.longTermSlip[r.id]??0):0);
+      return {kind:"bar", ds, de, pe:pEnd, slip, slipFrom:base, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     // division: pure rollup over its initiatives (no own dates)
     const gs=P.initiatives.filter(i=>i.divisionId===r.id).map(i=>geom("initiative",i));
@@ -1812,16 +2291,37 @@ function renderGantt(){
     if(entity==="division") return P.initiatives.filter(i=>i.divisionId===r.id).map(i=>({entity:"initiative",rec:i}));
     if(entity==="initiative") return P.milestones.filter(m=>m.initiativeId===r.id).map(m=>({entity:"milestone",rec:m}))
       .concat(P.objectives.filter(o=>o.initiativeId===r.id).map(o=>({entity:"objective",rec:o})));
-    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId]; return planGroupGates(doc, r.id).filter(grp=>grp.gates.length).map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
+    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId];
+      const grps=planGroupGates(doc, r.id).filter(grp=>grp.gates.length);
+      if(grps.length===1) return grps[0].gates.map(g=>({entity:"stagegate",rec:g}));   // lone workstream: hang the gates straight off the objective
+      return grps.map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
     if(entity==="stagegateset") return (r.__gates||[]).map(g=>({entity:"stagegate",rec:g}));
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
+  /* Objectives always read end-date ascending inside whatever parent or group they land in. The key is
+     g.de — the bar's drawn end (plannedEnd, else the projected end); visible() guarantees it is non-null
+     for any rendered objective bar. Ties fall back to the statement so the order is stable across renders.
+     Note this ignores the `order` field, which the Gantt never honoured anyway (the Structure tab still
+     uses it via byOrder), so the two tabs can legitimately differ in row order. */
+  const objEndCmp=(a,b)=>{
+    const ae=(a.g.de==null?Infinity:a.g.de), be=(b.g.de==null?Infinity:b.g.de);
+    if(ae!==be) return ae-be;
+    return String(nameOf("objective",a.rec)).localeCompare(String(nameOf("objective",b.rec)));
+  };
+  // sort ONLY the objective children in place, leaving milestones (and anything else) in their slots
+  const sortObjKids=(kids)=>{
+    const objs=kids.filter(k=>k.entity==="objective");
+    if(objs.length<2) return;
+    objs.sort(objEndCmp);
+    let i=0; for(let j=0;j<kids.length;j++) if(kids[j].entity==="objective") kids[j]=objs[i++];
+  };
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
     if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
     const g=geom(entity,r); if(!visible(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
+    sortObjKids(kids);
     if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
@@ -1830,14 +2330,19 @@ function renderGantt(){
     const out=[];
     nodes.forEach(n=>{
       const key=keyPrefix+"/"+n.dim+":"+n.key;
+      if(n.key===""){   // no value for this dimension -> no synthetic group row; hoist straight to this depth
+        (n.children ? buildGroupRoots(n.children, depth, keyPrefix)
+                    : n.objs.map(o=>build("objective",o,depth)).filter(Boolean).sort(objEndCmp)).forEach(k=>out.push(k));
+        return;
+      }
       const kids = n.children ? buildGroupRoots(n.children, depth+1, key)
-                              : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean);
+                              : n.objs.map(o=>build("objective",o,depth+1)).filter(Boolean).sort(objEndCmp);
       if(!kids.length) return;
       const dss=[], des=[];
       (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
         else { const gg=node.g; if(gg.ds!=null)dss.push(gg.ds); const e=gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds); if(e!=null)des.push(e); } }); })(kids);
       const under=collectObjs(n), vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null), gband=RD.band(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);
-      out.push({ synthetic:true, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
+      out.push({ synthetic:true, dim:n.dim, label:dimLabel(n.dim,n.key), band:gband, depth, key:"grp:"+key, kids,
         g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
     });
     return out;
@@ -1849,7 +2354,7 @@ function renderGantt(){
     roots = buildGroupRoots(RD.groupObjectives(gobjs, pfGroupDims, portfolio), 0, "");
   } else if(pfGroupMode==="dims"){                                             // dims cleared → flat objectives, no division tree
     const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
-    roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean);
+    roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean).sort(objEndCmp);
   } else {
     P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
   }
@@ -1894,38 +2399,56 @@ function renderGantt(){
       return;
     }
     const name=esc(nameOf(n.entity,n.rec));
-    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
+    const dot = STATUS_ENTITIES[n.entity] ? `<span class="gdot${dotShape(n.entity)}" style="background:${bandColor(nodeBand(n.entity,n.rec.id,em))}"></span>` : `<span class="gdot" style="visibility:hidden"></span>`;
     const fs=NS[n.entity]||"";
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
+    const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
     if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
-      html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
-      if(g.slip>0 && g.pe!=null){ const sx=x(n.rec.plannedEnd); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
+      if(g.slip>0 && g.pe!=null){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
+      if(_ended && n.entity==="objective" && _oEnd && _oEnd.endedDay!=null){ const mx=x(_oEnd.endedDay); html+=`<div class="gended ${_oEnd.status}" style="left:${mx}px" title="${_oEnd.status==='abandoned'?'abandoned':'achieved'} ${dayToIso(_oEnd.endedDay)}"></div>`; }
     } else if(g.gate){
       const st=g.state||"pending", ex=x(g.eff!=null?g.eff:g.planned);
-      if(g.slipped && g.baseline!=null){
+      const _cnl = _ended && st!=='passed' && st!=='passed-late';
+      const _missed = _cnl && _oEnd.status==='abandoned';   // abandoned -> these gates were MISSED; achieved -> work simply stopped
+      if(!_cnl && g.slipped && g.baseline!=null){
         const bx=x(g.baseline);
         html+=`<div class="gconn committed" style="left:${Math.min(bx,ex)}px;width:${Math.max(2,Math.abs(ex-bx))}px"></div>`;
-        html+=`<div class="gdia ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
-      } else if(g.eff!=null && g.planned!=null && g.eff!==g.planned){
+        html+=`<div class="gdia gsq ghost" style="left:${bx}px" title="committed ${dayToIso(g.baseline)}"></div>`;
+      } else if(!_cnl && g.eff!=null && g.planned!=null && g.eff!==g.planned){
         const px=x(g.planned);
+        html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
+        html+=`<div class="gdia gsq ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
+      }
+      html+=`<div class="gdia gsq ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+    } else {
+      // Milestones read exactly like stage-gates: a grey ghost at the planned date, a connector, and a status
+      // marker at the actual date (or the projection when it hasn't happened yet).
+      const st=msDiaClass(n.rec, em);
+      const mark=(g.actual!=null)?g.actual:g.eff;
+      const px=x(g.planned), ex=(mark!=null?x(mark):px);
+      if(mark!=null && g.planned!=null && mark!==g.planned){
         html+=`<div class="gconn" style="left:${Math.min(px,ex)}px;width:${Math.max(2,Math.abs(ex-px))}px"></div>`;
         html+=`<div class="gdia ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
-      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${st}${g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
-    } else {
-      const dn=RD.milestoneAchieved(n.rec,em)?" done":"";
-      html+=`<div class="gdia planned${dn}" style="left:${x(g.planned)}px" title="planned"></div>`;
-      if(g.eff!=null && g.eff!==g.planned) html+=`<div class="gdia eff${dn}" style="left:${x(g.eff)}px" title="projected/actual"></div>`;
+      const slip=(g.actual!=null&&g.planned!=null)?g.actual-g.planned:null;
+      const ttl=(g.actual!=null?`completed ${dayToIso(g.actual)}`:(mark!=null?`projected ${dayToIso(mark)}`:"planned"))+
+                (slip!=null&&slip!==0?` (${slip>0?"+":""}${slip}d)`:"");
+      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${esc(ttl)}"></div>`;
     }
     html+=`</div></div>`;
   });
   html+=`</div>`;
-  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span></div>`;
+  if(hasGates) html+=`<div class="glegend"><span><i style="background:var(--ok)"></i>passed</span><span><i style="background:var(--warn)"></i>passed late</span><span><i style="background:var(--bad)"></i>overdue</span><span><i style="border:1.5px solid var(--muted)"></i>pending</span><span><i style="border:1.5px dashed var(--muted);opacity:.6"></i>committed / planned</span><span><i style="background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)"></i>cancelled</span><span><i style="background:repeating-linear-gradient(45deg,var(--bad) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--bad)"></i>missed</span></div>`;
+  ganttRoots = roots;
+  const lb=document.getElementById("ganttLevelBar");
+  if(lb){ lb.innerHTML=levelBarHtml("gantt");
+    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null)); }
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
@@ -2001,7 +2524,7 @@ function activePanelHtml(){
     g.obj.forEach(o=>{ const b=nodeBand("objective",o.id), sc=RD.rollupObjective(o.id,portfolio,em);
       const dates=[o.quarter,(o.plannedStart!=null&&o.plannedEnd!=null)?`${dayToIso(o.plannedStart)} – ${dayToIso(o.plannedEnd)}`:null].filter(Boolean).join(" · ");
       h+=`<div class="ap-row" data-lineage="objective:${o.id}"><span class="tdot" style="background:${bandColor(b)}"></span>`+
-        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>`+
+        `<div class="ap-main"><div class="ap-name">${esc(nameOf("objective",o))}</div>${objEndBadge(o)}`+
         `<div class="ap-sub">${dates?`<span>${esc(dates)}</span>`:""}${activeKrDots(o,em)}</div></div>`+
         `<span class="ap-score" style="color:${scoreColor(sc)}">${sc==null?"—":Math.round(sc)}</span></div>`;
     });
@@ -2028,6 +2551,8 @@ function ovObjModelId(o){ const c=RD.effClass(o,portfolio); if(c.kind==="model")
 function ovObjProdId(o){ const mid=ovObjModelId(o); if(mid){ const m=byId("model",mid); if(m) return m.productId; } const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; const i=ovInit(o); return (i&&i.productId)||null; }
 function ovMsProdId(ms){ const i=ovInit(ms); if(i&&i.modelId){ const m=byId("model",i.modelId); if(m) return m.productId; } return (i&&i.productId)||null; }
 function ovMsDiv(ms){ const i=ovInit(ms); return (i&&i.divisionId)||null; }
+function divCode(divId){ const t=String(divId||""), i=t.indexOf("-"); return i>=0?t.slice(i+1):t; }   // "DIV-EL" -> "EL", same stem core uses to mint ids
+function prodDiv(pid){ const p=byId("product",pid); return p?p.divisionId:null; }
 function ovBadge(v){ const b=RD.band(v); return '<span class="band '+b+'">'+b.replace("-"," ")+'</span>'; }
 function ovProg(pct,color){ pct=Math.max(0,Math.min(100,Math.round(pct||0))); return '<div class="prog"><div class="ptrack"><div class="pfill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="ppct">'+pct+'%</span></div>'; }
 function ovKpiTbl(label, rows){ if(!rows.length) return ""; const head='<div class="kh"></div><div class="kh">'+label+'</div><div class="kh" style="text-align:right">Target</div><div class="kh" style="text-align:right">Now</div>'; const body=rows.map(function(r){ return '<div><div class="kdot" style="background:'+r.c+'"></div></div><span class="kname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="ktgt">'+esc(r.tgt)+'</span><span class="kcur" style="color:'+r.c+'">'+esc(r.cur)+'</span>'; }).join(""); return '<div class="kpit">'+head+body+'</div>'; }
@@ -2056,20 +2581,37 @@ function overviewTilesHtml(){
   for(const d of portfolio.divisions){
     const dObjs=activeObjs.filter(function(o){return o.divisionId===d.id;});
     const dMs=activeMs.filter(function(m){return ovMsDiv(m)===d.id;});
-    if(!dObjs.length && !dMs.length) continue;
-    let prodIds=Array.from(new Set(dObjs.map(ovObjProdId).concat(dMs.map(ovMsProdId))));
-    prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1; return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
+    // Products/models come from the division that OWNS them (product.divisionId), not from whatever objectives
+    // happen to reference them. Two consequences: a product still gets a tile with no active objective this
+    // quarter, and an objective pointing at another division's product no longer drags that product in here.
+    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id;}).map(function(p){return p.id;});
+    if(!dObjs.length && !dMs.length && !dProdIds.length) continue;
+    const ownHere=function(pid){ return pid!=null && dProdIds.indexOf(pid)>=0; };
+    // Work here can point at a product owned by ANOTHER division. That product still gets a labelled block in
+    // this group (so the objectives read under their product rather than being orphaned into "unclassified"),
+    // but it renders no model scorecards — those belong to the owning division's block, and only there.
+    const objProd=function(o){ return ovObjProdId(o)||null; };
+    const msProd =function(m){ return ovMsProdId(m)||null; };
+    let prodIds=dProdIds.slice();
+    dObjs.forEach(function(o){ const p=objProd(o); if(p && prodIds.indexOf(p)<0) prodIds.push(p); });
+    dMs.forEach(function(m){ const p=msProd(m); if(p && prodIds.indexOf(p)<0) prodIds.push(p); });
+    if(dObjs.some(function(o){return objProd(o)==null;}) || dMs.some(function(m){return msProd(m)==null;})) prodIds.push(null);
+    prodIds.sort(function(a,b){ if(!a&&b)return 1; if(a&&!b)return -1;
+      const fa=!ownHere(a), fb=!ownHere(b); if(fa!==fb) return fa?1:-1;   // this division's own products first, borrowed ones after
+      return String(productName(a)||"").localeCompare(String(productName(b)||"")); });
     groups+='<div class="divgroup"><div class="divlabel"><div class="ldot"></div><div class="nm">'+esc(d.name)+'</div><div class="rule"></div></div>';
     for(const pid of prodIds){
-      const objs=dObjs.filter(function(o){return ovObjProdId(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
-      const mss=dMs.filter(function(m){return ovMsProdId(m)===pid;});
-      if(!objs.length && !mss.length) continue;
-      const models = pid ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];
-      const plabel = pid ? esc(productName(pid)||pid) : "\u2014 unclassified \u2014";
+      const objs=dObjs.filter(function(o){return objProd(o)===pid;}).sort(function(a,b){ return (RD.rollupObjective(a.id,portfolio,em)==null?101:RD.rollupObjective(a.id,portfolio,em))-(RD.rollupObjective(b.id,portfolio,em)==null?101:RD.rollupObjective(b.id,portfolio,em)); });
+      const mss=dMs.filter(function(m){return msProd(m)===pid;});
+      const foreign = pid!=null && !ownHere(pid);
+      // owned products always tile; the unclassified bucket and borrowed products only when they hold something
+      if(!objs.length && !mss.length && (pid==null || foreign)) continue;
+      const models = (pid && !foreign) ? portfolio.models.filter(function(m){return m.productId===pid;}) : [];   // scorecards live only in the owning division
+      const plabel = pid ? esc((foreign?divCode(prodDiv(pid))+" \u2014 ":"")+(productName(pid)||pid)) : "\u2014 unclassified \u2014";
       groups+='<div class="prodblock"><div class="prodlabel"><span class="pdot"></span>'+plabel+'</div>';
       if(models.length) groups+='<div class="rowsec"><div class="kidlbl">Models</div><div class="tilerow">'+models.map(function(m){return ovModelTile(m,em);}).join("")+'</div></div>';
       if(objs.length) groups+='<div class="rowsec"><div class="kidlbl">Objectives</div><div class="tilerow">'+objs.map(function(o){return ovObjTile(o,em,pool,casc);}).join("")+'</div></div>';
-      if(mss.length) groups+='<div class="rowsec"><div class="kidlbl">Milestones</div><div class="tilerow">'+mss.map(function(m){return ovMsTile(m,em,pool);}).join("")+'</div></div>';
+      if(mss.length) groups+='<div class="rowsec"><div class="kidlbl">Milestones</div><div class="tilerow">'+mss.map(function(m){return ovMsTile(m,em,pool,casc);}).join("")+'</div></div>';
       groups+='</div>';
     }
     groups+='</div>';
@@ -2123,24 +2665,43 @@ function ovObjTile(o, em, pool, casc){
   const behind=gates.filter(function(g){return RD.classifyGate(g,todayDay())==="overdue";}).length;
   const end=(o.plannedEnd!=null)?(casc.objectiveProjectedEnd[o.id]!=null?casc.objectiveProjectedEnd[o.id]:o.plannedEnd):casc.objectiveProjectedEnd[o.id];
   const dl=end!=null?end-todayDay():null;
-  const daysStr=dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left");
-  const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div><div class="gdots">'+ovGateDots(gates)+'</div></div>':'';
+  const _oe=pfObjEnd(o);
+  const daysStr= _oe ? ("ended "+dayToIso(_oe.endedDay)) : (dl==null?"":dl<0?(Math.abs(dl)+"d overdue"):dl===0?"Due today":(dl+"d left"));
+  const oSlip=(o.plannedEnd!=null&&end!=null)?end-o.plannedEnd:null;
+  // Objective acceleration only ever occurs together with slip (a gate binding past the objective's span), so a
+  // standalone "faster possible" chip here is unreachable; the slip chip carries the schedule signal on the tile.
+  const schedChip= _oe ? "" : ((oSlip!=null&&oSlip>0)?' <span class="ov-slip">+'+oSlip+'d slip</span>':'');
+  // One LANE PER WORKSTREAM (stage-gate set), stacked: A on top of B. A lone workstream keeps the old
+  // single unlabelled strip, so the common case is unchanged.
+  const grps=planGroupGates(doc, o.id).filter(function(grp){return grp.gates.length;});
+  const lanes=grps.map(function(grp,gi){
+    const lbl=grps.length>1
+      ? '<span class="wslbl" title="'+esc(grp.set.name||'Set')+'">'+String.fromCharCode(65+gi)+'</span>'
+      : '';
+    return '<div class="gdots">'+lbl+ovGateDots(grp.gates)+'</div>';
+  }).join('');
+  const gatesBlock=gates.length?'<div class="gates"><div class="gatehd"><span class="gt">Gates '+gp+'/'+gates.length+'</span>'+(behind?'<span class="behind">\u2691 '+behind+' behind</span>':'')+'</div>'+lanes+'</div>':'';
   return '<div class="tcard" style="width:262px" onclick="openOvDetail(\'objective\',\''+o.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
-    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(o.statement||o.id)+'">'+esc(o.statement||o.id)+'</div><div class="csub">'+daysStr+schedChip+'</div></div><div class="cbadges">'+objEndBadge(o)+ovBadge(score)+'</div></div>'
     +ovKpiTbl("Key result", krRows)
     +ovProg(score, scoreColor(score))
     +gatesBlock
     +'</div></div>';
 }
-function ovMsTile(m, em, pool){
+function ovMsTile(m, em, pool, casc){
   const div=ovMsDiv(m); const doc=execDocs["EXEC-"+div]||{kpis:[]};
   const achieved=RD.milestoneAchieved(m,em); const score=achieved?100:RD.milestoneScore(m.id, em);
   const kpiRows=ovKpiRowsFor("milestone", m.id, doc, pool, em);
-  const dueStr = m.plannedDate!=null?dayToIso(m.plannedDate):"";
+  const mEff=(casc&&casc.milestoneEffective)?casc.milestoneEffective[m.id]:null;
+  const mSlip=(!achieved&&m.plannedDate!=null&&mEff!=null)?mEff-m.plannedDate:null;
+  const dueStr = achieved ? (m.completedDate!=null?("Done "+dayToIso(m.completedDate)):"Achieved")
+               : (mSlip!=null&&mSlip>0) ? ("Est "+dayToIso(mEff))
+               : (m.plannedDate!=null?("Due "+dayToIso(m.plannedDate)):"");
+  const msChip=(mSlip!=null&&mSlip>0)?' <span class="ov-slip">+'+mSlip+'d slip</span>':'';
   return '<div class="tcard" style="width:234px" onclick="openOvDetail(\'milestone\',\''+m.id+'\')">'
     +'<div class="cbar" style="background:'+scoreColor(score)+'"></div>'
-    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(m.name||m.id)+'">'+esc(m.name||m.id)+'</div><div class="csub">'+(dueStr?("Due "+dueStr):"")+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
+    +'<div class="cbody"><div class="chead"><div style="flex:1;min-width:0"><div class="cname" title="'+esc(m.name||m.id)+'">'+esc(m.name||m.id)+'</div><div class="csub">'+dueStr+msChip+'</div></div><div class="cbadges">'+ovBadge(score)+'</div></div>'
     +ovKpiTbl("KPI", kpiRows)
     +ovProg(score, scoreColor(score))
     +'</div></div>';
@@ -2152,7 +2713,7 @@ function openOvDetail(kind, id){
   if(kind==="objective"){
     const o=byId("objective",id); if(!o) return; const doc=execDocs["EXEC-"+o.divisionId]||{keyResults:[],kpis:[],stageGates:[],risks:[]};
     const score=RD.rollupObjective(o.id, portfolio, em);
-    title=o.statement||o.id; badges=ovBadge(score)+' <span class="pn">'+esc(productName(ovObjProdId(o))||"\u2014")+'</span>';
+    title=o.statement||o.id; badges=objEndBadge(o)+ovBadge(score)+' <span class="pn">'+esc(productName(ovObjProdId(o))||"\u2014")+'</span>';
     const krRows=ovKrRows(o.id, doc, pool, em);
     const krBlk=krRows.length?'<div class="mblk"><div class="mblkh">Key results</div>'+krRows.map(function(r){return '<div class="krline"><div class="kdot" style="background:'+r.c+'"></div><span>'+esc(r.name)+'</span><span class="kt">'+esc(r.tgt)+'</span><span class="kv" style="color:'+r.c+'">'+esc(r.cur)+'</span></div>';}).join("")+'</div>':"";
     const gates=(doc.stageGates||[]).filter(function(g){return g.objectiveId===o.id;});
@@ -2188,9 +2749,13 @@ function openOvDetail(kind, id){
     title=d.name||d.id; badges=ovBadge(overall);
     const nObj=portfolio.objectives.filter(function(o){return o.divisionId===d.id;}).length, nMs=portfolio.milestones.filter(function(m){return ovMsDiv(m)===d.id;}).length;
     const sumBlk='<div class="mblk"><div class="mblkh">Summary</div><div class="datagrid"><span class="dk">Overall</span><span class="dv" style="color:'+scoreColor(overall)+';font-weight:700">'+fmtScore(overall)+' \u00b7 '+RD.band(overall).replace("-"," ")+'</span><span class="dk">Active</span><span class="dv">'+nObj+' objectives \u00b7 '+nMs+' milestones</span><span class="dk">Status mix</span><span class="dv">'+counts["on-track"]+' on track \u00b7 '+counts["at-risk"]+' at risk \u00b7 '+counts["off-track"]+' off track</span><span class="dk">Worst slip</span><span class="dv">'+(worst==null?"\u2014":(worst<=0?"0":"+"+worst)+"d")+'</span></div></div>';
+    const dl=delayedInits(d.id, casc, 3);
+    const dlBlk=dl.length?'<div class="mblk"><div class="mblkh">Most delayed initiatives</div>'+dl.map(function(r){
+      return '<div class="modelobjline"><span>'+esc(r.i.name||r.i.id)+'<span style="color:var(--muted)"> \u00b7 due '+(r.i.plannedEnd!=null?dayToIso(r.i.plannedEnd):"\u2014")+'</span></span><span class="cv" style="color:var(--bad);font-weight:600">+'+Math.round(r.slip)+'d<span style="color:var(--muted);font-weight:400"> \u2192 '+(r.pe!=null&&!isNaN(r.pe)?dayToIso(r.pe):"\u2014")+'</span></span></div>';
+    }).join("")+'</div>':'<div class="mblk"><div class="mblkh">Most delayed initiatives</div><p class="hint" style="margin:0">No initiatives are running late.</p></div>';
     const models=portfolio.models.filter(function(m){return divOfModel(m.id)===d.id;});
     const mBlk=models.length?'<div class="mblk"><div class="mblkh">Models</div>'+models.map(function(m){var r=RD.sliceScore("model",m.id,portfolio,em,null),c=modelConformance(m.id);return '<div class="modelobjline"><span>'+esc(productName(m.productId)||"")+' <span style="color:var(--muted)">/ '+esc(m.name)+'</span></span><span class="cv" style="color:'+scoreColor(r)+';font-weight:600">rollup '+fmtScore(r)+' \u00b7 conf '+fmtScore(c)+(c!=null?'%':'')+'</span></div>';}).join("")+'</div>':"";
-    body=sumBlk+mBlk;
+    body=sumBlk+dlBlk+mBlk;
   }
   document.getElementById("ovDetTitle").textContent=title;
   document.getElementById("ovDetBadges").innerHTML=badges;

@@ -124,6 +124,23 @@
     }
     return statAverage(xs);
   }
+  // A KPI may BORROW another KPI's readings (kpi.readsFrom) so that one sample feeds several statistics —
+  // e.g. an average target and a CoV target over the same 10 points, entered once. The statistic still comes
+  // from each KPI's own definer, so only the data is shared. Follows the chain to whoever actually holds the
+  // readings; cycle-safe, and a KPI without readsFrom resolves to itself (unchanged).
+  // NOTE: this is a deliberate stopgap for a first-class sample entity — the data still lives on a privileged
+  // KPI rather than on the sample it belongs to.
+  function readingSourceId(kpi, kpis){
+    if(!kpi) return null;
+    var seen={}, cur=kpi;
+    while(cur && cur.readsFrom && !seen[cur.id]){
+      seen[cur.id]=1;
+      var nx=kpiById(cur.readsFrom, kpis||[]);
+      if(!nx || nx.id===cur.id) break;
+      cur=nx;
+    }
+    return cur.id;
+  }
   // all readings posted to a kpi id, newest first
   function readingsFor(kpiId, execDocs){
     var out=[];
@@ -301,7 +318,7 @@
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
     root = root || rootOf(kpi, kpis);
     var pool=[];
-    var ownV=resolvedReadingValue(kpi.id, root, execDocs);
+    var ownV=resolvedReadingValue(readingSourceId(kpi, kpis), root, execDocs);   // borrowed sample, own statistic
     if(ownV!=null) pool.push({ value:ownV, src:kpi.id, own:true, key:precKey(kpi, latestReadingObj(kpi.id, execDocs), LINK_OWN_RANK, execDocs) });
     var kids=childrenOf(kpi.id, kpis);
     var ex=sourcesOf(kpi, kpis);
@@ -648,12 +665,21 @@
   // dims ⊂ ['division','product','model','quarter','owner','initiative']; product/model resolve
   // through the initiative (effProduct/effModel), so a blank objective inherits its initiative.
   // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
+  // owner was free text and is now a list of roster emails. Read BOTH shapes: a legacy string is a
+  // one-element list, so nothing needs migrating and old data keeps grouping exactly as it did.
+  function ownersOf(rec) {
+    if (!rec) return [];
+    var v = rec.owner;
+    if (v == null || v === '') return [];
+    if (Array.isArray(v)) return v.filter(function (x) { return x != null && x !== ''; });
+    return [v];
+  }
   function _dimKey(o, dim, portfolio) {
     if (dim === 'division') return o.divisionId || '';
     if (dim === 'product') return effProduct(o, portfolio) || '';
     if (dim === 'model') return effModel(o, portfolio) || '';
     if (dim === 'quarter') return o.quarter || '';
-    if (dim === 'owner') return o.owner || '';
+    if (dim === 'owner') { var ow = ownersOf(o); return ow.length ? ow : ''; }   // array = fan out (see _groupBy)
     if (dim === 'initiative') return o.initiativeId || '';
     return '';
   }
@@ -682,8 +708,17 @@
   function _groupBy(items, dims, portfolio, keyFn) {
     if (!dims || !dims.length) return [{ key: '__all__', dim: null, objs: (items || []).slice() }];
     var dim = dims[0], rest = dims.slice(1), buckets = {}, seen = [];
-    (items || []).forEach(function (o) { var k = keyFn(o, dim, portfolio);
-      if (!buckets[k]) { buckets[k] = []; seen.push(k); } buckets[k].push(o); });
+    // A key function may return an ARRAY to FAN OUT: the item lands in every one of those buckets. Owner does
+    // this, so an objective owned by two people appears under both. Consequence, by design: groups overlap, so
+    // each group's own score is right but a total ACROSS groups counts a shared objective once per owner.
+    (items || []).forEach(function (o) {
+      var k = keyFn(o, dim, portfolio);
+      var ks = Array.isArray(k) ? (k.length ? k : ['']) : [k];
+      ks.forEach(function (key) {
+        if (!buckets[key]) { buckets[key] = []; seen.push(key); }
+        if (buckets[key].indexOf(o) < 0) buckets[key].push(o);   // a dupe key must not double-list the item
+      });
+    });
     return _dimOrder(dim, seen, portfolio).map(function (k) {
       var node = { key: k, dim: dim };
       if (rest.length) node.children = _groupBy(buckets[k], rest, portfolio, keyFn);
@@ -1212,6 +1247,8 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    ownersOf: ownersOf,
+    readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
     readingCount: readingCount,
