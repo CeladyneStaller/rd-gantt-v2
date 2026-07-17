@@ -24,17 +24,17 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     var gw=document.getElementById('ganttWrap').innerHTML;
     var cnlDia=(gw.match(/class="gdia [^"]*cancelled/g)||[]);
     ok(cnlDia.length===2, 'both gates under the abandoned objective are cancelled, and none under the active one');
-    ok(/gdia overdue cancelled/.test(gw), 'the cancelled gate keeps its state class + gains the cancelled class');
+    ok(/gdia gsq overdue cancelled/.test(gw), 'the cancelled gate is a SQUARE and keeps its state class + gains the cancelled class');
     ok((gw.match(/gsetbar cancelled/g)||[]).length===2, 'both of the abandoned objective workstream bars are cancelled');
     // control: the active objective O1's gate is a normal (non-cancelled) diamond
-    ok(/class="gdia overdue"/.test(gw), 'the active objective gate diamond is left normal (not cancelled)');
+    ok(/class="gdia gsq overdue"/.test(gw), 'the active objective gate marker is left normal (not cancelled)');
     // legend gained the cancelled key
     ok(/>cancelled<\\/span>/.test(gw), 'the Gantt legend shows a "cancelled" key');
     // Request 1: workstream (set) bar starts at the OBJECTIVE start (left:0), not the first gate's due date
     ok(/gsetbar[^"]*" style="left:0px/.test(gw), 'workstream bar starts at the objective start (left:0), not the first gate due date');
     // Request 2: the abandoned objective's incomplete gate sits at its PLANNED date -> left of the active gate's forecast
-    var m1=gw.match(/class="gdia overdue" style="left:([0-9.]+)px/);
-    var m2=gw.match(/class="gdia overdue cancelled[^"]*" style="left:([0-9.]+)px/);
+    var m1=gw.match(/class="gdia gsq overdue" style="left:([0-9.]+)px/);
+    var m2=gw.match(/class="gdia gsq overdue cancelled[^"]*" style="left:([0-9.]+)px/);
     ok(m1 && m2 && parseFloat(m2[1]) < parseFloat(m1[1]), 'ended objective: cancelled gate sits at its planned date, left of the active gate forecast');
     // Request 2.1: an abandon marker is drawn on the abandoned objective row
     ok(/class="gended abandoned"/.test(gw), 'an abandon marker (gended) is rendered on the abandoned objective row');

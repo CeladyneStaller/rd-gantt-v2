@@ -2,7 +2,7 @@
 // entirely — no "— none —" header, the items hang off the parent; (3) the milestones tab groups by the same
 // shared dims (milestones derive division/product/model from their initiative; quarter/owner simply skip).
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-const C=require((process.env.RD_SRC||'/home/claude')+'/core.js');
+const C=require((process.env.RD_SRC||'/home/claude')+'/rdcore.js');
 const out=[]; const ok=(c,m)=>out.push((c?'ok  ':'FAIL ')+m);
 
 // ---------- core ----------

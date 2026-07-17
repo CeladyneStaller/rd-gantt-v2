@@ -1,4 +1,4 @@
-const fs=require('fs'); const RD=require('./core.js');
+const fs=require('fs'); const RD=require('./rdcore.js');
 let pass=0, fail=0; function ok(c,m){ if(c) pass++; else { fail++; console.error('FAIL: '+m); } }
 const html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 const m=html.match(/function migrateStageGateSets\(x\)\{([\s\S]*?)\n\}/);

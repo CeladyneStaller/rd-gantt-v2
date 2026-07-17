@@ -1,4 +1,4 @@
-const C=require('./core.js'); let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; console.log('FAIL:',m);}};
+const C=require('./rdcore.js'); let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; console.log('FAIL:',m);}};
 const pb=C.keyResultPaceBand;
 ok(pb(null,0,100,50)==='no-band','null attainment -> no-band');
 ok(pb(100,0,100,20)==='on-track','attainment 100 -> on-track (met, regardless of time)');

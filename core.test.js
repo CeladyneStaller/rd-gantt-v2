@@ -2,7 +2,7 @@
    Core test harness (pure Node, headless). Run: node core.test.js
    Exits non-zero on any failure. Assertion count must never regress.
    ============================================================================ */
-var C = require('./core.js');
+var C = require('./rdcore.js');
 
 var count = 0, fails = 0;
 function eq(a, b, msg) {

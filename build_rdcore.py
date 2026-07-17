@@ -139,7 +139,12 @@ def check_broker(base: str, digest: str):
     are directly comparable."""
     import json as _json
     import urllib.request
-    url = base.rstrip("/") + "/rdcore/version"
+    # A bare host ("host.railway.app") is the natural thing to paste, and urllib rejects it with the
+    # unhelpful "unknown url type". Default the scheme instead of lecturing.
+    base = base.strip().rstrip("/")
+    if "://" not in base:
+        base = "https://" + base
+    url = base + "/rdcore/version"
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             etag = (_json.loads(r.read()) or {}).get("etag")
@@ -175,12 +180,15 @@ def main() -> int:
     print(f"checking against {args.core}  sha256:{digest}\n")
     worst = 0
     checked = 0
+    drifted = 0
     for app in args.apps:
         status, detail = process(app, core_text)
         symbol = {"ok": "  ok  ", "drift": " DRIFT", "missing": " skip ", "error": " ERROR"}[status]
         print(f"[{symbol}] {os.path.basename(app):26} {detail}")
         if status in ("drift", "error"):
             worst = 1
+        if status == "drift":
+            drifted = 1
         if status != "missing":
             checked += 1
 
@@ -190,6 +198,8 @@ def main() -> int:
         print(f"[{symbol}] {'broker (Hub loads this)':26} {detail}")
         if status in ("drift", "error"):
             worst = 1
+        if status == "drift":
+            drifted = 1
     else:
         print("\n  note: broker not checked (pass --broker <url> or set RD_BROKER).")
         print("        The Hub loads its engine from the broker, so a repo/broker mismatch")
@@ -201,8 +211,12 @@ def main() -> int:
         print("ERROR: no app files found to check — nothing was verified.", file=sys.stderr)
         print(f"       looked for: {', '.join(DEFAULT_APPS)} in {os.getcwd()}", file=sys.stderr)
         return 2
-    print("drift detected — edit rdcore.js, run `python build.py`, then redeploy the broker"
-          if worst else f"all {checked} inlined copies match rdcore.js")
+    if drifted:
+        print("drift detected — edit rdcore.js, run `python build.py`, then redeploy the broker")
+    elif worst:
+        print(f"all {checked} inlined copies match rdcore.js, but a check could not run (see ERROR above)")
+    else:
+        print(f"all {checked} inlined copies match rdcore.js")
     return worst
 
 

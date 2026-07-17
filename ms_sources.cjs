@@ -1,7 +1,7 @@
 // A milestone KPI names its value sources explicitly (kpi.sources), because the KR KPIs that feed it live in
 // EXEC-<div> docs the planning app cannot write. Multiple sources are allowed and the BEST-SCORING one wins.
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
-const C=require((process.env.RD_SRC||'/home/claude')+'/core.js');
+const C=require((process.env.RD_SRC||'/home/claude')+'/rdcore.js');
 const out=[]; const ok=(c,m)=>out.push((c?'ok  ':'FAIL ')+m);
 
 // ---------- core: best-scoring source wins ----------

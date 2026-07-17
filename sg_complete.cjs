@@ -1,4 +1,4 @@
-const C=require('./core.js'); let n=0,f=0;
+const C=require('./rdcore.js'); let n=0,f=0;
 const ok=(c,m)=>{n++; if(!c){f++; console.log('FAIL:',m);}};
 const ex={ D:{ keyResults:[],
   kpis:[

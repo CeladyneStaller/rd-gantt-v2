@@ -25,7 +25,7 @@ const w=dom.window, doc=w.document;
   ok(doc.getElementById("kpiTgtOverlay").classList.contains("open"), "1: modal overlay opened");
   let body=doc.getElementById("kpiTgtBody");
   ok([...body.querySelectorAll("[data-tgttype]")].map(b=>b.dataset.tgttype).join(",")==="demonstration,statistical,binary", "1: segmented target-type control (Demonstration/Statistical/Binary)");
-  ok([...body.querySelectorAll("[data-tgtdir]")].map(b=>b.dataset.tgtdir).join(",")==="increase,decrease", "1: segmented direction control (Increase/Decrease)");
+  ok([...body.querySelectorAll("[data-tgtdir]")].map(b=>b.dataset.tgtdir).join(",")==="increase,decrease,range", "1: segmented direction control (Increase/Decrease/Range)");
   ok(body.querySelector('[data-tf="name"]')&&body.querySelector('[data-tf="target"]')&&body.querySelector('[data-tf="unit"]'), "1: name/target/unit fields present");
   ok(!body.querySelector('[data-f="direction"]'), "1: old plain up/down/range dropdown is gone");
 

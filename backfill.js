@@ -12,7 +12,7 @@
  * Idempotent: skips milestone KPIs whose name already exists; never overwrites a set completedDate.
  */
 'use strict';
-var RD = require('./core.js');
+var RD = require('./rdcore.js');
 
 var EPOCH = Date.UTC(2020, 0, 1);
 function isoToDay(iso){ return iso ? Math.round((Date.parse(iso + 'T00:00:00Z') - EPOCH) / 86400000) : null; }
