@@ -498,29 +498,49 @@ if __name__ == "__main__":
     ok("locks are per-doc, and stable per doc")
 
     # --- /rdcore.js -----------------------------------------------------------
+    # The seam is _rdcore_candidates(), NOT _RDCORE_PATH. _RDCORE_PATH is now only
+    # "the first place we would look" and _rdcore() never consults it, so stubbing
+    # it would leave the real engine sitting beside this file to be found instead —
+    # the test would pass or fail on whether rdcore.js happens to be in the repo,
+    # which is precisely the kind of accidental result rdcore_check.py exists to stop.
     import tempfile
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as fh:
         fh.write("/* engine */ var x = 1;\n")
         _tmp = fh.name
-    globals()["_RDCORE_PATH"] = _tmp
+    globals()["_rdcore_candidates"] = lambda: [_tmp]
     globals()["_RDCORE"] = None
     body = get_rdcore(if_none_match=None)
     etag = body.headers["etag"]
-    assert body.status_code == 200 and b"var x = 1" in body.body
+    assert body.status_code == 200 and b"var x = 1" in body.body, "must serve the stub, not a found engine"
     assert get_rdcore_version()["etag"] == etag, "version endpoint must match the served ETag"
     assert get_rdcore(if_none_match=etag).status_code == 304, "matching If-None-Match -> 304"
     assert get_rdcore(if_none_match='"stale"').status_code == 200, "stale If-None-Match -> full body"
-    os.unlink(_tmp)
     ok("rdcore.js served; ETag matches /rdcore/version; 304 on revalidate")
 
-    # A missing engine file fails loudly rather than serving nothing.
-    globals()["_RDCORE_PATH"] = "/nonexistent/rdcore.js"
+    # The search falls through misses to the first file that exists.
+    globals()["_rdcore_candidates"] = lambda: ["/nonexistent/a.js", "/nonexistent/b.js", _tmp]
+    globals()["_RDCORE"] = None
+    assert b"var x = 1" in get_rdcore(if_none_match=None).body
+    ok("candidate search skips absent paths and takes the first that exists")
+    os.unlink(_tmp)
+
+    # A missing engine names every path tried — "not found at X" would send you to
+    # fix an X that may not even be the one that mattered.
+    globals()["_rdcore_candidates"] = lambda: ["/nonexistent/one.js", "/nonexistent/two.js"]
     globals()["_RDCORE"] = None
     try:
         get_rdcore(if_none_match=None)
         raise AssertionError("missing rdcore.js should raise")
     except HTTPException as e:
-        assert e.status_code == 500 and "rdcore.js not found" in str(e.detail)
-    ok("missing rdcore.js -> clear 500, not a silent empty body")
+        assert e.status_code == 500, e.status_code
+        detail = str(e.detail)
+        assert "rdcore.js not found" in detail
+        assert "/nonexistent/one.js" in detail and "/nonexistent/two.js" in detail, \
+            "the error must name EVERY path tried, not just the last"
+    ok("missing rdcore.js -> 500 naming every path tried")
+
+    # Real resolution, unstubbed: the env override is honoured and quote-stripped.
+    assert _rdcore_candidates(), "candidate list must never be empty"
+    ok("candidate list is non-empty without any stub")
 
     print("\nbroker_patch self-check OK — concurrency, cache, per-doc locks, rdcore serving")
