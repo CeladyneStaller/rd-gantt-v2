@@ -292,8 +292,6 @@ def _rdcore_candidates() -> list:
     return seen
 
 
-# kept for compatibility: the first place we would look
-_RDCORE_PATH = _rdcore_candidates()[0]
 _RDCORE: Optional[Tuple[str, str]] = None
 
 
@@ -498,11 +496,9 @@ if __name__ == "__main__":
     ok("locks are per-doc, and stable per doc")
 
     # --- /rdcore.js -----------------------------------------------------------
-    # The seam is _rdcore_candidates(), NOT _RDCORE_PATH. _RDCORE_PATH is now only
-    # "the first place we would look" and _rdcore() never consults it, so stubbing
-    # it would leave the real engine sitting beside this file to be found instead —
-    # the test would pass or fail on whether rdcore.js happens to be in the repo,
-    # which is precisely the kind of accidental result rdcore_check.py exists to stop.
+    # The seam is _rdcore_candidates(): stub THAT, or the search finds the real engine
+    # beside this file and the test passes or fails on whether rdcore.js happens to be
+    # in the repo — the kind of accidental result this self-check exists to stop.
     import tempfile
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as fh:
         fh.write("/* engine */ var x = 1;\n")
