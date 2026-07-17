@@ -14,7 +14,9 @@ the templates is touched — only the marker line is replaced.
 The marker in each template is exactly:  <script>/*__CORE__*/</script>
 """
 
+import filecmp
 import os
+import shutil
 import subprocess
 import sys
 
@@ -24,6 +26,29 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SANDBOX = os.path.isdir("/mnt/user-data/outputs") and os.path.isdir("/home/claude")
 OUT = os.environ.get("RD_OUT") or ("/mnt/user-data/outputs" if SANDBOX else HERE)
 CORE = os.path.join(HERE, "rdcore.js")
+
+# The broker deploys from its own root, so the engine it serves to the R&D Hub is a SECOND copy of rdcore.js
+# living in the broker's directory. A copy you have to remember to make is a copy that drifts — and when it
+# drifts nothing breaks loudly: the Hub and the apps simply band the same score differently. Editing the engine
+# and refreshing the broker's copy are two thoughts; this makes them one action.
+# No-op when there is no broker directory here, so this is harmless for any other checkout.
+BROKER_DIRS = ("Broker", "broker")
+
+
+def sync_broker_copy():
+    """Copy rdcore.js into the broker's deploy root, if it lives in this tree. Returns (path, changed) or None.
+    Byte-for-byte: the broker hashes the file after Python's universal-newline read, so a verbatim copy
+    produces the identical etag regardless of the checkout's line endings."""
+    for d in BROKER_DIRS:
+        bdir = os.path.join(HERE, d)
+        if not os.path.isdir(bdir):
+            continue
+        dst = os.path.join(bdir, "rdcore.js")
+        if os.path.exists(dst) and filecmp.cmp(CORE, dst, shallow=False):
+            return dst, False
+        shutil.copy2(CORE, dst)
+        return dst, True
+    return None
 MARKER = "/*__CORE__*/"
 
 TARGETS = [
@@ -106,6 +131,14 @@ def main():
         kb = round(len(html.encode("utf-8")) / 1024, 1)
         built.append((outname, kb))
         print(f"✓ built {outname}  ({kb} KB, core inlined)")
+
+    synced = sync_broker_copy()
+    if synced:
+        dst, changed = synced
+        rel = os.path.relpath(dst, HERE)
+        print(f"\u2713 {'updated' if changed else 'already current'}: {rel}  (the engine the Hub loads)")
+        if changed:
+            print(f"  commit {rel} and redeploy the broker, or the Hub keeps the old engine")
 
     print("\nbuild complete:")
     for name, kb in built:
