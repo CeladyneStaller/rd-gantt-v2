@@ -360,7 +360,7 @@
   .gname.static{color:var(--muted);cursor:default}
   .gname.static:hover{color:var(--muted);text-decoration:none}
   .gsetnum{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-right:4px}
-  .gtrack{position:relative;width:720px;flex:none;height:100%}
+  .gtrack{position:relative;width:720px;flex:none;height:100%;overflow:hidden}
   .gaxis{display:flex;align-items:flex-end;height:22px}
   .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
   .ggrid{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);opacity:.5;pointer-events:none}
@@ -391,11 +391,14 @@
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
   .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
+  .lvlsep{display:inline-block;width:1px;height:14px;background:var(--line);margin:0 8px;vertical-align:middle}
   .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
   .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
   .lvlb{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:5px;cursor:pointer;
     background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
   .lvlb:hover{border-color:var(--accent);color:var(--accent)}
+  .lvlb.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+  .lvlb.on:hover{color:var(--panel);opacity:.9}
   .lvlb.ghosty{color:var(--muted)}
   /* one row per stage-gate set on an overview tile; the letter matches the Gantt's SG-A / SG-B labelling */
   .gdots + .gdots{margin-top:3px}
@@ -1959,7 +1962,8 @@ const URLP = (function(){
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
   return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
-           tab: (p.get("tab")||"").trim().toLowerCase() };   // ?tab=gantt opens on that tab
+           tab: (p.get("tab")||"").trim().toLowerCase(),
+           ganttActive: p.get("ganttActive")==="1", ganttQuarter: p.get("ganttQuarter")==="1" };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -3259,6 +3263,11 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+// Gantt view toggles. Seeded from ?ganttActive=1 / ?ganttQuarter=1, then owned by the toolbar.
+// They compose: filtering shrinks the tree (and, because the axis is derived from what survives, the axis with
+// it); the quarter clamp instead pins the window regardless of what is on screen.
+let ganttActiveOnly = URLP.ganttActive;
+let ganttQtrZoom = URLP.ganttQuarter;
 let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
 // (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
@@ -3301,7 +3310,15 @@ function levelBarHtml(tab){
   const lv=pfLevels(tab); if(!lv.length) return "";
   return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
     lv.map(l=>`<button class="lvlb" data-lvl="${esc(l.id)}" data-lvltab="${tab}">${esc(l.label)}</button>`).join("")+
-    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button></div>`;
+    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button>`+
+    (tab==="gantt"?ganttViewTogglesHtml():"")+`</div>`;
+}
+// Two independent view toggles. Separate from "Collapse to" (which only folds the tree) because these change
+// WHAT is shown and WHAT the axis spans.
+function ganttViewTogglesHtml(){
+  return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
+    `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
+    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Pin the time axis to ${esc(currentQuarter())}. Bars crossing the edge are clipped; rows with no overlap drop out.">${esc(currentQuarter())} only</button>`;
 }
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
@@ -3619,6 +3636,16 @@ function renderGantt(){
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
+  const qWin=(function(){ if(!ganttQtrZoom) return null;
+    const qr=RD.quarterRange(currentQuarter()); if(!qr) return null;
+    const a=isoToDay(qr.start), b=isoToDay(qr.end);
+    return (a!=null && b!=null && b>a) ? {lo:a, hi:b} : null; })();
+  // Zoomed to a quarter, a row with NO overlap at all is just an empty track — drop it. Anything that touches
+  // the quarter stays and is clipped at the edge, so a long initiative still reads as running off the end.
+  const inWin=g=>{ if(!qWin) return true;
+    if(g.kind==="bar") return g.ds!=null && g.de!=null && g.de>=qWin.lo && g.ds<=qWin.hi;
+    const pts=[g.planned, g.eff, g.actual].filter(v=>v!=null);
+    return pts.some(v=>v>=qWin.lo && v<=qWin.hi); };
   /* Objectives always read end-date ascending inside whatever parent or group they land in. The key is
      g.de — the bar's drawn end (plannedEnd, else the projected end); visible() guarantees it is non-null
      for any rendered objective bar. Ties fall back to the statement so the order is stable across renders.
@@ -3639,10 +3666,12 @@ function renderGantt(){
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
     if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
+    if(entity==="objective" && ganttActiveOnly && !isActiveObjective(r, em)) return null;
     const g=geom(entity,r); if(!visible(g)) return null;
+    if(!inWin(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
     sortObjKids(kids);
-    if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
+    if((pfAnyFilter()||ganttActiveOnly) && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
@@ -3693,6 +3722,13 @@ function renderGantt(){
   });
   if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
   if(!isFinite(lo)){ lo=td; } if(!isFinite(hi)||hi<=lo){ hi=lo+1; }
+  // Quarter zoom pins the window to the quarter itself rather than to whatever survived the filter — applied
+  // LAST so the today-clamp above cannot widen it back. Bars crossing the edge are clipped by the track's
+  // overflow, so a long initiative still reads as running off the end instead of vanishing.
+  if(ganttQtrZoom){
+    const qr=RD.quarterRange(currentQuarter());
+    if(qr){ const qlo=isoToDay(qr.start), qhi=isoToDay(qr.end); if(qlo!=null && qhi!=null && qhi>qlo){ lo=qlo; hi=qhi; } }
+  }
   const LABELW=240, TRACKW=720, x=d=>(d-lo)/(hi-lo)*TRACKW;
   function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
   const ticks=quarterTicks(lo,hi);
@@ -3768,7 +3804,11 @@ function renderGantt(){
   ganttRoots = roots;
   const lb=document.getElementById("ganttLevelBar");
   if(lb){ lb.innerHTML=levelBarHtml("gantt");
-    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null)); }
+    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null));
+    lb.querySelectorAll("[data-gview]").forEach(b=>b.onclick=()=>{
+      if(b.dataset.gview==="active") ganttActiveOnly=!ganttActiveOnly; else ganttQtrZoom=!ganttQtrZoom;
+      renderGantt();                       // rebuilds the tree AND the bar, so the button reflects the new state
+    }); }
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
