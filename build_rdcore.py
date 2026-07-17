@@ -138,6 +138,7 @@ def check_broker(base: str, digest: str):
     etag is sha256(text.strip())[:16] — the same digest_of() computes, so the two
     are directly comparable."""
     import json as _json
+    import urllib.error
     import urllib.request
     # A bare host ("host.railway.app") is the natural thing to paste, and urllib rejects it with the
     # unhelpful "unknown url type". Default the scheme instead of lecturing.
@@ -148,6 +149,17 @@ def check_broker(base: str, digest: str):
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             etag = (_json.loads(r.read()) or {}).get("etag")
+    except urllib.error.HTTPError as e:
+        # The broker puts the real reason in the response BODY (FastAPI's {"detail": ...}) — e.g. exactly where
+        # it looked for rdcore.js. urllib hides that behind a bare "HTTP Error 500: Internal Server Error", so
+        # read it out. A 500 here almost always means the engine has not been deployed beside broker.py yet.
+        try:
+            body = e.read().decode("utf-8", "replace")
+            detail = (_json.loads(body) or {}).get("detail") or body.strip()
+        except Exception:
+            detail = ""
+        detail = (detail or "no detail returned")[:300]
+        return "error", f"HTTP {e.code} from {url}\n{'':>36}-> {detail}"
     except Exception as e:
         return "error", f"{url}: {e}"
     if not etag:

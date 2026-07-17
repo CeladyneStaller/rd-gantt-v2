@@ -49,6 +49,35 @@ tail = src[i:i + 420]
 ok("could not run" in tail, "an unreachable broker reports that a check could not run, NOT drift")
 ok("all {checked} inlined copies match" in tail, "a clean run still says so plainly")
 
+# --- an HTTP error must surface the broker's OWN detail, not a bare "Internal Server Error" ---
+# Corey hit a real 500 whose body said exactly where rdcore.js was missing; urllib hides that.
+import http.server, json as _j, threading, urllib.error
+
+
+class _H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = _j.dumps({"detail": "rdcore.js not found at /app/rdcore.js - commit it beside broker.py, "
+                                   "or point RDCORE_PATH at it"}).encode()
+        self.send_response(500)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *a):
+        pass
+
+
+srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+st, det = m.check_broker(f"http://127.0.0.1:{srv.server_port}", "deadbeef")
+srv.shutdown()
+ok(st == "error", "a 500 is an error status")
+ok("rdcore.js not found at /app/rdcore.js" in det,
+   "the broker's OWN detail is surfaced (not a bare 'Internal Server Error')")
+ok("commit it beside broker.py" in det, "...including what to actually do about it")
+ok("HTTP 500" in det, "...alongside the status code")
+
 # --- fail-on-zero must survive (a checker that checks nothing cannot report success) ---
 ok("no app files found to check" in src, "fail-on-zero guard is still present")
 
