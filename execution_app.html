@@ -50,7 +50,15 @@
   header .home:hover{color:var(--accent);background:var(--panel2)}
   header .div-pill{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:3px 9px;border-radius:6px;color:var(--accent)}
   .spacer{flex:1}
-  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly [data-edit], body.readonly [data-editsubkr], body.readonly #saveBtn{display:none !important}
+  /* data-edit / data-editsubkr are NOT only on buttons — they are also the click-to-edit affordance ON the
+     content itself: <span class="g-name click">, <span class="g-chip">, <span class="icard-title">,
+     <span class="icard-num">, <span class="skr-name">. Hiding the attribute wholesale therefore blanked the
+     KR/SG names, chips, card titles and sub-KR names in readonly — suppressing 2 controls by deleting 7 pieces
+     of content. Hide the actual controls; keep the text and simply make it inert. */
+  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly button[data-edit], body.readonly a[data-edit], body.readonly button[data-editsubkr], body.readonly a[data-editsubkr], body.readonly #saveBtn{display:none !important}
+  /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
+     without pointer-events:none the newly-visible names would open editors in a read-only view */
+  body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
