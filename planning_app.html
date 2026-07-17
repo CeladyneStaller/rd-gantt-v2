@@ -67,6 +67,11 @@
   .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   .gact.danger{color:var(--bad)} .gact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   .ms-tbl .gact + .gact{margin-left:4px}
+  /* ?present — only the tab's own content. Chrome is hidden, not unrendered, so every existing handler still
+     wires up and no downstream code needs to know this mode exists. The legend stays: it is how you READ the
+     chart, not a control. The view is set entirely by URL params (tab, division, ganttactive, ganttquarter). */
+  body.present header, body.present .filterbar, body.present .lvlbar{display:none !important}
+  body.present main{padding:12px;max-width:none}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
@@ -1973,12 +1978,18 @@ const URLP = (function(){
     history.replaceState({}, "", u.toString()); }
   const rq = pget("quarter");
   const flag = (name) => { const v = pget(name); return v !== null && v !== "0" && v.toLowerCase() !== "false"; };
-  return { readonly: phas("readonly"), division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
+  // ?present strips the app down to the tab's own content — no header, no nav, no filter or level bars — for
+  // a screen or a slide. It implies readonly: a view with no navigation should not offer edits either, and
+  // there would be no Save button to commit them with.
+  const present = flag("present");
+  return { present: present, readonly: phas("readonly") || present,
+           division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
            tab: (pget("tab")||"").trim().toLowerCase(),
            ganttActive: flag("ganttActive"), ganttQuarter: flag("ganttQuarter") };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
+if (URLP.present) document.body.classList.add("present");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r = await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
