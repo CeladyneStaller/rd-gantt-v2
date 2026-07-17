@@ -3280,15 +3280,20 @@ let ganttCollapsed = new Set();
 // it); the quarter clamp instead pins the window regardless of what is on screen.
 let ganttActiveOnly = URLP.ganttActive;
 let ganttQtrZoom = URLP.ganttQuarter;
-const GANTT_QBUF = 7;   // days of slack each side of the quarter — see ganttQuarterWindow()
-// The window used BOTH for the axis and for the overlap test, so a bar that survives the filter is a bar that
-// fits: computing them separately would clip something the row test had just decided to keep.
+const GANTT_QBUF = 7;          // days of slack each side of the quarter, for the AXIS only
+const GANTT_MIN_OVERLAP = 7;   // a bar must spend at least this many days inside the quarter itself
+// Two windows, deliberately different:
+//   qlo/qhi — the quarter itself. Row membership is judged against this, so a bar merely grazing the boundary
+//             does not count as being "in" the quarter.
+//   lo/hi   — the quarter plus a week each side. The AXIS spans this, because a quarter boundary is an
+//             accounting line and work planned "for 26Q3" routinely ends a few days into Q4; clipping exactly
+//             at the boundary amputates those bars for no reason.
 function ganttQuarterWindow(){
   if(!ganttQtrZoom) return null;
-  const qr=RD.quarterRange(currentQuarter()); if(!qr) return null;
+  const q=currentQuarter(), qr=RD.quarterRange(q); if(!qr) return null;
   const a=isoToDay(qr.start), b=isoToDay(qr.end);
   if(a==null || b==null || b<=a) return null;
-  return { lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
+  return { name:q, qlo:a, qhi:b, lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
 }
 let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
@@ -3340,7 +3345,7 @@ function levelBarHtml(tab){
 function ganttViewTogglesHtml(){
   return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
     `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
-    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Pin the time axis to ${esc(currentQuarter())}. Bars crossing the edge are clipped; rows with no overlap drop out.">${esc(currentQuarter())} only</button>`;
+    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Show work in ${esc(currentQuarter())}: anything tagged ${esc(currentQuarter())}, plus anything spending 7+ days inside it. The axis spans the quarter with a week of slack each side.">${esc(currentQuarter())} only</button>`;
 }
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
@@ -3664,8 +3669,21 @@ function renderGantt(){
   const qWin=ganttQuarterWindow();
   // Zoomed to a quarter, a row with NO overlap at all is just an empty track — drop it. Anything that touches
   // the quarter stays and is clipped at the edge, so a long initiative still reads as running off the end.
-  const inWin=g=>{ if(!qWin) return true;
-    if(g.kind==="bar") return g.ds!=null && g.de!=null && g.de>=qWin.lo && g.ds<=qWin.hi;
+  // An objective tagged for this quarter IS in this quarter, whatever its dates say — the same rule
+  // isActiveObjective already applies. Otherwise it must spend real time inside the quarter, not just graze
+  // the edge. A tagged objective whose dates sit elsewhere renders an empty track, which is honest: that row
+  // has a tag/date mismatch and now you can see which.
+  const objInWin=(r,g)=>{
+    if(!qWin) return true;
+    if((r.quarter||"")===qWin.name) return true;
+    if(g.kind!=="bar") return true;
+    if(g.ds==null || g.de==null) return false;
+    const ov=Math.min(g.de,qWin.qhi)-Math.max(g.ds,qWin.qlo)+1;   // inclusive days inside the quarter proper
+    return ov>=GANTT_MIN_OVERLAP;
+  };
+  // Points (gates, milestones) have no duration to overlap, so they use the buffered window: a gate three days
+  // past the boundary is quarter-boundary slop, not next quarter's work.
+  const ptInWin=g=>{ if(!qWin) return true;
     const pts=[g.planned, g.eff, g.actual].filter(v=>v!=null);
     return pts.some(v=>v>=qWin.lo && v<=qWin.hi); };
   /* Objectives always read end-date ascending inside whatever parent or group they land in. The key is
@@ -3690,10 +3708,11 @@ function renderGantt(){
     if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
     if(entity==="objective" && ganttActiveOnly && !isActiveObjective(r, em)) return null;
     const g=geom(entity,r); if(!visible(g)) return null;
-    if(!inWin(g)) return null;
+    if(entity==="objective" && !objInWin(r,g)) return null;
+    if((entity==="milestone"||entity==="stagegate") && !ptInWin(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
     sortObjKids(kids);
-    if((pfAnyFilter()||ganttActiveOnly) && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
+    if((pfAnyFilter()||ganttActiveOnly||qWin) && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
