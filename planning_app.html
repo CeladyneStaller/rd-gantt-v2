@@ -1958,12 +1958,24 @@ const BROKER = "https://web-production-b17a2.up.railway.app";
 function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
 const URLP = (function(){
   const u = new URL(location.href), p = u.searchParams;
-  const t = p.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
-  const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
-           tab: (p.get("tab")||"").trim().toLowerCase(),
-           ganttActive: p.get("ganttActive")==="1", ganttQuarter: p.get("ganttQuarter")==="1" };   // ?tab=gantt opens on that tab
+  // URLSearchParams keys are case-SENSITIVE, so ?ganttquarter=1 silently missed a param declared as
+  // "ganttQuarter" — no error, no effect, nothing to see. Look names up case-insensitively instead: the KEY
+  // is ours to be lenient about, while VALUES stay exact (division ids like DIV-FC are case-significant).
+  const pget = (name) => {
+    const want = name.toLowerCase();
+    for (const [k, v] of p) if (k.toLowerCase() === want) return v;
+    return null;
+  };
+  const phas = (name) => pget(name) !== null;
+  const t = pget("token");
+  if (t){ localStorage.setItem("rd_broker_token", t);
+    [...p.keys()].filter(k=>k.toLowerCase()==="token").forEach(k=>p.delete(k));   // strip it whatever its case
+    history.replaceState({}, "", u.toString()); }
+  const rq = pget("quarter");
+  const flag = (name) => { const v = pget(name); return v !== null && v !== "0" && v.toLowerCase() !== "false"; };
+  return { readonly: phas("readonly"), division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
+           tab: (pget("tab")||"").trim().toLowerCase(),
+           ganttActive: flag("ganttActive"), ganttQuarter: flag("ganttQuarter") };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -3268,6 +3280,16 @@ let ganttCollapsed = new Set();
 // it); the quarter clamp instead pins the window regardless of what is on screen.
 let ganttActiveOnly = URLP.ganttActive;
 let ganttQtrZoom = URLP.ganttQuarter;
+const GANTT_QBUF = 7;   // days of slack each side of the quarter — see ganttQuarterWindow()
+// The window used BOTH for the axis and for the overlap test, so a bar that survives the filter is a bar that
+// fits: computing them separately would clip something the row test had just decided to keep.
+function ganttQuarterWindow(){
+  if(!ganttQtrZoom) return null;
+  const qr=RD.quarterRange(currentQuarter()); if(!qr) return null;
+  const a=isoToDay(qr.start), b=isoToDay(qr.end);
+  if(a==null || b==null || b<=a) return null;
+  return { lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
+}
 let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
 // (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
@@ -3636,10 +3658,10 @@ function renderGantt(){
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
-  const qWin=(function(){ if(!ganttQtrZoom) return null;
-    const qr=RD.quarterRange(currentQuarter()); if(!qr) return null;
-    const a=isoToDay(qr.start), b=isoToDay(qr.end);
-    return (a!=null && b!=null && b>a) ? {lo:a, hi:b} : null; })();
+  // A quarter boundary is an accounting line, not a real one: work planned "for 26Q3" routinely ends a few
+  // days into Q4 because dates were set from a slightly different calendar. Clipping exactly at the boundary
+  // amputates those bars for no reason, so the window carries a week of slack on each side.
+  const qWin=ganttQuarterWindow();
   // Zoomed to a quarter, a row with NO overlap at all is just an empty track — drop it. Anything that touches
   // the quarter stays and is clipped at the edge, so a long initiative still reads as running off the end.
   const inWin=g=>{ if(!qWin) return true;
@@ -3725,10 +3747,8 @@ function renderGantt(){
   // Quarter zoom pins the window to the quarter itself rather than to whatever survived the filter — applied
   // LAST so the today-clamp above cannot widen it back. Bars crossing the edge are clipped by the track's
   // overflow, so a long initiative still reads as running off the end instead of vanishing.
-  if(ganttQtrZoom){
-    const qr=RD.quarterRange(currentQuarter());
-    if(qr){ const qlo=isoToDay(qr.start), qhi=isoToDay(qr.end); if(qlo!=null && qhi!=null && qhi>qlo){ lo=qlo; hi=qhi; } }
-  }
+  const qw=ganttQuarterWindow();
+  if(qw){ lo=qw.lo; hi=qw.hi; }
   const LABELW=240, TRACKW=720, x=d=>(d-lo)/(hi-lo)*TRACKW;
   function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
   const ticks=quarterTicks(lo,hi);
