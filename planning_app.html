@@ -1958,7 +1958,8 @@ const URLP = (function(){
   const t = p.get("token");
   if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
   const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
+  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
+           tab: (p.get("tab")||"").trim().toLowerCase() };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
@@ -3890,20 +3891,26 @@ function ovRpnPill(r){ const b=RD.rpnBand(r); return b==="high"?"bad":b==="med"?
 
 function overviewTilesHtml(){
   const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
+  const ovDivs=portfolio.divisions.filter(structDivShows);
   let cards='<div class="cards">';
-  for(const d of portfolio.divisions){ cards+=ovDivCard(d, em, casc); }
+  for(const d of ovDivs){ cards+=ovDivCard(d, em, casc); }
   cards+='</div>';
   if(!portfolio.divisions.length) cards='<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>';
+  // "No divisions yet" is only true when there are none. A filter hiding them all — including a mistyped
+  // ?division=fuelcell, which matches no id and renders a convincingly empty page — must say so instead.
+  else if(!ovDivs.length) cards='<p class="hint">No divisions match the current filter (division='
+    +esc(pfFilters.division||"any")+(pfFilters.product?", product="+esc(pfFilters.product):"")
+    +'). The filter matches a division id such as DIV-FC, not its name.</p>';
   const activeObjs=portfolio.objectives.filter(function(o){return isActiveObjective(o,em);});
   const activeMs=portfolio.milestones.filter(function(m){return isActiveMilestone(m,em);});
   let groups="";
-  for(const d of portfolio.divisions){
+  for(const d of ovDivs){
     const dObjs=activeObjs.filter(function(o){return o.divisionId===d.id;});
     const dMs=activeMs.filter(function(m){return ovMsDiv(m)===d.id;});
     // Products/models come from the division that OWNS them (product.divisionId), not from whatever objectives
     // happen to reference them. Two consequences: a product still gets a tile with no active objective this
     // quarter, and an objective pointing at another division's product no longer drags that product in here.
-    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id;}).map(function(p){return p.id;});
+    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id && structProdShows(p);}).map(function(p){return p.id;});
     if(!dObjs.length && !dMs.length && !dProdIds.length) continue;
     const ownHere=function(pid){ return pid!=null && dProdIds.indexOf(pid)>=0; };
     // Work here can point at a product owned by ANOTHER division. That product still gets a labelled block in
@@ -4093,6 +4100,16 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   document.getElementById("tab-"+b.dataset.tab).classList.add("active");
 });
 
+// ?tab=<name> chooses the starting tab. An unknown value leaves the default (Overview) rather than
+// showing a blank page: there is no #tab-<junk> section to activate.
+function applyTabParam(){
+  if(!URLP.tab) return false;
+  const b=document.querySelector(`#nav button[data-tab="${URLP.tab}"]`);
+  if(!b) return false;
+  b.click();
+  return true;
+}
+
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
@@ -4110,7 +4127,7 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
 /* boot */
 renderAll();
-loadAll();
+loadAll().then(applyTabParam, applyTabParam);
 </script>
 <script>
 (function(){
