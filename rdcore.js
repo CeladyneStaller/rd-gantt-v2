@@ -43,7 +43,7 @@
   // ALLOCATION number, never a position: reordering existing ids never changes
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    unit: 'UNIT', division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
     product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
@@ -51,7 +51,7 @@
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
 
   function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    if (type === 'division' || type === 'unit') return opts.code;   // explicit short code, e.g. "FC" / "BIZ"
     var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
     if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
     return parentStem;
@@ -66,9 +66,9 @@
     var prefix = ID_PREFIX[type];
     if (!prefix) throw new Error('allocId: unknown type ' + type);
     var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
+    if (type === 'division' || type === 'unit') {
       var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate ' + type + ' code ' + stem);
       return did;
     }
     var base = prefix + '-' + stem + '-';

@@ -680,7 +680,7 @@
   // ALLOCATION number, never a position: reordering existing ids never changes
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    unit: 'UNIT', division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
     product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
@@ -688,7 +688,7 @@
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
 
   function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    if (type === 'division' || type === 'unit') return opts.code;   // explicit short code, e.g. "FC" / "BIZ"
     var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
     if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
     return parentStem;
@@ -703,9 +703,9 @@
     var prefix = ID_PREFIX[type];
     if (!prefix) throw new Error('allocId: unknown type ' + type);
     var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
+    if (type === 'division' || type === 'unit') {
       var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate ' + type + ' code ' + stem);
       return did;
     }
     var base = prefix + '-' + stem + '-';
@@ -2345,11 +2345,12 @@ function ownerOptions(){
   return known.map(e=>({id:e, name:e}))
     .concat(extra.map(e=>({id:e, name:e+" \u2014 not in roster"})));
 }
-const SEL = { unit:()=>(portfolio.units||[]), division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+const SEL = { unit:()=>(portfolio.units||(portfolio.units=[])), division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
   user:ownerOptions,
   initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
 const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
 const SCHEMAS = {
+  unit:       [["name","Name","text"],["order","Order","number"]],
   division:   [["name","Name","text"],["unitId","Unit","ref:unit?"],["kind","Kind","enum:rd,biz"],["order","Order","number"]],
   product:    [["name","Name","text"],["divisionId","Division","ref:division"],["order","Order","number"]],
   model:      [["name","Name","text"],["productId","Product","ref:product"],["order","Order","number"]],
@@ -3232,6 +3233,10 @@ function allocFor(entity, data){
     const code = (data.name||"DIV").replace(/[^A-Za-z0-9]/g,"").slice(0,4).toUpperCase()||"DIV";
     return RD.allocId("division", null, portfolio.divisions.map(x=>x.id), {code});
   }
+  if(entity==="unit"){
+    const code = (data.name||"UNIT").replace(/[^A-Za-z0-9]/g,"").slice(0,6).toUpperCase()||"UNIT";
+    return RD.allocId("unit", null, (portfolio.units||[]).map(x=>x.id), {code});
+  }
   if(entity==="product") return RD.allocId("product", data.divisionId, portfolio.products.map(x=>x.id));
   if(entity==="model")   return RD.allocId("model", data.productId, portfolio.models.map(x=>x.id));
   if(entity==="initiative") return RD.allocId("initiative", data.divisionId, portfolio.initiatives.map(x=>x.id));
@@ -3259,8 +3264,10 @@ function structAdd(child, parentId){
   else if(child==="milestone") prefill={initiativeId:parentId};
   openEditor(null, child, prefill);
 }
+function unitMemberDivs(uid){ return (portfolio.divisions||[]).filter(d=>(d.unitId||null)===uid); }
 function cascadeSet(ent, id){   // owned descendants that a cascade delete would also remove
   const out=[];
+  if(ent==="unit") return out;   // a unit owns nothing; member divisions only reference it (not deleted)
   if(ent==="product"){
     SEL.model().filter(m=>m.productId===id).forEach(m=>out.push({ent:"model",id:m.id}));
   } else if(ent==="initiative"){
@@ -3278,6 +3285,9 @@ function cascadeSet(ent, id){   // owned descendants that a cascade delete would
   const seen=new Set(); return out.filter(x=>{ const k=x.ent+":"+x.id; if(seen.has(k))return false; seen.add(k); return true; });
 }
 function applyStructDelete(targets){   // targets: [{ent,id}] — splice each, then strip dangling milestone refs
+  // deleting a unit must not leave a division pointing at a dead unit id -> clear unitId (Unassigned)
+  targets.filter(x=>x.ent==="unit").forEach(x=>{
+    (portfolio.divisions||[]).forEach(d=>{ if((d.unitId||null)===x.id) d.unitId=null; }); });
   targets.forEach(x=>{ const arr=SEL[x.ent](); const idx=arr.findIndex(r=>r.id===x.id); if(idx>=0) arr.splice(idx,1); });
   const delMs=targets.filter(x=>x.ent==="milestone").map(x=>x.id);
   if(delMs.length) portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(mid=>delMs.indexOf(mid)<0); });
@@ -3290,7 +3300,11 @@ function structDelete(ent, id){
   document.getElementById("delTitle").textContent="Delete "+ent;
   const name=esc(nameOf(ent,rec));
   const body=document.getElementById("delBody"), acts=document.getElementById("delActions");
-  if(!kids.length){
+  const unitMembers = ent==="unit" ? unitMemberDivs(id) : [];
+  if(ent==="unit" && unitMembers.length){
+    body.innerHTML=`<p class="del-lead">Delete unit <b>${name}</b>?</p><p class="hint">${unitMembers.length} division${unitMembers.length>1?"s":""} in this unit will become <b>Unassigned</b> (they are not deleted).</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete unit</button>`;
+  } else if(!kids.length){
     body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This can't be undone.</p>`;
     acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete</button>`;
   } else {
@@ -3327,6 +3341,16 @@ function renderStructTables(){
   };
   const newBtn=ent=>RO?"":`<button class="act" data-addnew="${ent}">+ New ${ent}</button>`;
   let html="";
+  // 0) Units (flat) — the top of the hierarchy. A division's Unit column (below) says which unit it sits in.
+  const units=byOrder(SEL.unit());
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Units</h3>${newBtn("unit")}</div>`;
+  html+= units.length
+    ? `<table><thead><tr><th>id</th><th>Name</th><th>Order</th><th>Divisions</th><th></th></tr></thead><tbody>`+
+        units.map(u=>`<tr class="s-parent">`+idCell("unit",u.id)+`<td><b>${esc(u.name)}</b></td>`+
+          `<td class="mono">${ordOf(u)===1e9?"—":ordOf(u)}</td>`+
+          `<td class="mono">${unitMemberDivs(u.id).length}</td>`+acts("unit",u.id)+`</tr>`).join("")+`</tbody></table>`
+    : `<p class="hint">No units yet. Units group divisions (e.g. Business, Technical).</p>`;
+  html+=`</div>`;
   // 1) Divisions (flat)
   const divs=byOrder(SEL.division().filter(structDivShows));
   html+=`<div class="struct-section"><div class="struct-head"><h3>Divisions</h3>${newBtn("division")}</div>`;
