@@ -68,6 +68,7 @@
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
   body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
+  .unit-tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);padding:3px 9px;border-radius:6px;margin-right:8px;align-self:center}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
@@ -818,6 +819,7 @@ html[data-theme="dark"] #etb-view{
   <h1><span class="dot">▣</span> Sales</h1>
   <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <div class="spacer"></div>
+  <span id="unitTag" class="unit-tag" style="display:none"></span>
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
@@ -1014,7 +1016,7 @@ html[data-theme="dark"] #etb-view{
   // ALLOCATION number, never a position: reordering existing ids never changes
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    unit: 'UNIT', division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
     product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
@@ -1022,7 +1024,7 @@ html[data-theme="dark"] #etb-view{
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
 
   function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    if (type === 'division' || type === 'unit') return opts.code;   // explicit short code, e.g. "FC" / "BIZ"
     var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
     if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
     return parentStem;
@@ -1037,9 +1039,9 @@ html[data-theme="dark"] #etb-view{
     var prefix = ID_PREFIX[type];
     if (!prefix) throw new Error('allocId: unknown type ' + type);
     var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
+    if (type === 'division' || type === 'unit') {
       var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate ' + type + ' code ' + stem);
       return did;
     }
     var base = prefix + '-' + stem + '-';
@@ -2823,9 +2825,30 @@ async function switchDivision(newDiv){
   startPoll();
 }
 function fillDivSelect(){ const s=document.getElementById("divSelect");
-  s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
+  const divs=portfolio.divisions||[], units=portfolio.units||[];
+  const opt=d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`;
+  if(units.length){
+    // group by unit (ordered), then an "Unassigned" group for divisions with no unitId
+    const uord=units.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    let html="";
+    uord.forEach(u=>{ const ds=divs.filter(d=>(d.unitId||null)===u.id);
+      if(ds.length) html+=`<optgroup label="${esc(u.name)}">`+ds.map(opt).join("")+`</optgroup>`; });
+    const orphan=divs.filter(d=>!units.some(u=>u.id===(d.unitId||null)));
+    if(orphan.length) html+=`<optgroup label="Unassigned">`+orphan.map(opt).join("")+`</optgroup>`;
+    s.innerHTML=html;
+  } else s.innerHTML=divs.map(opt).join("");
   if(divisionId) s.value=divisionId;
-  s.onchange=()=>switchDivision(s.value); }
+  s.onchange=()=>switchDivision(s.value);
+  updateUnitTag(); }
+// a small header tag showing which unit the current division sits in — orientation only, nothing gated.
+function updateUnitTag(){
+  const el=document.getElementById("unitTag"); if(!el) return;
+  const d=(portfolio.divisions||[]).find(x=>x.id===divisionId);
+  const uid=RD.unitIdOfDivision(divisionId, portfolio);
+  const u=(portfolio.units||[]).find(x=>x.id===uid);
+  if(u){ el.textContent=u.name; el.title="Unit — grouped in the planning app"; el.style.display=""; }
+  else { el.textContent=""; el.style.display="none"; }
+}
 function fillQtrSelect(){
   const s=document.getElementById("qtrSelect"); if(!s) return;
   const qs=[...new Set(myObjectives().map(o=>o.quarter).filter(Boolean))];
