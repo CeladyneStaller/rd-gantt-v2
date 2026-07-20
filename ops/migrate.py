@@ -41,7 +41,7 @@ import sys
 import time
 from datetime import date
 
-# ---- id allocation (mirrors core.js allocId) -------------------------------
+# ---- id allocation (mirrors rdcore.js allocId) -------------------------------
 ID_PREFIX = {"division": "DIV", "initiative": "INIT", "milestone": "MS",
              "objective": "OBJ", "keyResult": "KR", "stageGate": "SG",
              "task": "TSK", "kpi": "KPI"}
@@ -74,7 +74,23 @@ def alloc_id(t, parent_id, existing, **opts):
 EPOCH = date(2020, 1, 1)
 DIVISION_NAME_TO_ID = {"fuelcell": "DIV-FC", "electrolyzer": "DIV-EL",
                        "exploration": "DIV-EXP", "experimental": "DIV-EXP"}
-DIVISION_DISPLAY = {"DIV-FC": "Fuel Cell", "DIV-EL": "Electrolyzer", "DIV-EXP": "Exploration"}
+DIVISION_DISPLAY = {"DIV-FC": "Fuel Cell", "DIV-EL": "Electrolyzer", "DIV-EXP": "Exploration",
+                    "DIV-FIN": "Financial", "DIV-BD": "Business Development", "DIV-HR": "Human Resources"}
+
+# ---- Company > Unit > Division hierarchy (Phase 0) ---------------------------
+# Units are first-class records {id, name, order}. Every division carries a unitId (which unit it sits under)
+# and a kind ('rd' | 'biz'); kind is absent-means-'rd' everywhere else, so the map only lists exceptions.
+UNITS = [
+    {"id": "UNIT-BIZ",  "name": "Business",  "order": 1},
+    {"id": "UNIT-TECH", "name": "Technical", "order": 2},
+]
+DIVISION_UNIT = {"DIV-FC": "UNIT-TECH", "DIV-EL": "UNIT-TECH", "DIV-EXP": "UNIT-TECH",
+                 "DIV-FIN": "UNIT-BIZ", "DIV-BD": "UNIT-BIZ", "DIV-HR": "UNIT-BIZ"}
+DIVISION_KIND = {"DIV-FC": "rd", "DIV-EL": "rd", "DIV-EXP": "rd",
+                 "DIV-FIN": "biz", "DIV-BD": "biz", "DIV-HR": "biz"}
+# Business divisions that the migration seeds even if the source data has none of them yet, so the hierarchy is
+# whole. R&D divisions come from the actual project data as before.
+SEED_BIZ_DIVISIONS = ["DIV-FIN", "DIV-BD", "DIV-HR"]
 DEP_TARGET_IS_PREDECESSOR = True  # P.dependencies[].id = X means X precedes P (X -> P).
 
 
@@ -134,9 +150,11 @@ class Report:
 
 # ---- the build -------------------------------------------------------------
 def build(divisional, quarter_docs, rep):
-    portfolio = {"divisions": [], "products": [], "models": [], "initiatives": [],
+    portfolio = {"units": [], "divisions": [], "products": [], "models": [], "initiatives": [],
                  "milestones": [], "milestoneEdges": [], "objectives": [],
                  "objectiveEdges": [], "kpiDefs": []}
+    portfolio["units"] = [dict(u) for u in UNITS]
+    rep.counts["units"] = len(portfolio["units"])
 
     div_ids = set()
     for p in divisional.get("projects", []):
@@ -145,8 +163,15 @@ def build(divisional, quarter_docs, rep):
             div_ids.add(did)
     for did in quarter_docs:
         div_ids.add(did)
+    # seed the Business divisions so Company > Unit > Division is whole even when the source has no biz data yet
+    for d in SEED_BIZ_DIVISIONS:
+        div_ids.add(d)
     for i, d in enumerate(sorted(div_ids)):
-        portfolio["divisions"].append({"id": d, "name": DIVISION_DISPLAY.get(d, d), "order": i})
+        portfolio["divisions"].append({
+            "id": d, "name": DIVISION_DISPLAY.get(d, d), "order": i,
+            "unitId": DIVISION_UNIT.get(d),          # None -> Unassigned bucket downstream
+            "kind": DIVISION_KIND.get(d, "rd"),      # absent -> rd, per the model
+        })
         rep.bump("divisions")
 
     canon_products, canon_models = set(), set()

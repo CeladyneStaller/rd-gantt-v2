@@ -67,6 +67,11 @@
   .tact.danger{color:var(--bad)} .tact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   .gact.danger{color:var(--bad)} .gact.danger:hover{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd)}
   .ms-tbl .gact + .gact{margin-left:4px}
+  /* ?present — only the tab's own content. Chrome is hidden, not unrendered, so every existing handler still
+     wires up and no downstream code needs to know this mode exists. The legend stays: it is how you READ the
+     chart, not a control. The view is set entirely by URL params (tab, division, ganttactive, ganttquarter). */
+  body.present header, body.present .filterbar, body.present .lvlbar{display:none !important}
+  body.present main{padding:12px;max-width:none}
   body.readonly .erow{cursor:default}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
@@ -360,7 +365,7 @@
   .gname.static{color:var(--muted);cursor:default}
   .gname.static:hover{color:var(--muted);text-decoration:none}
   .gsetnum{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-right:4px}
-  .gtrack{position:relative;width:720px;flex:none;height:100%}
+  .gtrack{position:relative;width:720px;flex:none;height:100%;overflow:hidden}
   .gaxis{display:flex;align-items:flex-end;height:22px}
   .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
   .ggrid{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);opacity:.5;pointer-events:none}
@@ -391,11 +396,14 @@
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
   .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
+  .lvlsep{display:inline-block;width:1px;height:14px;background:var(--line);margin:0 8px;vertical-align:middle}
   .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
   .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
   .lvlb{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:5px;cursor:pointer;
     background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
   .lvlb:hover{border-color:var(--accent);color:var(--accent)}
+  .lvlb.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+  .lvlb.on:hover{color:var(--panel);opacity:.9}
   .lvlb.ghosty{color:var(--muted)}
   /* one row per stage-gate set on an overview tile; the letter matches the Gantt's SG-A / SG-B labelling */
   .gdots + .gdots{margin-top:3px}
@@ -636,13 +644,33 @@ const BROKER = "https://web-production-b17a2.up.railway.app";
 function currentQuarter(){ const d=new Date(); return d.getFullYear()+"Q"+(Math.floor(d.getMonth()/3)+1); }
 const URLP = (function(){
   const u = new URL(location.href), p = u.searchParams;
-  const t = p.get("token");
-  if (t){ localStorage.setItem("rd_broker_token", t); p.delete("token"); history.replaceState({}, "", u.toString()); }
-  const rq = p.get("quarter");
-  return { readonly: p.has("readonly"), division: p.get("division")||"", product: p.get("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||"") };
+  // URLSearchParams keys are case-SENSITIVE, so ?ganttquarter=1 silently missed a param declared as
+  // "ganttQuarter" — no error, no effect, nothing to see. Look names up case-insensitively instead: the KEY
+  // is ours to be lenient about, while VALUES stay exact (division ids like DIV-FC are case-significant).
+  const pget = (name) => {
+    const want = name.toLowerCase();
+    for (const [k, v] of p) if (k.toLowerCase() === want) return v;
+    return null;
+  };
+  const phas = (name) => pget(name) !== null;
+  const t = pget("token");
+  if (t){ localStorage.setItem("rd_broker_token", t);
+    [...p.keys()].filter(k=>k.toLowerCase()==="token").forEach(k=>p.delete(k));   // strip it whatever its case
+    history.replaceState({}, "", u.toString()); }
+  const rq = pget("quarter");
+  const flag = (name) => { const v = pget(name); return v !== null && v !== "0" && v.toLowerCase() !== "false"; };
+  // ?present strips the app down to the tab's own content — no header, no nav, no filter or level bars — for
+  // a screen or a slide. It implies readonly: a view with no navigation should not offer edits either, and
+  // there would be no Save button to commit them with.
+  const present = flag("present");
+  return { present: present, readonly: phas("readonly") || present,
+           division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
+           tab: (pget("tab")||"").trim().toLowerCase(),
+           ganttActive: flag("ganttActive"), ganttQuarter: flag("ganttQuarter") };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
+if (URLP.present) document.body.classList.add("present");
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r = await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
@@ -665,7 +693,7 @@ let etags = {};                  // docId -> etag (for If-Match)
 let knownVersions = {};          // docId -> version (ignore own echo)
 let pollTimer = null;
 
-function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
+function blankPortfolio(){ return { units:[],divisions:[],products:[],models:[],initiatives:[],
   milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
@@ -1939,6 +1967,26 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+// Gantt view toggles. Seeded from ?ganttActive=1 / ?ganttQuarter=1, then owned by the toolbar.
+// They compose: filtering shrinks the tree (and, because the axis is derived from what survives, the axis with
+// it); the quarter clamp instead pins the window regardless of what is on screen.
+let ganttActiveOnly = URLP.ganttActive;
+let ganttQtrZoom = URLP.ganttQuarter;
+const GANTT_QBUF = 7;          // days of slack each side of the quarter, for the AXIS only
+const GANTT_MIN_OVERLAP = 7;   // a bar must spend at least this many days inside the quarter itself
+// Two windows, deliberately different:
+//   qlo/qhi — the quarter itself. Row membership is judged against this, so a bar merely grazing the boundary
+//             does not count as being "in" the quarter.
+//   lo/hi   — the quarter plus a week each side. The AXIS spans this, because a quarter boundary is an
+//             accounting line and work planned "for 26Q3" routinely ends a few days into Q4; clipping exactly
+//             at the boundary amputates those bars for no reason.
+function ganttQuarterWindow(){
+  if(!ganttQtrZoom) return null;
+  const q=currentQuarter(), qr=RD.quarterRange(q); if(!qr) return null;
+  const a=isoToDay(qr.start), b=isoToDay(qr.end);
+  if(a==null || b==null || b<=a) return null;
+  return { name:q, qlo:a, qhi:b, lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
+}
 let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
 // (so the button row changes when the dims change); in hierarchy mode it is the entity tree. `leaf` marks
@@ -1981,7 +2029,15 @@ function levelBarHtml(tab){
   const lv=pfLevels(tab); if(!lv.length) return "";
   return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
     lv.map(l=>`<button class="lvlb" data-lvl="${esc(l.id)}" data-lvltab="${tab}">${esc(l.label)}</button>`).join("")+
-    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button></div>`;
+    `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button>`+
+    (tab==="gantt"?ganttViewTogglesHtml():"")+`</div>`;
+}
+// Two independent view toggles. Separate from "Collapse to" (which only folds the tree) because these change
+// WHAT is shown and WHAT the axis spans.
+function ganttViewTogglesHtml(){
+  return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
+    `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
+    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Show work in ${esc(currentQuarter())}: anything tagged ${esc(currentQuarter())}, plus anything spending 7+ days inside it. The axis spans the quarter with a week of slack each side.">${esc(currentQuarter())} only</button>`;
 }
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
@@ -2299,6 +2355,29 @@ function renderGantt(){
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
+  // A quarter boundary is an accounting line, not a real one: work planned "for 26Q3" routinely ends a few
+  // days into Q4 because dates were set from a slightly different calendar. Clipping exactly at the boundary
+  // amputates those bars for no reason, so the window carries a week of slack on each side.
+  const qWin=ganttQuarterWindow();
+  // Zoomed to a quarter, a row with NO overlap at all is just an empty track — drop it. Anything that touches
+  // the quarter stays and is clipped at the edge, so a long initiative still reads as running off the end.
+  // An objective tagged for this quarter IS in this quarter, whatever its dates say — the same rule
+  // isActiveObjective already applies. Otherwise it must spend real time inside the quarter, not just graze
+  // the edge. A tagged objective whose dates sit elsewhere renders an empty track, which is honest: that row
+  // has a tag/date mismatch and now you can see which.
+  const objInWin=(r,g)=>{
+    if(!qWin) return true;
+    if((r.quarter||"")===qWin.name) return true;
+    if(g.kind!=="bar") return true;
+    if(g.ds==null || g.de==null) return false;
+    const ov=Math.min(g.de,qWin.qhi)-Math.max(g.ds,qWin.qlo)+1;   // inclusive days inside the quarter proper
+    return ov>=GANTT_MIN_OVERLAP;
+  };
+  // Points (gates, milestones) have no duration to overlap, so they use the buffered window: a gate three days
+  // past the boundary is quarter-boundary slop, not next quarter's work.
+  const ptInWin=g=>{ if(!qWin) return true;
+    const pts=[g.planned, g.eff, g.actual].filter(v=>v!=null);
+    return pts.some(v=>v>=qWin.lo && v<=qWin.hi); };
   /* Objectives always read end-date ascending inside whatever parent or group they land in. The key is
      g.de — the bar's drawn end (plannedEnd, else the projected end); visible() guarantees it is non-null
      for any rendered objective bar. Ties fall back to the statement so the order is stable across renders.
@@ -2319,10 +2398,13 @@ function renderGantt(){
   // ---- build the full tree (every dated node, so the axis is stable under collapse) ----
   function build(entity, r, depth){
     if(entity==="objective" && pfAnyFilter() && !objMatches(r)) return null;   // filter objectives
+    if(entity==="objective" && ganttActiveOnly && !isActiveObjective(r, em)) return null;
     const g=geom(entity,r); if(!visible(g)) return null;
+    if(entity==="objective" && !objInWin(r,g)) return null;
+    if((entity==="milestone"||entity==="stagegate") && !ptInWin(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
     sortObjKids(kids);
-    if(pfAnyFilter() && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
+    if((pfAnyFilter()||ganttActiveOnly||qWin) && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
@@ -2373,6 +2455,11 @@ function renderGantt(){
   });
   if(isFinite(lo)) lo=Math.min(lo,td); if(isFinite(hi)) hi=Math.max(hi,td);
   if(!isFinite(lo)){ lo=td; } if(!isFinite(hi)||hi<=lo){ hi=lo+1; }
+  // Quarter zoom pins the window to the quarter itself rather than to whatever survived the filter — applied
+  // LAST so the today-clamp above cannot widen it back. Bars crossing the edge are clipped by the track's
+  // overflow, so a long initiative still reads as running off the end instead of vanishing.
+  const qw=ganttQuarterWindow();
+  if(qw){ lo=qw.lo; hi=qw.hi; }
   const LABELW=240, TRACKW=720, x=d=>(d-lo)/(hi-lo)*TRACKW;
   function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
   const ticks=quarterTicks(lo,hi);
@@ -2448,7 +2535,11 @@ function renderGantt(){
   ganttRoots = roots;
   const lb=document.getElementById("ganttLevelBar");
   if(lb){ lb.innerHTML=levelBarHtml("gantt");
-    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null)); }
+    lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null));
+    lb.querySelectorAll("[data-gview]").forEach(b=>b.onclick=()=>{
+      if(b.dataset.gview==="active") ganttActiveOnly=!ganttActiveOnly; else ganttQtrZoom=!ganttQtrZoom;
+      renderGantt();                       // rebuilds the tree AND the bar, so the button reflects the new state
+    }); }
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   host.querySelectorAll("[data-gtoggle]").forEach(t=>t.onclick=()=>{ const k=t.dataset.gtoggle; ganttCollapsed.has(k)?ganttCollapsed.delete(k):ganttCollapsed.add(k); renderGantt(); });
   host.querySelectorAll("[data-lineage]").forEach(a=>a.onclick=()=>{ const s=a.dataset.lineage,i=s.indexOf(":"); openLineage(s.slice(0,i), s.slice(i+1)); });
@@ -2571,20 +2662,26 @@ function ovRpnPill(r){ const b=RD.rpnBand(r); return b==="high"?"bad":b==="med"?
 
 function overviewTilesHtml(){
   const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
+  const ovDivs=portfolio.divisions.filter(structDivShows);
   let cards='<div class="cards">';
-  for(const d of portfolio.divisions){ cards+=ovDivCard(d, em, casc); }
+  for(const d of ovDivs){ cards+=ovDivCard(d, em, casc); }
   cards+='</div>';
   if(!portfolio.divisions.length) cards='<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>';
+  // "No divisions yet" is only true when there are none. A filter hiding them all — including a mistyped
+  // ?division=fuelcell, which matches no id and renders a convincingly empty page — must say so instead.
+  else if(!ovDivs.length) cards='<p class="hint">No divisions match the current filter (division='
+    +esc(pfFilters.division||"any")+(pfFilters.product?", product="+esc(pfFilters.product):"")
+    +'). The filter matches a division id such as DIV-FC, not its name.</p>';
   const activeObjs=portfolio.objectives.filter(function(o){return isActiveObjective(o,em);});
   const activeMs=portfolio.milestones.filter(function(m){return isActiveMilestone(m,em);});
   let groups="";
-  for(const d of portfolio.divisions){
+  for(const d of ovDivs){
     const dObjs=activeObjs.filter(function(o){return o.divisionId===d.id;});
     const dMs=activeMs.filter(function(m){return ovMsDiv(m)===d.id;});
     // Products/models come from the division that OWNS them (product.divisionId), not from whatever objectives
     // happen to reference them. Two consequences: a product still gets a tile with no active objective this
     // quarter, and an objective pointing at another division's product no longer drags that product in here.
-    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id;}).map(function(p){return p.id;});
+    const dProdIds=portfolio.products.filter(function(p){return p.divisionId===d.id && structProdShows(p);}).map(function(p){return p.id;});
     if(!dObjs.length && !dMs.length && !dProdIds.length) continue;
     const ownHere=function(pid){ return pid!=null && dProdIds.indexOf(pid)>=0; };
     // Work here can point at a product owned by ANOTHER division. That product still gets a labelled block in
@@ -2774,6 +2871,16 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   document.getElementById("tab-"+b.dataset.tab).classList.add("active");
 });
 
+// ?tab=<name> chooses the starting tab. An unknown value leaves the default (Overview) rather than
+// showing a blank page: there is no #tab-<junk> section to activate.
+function applyTabParam(){
+  if(!URLP.tab) return false;
+  const b=document.querySelector(`#nav button[data-tab="${URLP.tab}"]`);
+  if(!b) return false;
+  b.click();
+  return true;
+}
+
 document.getElementById("saveBtn").onclick = saveAll;
 document.getElementById("tokenSave").onclick = ()=>{ localStorage.setItem("rd_broker_token",
   document.getElementById("tokenInput").value.trim()); setMsg("Token saved.", "ok"); loadAll(); };
@@ -2791,7 +2898,7 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
 /* boot */
 renderAll();
-loadAll();
+loadAll().then(applyTabParam, applyTabParam);
 </script>
 <script>
 (function(){

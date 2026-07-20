@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <script>
@@ -2043,7 +2043,7 @@ let etags = {};                  // docId -> etag (for If-Match)
 let knownVersions = {};          // docId -> version (ignore own echo)
 let pollTimer = null;
 
-function blankPortfolio(){ return { divisions:[],products:[],models:[],initiatives:[],
+function blankPortfolio(){ return { units:[],divisions:[],products:[],models:[],initiatives:[],
   milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
 function execIdFor(divId){ return "EXEC-"+divId; }
 function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
