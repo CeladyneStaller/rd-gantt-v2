@@ -7,7 +7,8 @@ ONLY these; your current divisional / quarter / gantt bins are never referenced 
 it (their ids never enter the broker's BIN_FOR map).
 
 Creates one bin per unified document:
-  portfolio, gantt-view, and one EXEC-<divisionId> per division.
+  portfolio, gantt-view, EXEC-<div> + SPEC-<div> per R&D division, and BIZ-<div>
+  per Business division. This matches the broker's BIN_FOR doc set exactly.
 
 Standard library only (urllib) — no pip install required.
 
@@ -17,8 +18,10 @@ broker service, then run fetch_bins.py + migrate.py.
 
 Env:
   JSONBIN_MASTER_KEY   your X-Master-Key (Core API key)
-  UNIFIED_DIVISIONS    comma-separated division ids, e.g. "DIV-FC,DIV-EL"
-                       (default "DIV-FC")
+  UNIFIED_DIVISIONS    comma-separated R&D division ids, e.g. "DIV-FC,DIV-EL"
+                       (default "DIV-FC"); each gets EXEC- + SPEC- bins
+  BIZ_DIVISIONS        comma-separated Business division ids, e.g. "DIV-FIN,DIV-BD,DIV-HR"
+                       (default empty); each gets a BIZ- bin
 
 Usage:
   python ops/create_bins.py                 # human log on stderr, env block on stdout
@@ -35,7 +38,14 @@ if not KEY:
     sys.exit("set JSONBIN_MASTER_KEY (your X-Master-Key)")
 
 DIVISIONS = [d.strip() for d in os.environ.get("UNIFIED_DIVISIONS", "DIV-FC").split(",") if d.strip()]
-DOC_IDS = ["portfolio", "gantt-view"] + [f"EXEC-{d}" for d in DIVISIONS]
+# Business divisions get a BIZ-<div> execution workspace only (no EXEC-/SPEC-). Disjoint from the R&D list so
+# no empty bins are created for a division that will not use them. Default empty -> biz is opt-in.
+BIZ_DIVISIONS = [d.strip() for d in os.environ.get("BIZ_DIVISIONS", "").split(",") if d.strip()]
+# One bin per unified doc, MATCHING the broker's _DOC_IDS: EXEC- + SPEC- per R&D division, BIZ- per business one.
+DOC_IDS = (["portfolio", "gantt-view"]
+           + [f"EXEC-{d}" for d in DIVISIONS]
+           + [f"SPEC-{d}" for d in DIVISIONS]
+           + [f"BIZ-{d}" for d in BIZ_DIVISIONS])
 
 
 # doc id -> env var name the broker's BIN_FOR reads, e.g. EXEC-DIV-FC -> EXEC_DIV_FC_BIN

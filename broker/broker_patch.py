@@ -83,7 +83,8 @@ def _lock_for(doc_id: str) -> threading.RLock:
 #
 # Configured entirely via env (no ids/keys in code):
 #   JSONBIN_MASTER_KEY   your X-Master-Key
-#   UNIFIED_DIVISIONS    comma-separated division ids, e.g. "DIV-FC,DIV-EL"
+#   UNIFIED_DIVISIONS    comma-separated R&D division ids, e.g. "DIV-FC,DIV-EL" (get EXEC-/SPEC- docs)
+#   BIZ_DIVISIONS        comma-separated Business division ids, e.g. "DIV-FIN,DIV-BD,DIV-HR" (get BIZ- docs)
 #   <DOC>_BIN            one bin id per doc: PORTFOLIO_BIN, GANTT_VIEW_BIN,
 #                        EXEC_DIV_FC_BIN, ...  (create_bins.py prints these)
 #
@@ -95,9 +96,14 @@ _JSONBIN = "https://api.jsonbin.io/v3/b"
 _UA = "Mozilla/5.0 (compatible; CeladyneRD/1.0)"
 _KEY = os.environ.get("JSONBIN_MASTER_KEY")
 _DIVISIONS = [d.strip() for d in os.environ.get("UNIFIED_DIVISIONS", "DIV-FC").split(",") if d.strip()]
+# Business divisions use a BIZ-<div> execution workspace (the namespace the Sales app writes) and have neither
+# EXEC- nor SPEC- docs. Kept a SEPARATE list from UNIFIED_DIVISIONS so the two namespaces stay disjoint and no
+# empty EXEC-/SPEC- bins are created for a division that will never use them. Default empty -> biz is opt-in.
+_BIZ_DIVISIONS = [d.strip() for d in os.environ.get("BIZ_DIVISIONS", "").split(",") if d.strip()]
 _DOC_IDS = (["portfolio", "gantt-view"]
             + [f"EXEC-{d}" for d in _DIVISIONS]
-            + [f"SPEC-{d}" for d in _DIVISIONS])   # SPEC-<div>: product-designer per-division spec docs
+            + [f"SPEC-{d}" for d in _DIVISIONS]    # SPEC-<div>: product-designer per-division spec
+            + [f"BIZ-{d}" for d in _BIZ_DIVISIONS])  # BIZ-<div>: Business-division execution (Sales app)
 
 
 def _env_name(doc_id: str) -> str:
