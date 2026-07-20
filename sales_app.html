@@ -2687,9 +2687,23 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
   if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
 
 /* ---------------- division resolution ---------------- */
+// This app's kind: the Sales app writes BIZ-<div>, the Execution app writes EXEC-<div>. Derive it from
+// execId()'s prefix so the two builds need no extra difference. The Sales app shows only kind=biz divisions;
+// the Execution app only kind=rd.
+function appKind(){ return execId().indexOf("BIZ-")===0 ? "biz" : "rd"; }
+function divInThisApp(d){ return d && RD.divisionKind(d)===appKind(); }
+function firstAppDivision(){ const d=((portfolio&&portfolio.divisions)||[]).find(divInThisApp); return d?d.id:null; }
 function resolveDivision(){
   const u = new URL(location.href);
-  return u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  // a requested/remembered division only counts if it belongs to THIS app's kind — otherwise the Execution
+  // app could land on a biz division (whose data lives in BIZ-, not EXEC-) and vice-versa.
+  const want = u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  if(!want) return null;
+  // portfolio not loaded yet -> can't judge kind here; accept the wanted division and let loadAll re-validate
+  // it against this app's kind once the divisions are known.
+  if(!portfolio || !portfolio.divisions) return want;
+  const d=portfolio.divisions.find(x=>x.id===want);
+  return divInThisApp(d) ? want : null;
 }
 
 /* ---------------- load / save ---------------- */
@@ -2716,8 +2730,10 @@ async function loadAll(){
     portfolio = p.doc; portfolioVersion = p.version;
     if(pendingObjective){ const _to=(portfolio.objectives||[]).find(o=>o.id===pendingObjective);
       if(_to) divisionId=_to.divisionId; else pendingObjective=""; }   // ?objective= robust-resolve: switch to its division; drop an unknown id
-    if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
-    if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
+    if(!divisionId || !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===divisionId))){
+      divisionId = resolveDivision() || firstAppDivision();
+    }
+    if(!divisionId){ setMsg(appKind()==="biz" ? "No business (kind=biz) divisions yet — add one in the Planning app." : "No R&D (kind=rd) divisions yet — add one in the Planning app.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
     fillDivSelect();   // populate + select the resolved division (header selector)
     const ex = await apiGet(execId());
@@ -2808,6 +2824,10 @@ function ownerLine(objId){
   return ow.length ? ow.join(", ") : "";
 }
 async function switchDivision(newDiv){
+  if(newDiv && !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===newDiv))){
+    setMsg("That division isn't a "+(appKind()==="biz"?"business":"R&D")+" division for this app.", "err");
+    const s=document.getElementById("divSelect"); if(s) s.value=divisionId; return;
+  }
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
   await flushPersist();                                                       // save the current division fully before repointing the bin
@@ -2825,7 +2845,7 @@ async function switchDivision(newDiv){
   startPoll();
 }
 function fillDivSelect(){ const s=document.getElementById("divSelect");
-  const divs=portfolio.divisions||[], units=portfolio.units||[];
+  const divs=(portfolio.divisions||[]).filter(divInThisApp), units=portfolio.units||[];
   const opt=d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`;
   if(units.length){
     // group by unit (ordered), then an "Unassigned" group for divisions with no unitId
@@ -2837,6 +2857,7 @@ function fillDivSelect(){ const s=document.getElementById("divSelect");
     if(orphan.length) html+=`<optgroup label="Unassigned">`+orphan.map(opt).join("")+`</optgroup>`;
     s.innerHTML=html;
   } else s.innerHTML=divs.map(opt).join("");
+  if(!divs.length) s.innerHTML=`<option value="">${appKind()==="biz"?"no business divisions":"no R&D divisions"}</option>`;
   if(divisionId) s.value=divisionId;
   s.onchange=()=>switchDivision(s.value);
   updateUnitTag(); }
