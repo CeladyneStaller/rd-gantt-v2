@@ -55,7 +55,8 @@
      <span class="icard-num">, <span class="skr-name">. Hiding the attribute wholesale therefore blanked the
      KR/SG names, chips, card titles and sub-KR names in readonly — suppressing 2 controls by deleting 7 pieces
      of content. Hide the actual controls; keep the text and simply make it inert. */
-  body.readonly [data-mut], body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-del], body.readonly button[data-edit], body.readonly a[data-edit], body.readonly button[data-editsubkr], body.readonly a[data-editsubkr], body.readonly #saveBtn{display:none !important}
+  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-addset], body.readonly [data-addpendingtarget], body.readonly [data-del], body.readonly [data-delsubkr], body.readonly [data-wsdel], body.readonly [data-gatedel], body.readonly [data-setdel], body.readonly [data-rmpending], body.readonly button[data-edit], body.readonly a[data-edit], body.readonly button[data-editsubkr], body.readonly a[data-editsubkr], body.readonly button[data-editpending], body.readonly a[data-editpending], body.readonly button[data-wsedit], body.readonly a[data-wsedit], body.readonly #saveBtn{display:none !important}
+  body.readonly span[data-edit], body.readonly span[data-editsubkr], body.readonly span[data-editpending], body.readonly span[data-wsedit]{pointer-events:none;cursor:default}
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
   body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
@@ -2327,6 +2328,21 @@ const URLP = (function(){
 })();
 const RO = URLP.readonly;
 if (RO) document.body.classList.add("readonly");
+if (RO) {
+  // Any element whose data-* attribute begins with one of these opens an editor, pushes, splices, or deletes.
+  // Navigational/display interactions (panel/view/toggle/close/cancel/segment) are deliberately NOT here, so
+  // reading the board still works. Matching by prefix means a future mutating control is caught automatically.
+  const MUT = /^data-(add|del|edit|new|create|remove|rmpending|markcomplete|release|reopen|endobj|actend|commit|save|savelink|linkdef|unlink|catchup|gstatus|setname|setrename|setchain|setdel|setsave|wschoice|wsedit|wsdel)/;
+  const isMut = el => {
+    for (; el && el.nodeType === 1; el = el.parentElement) {
+      if (el.attributes) for (const a of el.attributes) if (MUT.test(a.name)) return true;
+    }
+    return false;
+  };
+  document.addEventListener("click", (e) => {
+    if (isMut(e.target)) { e.preventDefault(); e.stopPropagation(); setMsg("Read-only view — editing is disabled.", "err"); }
+  }, true);   // capture: runs before any element's own onclick
+}
 const tok = () => localStorage.getItem("rd_broker_token") || "";
 const auth = () => { const t = tok(); return t ? { "Authorization":"Bearer "+t } : {}; };
 async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/version`,{headers:auth()}); if(!r.ok) throw r; return r.json(); }
@@ -3266,7 +3282,7 @@ function pendingTgtRows(){
   if(!pendingGateTargets.length) return '<div class="hint" style="margin:6px 0 0">No targets yet — click “+ target” to add measurable pass criteria.</div>';
   return pendingGateTargets.map((t,i)=>{
     const desc = t.targetType==="binary" ? "binary (met / not met)" : ((t.direction==="down"?"↓ ":"↑ ")+((t.target!=null&&t.target!=="")?t.target:"—")+(t.unit?(" "+t.unit):""));
-    return `<div class="pending-tgt"><span class="pt-main" data-mut data-editpending="${i}" title="Edit target"><span class="pt-name">${esc(t.name)}</span><span class="pt-desc mono">${esc(desc)}</span></span><button type="button" class="ghost mini" data-rmpending="${i}" title="Remove">✕</button></div>`;
+    return `<div class="pending-tgt"><span class="pt-main" data-editpending="${i}" title="Edit target"><span class="pt-name">${esc(t.name)}</span><span class="pt-desc mono">${esc(desc)}</span></span><button type="button" class="ghost mini" data-rmpending="${i}" title="Remove">✕</button></div>`;
   }).join("");
 }
 function wirePendingTgt(scope){ const root=scope||document;
@@ -3312,7 +3328,7 @@ function gateModalBody(g){
   } else {
     h+=`<span class="modal-section-lbl">Targets / pass criteria</span>
       <div class="gt-head"><span class="hint" style="margin:0">measurable criteria — added to the gate when you click Add</span>
-        <span class="gt-acts"><button class="ghost mini" data-mut data-addpendingtarget="1">+ target</button></span></div>
+        <span class="gt-acts"><button class="ghost mini" data-addpendingtarget="1">+ target</button></span></div>
       <div id="pendingTgtList">${pendingTgtRows()}</div>
       <p class="hint" style="margin:12px 0 0">Or Link the gate straight to a product / model / initiative metric; predecessors can be added after saving.</p>`;
   }
@@ -3362,7 +3378,7 @@ function draftSubKrListHtml(){
       if(tp==="binary"){ measured = (k.current!=null) ? ` · ${Number(k.current)>=1?"met":"not met"}` : ` · unmeasured`; }
       else if(k.current!=null){ const sc=RD.scoreEmbeddedKpi(k); measured=` · now ${esc(String(k.current))}${k.unit?" "+esc(k.unit):""}`+(sc!=null?` (${Math.round(sc)}%)`:""); }
       else measured=` · unmeasured`; }
-    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}${measured}</span><button class="ghost mini danger" type="button" data-mut data-delsubkr="${i}">del</button></div>`;
+    return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}${measured}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
   }).join("");
 }
 function krModalBody(){
@@ -4156,7 +4172,7 @@ function renderGates(){
     inner+=`</div>`;
   });
   if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
-  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-mut data-addset="1">+ workstream</button>`;
+  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
   const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
   let cuBanner="";
   if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
