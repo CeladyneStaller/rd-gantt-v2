@@ -55,7 +55,7 @@
      <span class="icard-num">, <span class="skr-name">. Hiding the attribute wholesale therefore blanked the
      KR/SG names, chips, card titles and sub-KR names in readonly — suppressing 2 controls by deleting 7 pieces
      of content. Hide the actual controls; keep the text and simply make it inert. */
-  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-addset], body.readonly [data-addpendingtarget], body.readonly [data-del], body.readonly [data-delsubkr], body.readonly [data-wsdel], body.readonly [data-gatedel], body.readonly [data-setdel], body.readonly [data-rmpending], body.readonly button[data-edit], body.readonly a[data-edit], body.readonly button[data-editsubkr], body.readonly a[data-editsubkr], body.readonly button[data-editpending], body.readonly a[data-editpending], body.readonly button[data-wsedit], body.readonly a[data-wsedit], body.readonly #saveBtn{display:none !important}
+  body.readonly [data-addkpi], body.readonly [data-addlink], body.readonly [data-addsubkr], body.readonly [data-addkr], body.readonly [data-addsg], body.readonly [data-addtask], body.readonly [data-addedge], body.readonly [data-addset], body.readonly [data-addsg-set], body.readonly [data-addpendingtarget], body.readonly [data-del], body.readonly [data-delsubkr], body.readonly [data-wsdel], body.readonly [data-gatedel], body.readonly [data-setdel], body.readonly [data-rmpending], body.readonly button[data-edit], body.readonly a[data-edit], body.readonly button[data-editsubkr], body.readonly a[data-editsubkr], body.readonly button[data-editpending], body.readonly a[data-editpending], body.readonly button[data-wsedit], body.readonly a[data-wsedit], body.readonly #saveBtn{display:none !important}
   body.readonly span[data-edit], body.readonly span[data-editsubkr], body.readonly span[data-editpending], body.readonly span[data-wsedit]{pointer-events:none;cursor:default}
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
@@ -2333,9 +2333,20 @@ if (RO) {
   // Navigational/display interactions (panel/view/toggle/close/cancel/segment) are deliberately NOT here, so
   // reading the board still works. Matching by prefix means a future mutating control is caught automatically.
   const MUT = /^data-(add|del|edit|new|create|remove|rmpending|markcomplete|release|reopen|endobj|actend|commit|save|savelink|linkdef|unlink|catchup|gstatus|setname|setrename|setchain|setdel|setsave|wschoice|wsedit|wsdel)/;
+  // edit-only containers: everything inside them is an editing control, including buttons built in JS with no
+  // data-attribute (the ETB panel and the FMEA editor both do this).
+  const EDIT_ONLY = ["#drawerContent", "#fmeaBody"];
+  const inEditOnly = el => EDIT_ONLY.some(sel => el.closest && el.closest(sel));
+  const actionable = el => el.tagName === "BUTTON" || el.tagName === "A"
+      || el.getAttribute && el.getAttribute("onclick") != null || (el.className || "").indexOf("click") >= 0;
   const isMut = el => {
     for (; el && el.nodeType === 1; el = el.parentElement) {
+      // a mutation data-attribute anywhere up the chain
       if (el.attributes) for (const a of el.attributes) if (MUT.test(a.name)) return true;
+      // an inline onclick (FMEA "+ Add failure mode" is onclick="addDraftMode()")
+      if (el.getAttribute && el.getAttribute("onclick") != null) return true;
+      // an actionable control inside an edit-only panel (ETB + / delete / re-link, built in JS)
+      if (actionable(el) && inEditOnly(el)) return true;
     }
     return false;
   };
