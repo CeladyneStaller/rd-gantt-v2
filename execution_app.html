@@ -63,7 +63,8 @@
   body.readonly button[onclick^="openFmeaModal"], body.readonly button[onclick^="openEditFmeaModal"],
   body.readonly button[onclick^="addDraft"], body.readonly button[onclick^="delDraft"],
   body.readonly button[onclick^="delProblem"], body.readonly button[onclick^="delCause"],
-  body.readonly button[onclick^="delMode"], body.readonly button[onclick^="saveFmea"]{display:none !important}
+  body.readonly button[onclick^="delMode"], body.readonly button[onclick^="saveFmea"],
+  body.readonly #btnAddExp, body.readonly #btnSave{display:none !important}
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
   body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
@@ -2344,6 +2345,7 @@ if (RO) {
   // data-attribute (the ETB panel and the FMEA editor both do this).
   const EDIT_ONLY = ["#drawerContent", "#fmeaBody"];
   const inEditOnly = el => EDIT_ONLY.some(sel => el.closest && el.closest(sel));
+  const MUT_IDS = { btnAddExp: 1, btnSave: 1 };   // ETB toolbar mutators: id'd, no data-attr, outside the panels
   const actionable = el => el.tagName === "BUTTON" || el.tagName === "A"
       || el.getAttribute && el.getAttribute("onclick") != null || (el.className || "").indexOf("click") >= 0;
   const isMut = el => {
@@ -2354,6 +2356,8 @@ if (RO) {
       if (el.getAttribute && el.getAttribute("onclick") != null) return true;
       // an actionable control inside an edit-only panel (ETB + / delete / re-link, built in JS)
       if (actionable(el) && inEditOnly(el)) return true;
+      // a known ETB-toolbar mutator, addressed by id (no attribute to match on)
+      if (el.id && MUT_IDS[el.id]) return true;
     }
     return false;
   };
