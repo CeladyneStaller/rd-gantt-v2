@@ -2084,8 +2084,21 @@ let pollTimer = null;
 
 function blankPortfolio(){ return { units:[],divisions:[],products:[],models:[],initiatives:[],
   milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
-function execIdFor(divId){ return "EXEC-"+divId; }
-function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
+function divisionKindOf(divId){
+  const d = (portfolio.divisions||[]).find(x=>x.id===divId);
+  return RD.divisionKind(d);                 // 'rd' | 'biz', absent -> rd
+}
+// The execution workspace doc id for a division. rd -> EXEC-<div>, biz -> BIZ-<div>. So a full Company rollup
+// pulls a Business division's KR/KPI readings from its BIZ- doc automatically.
+function execIdFor(divId){ return (divisionKindOf(divId)==="biz" ? "BIZ-" : "EXEC-") + divId; }
+// docId is <workspace-prefix>+<divId>. Strip the known workspace prefixes (EXEC- / BIZ-, what execIdFor
+// prepends) rather than assuming a fixed length or that divId starts with "DIV-".
+function stripDocPrefix(docId){
+  if(docId.indexOf("EXEC-")===0) return docId.slice(5);
+  if(docId.indexOf("BIZ-")===0)  return docId.slice(4);
+  return docId;
+}
+function execMap(){ const m={}; for(const id in execDocs){ m[stripDocPrefix(id)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
 function pfMap(){ return RD.withPortfolio(portfolio, execMap()); }
 // flatten every doc's KPIs into the resolution pool (mirrors core allKpis)
