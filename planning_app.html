@@ -431,6 +431,14 @@
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
 
   /* ===== Overall tab — tiled active view (scoped under .ovwrap) ===== */
+  .ov-company{display:flex;align-items:center;gap:16px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .ov-company .ovc-score{font-size:40px;font-weight:800;line-height:1}
+  .ov-company .ovc-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink)}
+  .ov-company .ovc-note{font-size:11px;color:var(--muted);margin-top:2px}
+  .ov-unit{margin-bottom:18px}
+  .ov-unit-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .ov-unit-head .ovu-name{font-size:13px;font-weight:700;letter-spacing:.02em}
+  .ov-unit-head .ovu-score{font-size:15px;font-weight:800;margin-left:auto}
   .ovwrap .seclbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:var(--mono);margin:0 0 11px}
   .ovwrap .cards{margin-bottom:26px}
   .ovwrap .card{cursor:pointer;transition:box-shadow .15s,transform .1s}
@@ -2054,7 +2062,7 @@ const URLP = (function(){
   const present = flag("present");
   return { present: present, readonly: phas("readonly") || present,
            division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
-           tab: (pget("tab")||"").trim().toLowerCase(),
+           tab: (pget("tab")||"").trim().toLowerCase(), unit: pget("unit")||"",
            ganttActive: flag("ganttActive"), ganttQuarter: flag("ganttQuarter") };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
@@ -2337,12 +2345,12 @@ function ownerOptions(){
   return known.map(e=>({id:e, name:e}))
     .concat(extra.map(e=>({id:e, name:e+" \u2014 not in roster"})));
 }
-const SEL = { division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+const SEL = { unit:()=>(portfolio.units||[]), division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
   user:ownerOptions,
   initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
 const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
 const SCHEMAS = {
-  division:   [["name","Name","text"],["order","Order","number"]],
+  division:   [["name","Name","text"],["unitId","Unit","ref:unit?"],["kind","Kind","enum:rd,biz"],["order","Order","number"]],
   product:    [["name","Name","text"],["divisionId","Division","ref:division"],["order","Order","number"]],
   model:      [["name","Name","text"],["productId","Product","ref:product"],["order","Order","number"]],
   initiative: [["name","Name","text"],["divisionId","Division","ref:division"],["desc","Description","text"],
@@ -2363,7 +2371,7 @@ let pfView = "tree";
 let lens = "division";   // Overview: by division vs by product/model
 let pfGroupMode = "hierarchy";                     // "hierarchy" (entity tree) | "dims" (custom layered grouping)
 let pfGroupDims = ["division"];                    // ordered grouping dimensions used when pfGroupMode==="dims"
-const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"" };   // seeded from URL params (seed-on-load)
+const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"", unit:URLP.unit };   // seeded from URL params (seed-on-load)
 
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
@@ -2399,6 +2407,10 @@ function openEditor(id, entityOverride, prefill){
       const cur = Array.isArray(rec[k]) ? rec[k] : (rec[k]!=null && rec[k]!=="" ? [rec[k]] : []);
       html += `<select data-f="${k}" multiple size="3">`+
         SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
+    } else if(type.startsWith("enum:")){
+      const vals = type.slice(5).split(","); const cur = rec[k]!=null ? String(rec[k]) : vals[0];
+      html += `<select data-f="${k}">`+
+        vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join("")+`</select>`;
     } else if(type==="quarter"){
       const opts = RD.quarterList(pfQuartersList(), new Date().getFullYear(), 1, 2);
       const cur = rec[k]!=null ? String(rec[k]) : "";
@@ -2942,9 +2954,10 @@ function objMatches(o){ const f=pfFilters;
   if(f.status && nodeBand("objective",o.id)!==f.status) return false;
   return true; }
 function pfQuartersList(){ const s=new Set(); portfolio.objectives.forEach(o=>{ if(o.quarter) s.add(o.quarter); }); return Array.from(s).sort(); }
-const GROUP_DIMS=[["division","Division"],["product","Product"],["model","Model"],["quarter","Quarter"],["owner","Owner"],["initiative","Initiative"]];
+const GROUP_DIMS=[["unit","Unit"],["division","Division"],["product","Product"],["model","Model"],["quarter","Quarter"],["owner","Owner"],["initiative","Initiative"]];
 function dimLabel(dim,key){
   if(key===""||key==null||key==="__all__") return "— none —";
+  if(dim==="unit"){ const u=(portfolio.units||[]).find(x=>x.id===key); return u?u.name:key; }
   if(dim==="division")   return nameOf("division",byId("division",key))||key;
   if(dim==="product")    return productName(key)||key;
   if(dim==="model")      return (byId("model",key)||{}).name||key;
@@ -3231,7 +3244,11 @@ let armedDelete = null;
 const ordOf = x => (x && x.order!=null ? x.order : 1e9);
 const byOrder = arr => arr.slice().sort((a,b)=>ordOf(a)-ordOf(b));
 function structRefName(entity,id){ const r=byId(entity,id); return r ? esc(nameOf(entity,r)) : '<span class="pill">—</span>'; }
-function structDivShows(d){ return !pfFilters.division || d.id===pfFilters.division; }
+function structDivShows(d){
+  if(pfFilters.division && d.id!==pfFilters.division) return false;
+  if(pfFilters.unit && (d.unitId||null)!==pfFilters.unit) return false;
+  return true;
+}
 function structProdShows(p){ if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
 function structObjsOf(i){ let os=SEL.objective().filter(o=>o.initiativeId===i.id); if(pfAnyFilter()) os=os.filter(objMatches); return byOrder(os); }
 function structInitShows(i){ if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
@@ -4065,9 +4082,35 @@ function ovRpnPill(r){ const b=RD.rpnBand(r); return b==="high"?"bad":b==="med"?
 function overviewTilesHtml(){
   const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
   const ovDivs=portfolio.divisions.filter(structDivShows);
-  let cards='<div class="cards">';
-  for(const d of ovDivs){ cards+=ovDivCard(d, em, casc); }
-  cards+='</div>';
+  // Company hero: the score plus the note that explains it is a mean of DIVISION scores (not of objectives or
+  // units), so a reader who watched the number shift from the old flat mean knows why.
+  const comp = RD.rollupCompany(portfolio, em);
+  const company = `<div class="ov-company">
+      <div class="ovc-score" style="color:${scoreColor(comp)}">${fmtScore(comp)}</div>
+      <div class="ovc-meta"><div class="ovc-lbl">Company</div>
+        <div class="ovc-note">Mean of division scores</div></div></div>`;
+
+  // Division cards, grouped under their Unit. Units don't overlap, so this is a straight partition — each
+  // division falls in exactly one unit (or the Unassigned bucket for a division with no unitId).
+  const unitOrder = (portfolio.units||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const seenUnits = unitOrder.map(u=>u.id);
+  // any unitId referenced by a division but not declared in units[] still gets a section, then Unassigned last
+  ovDivs.forEach(d=>{ const u=d.unitId||null; if(u && seenUnits.indexOf(u)<0) seenUnits.push(u); });
+  const unitName = uid => { const u=(portfolio.units||[]).find(x=>x.id===uid); return u ? u.name : uid; };
+  let cards='';
+  const renderUnitSection = (uid, label) => {
+    const dvs = ovDivs.filter(d=>(d.unitId||null)===uid);
+    if(!dvs.length) return '';
+    const us = uid==null ? null : RD.rollupUnit(uid, portfolio, em);
+    const head = `<div class="ov-unit-head"><span class="ovu-name">${esc(label)}</span>`
+      + (uid==null ? '' : `<span class="ovu-score" style="color:${scoreColor(us)}">${fmtScore(us)}</span>`)
+      + `</div>`;
+    return `<div class="ov-unit">${head}<div class="cards">`
+      + dvs.map(d=>ovDivCard(d, em, casc)).join('') + `</div></div>`;
+  };
+  for(const uid of seenUnits) cards += renderUnitSection(uid, unitName(uid));
+  cards += renderUnitSection(null, "Unassigned");
+  cards = company + cards;
   if(!portfolio.divisions.length) cards='<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>';
   // "No divisions yet" is only true when there are none. A filter hiding them all — including a mistyped
   // ?division=fuelcell, which matches no id and renders a convincingly empty page — must say so instead.
@@ -4116,7 +4159,7 @@ function overviewTilesHtml(){
     groups+='</div>';
   }
   if(!groups) groups='<p class="hint" style="margin-top:18px">No active objectives or milestones this quarter.</p>';
-  return '<div class="seclbl">Divisions</div>'+cards+groups;
+  return '<div class="seclbl">Portfolio</div>'+cards+groups;
 }
 function ovDivCard(d, em, casc){
   const overall=RD.rollupDivision(d.id, portfolio, em);
