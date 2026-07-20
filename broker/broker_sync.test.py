@@ -28,7 +28,7 @@ def build_tree(broker_dirname="Broker", crlf=False):
     """A minimal checkout: build.py + rdcore.js + templates, optionally with a broker subfolder."""
     root = tempfile.mkdtemp()
     for f in ("build.py", "rdcore.js", "planning_app.template.html",
-              "execution_app.template.html", "product_designer.template.html"):
+              "execution_app.template.html", "sales_app.template.html", "product_designer.template.html"):
         src = os.path.join(HERE, f)
         if not os.path.exists(src):
             return None

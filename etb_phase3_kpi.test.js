@@ -48,9 +48,12 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     o.oneReading = (mine.length===1);
     o.readingForKpi1 = (mine.length===1 && mine[0].kpiId==='kpi1' && Number(mine[0].value)===1.5);
     o.unlinkedIgnored = !mine.some(function(u){return u.kpiId==='kr2';});
-    // 4) rollup: KR score now reflects the reading (1.5 >= target 1.0 -> met)
+    // 4) rollup: the reading moves the score, but KR1 has a SECOND target (kpi2, cost) that nobody has read.
+    //    Under g1' an unread target counts 0, so the KR is half done, not complete: mean(100, 0) = 50.
     var after = RD.keyResultScore('KR1', emForCore());
-    o.rollupMoved = (after!=null && after>=100);
+    o.rollupMoved = (after!=null && Math.abs(after-50)<1e-9);
+    o.unreadTargetCounts = (RD.kpiScoreResolved(exec.kpis[0], allKpisPool(), emForCore())===100
+                            && RD.kpiScoreResolved(exec.kpis[1], allKpisPool(), emForCore())===null);
     // 5) regression
     o.summaryOk = /Membrane screen|No current experiment/.test(document.getElementById('expSummary').innerHTML);
     renderAll(); o.tasksRetired=!(/Execution tasks/.test(document.getElementById('subTASK').innerHTML));
@@ -64,7 +67,9 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     [['hubProjectKpis returns the objective KPI',o.bridgeReturns],['bridge shape: name/unit/direction/label',o.bridgeShape],['decrease KPI maps to <= operator',o.downMapping],
      ['KR score is empty before any reading',o.scoreBeforeNull],['recording writes exactly one reading',o.oneReading],
      ['reading is for the linked KPI at the measured value',o.readingForKpi1],['unlinked key-read is not posted',o.unlinkedIgnored],
-     ['KR score rolls up from the posted reading',o.rollupMoved],['summary still renders',o.summaryOk],
+     ['KR score rolls up to 50 — the reading counts, the unread cost target counts 0',o.rollupMoved],
+     ['...the read KPI scores 100 while the unread one is still individually null',o.unreadTargetCounts],
+     ['summary still renders',o.summaryOk],
      ['tasks panel retired (E5)',o.tasksRetired],['#etb-view still mounted',o.etbMounted]]
     .forEach(([n,c])=>{__cnt++; console.log((c?'  \u2713 ':'  \u2717 FAIL ')+n); if(!c)process.exitCode=1;});
     console.log('\nPASS - '+__cnt+' ETB phase-3 KPI assertions green');   // count so sweep.py can guard it

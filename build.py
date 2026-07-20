@@ -54,6 +54,7 @@ MARKER = "/*__CORE__*/"
 TARGETS = [
     ("planning_app.template.html", "planning_app.html"),
     ("execution_app.template.html", "execution_app.html"),
+    ("sales_app.template.html", "sales_app.html"),
     ("product_designer.template.html", "product_designer.html"),
 ]
 

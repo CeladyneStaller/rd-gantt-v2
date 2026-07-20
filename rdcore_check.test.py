@@ -1,24 +1,17 @@
 """
-The broker must FIND its engine, not be told where it is. Written after three rounds lost to a path:
-the default looked beside broker.py, Corey's rdcore.js sits one level up, and RDCORE_PATH was set to a
-RELATIVE value ("main/rdcore.js") which resolved against the container cwd and missed.
-
-Exercises the real resolver from broker_patch.py against Corey's actual layout:
-    Main/Broker/broker_patch.py
-    Main/rdcore.js
+Guards build_rdcore.py's broker check. Exists because the scheme fix was silently clobbered by a backwards cp
+and a `grep -q ... && echo` reported its absence by printing NOTHING — which read as success.
+A harness asserts; a grep whispers.
 """
+import importlib.util
 import os
-import re
 import sys
-import tempfile
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "broker_patch.py")
-src = open(SRC, encoding="utf-8").read()
-
-# lift the resolver out (importing the module needs fastapi + env)
-start = src.index("_RDCORE_ENV = ")
-end = src.index("# kept for compatibility")
-BLOCK = src[start:end]
+SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build_rdcore.py")
+spec = importlib.util.spec_from_file_location("brd", SRC)
+m = importlib.util.module_from_spec(spec)
+sys.argv = ["build_rdcore.py"]
+spec.loader.exec_module(m)
 
 out, fails = [], 0
 
@@ -30,85 +23,70 @@ def ok(c, msg):
         fails += 1
 
 
-def resolve(env_value, here, cwd):
-    """Run the real candidate logic with RDCORE_PATH=env_value, broker at `here`, process cwd `cwd`."""
-    ns = {"os": os}
-    old_env, old_cwd = os.environ.get("RDCORE_PATH"), os.getcwd()
-    if env_value is None:
-        os.environ.pop("RDCORE_PATH", None)
-    else:
-        os.environ["RDCORE_PATH"] = env_value
-    os.chdir(cwd)
-    try:
-        block = BLOCK.replace(
-            '_RDCORE_HERE = os.path.dirname(os.path.abspath(__file__))',
-            f'_RDCORE_HERE = {here!r}')
-        exec(block, ns)
-        return ns["_rdcore_candidates"]()
-    finally:
-        os.chdir(old_cwd)
-        os.environ.pop("RDCORE_PATH", None)
-        if old_env is not None:
-            os.environ["RDCORE_PATH"] = old_env
+# --- the actual bug Corey hit twice: a bare hostname ---
+st, det = m.check_broker("web-production-b17a2.up.railway.app", "deadbeef")
+ok("unknown url type" not in det, "a BARE hostname no longer produces 'unknown url type'")
+ok("https://web-production-b17a2.up.railway.app/rdcore/version" in det,
+   "...the scheme is defaulted to https and the path appended")
+ok(st in ("ok", "drift", "error"), "...and it returns a real status")
+
+# --- other shapes people paste ---
+for given, want in [
+    ("https://h.example.app", "https://h.example.app/rdcore/version"),
+    ("http://h.example.app", "http://h.example.app/rdcore/version"),      # explicit http is respected
+    ("h.example.app/", "https://h.example.app/rdcore/version"),           # trailing slash
+    ("  h.example.app  ", "https://h.example.app/rdcore/version"),        # stray whitespace
+]:
+    _, d = m.check_broker(given, "deadbeef")
+    ok(want in d, f"{given!r} -> {want}")
+
+# --- the summary must not call an unreachable broker "drift" ---
+src = open(SRC, encoding="utf-8").read()
+ok("drifted" in src, "the summary tracks drift separately from reachability")
+ok(src.count('print("drift detected') == 1, "drift is announced in exactly one place")
+i = src.index("if drifted:")
+tail = src[i:i + 420]
+ok("could not run" in tail, "an unreachable broker reports that a check could not run, NOT drift")
+ok("all {checked} inlined copies match" in tail, "a clean run still says so plainly")
+
+# --- an HTTP error must surface the broker's OWN detail, not a bare "Internal Server Error" ---
+# Corey hit a real 500 whose body said exactly where rdcore.js was missing; urllib hides that.
+import http.server, json as _j, threading, urllib.error
 
 
-root = tempfile.mkdtemp()
-main = os.path.join(root, "Main")
-broker = os.path.join(main, "Broker")
-os.makedirs(broker)
-engine = os.path.join(main, "rdcore.js")           # Corey's layout: repo root, broker in a subfolder
-open(engine, "w").write("// engine\n")
-open(os.path.join(broker, "broker_patch.py"), "w").write("# broker\n")
+class _H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = _j.dumps({"detail": "rdcore.js not found at /app/rdcore.js - commit it beside broker.py, "
+                                   "or point RDCORE_PATH at it"}).encode()
+        self.send_response(500)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
-found = lambda cands: next((p for p in cands if os.path.exists(p)), None)
+    def log_message(self, *a):
+        pass
 
-# --- the case that matters: NO configuration at all ---
-c = resolve(None, broker, root)
-ok(found(c) == engine, "with RDCORE_PATH UNSET the engine one level up is found (no configuration needed)")
-ok(os.path.join(broker, "rdcore.js") in c, "...having looked beside broker.py first")
 
-# --- the value Corey actually had: a RELATIVE path ---
-c = resolve("main/rdcore.js", broker, root)
-ok(any("main/rdcore.js" in p or "main\\\\rdcore.js" in p for p in c),
-   "a relative RDCORE_PATH is tried against the broker file AND the cwd")
-ok(found(c) == engine, "...and even when that relative value misses, the fallback still finds the engine")
+srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+st, det = m.check_broker(f"http://127.0.0.1:{srv.server_port}", "deadbeef")
+srv.shutdown()
+ok(st == "error", "a 500 is an error status")
+ok("rdcore.js not found at /app/rdcore.js" in det,
+   "the broker's OWN detail is surfaced (not a bare 'Internal Server Error')")
+ok("commit it beside broker.py" in det, "...including what to actually do about it")
+ok("HTTP 500" in det, "...alongside the status code")
 
-# --- quotes pasted into a dashboard field ---
-c = resolve('"' + engine + '"', broker, root)
-ok(found(c) == engine, 'RDCORE_PATH pasted WITH quotes still resolves (a Variables field takes them literally)')
-c = resolve("'" + engine + "'", broker, root)
-ok(found(c) == engine, "...single quotes too")
-c = resolve("  " + engine + "  ", broker, root)
-ok(found(c) == engine, "...and stray whitespace")
+# --- fail-on-zero must survive (a checker that checks nothing cannot report success) ---
+ok("no app files found to check" in src, "fail-on-zero guard is still present")
 
-# --- an absolute override is honoured first ---
-other = os.path.join(root, "elsewhere.js")
-open(other, "w").write("// other\n")
-c = resolve(other, broker, root)
-ok(c[0] == other and found(c) == other, "an absolute RDCORE_PATH is tried FIRST and wins")
-
-# --- beside broker.py still works (the original default) ---
-beside = os.path.join(broker, "rdcore.js")
-open(beside, "w").write("// beside\n")
-c = resolve(None, broker, root)
-ok(found(c) == beside, "an engine beside broker.py takes precedence over the one a level up")
-os.remove(beside)
-
-# --- no duplicates, and a real diagnosis when nothing exists ---
-c = resolve(None, broker, root)
-ok(len(c) == len(set(c)), "the candidate list has no duplicates")
-os.remove(engine)
-c = resolve(None, broker, root)
-ok(found(c) is None, "with the engine genuinely absent, nothing is found")
-ok(len(c) >= 2, "...and more than one location was attempted, so the error can name them all")
-
-# --- the failure message must list EVERY path tried, not just one ---
-ok('"\\n  ".join(tried)' in src, "the FileNotFoundError names every path tried, in order")
-ok("cwd=" in src and "RDCORE_PATH=" in src, "...plus the cwd and the env value, since both decide the outcome")
-ok("detail=str(e)" in src, "both endpoints relay that full message to the client, not a re-guessed single path")
+# --- and it must never write ---
+ok("write_text(app_path" not in src, "the tool has no write path — build.py owns inlining")
+ok("def check_broker" in src and "urllib.request" in src, "the broker check is real, not a stub")
 
 for l in out:
     if l.startswith("FAIL"):
         print(l)
-print(f"\n{fails}/{len(out)} FAILED" if fails else f"\nPASS - {len(out)} rdcore-resolution assertions green")
+print(f"\n{fails}/{len(out)} FAILED" if fails else f"\nPASS - {len(out)} rdcore-check assertions green")
 sys.exit(1 if fails else 0)

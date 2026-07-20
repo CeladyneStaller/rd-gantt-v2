@@ -1238,6 +1238,68 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(lateChain.gateAcceleration['G2']===0 && lateChain.gateAcceleration['G3']===0 && lateChain.objectiveAcceleration['O']===0, 'a delayed chain reports no acceleration');
 })();
 
+/* ---- g1': an UNREAD target counts 0, but only once something has been read --------------------
+   The bug: meanScorable pushed only non-null scores, so a gate with three targets and ONE reading
+   of 100 scored mean([100]) = 100 and gateAtTarget() called it complete with two targets never
+   measured. Fixed by counting every TARGET, unread ones as 0 — while "nothing read at all" stays
+   unscored rather than becoming a red 0. */
+(function () {
+  const mk = (id, host, target) => ({ id, hostType: host === 'kr' ? 'keyResult' : 'stageGate',
+    hostId: host === 'kr' ? 'KR1' : 'SG1', objectiveId: 'O1', name: id,
+    targetType: 'demonstration', direction: 'up', target, isDefiner: true });
+  const docs = (kpis, ups) => ({ D1: { kpis, kpiUpdates: ups, keyResults: [{ id: 'KR1', objectiveId: 'O1' }],
+    stageGates: [{ id: 'SG1', objectiveId: 'O1' }], objectiveState: [], tasks: [], stageGateEdges: [], stageGateSets: [] } });
+  const rd = (id, v) => ({ id: 'u' + id, kpiId: id, value: v, timestamp: 1 });
+
+  // --- THE REPORTED BUG: 3 gate targets, only one read, and it is at target ---
+  const g3 = [mk('A', 'sg', 10), mk('B', 'sg', 10), mk('C', 'sg', 10)];
+  let d = docs(g3, [rd('A', 10)]);
+  ok(Math.abs(C.stageGateScore('SG1', d) - 100/3) < 1e-9, 'gate: 1 of 3 targets read at 100 scores 33.3, not 100');
+  ok(C.gateAtTarget('SG1', d) === false, 'gate: ...so it is NOT at target with 2 targets unmeasured');
+
+  d = docs(g3, [rd('A', 10), rd('B', 10)]);
+  ok(Math.abs(C.stageGateScore('SG1', d) - 200/3) < 1e-9, 'gate: 2 of 3 read at 100 scores 66.7');
+  ok(C.gateAtTarget('SG1', d) === false, 'gate: ...still not at target');
+
+  d = docs(g3, [rd('A', 10), rd('B', 10), rd('C', 10)]);
+  eq(C.stageGateScore('SG1', d), 100, 'gate: all 3 read at 100 scores 100');
+  ok(C.gateAtTarget('SG1', d) === true, 'gate: ...and only THEN is it at target');
+
+  // a read that MISSES also counts, rather than being generous
+  d = docs(g3, [rd('A', 10), rd('B', 10), rd('C', 0)]);
+  ok(Math.abs(C.stageGateScore('SG1', d) - 200/3) < 1e-9, 'gate: a read of 0 counts as 0, same as unread');
+
+  // --- g1 PRESERVED: nothing read at all is UNKNOWN, not failure ---
+  d = docs(g3, []);
+  ok(C.stageGateScore('SG1', d) === null, 'gate: with NO reads at all the score is null, not 0');
+  ok(C.band(C.stageGateScore('SG1', d)) === 'no-band', 'gate: ...so it has no band rather than off-track');
+  ok(C.gateAtTarget('SG1', d) === false, 'gate: ...and an unread gate is not at target');
+
+  // --- the same fault existed in KRs ---
+  const k3 = [mk('K1', 'kr', 10), mk('K2', 'kr', 10), mk('K3', 'kr', 10)];
+  d = docs(k3, [rd('K1', 10)]);
+  ok(Math.abs(C.keyResultScore('KR1', d) - 100/3) < 1e-9, 'KR: 1 of 3 targets read at 100 scores 33.3, not 100');
+  ok(C.band(C.keyResultScore('KR1', d)) === 'off-track', 'KR: ...which bands off-track, honestly');
+  d = docs(k3, []);
+  ok(C.keyResultScore('KR1', d) === null, 'KR: a fresh KR with no reads is unscored, NOT a red 0');
+  ok(C.band(C.keyResultScore('KR1', d)) === 'no-band', 'KR: ...and shows no band on day one');
+
+  // --- a KPI with NO target is not a target: out of numerator AND denominator ---
+  const mixed = [mk('T1', 'kr', 10), Object.assign(mk('T2', 'kr', 10), { target: null })];
+  d = docs(mixed, [rd('T1', 10)]);
+  eq(C.keyResultScore('KR1', d), 100, 'an untargeted KPI does not dilute the mean (it is not a target)');
+  ok(C.hasTarget(mixed[0], mixed) === true, 'hasTarget: a KPI with a target is a target');
+  ok(C.hasTarget(mixed[1], mixed) === false, 'hasTarget: a KPI with no target is not');
+  ok(C.hasTarget({ id: 'B1', targetType: 'binary', hostType: 'keyResult', hostId: 'KR1' }, []) === true,
+    'hasTarget: a binary KPI carries an implicit target');
+
+  // --- a binary target that is unread still counts against the mean ---
+  const bin = [mk('N1', 'kr', 10), { id: 'B2', hostType: 'keyResult', hostId: 'KR1', objectiveId: 'O1',
+    name: 'B2', targetType: 'binary', isDefiner: true }];
+  d = docs(bin, [rd('N1', 10)]);
+  eq(C.keyResultScore('KR1', d), 50, 'an unread BINARY target counts 0 once something else has been read');
+})();
+
 /* ---- summary ------------------------------------------------------------- */
 if (fails) {
   console.error('\n' + fails + ' / ' + count + ' assertions FAILED');
