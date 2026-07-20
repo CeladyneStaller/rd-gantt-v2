@@ -676,6 +676,7 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
 /* ---- cross-document KPI resolution (portfolio target ↓ / exec readings ↑) -- */
 (function(){
   var pf = {
+    divisions: [{ id:'D', name:'D', order:0 }],   // nested rollupCompany means over declared divisions
     objectives: [{ id:'O1', initiativeId:'INIT1', divisionId:'D', quarter:'Q1' }],
     kpis: [{ id:'PK1', hostType:'initiative', hostId:'INIT1', objectiveId:null, isDefiner:true, groupId:'G1', direction:'up', target:80, unit:'A/g' }],
     keyResults: [{ id:'KR1', objectiveId:'O1' }]   // duplicate structure that must NOT be double-counted
@@ -1298,6 +1299,100 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
     name: 'B2', targetType: 'binary', isDefiner: true }];
   d = docs(bin, [rd('N1', 10)]);
   eq(C.keyResultScore('KR1', d), 50, 'an unread BINARY target counts 0 once something else has been read');
+})();
+
+/* ---- Phase 1 hierarchy: Company nested, Unit flat, Division flat ----------------------------
+   Three DIFFERENT computations, proven on an UNBALANCED fixture where flat and nested Company differ:
+     Company = mean of DIVISION scores        (each division equal weight)
+     Unit    = flat mean of the unit's objectives  (a bigger division weighs more)
+     Division= flat mean of its objectives    (unchanged)
+   Fixture: UNIT-TECH = { D-FC: 1 obj @100, D-EL: 3 obj @0 };  UNIT-BIZ = { D-FIN: 1 obj @60 }.
+   Division scores: D-FC=100, D-EL=0, D-FIN=60. */
+(function () {
+  // one binary KPI per objective, read met(1)=>100 or unmet(0)=>0, so objective scores are deterministic
+  function build(units, divisions, objs) {
+    var objectives = objs.map(function (o) { return { id: o.id, divisionId: o.div }; });
+    var keyResults = [], kpis = [], kpiUpdates = [];
+    objs.forEach(function (o) {
+      var kr = 'KR-' + o.id, kpi = 'K-' + o.id;
+      keyResults.push({ id: kr, objectiveId: o.id });
+      // demonstration KPI, target 100, value = the desired objective score, so any score is reachable
+      kpis.push({ id: kpi, objectiveId: o.id, hostType: 'keyResult', hostId: kr,
+        targetType: 'demonstration', direction: 'up', target: 100, isDefiner: true });
+      kpiUpdates.push({ id: 'U-' + kpi, kpiId: kpi, value: o.s, timestamp: 1 });
+    });
+    var execDocs = { D1: { keyResults: keyResults, kpis: kpis, kpiUpdates: kpiUpdates,
+      stageGates: [], stageGateSets: [], stageGateEdges: [], tasks: [], objectiveState: [] } };
+    var portfolio = { units: units, divisions: divisions, objectives: objectives,
+      products: [], models: [], initiatives: [], milestones: [], kpis: [] };
+    return { portfolio: portfolio, execDocs: execDocs };
+  }
+  var UNITS = [{ id: 'UNIT-TECH', name: 'Technical', order: 1 }, { id: 'UNIT-BIZ', name: 'Business', order: 2 }];
+  var DIVS = [
+    { id: 'D-FC',  unitId: 'UNIT-TECH', kind: 'rd'  },
+    { id: 'D-EL',  unitId: 'UNIT-TECH', kind: 'rd'  },
+    { id: 'D-FIN', unitId: 'UNIT-BIZ',  kind: 'biz' },
+  ];
+  var OBJS = [
+    { id: 'O-FC1',  div: 'D-FC',  s: 100 },
+    { id: 'O-EL1',  div: 'D-EL',  s: 0 }, { id: 'O-EL2', div: 'D-EL', s: 0 }, { id: 'O-EL3', div: 'D-EL', s: 0 },
+    { id: 'O-FIN1', div: 'D-FIN', s: 60 },
+  ];
+  var f = build(UNITS, DIVS, OBJS);
+  var P = f.portfolio, X = f.execDocs;
+  var A = function (v, t, m) { ok(Math.abs(v - t) < 1e-9, m); };
+
+  // division scores (unchanged flat mean of a division's objectives)
+  A(C.rollupDivision('D-FC', P, X), 100, 'division D-FC = 100 (its one objective)');
+  A(C.rollupDivision('D-EL', P, X), 0,   'division D-EL = 0 (three objectives, all 0)');
+  A(C.rollupDivision('D-FIN', P, X), 60, 'division D-FIN = 60');
+
+  // UNIT = flat mean of the unit's objectives (NOT the mean of its divisions)
+  A(C.rollupUnit('UNIT-TECH', P, X), 25, 'UNIT-TECH = 25 = flat mean of its 4 objectives (100,0,0,0)');
+  ok(Math.abs(C.rollupUnit('UNIT-TECH', P, X) - 50) > 1e-9,
+     '...NOT 50, which is what mean-of-its-divisions would give — Unit is flat, not nested');
+  A(C.rollupUnit('UNIT-BIZ', P, X), 60, 'UNIT-BIZ = 60');
+
+  // COMPANY = mean of division scores
+  A(C.rollupCompany(P, X), (100 + 0 + 60) / 3, 'Company = mean of division scores = 53.3');
+  // ...which is NOT the flat mean of all objectives (the old behaviour)
+  ok(Math.abs(C.rollupCompany(P, X) - (100 + 0 + 0 + 0 + 60) / 5) > 1e-9,
+     '...and NOT 32, the flat mean of all five objectives — the definition really changed');
+  // ...and NOT the mean of unit scores (the "does not add up" property, now provable)
+  ok(Math.abs(C.rollupCompany(P, X) - (25 + 60) / 2) > 1e-9,
+     '...and NOT the mean of the two unit scores (42.5) — Company reaches past units to divisions');
+
+  // a big division dominates its UNIT but not the COMPANY: growing D-EL from 3 to 10 zero-objectives
+  var OBJS2 = OBJS.slice();
+  for (var k = 4; k <= 10; k++) OBJS2.push({ id: 'O-EL' + k, div: 'D-EL', s: 0 });
+  var g = build(UNITS, DIVS, OBJS2); var P2 = g.portfolio, X2 = g.execDocs;
+  ok(Math.abs(C.rollupUnit('UNIT-TECH', P2, X2) - C.rollupUnit('UNIT-TECH', P, X)) > 1e-9,
+     'adding objectives to D-EL MOVES its unit score (flat mean shifts)');
+  A(C.rollupCompany(P2, X2), C.rollupCompany(P, X),
+    '...but leaves the Company score UNCHANGED (D-EL is still one division scoring 0)');
+
+  // back-compat: a portfolio with NO units still computes a Company score (divisions ungrouped)
+  var noUnits = build([], DIVS, OBJS);
+  A(C.rollupCompany(noUnits.portfolio, noUnits.execDocs), (100 + 0 + 60) / 3,
+    'Company still computes with no units collection (membership comes from divisions\' unitId, not units[])');
+  A(C.rollupUnit('UNIT-TECH', noUnits.portfolio, noUnits.execDocs), 25,
+    '...and a unit still scores from its member divisions even with no units[] metadata (25)');
+  ok(C.rollupUnit('UNIT-NONE', P, X) === null,
+     'a unit id that no division points at is unscored (null), not zero');
+
+  // a division with no scorable objectives drops OUT of the company mean (not counted as 0)
+  var DIVS3 = DIVS.concat([{ id: 'D-EMPTY', unitId: 'UNIT-TECH', kind: 'rd' }]);
+  var e = build(UNITS, DIVS3, OBJS);  // D-EMPTY has no objectives
+  A(C.rollupCompany(e.portfolio, e.execDocs), (100 + 0 + 60) / 3,
+    'an empty division drops out of the Company mean (not counted as a 0)');
+
+  // helpers
+  ok(C.unitIdOfDivision('D-FC', P) === 'UNIT-TECH', 'unitIdOfDivision resolves a division to its unit');
+  ok(C.unitIdOfDivision('D-NONE', P) === null, '...and null for an unknown/unassigned division');
+  ok(C.divisionKind({ kind: 'biz' }) === 'biz' && C.divisionKind({}) === 'rd',
+     'divisionKind reads kind, defaulting to rd');
+  ok(C.divisionsInUnit('UNIT-TECH', P).map(function (d) { return d.id; }).join() === 'D-FC,D-EL',
+     'divisionsInUnit lists a unit\'s divisions');
 })();
 
 /* ---- summary ------------------------------------------------------------- */

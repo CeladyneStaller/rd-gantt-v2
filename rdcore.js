@@ -575,12 +575,31 @@
     return mean(scores); // null if empty
   }
 
+  // ---- hierarchy lookups (Phase 1) -----------------------------------------
+  // A division carries unitId (which unit it sits under) and kind ('rd' | 'biz', absent-means-'rd').
+  function _divRow(divId, portfolio) {
+    var ds = (portfolio && portfolio.divisions) || [];
+    for (var i = 0; i < ds.length; i++) if (ds[i].id === divId) return ds[i];
+    return null;
+  }
+  function unitIdOfDivision(divId, portfolio) {
+    var d = _divRow(divId, portfolio);
+    return (d && d.unitId) || null;      // null -> Unassigned
+  }
+  function divisionKind(div) { return (div && div.kind) || 'rd'; }   // absent -> rd
+  function divisionsInUnit(unitId, portfolio) {
+    var ds = (portfolio && portfolio.divisions) || [], out = [];
+    for (var i = 0; i < ds.length; i++) if ((ds[i].unitId || null) === unitId) out.push(ds[i]);
+    return out;
+  }
+
   function objectivesInScope(entityType, entityId, portfolio) {
     var objs = portfolio.objectives || [];
     switch (entityType) {
       case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
       case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
       case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'unit':       return objs.filter(function (o) { return unitIdOfDivision(o.divisionId, portfolio) === entityId; });
       case 'company':    return objs.slice();
       default: return [];
     }
@@ -619,7 +638,22 @@
   function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
   function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
   function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
-  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+  // Unit score: FLAT mean of every objective in the unit — "how is the work going in general". A larger
+  // division therefore weighs more in its unit's score. Reuses the score() primitive via the 'unit' scope.
+  function rollupUnit(id, portfolio, execDocs, quarter) { return score('unit', id, portfolio, execDocs, quarter); }
+  // Company score: NESTED — the mean of the DIVISION scores, so every division counts equally regardless of
+  // how many objectives it holds ("how are my divisions doing"). This is deliberately NOT the flat mean of all
+  // objectives (the old behaviour) and NOT the mean of unit scores; a note in the UI reads "Mean of division
+  // scores". A division with no scorable objectives drops out (null), exactly as an objective does in a lower mean.
+  function rollupCompany(portfolio, execDocs, quarter) {
+    var ds = (portfolio && portfolio.divisions) || [];
+    var scores = [];
+    for (var i = 0; i < ds.length; i++) {
+      var sc = score('division', ds[i].id, portfolio, execDocs, quarter);
+      if (sc != null) scores.push(sc);
+    }
+    return mean(scores);
+  }
 
   // Combine the portfolio doc into a docs map for cross-document KPI resolution.
   // Portfolio KPIs join the resolution pool (their targets/identity cascade down
@@ -711,11 +745,12 @@
     if (dim === 'quarter') return o.quarter || '';
     if (dim === 'owner') { var ow = ownersOf(o); return ow.length ? ow : ''; }   // array = fan out (see _groupBy)
     if (dim === 'initiative') return o.initiativeId || '';
+    if (dim === 'unit') return unitIdOfDivision(o.divisionId, portfolio) || '';
     return '';
   }
   function _dimOrder(dim, keys, portfolio) {
     var none = keys.indexOf('') >= 0, rest = keys.filter(function (k) { return k !== ''; });
-    var src = dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
+    var src = dim === 'unit' ? portfolio.units : dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
             : dim === 'model' ? portfolio.models : dim === 'initiative' ? portfolio.initiatives : null;
     if (src) { var idx = {}; src.forEach(function (r, i) { idx[r.id] = i; });
       rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
@@ -1278,6 +1313,10 @@
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
     hasTarget: hasTarget,
+    rollupUnit: rollupUnit,
+    unitIdOfDivision: unitIdOfDivision,
+    divisionsInUnit: divisionsInUnit,
+    divisionKind: divisionKind,
     ownersOf: ownersOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
