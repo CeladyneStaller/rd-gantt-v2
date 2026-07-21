@@ -4650,7 +4650,7 @@ function renderKanban(host){
   }).join("");
 
   const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span></div>`;
-  const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\\u2715</button></div></div>`;
+  const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
   const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
   const grid=`<div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 
@@ -4660,7 +4660,7 @@ function renderKanban(host){
 
 function kanbanConfigHtml(board){
   const cols=board.columns.map(c=>`<div class="kb-cfgrow"><input type="text" data-kbcolname="${c.id}" value="${esc(c.name)}">${board.columns.length>1?`<button class="ghost mini danger" data-kbcoldel="${c.id}">\u2715</button>`:""}</div>`).join("");
-  const lanes=board.swimlanes.map(l=>`<tr><td><input type="text" data-kblanename="${l.id}" value="${esc(l.name)}"></td><td><input type="number" min="0" data-kblanemax="${l.id}" value="${l.maxDaysPerCol||""}"></td><td><input type="date" data-kblanedue="${l.id}" value="${l.deadline||""}"></td><td>${board.swimlanes.length>1?`<button class="ghost mini danger" data-kblanedel="${l.id}">\\u2715</button>`:""}</td></tr>`).join("");
+  const lanes=board.swimlanes.map(l=>`<tr><td><input type="text" data-kblanename="${l.id}" value="${esc(l.name)}"></td><td><input type="number" min="0" data-kblanemax="${l.id}" value="${l.maxDaysPerCol||""}"></td><td><input type="date" data-kblanedue="${l.id}" value="${l.deadline||""}"></td><td>${board.swimlanes.length>1?`<button class="ghost mini danger" data-kblanedel="${l.id}">\u2715</button>`:""}</td></tr>`).join("");
   return `<div class="kb-cfg"><div class="kb-cfgcol"><h4>Board name</h4><input type="text" data-kbboardname="${board.id}" value="${esc(board.name)}" style="width:100%"><h4>Columns (stage-gates)</h4>${cols}<button class="ghost mini" data-kbaddcol="${board.id}">+ column</button></div><div class="kb-cfgcol"><h4>Swimlanes &amp; rules</h4><table class="kb-lanecfg"><thead><tr><th>Name</th><th>Max d/col</th><th>Deadline</th><th></th></tr></thead><tbody>${lanes}</tbody></table><button class="ghost mini" data-kbaddlane="${board.id}">+ swimlane</button></div><div class="kb-cfgclose"><button class="ghost mini" data-kbcfgclose="1">done</button></div></div>`;
 }
 
