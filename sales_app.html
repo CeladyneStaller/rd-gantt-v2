@@ -897,6 +897,10 @@ html[data-theme="dark"] #etb-view{
       <button type="button" class="theme-opt" data-theme-set="light">Light</button>
       <button type="button" class="theme-opt" data-theme-set="dark">Dark</button>
     </div>
+    <h3 style="margin-top:16px">Maintenance</h3>
+    <p class="hint">If an objective was moved to this division from another, its key results, KPIs, stage-gates, tasks, boards and ETB tree may still live in the old division's bin. This scans the other business divisions and moves any stranded execution data for this division's objectives into this bin.</p>
+    <div class="row"><button class="act" id="btnRecoverStranded">Recover stranded execution data</button><span id="recoverMsg" class="io-msg muted" style="margin-left:8px"></span></div>
+    <div id="recoverReport"></div>
   </div>
 
   <div id="objHeadWrap"></div>
@@ -1006,12 +1010,6 @@ html[data-theme="dark"] #etb-view{
         <button id="btnCloseSettings">Close</button>
       </div>
       <p class="keynote">Keys are stored only in this browser (local storage), never in the tool file. Clearing removes them from this browser.</p>
-      <div class="mz">
-        <div class="mz-lab">Maintenance</div>
-        <div class="row"><button id="btnRecoverStranded">Recover stranded execution data</button><span id="recoverMsg" class="io-msg muted"></span></div>
-        <p class="keynote" style="margin-top:8px">If an objective was moved to this division from another, its key results, KPIs, stage-gates, tasks, boards and ETB tree may still live in the old division's bin. This scans the other business divisions and moves any stranded execution data for this division's objectives into this bin.</p>
-        <div id="recoverReport"></div>
-      </div>
       <div class="dz">
         <div class="dz-lab">Danger zone</div>
         <div class="row"><button id="btnClearAll" class="danger">Clear all data</button><span id="clearAllMsg" class="io-msg muted"></span></div>
