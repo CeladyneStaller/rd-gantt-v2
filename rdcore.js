@@ -585,15 +585,78 @@
   // changing swimlane re-parents its rules. Returns a NEW board (original untouched).
   function dropTile(board, tileId, toCol, toLane, todayIso) {
     var nb = JSON.parse(JSON.stringify(board || {}));
-    var tiles = nb.tiles || [];
+    var tiles = nb.tiles || [], cols = nb.columns || [];
+    var colIndex = {}; for (var ci = 0; ci < cols.length; ci++) colIndex[cols[ci].id] = ci;
     for (var i = 0; i < tiles.length; i++) {
       if (tiles[i].id === tileId) {
         if (toCol != null && tiles[i].col !== toCol) { tiles[i].col = toCol; tiles[i].enteredCol = todayIso || tiles[i].enteredCol; }
         if (toLane != null) tiles[i].lane = toLane;
+        // reconcile gate-crossing stamps against the tile's (possibly new) position
+        var cur = colIndex[tiles[i].col];
+        if (cur != null) {
+          var gp = tiles[i].gatePassed || {};
+          for (var k = 0; k < cols.length; k++) {
+            var cid = cols[k].id;
+            if (k < cur) { if (!gp[cid]) gp[cid] = todayIso || ''; }   // newly cleared -> stamp today
+            else if (gp[cid]) { delete gp[cid]; }                       // retreated past -> un-stamp
+          }
+          tiles[i].gatePassed = gp;
+        }
         break;
       }
     }
     return nb;
+  }
+
+  // ---- Kanban gate status for the Gantt ----------------------------------------------------
+  // Per (tile, gate-column-index): has the tile cleared this gate, and on time or late? or is it overdue/pending?
+  //   'passed-ontime' | 'passed-late' | 'overdue' | 'pending'
+  function gateTileState(board, tile, colIndex, todayIso) {
+    var cols = (board && board.columns) || [];
+    if (colIndex < 0 || colIndex >= cols.length) return 'pending';
+    var laneById = {}; ((board && board.swimlanes) || []).forEach(function (l) { laneById[l.id] = l; });
+    var lane = laneById[tile.lane];
+    var due = gateDueDates(cols, lane, tile).due[colIndex];   // iso or ''
+    var curIdx = -1; for (var i = 0; i < cols.length; i++) if (cols[i].id === tile.col) { curIdx = i; break; }
+    var col = cols[colIndex];
+    if (curIdx > colIndex) {                                  // cleared this gate
+      var crossed = (tile.gatePassed || {})[col.id];
+      if (crossed && due && crossed > due) return 'passed-late';
+      return 'passed-ontime';
+    }
+    // not cleared
+    if (due && todayIso && todayIso > due) return 'overdue';
+    return 'pending';
+  }
+
+  // Aggregate a gate column across all tiles for the collapsed board row: how many passed, and the WORST state
+  // (red = any overdue > orange = any late > green = all passed > none = some pending, none late/overdue).
+  function boardGateSummary(board, colIndex, todayIso) {
+    var tiles = (board && board.tiles) || [];
+    var passed = 0, anyOverdue = false, anyLate = false, allPassed = tiles.length > 0;
+    for (var i = 0; i < tiles.length; i++) {
+      var st = gateTileState(board, tiles[i], colIndex, todayIso);
+      if (st === 'passed-ontime' || st === 'passed-late') passed++; else allPassed = false;
+      if (st === 'overdue') anyOverdue = true;
+      if (st === 'passed-late') anyLate = true;
+    }
+    var worst = anyOverdue ? 'red' : (anyLate ? 'orange' : (allPassed ? 'green' : 'none'));
+    return { passed: passed, total: tiles.length, worst: worst };
+  }
+
+  // Dated milestone-KR steps for the Gantt: only steps WITH a due date, each with a completion-derived status.
+  //   'done' (100%) | 'overdue' (<100 & past due) | 'pending'
+  function milestoneGanttSteps(kr, todayIso) {
+    var steps = (kr && kr.steps) || [];
+    var out = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (!s.due) continue;                                   // undated steps don't go on the timeline
+      var c = Math.max(0, Math.min(100, Number(s.completion) || 0));
+      var status = c >= 100 ? 'done' : ((todayIso && todayIso > s.due) ? 'overdue' : 'pending');
+      out.push({ id: s.id, name: s.name, due: s.due, completion: c, status: status });
+    }
+    return out;
   }
 
   // Where each gate (column) lands on a timeline for a given tile, from its swimlane's rules.
@@ -1454,6 +1517,9 @@
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    gateTileState: gateTileState,
+    boardGateSummary: boardGateSummary,
+    milestoneGanttSteps: milestoneGanttSteps,
     keyResultPaceBand: keyResultPaceBand,
     keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
