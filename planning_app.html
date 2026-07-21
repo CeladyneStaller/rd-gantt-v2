@@ -365,6 +365,7 @@
   .gname.static{color:var(--muted);cursor:default}
   .gname.static:hover{color:var(--muted);text-decoration:none}
   .gsetnum{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-right:4px}
+  .gkrtag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--accent);margin-right:5px;letter-spacing:.02em}
   .gtrack{position:relative;width:720px;flex:none;height:100%;overflow:hidden}
   .gaxis{display:flex;align-items:flex-end;height:22px}
   .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
@@ -4188,6 +4189,7 @@ function renderGantt(){
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
+    else if(n.entity==="milestonekr") nm=`<span class="gname static" style="${fs}"><span class="gkrtag">(KR)</span> ${name}</span>`;
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
