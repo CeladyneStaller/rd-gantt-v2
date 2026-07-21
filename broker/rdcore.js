@@ -15,9 +15,13 @@
    - Scoring rolls up: KPI score -> Key Result score (mean of its KPIs) ->
      Objective score (mean of its Key Results). Stage-gate KPIs are gating only
      and never feed the objective OKR score (spec v1.3 §A, decision #1).
-   - Unscored: a KPI with a null target or no read yet is excluded from its KR's
-     mean (g1). A KR with no scorable KPIs is unscored; an objective with no
-     scorable KRs has no band, not zero. No synthesized KRs (decision #3).
+   - Unscored (g1'): a KPI with NO target is excluded from its KR's mean entirely
+     — it is not a target. A KPI that HAS a target but no read counts as 0, so a
+     group cannot score on the strength of the one member somebody measured. If
+     NOTHING in the group has been read the group is unscored (null), because
+     "not measured" is absence of information, not failure. A KR with no scorable
+     KPIs is unscored; an objective with no scorable KRs has no band, not zero.
+     No synthesized KRs (decision #3).
    - For direction 'range', score is 100 inside [lo,hi] and falls off linearly to
      0 at one full band-width outside the band.
    ============================================================================ */
@@ -39,7 +43,7 @@
   // ALLOCATION number, never a position: reordering existing ids never changes
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    unit: 'UNIT', division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
     product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
@@ -47,7 +51,7 @@
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
 
   function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    if (type === 'division' || type === 'unit') return opts.code;   // explicit short code, e.g. "FC" / "BIZ"
     var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
     if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
     return parentStem;
@@ -62,9 +66,9 @@
     var prefix = ID_PREFIX[type];
     if (!prefix) throw new Error('allocId: unknown type ' + type);
     var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
+    if (type === 'division' || type === 'unit') {
       var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate ' + type + ' code ' + stem);
       return did;
     }
     var base = prefix + '-' + stem + '-';
@@ -415,13 +419,38 @@
     return out;
   }
 
+  // hasTarget -> is this KPI actually a target at all? Binary KPIs carry an implicit target; otherwise a
+  // target must be defined, either its own or inherited through a link. A KPI with NO target is not a target
+  // and must stay out of BOTH the numerator and the denominator — otherwise adding an unconfigured KPI would
+  // drag the score down.
+  function hasTarget(kpi, kpis) {
+    if (definerOf(kpi, kpis).targetType === 'binary') return true;
+    return effTarget(kpi, kpis) != null;
+  }
+
+  // meanScorable -> mean over every TARGET, counting an unread target as 0. (g1', supersedes g1.)
+  //
+  // This used to push only non-null scores, i.e. it silently dropped targets nobody had read. A stage-gate
+  // with three targets and one reading of 100 scored mean([100]) = 100, so gateAtTarget() called it complete
+  // while two of its three targets had never been measured. Same for a KR. The old comment on gateAtTarget
+  // already claimed "ALL at/above target" — the code only ever checked the ones that had been read.
+  //
+  // But "nobody has read ANY of these yet" is not failure, it is absence of information: scoring it 0 would
+  // paint every fresh KR red on day one and make "not measured" indistinguishable from "measured and missing".
+  // That distinction is what g1 protected and it is kept. So:
+  //     no targets at all        -> null (unscored, no band)
+  //     targets, none read       -> null (unscored, no band)  <- g1's intent, preserved
+  //     targets, >=1 read        -> mean over ALL targets, unread ones counting 0
   function meanScorable(kpis, execDocs) {
     var all = allKpis(execDocs);
-    var scores = [];
+    var scores = [], anyRead = false;
     for (var i = 0; i < kpis.length; i++) {
+      if (!hasTarget(kpis[i], all)) continue;
       var s = kpiScoreResolved(kpis[i], all, execDocs);
-      if (s != null) scores.push(s);
+      if (s != null) anyRead = true;
+      scores.push(s == null ? 0 : s);
     }
+    if (!anyRead) return null;
     return mean(scores);
   }
 
@@ -497,7 +526,8 @@
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
   function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
-  // gateAtTarget -> true iff the gate has >=1 scorable KPI and they are ALL at/above target (score === 100).
+  // gateAtTarget -> true iff EVERY target on the gate has been read and is at/above target. Unread targets
+  // score 0 (see meanScorable), so a gate cannot pass on the strength of the one target somebody measured.
   // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
   function gateAtTarget(sgId, execDocs) { return stageGateScore(sgId, execDocs) === 100; }
 
@@ -545,12 +575,31 @@
     return mean(scores); // null if empty
   }
 
+  // ---- hierarchy lookups (Phase 1) -----------------------------------------
+  // A division carries unitId (which unit it sits under) and kind ('rd' | 'biz', absent-means-'rd').
+  function _divRow(divId, portfolio) {
+    var ds = (portfolio && portfolio.divisions) || [];
+    for (var i = 0; i < ds.length; i++) if (ds[i].id === divId) return ds[i];
+    return null;
+  }
+  function unitIdOfDivision(divId, portfolio) {
+    var d = _divRow(divId, portfolio);
+    return (d && d.unitId) || null;      // null -> Unassigned
+  }
+  function divisionKind(div) { return (div && div.kind) || 'rd'; }   // absent -> rd
+  function divisionsInUnit(unitId, portfolio) {
+    var ds = (portfolio && portfolio.divisions) || [], out = [];
+    for (var i = 0; i < ds.length; i++) if ((ds[i].unitId || null) === unitId) out.push(ds[i]);
+    return out;
+  }
+
   function objectivesInScope(entityType, entityId, portfolio) {
     var objs = portfolio.objectives || [];
     switch (entityType) {
       case 'objective':  return objs.filter(function (o) { return o.id === entityId; });
       case 'initiative': return objs.filter(function (o) { return o.initiativeId === entityId; });
       case 'division':   return objs.filter(function (o) { return o.divisionId === entityId; });
+      case 'unit':       return objs.filter(function (o) { return unitIdOfDivision(o.divisionId, portfolio) === entityId; });
       case 'company':    return objs.slice();
       default: return [];
     }
@@ -589,7 +638,22 @@
   function rollupObjective(id, portfolio, execDocs) { return score('objective', id, portfolio, execDocs); }
   function rollupInitiative(id, portfolio, execDocs) { return score('initiative', id, portfolio, execDocs); }
   function rollupDivision(id, portfolio, execDocs) { return score('division', id, portfolio, execDocs); }
-  function rollupCompany(portfolio, execDocs) { return score('company', null, portfolio, execDocs); }
+  // Unit score: FLAT mean of every objective in the unit — "how is the work going in general". A larger
+  // division therefore weighs more in its unit's score. Reuses the score() primitive via the 'unit' scope.
+  function rollupUnit(id, portfolio, execDocs, quarter) { return score('unit', id, portfolio, execDocs, quarter); }
+  // Company score: NESTED — the mean of the DIVISION scores, so every division counts equally regardless of
+  // how many objectives it holds ("how are my divisions doing"). This is deliberately NOT the flat mean of all
+  // objectives (the old behaviour) and NOT the mean of unit scores; a note in the UI reads "Mean of division
+  // scores". A division with no scorable objectives drops out (null), exactly as an objective does in a lower mean.
+  function rollupCompany(portfolio, execDocs, quarter) {
+    var ds = (portfolio && portfolio.divisions) || [];
+    var scores = [];
+    for (var i = 0; i < ds.length; i++) {
+      var sc = score('division', ds[i].id, portfolio, execDocs, quarter);
+      if (sc != null) scores.push(sc);
+    }
+    return mean(scores);
+  }
 
   // Combine the portfolio doc into a docs map for cross-document KPI resolution.
   // Portfolio KPIs join the resolution pool (their targets/identity cascade down
@@ -681,11 +745,12 @@
     if (dim === 'quarter') return o.quarter || '';
     if (dim === 'owner') { var ow = ownersOf(o); return ow.length ? ow : ''; }   // array = fan out (see _groupBy)
     if (dim === 'initiative') return o.initiativeId || '';
+    if (dim === 'unit') return unitIdOfDivision(o.divisionId, portfolio) || '';
     return '';
   }
   function _dimOrder(dim, keys, portfolio) {
     var none = keys.indexOf('') >= 0, rest = keys.filter(function (k) { return k !== ''; });
-    var src = dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
+    var src = dim === 'unit' ? portfolio.units : dim === 'division' ? portfolio.divisions : dim === 'product' ? portfolio.products
             : dim === 'model' ? portfolio.models : dim === 'initiative' ? portfolio.initiatives : null;
     if (src) { var idx = {}; src.forEach(function (r, i) { idx[r.id] = i; });
       rest.sort(function (a, b) { var ia = idx[a] == null ? 1e9 : idx[a], ib = idx[b] == null ? 1e9 : idx[b];
@@ -1247,6 +1312,11 @@
     migrateKpiLinks: migrateKpiLinks,
     KPI_LEVEL: KPI_LEVEL,
     computeStat: computeStat,
+    hasTarget: hasTarget,
+    rollupUnit: rollupUnit,
+    unitIdOfDivision: unitIdOfDivision,
+    divisionsInUnit: divisionsInUnit,
+    divisionKind: divisionKind,
     ownersOf: ownersOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
