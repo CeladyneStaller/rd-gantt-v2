@@ -3718,7 +3718,7 @@ function pfLevels(tab){
   if(tab!=="gantt") return [];
   const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
   if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat([{id:"objective",label:"Objectives"}]);
-  return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
+  return [{id:"unit",label:"Units"},{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
 }
 
 function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
@@ -4181,6 +4181,34 @@ function renderGantt(){
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
+  // Hierarchy preset: Unit -> Division -> Initiative -> Objective. Divisions are wrapped in a synthetic unit
+  // node (depth 0), divisions at depth 1. Divisions with no unitId fall under a synthetic "Unassigned" unit so
+  // nothing is hidden. A synthetic node with dim:"unit" is collapse-level "unit" via nodeLevel(), so
+  // "Collapse to Units" folds the tree to the unit tier.
+  function buildUnitHierarchyRoots(P){
+    const units=(P.units||[]);
+    // order: declared units first, then an Unassigned bucket for division.unitId absent/unknown
+    const buckets=[]; const byUnit={};
+    units.forEach(u=>{ const b={unit:u, divs:[]}; byUnit[u.id]=b; buckets.push(b); });
+    const unassigned={unit:null, divs:[]};
+    P.divisions.forEach(d=>{ const b=(d.unitId && byUnit[d.unitId]) ? byUnit[d.unitId] : unassigned; b.divs.push(d); });
+    buckets.push(unassigned);
+    const out=[];
+    buckets.forEach(b=>{
+      const kids=[]; b.divs.forEach(d=>{ const n=build("division", d, 1); if(n) kids.push(n); });
+      if(!kids.length) return;                                    // an empty unit (all divisions filtered out) drops away
+      const dss=[], des=[];
+      (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
+        else { const gg=node.g; if(gg&&gg.ds!=null)dss.push(gg.ds); const e=gg?(gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds)):null; if(e!=null)des.push(e); } }); })(kids);
+      const under=[]; kids.forEach(k=>{ collectObjs(k).forEach(o=>under.push(o)); });
+      const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null);
+      const gband=RD.band(vs.length?vs.reduce((a,c)=>a+c,0)/vs.length:null);
+      const uid = b.unit ? b.unit.id : "__none__";
+      out.push({ synthetic:true, dim:"unit", label: b.unit ? (b.unit.name||b.unit.id) : "Unassigned", band:gband, depth:0, key:"grp:unit:"+uid, kids,
+        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
+    });
+    return out;
+  }
   function buildGroupRoots(nodes, depth, keyPrefix){
     const out=[];
     nodes.forEach(n=>{
@@ -4211,7 +4239,7 @@ function renderGantt(){
     const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
     roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean).sort(objEndCmp);
   } else {
-    P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
+    roots = buildUnitHierarchyRoots(P);
   }
   if(!roots.length){ document.getElementById("ganttWrap").innerHTML=`<p class="hint">${pfAnyFilter()?'No matching items to chart.':'No scheduled, dated items to chart.'}</p>`; return; }
   // ---- domain over the full tree (+ today) ----
