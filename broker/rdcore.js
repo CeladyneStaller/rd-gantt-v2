@@ -1469,6 +1469,77 @@
     var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
     return null;
   }
+  // ---- Move an objective's entire execution payload between two exec docs -------------------
+  // Used by the sales app's "recover stranded data" (an objective moved divisions, but its execution
+  // artifacts stayed in the OLD division's bin). Pure: returns fresh {fromDoc, toDoc}. Moves every
+  // objective-scoped artifact — direct (by objectiveId), indirect (kpiUpdates by kpiId, gate edges by
+  // endpoint), and map-keyed (gateMode/etbTrees by objId, chainGatesByDate by moved gate). Additive and
+  // de-duplicating: an id already present in toDoc is not added twice. Later reused by Option A.
+  function moveObjectivePayload(fromDoc, toDoc, objId) {
+    var from = JSON.parse(JSON.stringify(fromDoc || {}));
+    var to = JSON.parse(JSON.stringify(toDoc || {}));
+    // ensure the collections exist on both
+    var ARR = ['keyResults','kpis','stageGates','tasks','boards','risks','catchupPlans','objectiveState','stageGateSets','kpiUpdates','stageGateEdges'];
+    for (var i = 0; i < ARR.length; i++) { if (!Array.isArray(from[ARR[i]])) from[ARR[i]] = []; if (!Array.isArray(to[ARR[i]])) to[ARR[i]] = []; }
+    if (!from.gateMode) from.gateMode = {}; if (!to.gateMode) to.gateMode = {};
+    if (!from.etbTrees) from.etbTrees = {}; if (!to.etbTrees) to.etbTrees = {};
+    if (!from.chainGatesByDate) from.chainGatesByDate = {}; if (!to.chainGatesByDate) to.chainGatesByDate = {};
+
+    var moved = { keyResults:0, kpis:0, stageGates:0, tasks:0, boards:0, risks:0, catchupPlans:0, objectiveState:0, stageGateSets:0, kpiUpdates:0, stageGateEdges:0, gateMode:0, etbTree:0, chainGates:0 };
+
+    // partition an array on `pred`: kept stay in `from`, matched move to `to` (de-duped by id)
+    function move(name, pred) {
+      var keep = [], has = {};
+      to[name].forEach(function (x) { if (x && x.id != null) has[x.id] = 1; });
+      from[name].forEach(function (x) {
+        if (pred(x)) { if (!(x && x.id != null && has[x.id])) { to[name].push(x); moved[name]++; } }
+        else keep.push(x);
+      });
+      from[name] = keep;
+    }
+
+    // 1) direct by objectiveId
+    move('keyResults',    function (x) { return x.objectiveId === objId; });
+    move('kpis',          function (x) { return x.objectiveId === objId; });
+    move('stageGates',    function (x) { return x.objectiveId === objId; });
+    move('tasks',         function (x) { return x.objectiveId === objId; });
+    move('boards',        function (x) { return x.objectiveId === objId; });
+    move('risks',         function (x) { return x.objectiveId === objId; });
+    move('catchupPlans',  function (x) { return x.objectiveId === objId; });
+    move('objectiveState',function (x) { return x.objectiveId === objId; });
+    move('stageGateSets', function (x) { return x.objectiveId === objId; });
+
+    // 2) indirect: KPI updates whose kpiId is one of the moved KPIs; gate edges touching a moved gate
+    var movedKpiIds = {}; to.kpis.forEach(function (k) { if (k.objectiveId === objId && k.id != null) movedKpiIds[k.id] = 1; });
+    move('kpiUpdates', function (u) { return u && movedKpiIds[u.kpiId]; });
+    var movedGateIds = {}; to.stageGates.forEach(function (g) { if (g.objectiveId === objId && g.id != null) movedGateIds[g.id] = 1; });
+    move('stageGateEdges', function (e) { return e && (movedGateIds[e.fromGate] || movedGateIds[e.toGate]); });
+
+    // 3) map-keyed: per-objective gateMode + ETB tree
+    if (Object.prototype.hasOwnProperty.call(from.gateMode, objId)) { if (!Object.prototype.hasOwnProperty.call(to.gateMode, objId)) { to.gateMode[objId] = from.gateMode[objId]; moved.gateMode = 1; } delete from.gateMode[objId]; }
+    if (Object.prototype.hasOwnProperty.call(from.etbTrees, objId)) { if (!Object.prototype.hasOwnProperty.call(to.etbTrees, objId)) { to.etbTrees[objId] = from.etbTrees[objId]; moved.etbTree = 1; } delete from.etbTrees[objId]; }
+    // chainGatesByDate: entries keyed by a moved gate id
+    Object.keys(from.chainGatesByDate).forEach(function (gid) {
+      if (movedGateIds[gid]) { if (!Object.prototype.hasOwnProperty.call(to.chainGatesByDate, gid)) { to.chainGatesByDate[gid] = from.chainGatesByDate[gid]; moved.chainGates++; } delete from.chainGatesByDate[gid]; }
+    });
+
+    return { fromDoc: from, toDoc: to, moved: moved };
+  }
+
+  // Count what an objective has in a doc (for the recovery preview). Mirrors moveObjectivePayload's reach.
+  function objectivePayloadCounts(doc, objId) {
+    doc = doc || {};
+    var g = (doc.stageGates || []).filter(function (x) { return x.objectiveId === objId; });
+    return {
+      keyResults: (doc.keyResults || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      kpis: (doc.kpis || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      stageGates: g.length,
+      tasks: (doc.tasks || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      boards: (doc.boards || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      risks: (doc.risks || []).filter(function (x) { return x.objectiveId === objId; }).length
+    };
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1517,6 +1588,8 @@
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    moveObjectivePayload: moveObjectivePayload,
+    objectivePayloadCounts: objectivePayloadCounts,
     gateTileState: gateTileState,
     boardGateSummary: boardGateSummary,
     milestoneGanttSteps: milestoneGanttSteps,

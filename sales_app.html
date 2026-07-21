@@ -229,6 +229,11 @@
   .tgt-toggle.add:hover{border-color:var(--accent);color:var(--accent)}
   .tgt-toggle + .tgt-toggle{margin-left:6px}
   .tgt-panel{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+  /* recover stranded data (settings > maintenance) */
+  .mz{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:14px}
+  .mz-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+  .recover-list{border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-top:6px}
+  .recover-row{padding:7px 10px;border-bottom:1px solid var(--line);font-size:12.5px} .recover-row:last-child{border-bottom:none}
   /* Kanban board (K2) */
   .gate-mode-seg{margin-right:8px} .gate-mode-seg .seg{transform:scale(.92);transform-origin:right}
   .kb-root{padding:6px 12px 12px}
@@ -1001,6 +1006,12 @@ html[data-theme="dark"] #etb-view{
         <button id="btnCloseSettings">Close</button>
       </div>
       <p class="keynote">Keys are stored only in this browser (local storage), never in the tool file. Clearing removes them from this browser.</p>
+      <div class="mz">
+        <div class="mz-lab">Maintenance</div>
+        <div class="row"><button id="btnRecoverStranded">Recover stranded execution data</button><span id="recoverMsg" class="io-msg muted"></span></div>
+        <p class="keynote" style="margin-top:8px">If an objective was moved to this division from another, its key results, KPIs, stage-gates, tasks, boards and ETB tree may still live in the old division's bin. This scans the other business divisions and moves any stranded execution data for this division's objectives into this bin.</p>
+        <div id="recoverReport"></div>
+      </div>
       <div class="dz">
         <div class="dz-lab">Danger zone</div>
         <div class="row"><button id="btnClearAll" class="danger">Clear all data</button><span id="clearAllMsg" class="io-msg muted"></span></div>
@@ -2491,6 +2502,77 @@ html[data-theme="dark"] #etb-view{
     var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
     return null;
   }
+  // ---- Move an objective's entire execution payload between two exec docs -------------------
+  // Used by the sales app's "recover stranded data" (an objective moved divisions, but its execution
+  // artifacts stayed in the OLD division's bin). Pure: returns fresh {fromDoc, toDoc}. Moves every
+  // objective-scoped artifact — direct (by objectiveId), indirect (kpiUpdates by kpiId, gate edges by
+  // endpoint), and map-keyed (gateMode/etbTrees by objId, chainGatesByDate by moved gate). Additive and
+  // de-duplicating: an id already present in toDoc is not added twice. Later reused by Option A.
+  function moveObjectivePayload(fromDoc, toDoc, objId) {
+    var from = JSON.parse(JSON.stringify(fromDoc || {}));
+    var to = JSON.parse(JSON.stringify(toDoc || {}));
+    // ensure the collections exist on both
+    var ARR = ['keyResults','kpis','stageGates','tasks','boards','risks','catchupPlans','objectiveState','stageGateSets','kpiUpdates','stageGateEdges'];
+    for (var i = 0; i < ARR.length; i++) { if (!Array.isArray(from[ARR[i]])) from[ARR[i]] = []; if (!Array.isArray(to[ARR[i]])) to[ARR[i]] = []; }
+    if (!from.gateMode) from.gateMode = {}; if (!to.gateMode) to.gateMode = {};
+    if (!from.etbTrees) from.etbTrees = {}; if (!to.etbTrees) to.etbTrees = {};
+    if (!from.chainGatesByDate) from.chainGatesByDate = {}; if (!to.chainGatesByDate) to.chainGatesByDate = {};
+
+    var moved = { keyResults:0, kpis:0, stageGates:0, tasks:0, boards:0, risks:0, catchupPlans:0, objectiveState:0, stageGateSets:0, kpiUpdates:0, stageGateEdges:0, gateMode:0, etbTree:0, chainGates:0 };
+
+    // partition an array on `pred`: kept stay in `from`, matched move to `to` (de-duped by id)
+    function move(name, pred) {
+      var keep = [], has = {};
+      to[name].forEach(function (x) { if (x && x.id != null) has[x.id] = 1; });
+      from[name].forEach(function (x) {
+        if (pred(x)) { if (!(x && x.id != null && has[x.id])) { to[name].push(x); moved[name]++; } }
+        else keep.push(x);
+      });
+      from[name] = keep;
+    }
+
+    // 1) direct by objectiveId
+    move('keyResults',    function (x) { return x.objectiveId === objId; });
+    move('kpis',          function (x) { return x.objectiveId === objId; });
+    move('stageGates',    function (x) { return x.objectiveId === objId; });
+    move('tasks',         function (x) { return x.objectiveId === objId; });
+    move('boards',        function (x) { return x.objectiveId === objId; });
+    move('risks',         function (x) { return x.objectiveId === objId; });
+    move('catchupPlans',  function (x) { return x.objectiveId === objId; });
+    move('objectiveState',function (x) { return x.objectiveId === objId; });
+    move('stageGateSets', function (x) { return x.objectiveId === objId; });
+
+    // 2) indirect: KPI updates whose kpiId is one of the moved KPIs; gate edges touching a moved gate
+    var movedKpiIds = {}; to.kpis.forEach(function (k) { if (k.objectiveId === objId && k.id != null) movedKpiIds[k.id] = 1; });
+    move('kpiUpdates', function (u) { return u && movedKpiIds[u.kpiId]; });
+    var movedGateIds = {}; to.stageGates.forEach(function (g) { if (g.objectiveId === objId && g.id != null) movedGateIds[g.id] = 1; });
+    move('stageGateEdges', function (e) { return e && (movedGateIds[e.fromGate] || movedGateIds[e.toGate]); });
+
+    // 3) map-keyed: per-objective gateMode + ETB tree
+    if (Object.prototype.hasOwnProperty.call(from.gateMode, objId)) { if (!Object.prototype.hasOwnProperty.call(to.gateMode, objId)) { to.gateMode[objId] = from.gateMode[objId]; moved.gateMode = 1; } delete from.gateMode[objId]; }
+    if (Object.prototype.hasOwnProperty.call(from.etbTrees, objId)) { if (!Object.prototype.hasOwnProperty.call(to.etbTrees, objId)) { to.etbTrees[objId] = from.etbTrees[objId]; moved.etbTree = 1; } delete from.etbTrees[objId]; }
+    // chainGatesByDate: entries keyed by a moved gate id
+    Object.keys(from.chainGatesByDate).forEach(function (gid) {
+      if (movedGateIds[gid]) { if (!Object.prototype.hasOwnProperty.call(to.chainGatesByDate, gid)) { to.chainGatesByDate[gid] = from.chainGatesByDate[gid]; moved.chainGates++; } delete from.chainGatesByDate[gid]; }
+    });
+
+    return { fromDoc: from, toDoc: to, moved: moved };
+  }
+
+  // Count what an objective has in a doc (for the recovery preview). Mirrors moveObjectivePayload's reach.
+  function objectivePayloadCounts(doc, objId) {
+    doc = doc || {};
+    var g = (doc.stageGates || []).filter(function (x) { return x.objectiveId === objId; });
+    return {
+      keyResults: (doc.keyResults || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      kpis: (doc.kpis || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      stageGates: g.length,
+      tasks: (doc.tasks || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      boards: (doc.boards || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      risks: (doc.risks || []).filter(function (x) { return x.objectiveId === objId; }).length
+    };
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -2539,6 +2621,8 @@ html[data-theme="dark"] #etb-view{
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    moveObjectivePayload: moveObjectivePayload,
+    objectivePayloadCounts: objectivePayloadCounts,
     gateTileState: gateTileState,
     boardGateSummary: boardGateSummary,
     milestoneGanttSteps: milestoneGanttSteps,
@@ -2656,6 +2740,69 @@ async function apiVersion(id){ const r=await fetch(`${BROKER}/state/${id}/versio
 async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:auth()}); if(r.status===404) return null; if(!r.ok) throw r; return r.json(); }
 async function apiPut(id,doc,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})}); if(!r.ok) throw r; return r.json(); }
+
+/* ---------------- Recover stranded execution data (Option B stopgap) ----------------
+   An objective can be moved to a different division (portfolio edit), but its execution artifacts stay in the
+   OLD division's bin — so they vanish from this division's view while still showing in cross-division rollups.
+   This scans the OTHER business divisions' bins for artifacts belonging to THIS division's objectives, and,
+   on confirmation, moves the full objective payload here (RD.moveObjectivePayload) — writing the source bin
+   (payload removed) and this bin (payload added). Target is written FIRST so a mid-way failure never loses data. */
+let __recoverPlan = null;   // [{srcDiv, srcId, srcDoc, srcEtag, objId, counts}]
+function bizDivisions(){ return (portfolio && portfolio.divisions || []).filter(d=>divisionKindOf(d)==="biz"); }
+function divisionKindOf(d){ return (d && d.kind) ? d.kind : (RD.divisionKind? RD.divisionKind(d.id, portfolio) : "rd"); }
+async function scanStranded(){
+  __recoverPlan = [];
+  const myObjIds = new Set((portfolio.objectives||[]).filter(o=>o.divisionId===divisionId).map(o=>o.id));
+  const others = bizDivisions().filter(d=>d.id!==divisionId);
+  for(const d of others){
+    const binId = "BIZ-"+d.id;
+    let res=null; try{ res=await apiGet(binId); }catch(e){ continue; }
+    const doc = res && res.doc ? res.doc : res;   // apiGet may return {doc,etag} or the doc
+    const etag = res && res.etag!=null ? res.etag : (res && res.version!=null ? res.version : "0");
+    if(!doc || typeof doc!=="object") continue;
+    // any of MY objectives with artifacts sitting in THIS other bin?
+    myObjIds.forEach(objId=>{
+      const c = RD.objectivePayloadCounts(doc, objId);
+      const total = c.keyResults+c.kpis+c.stageGates+c.tasks+c.boards+c.risks;
+      if(total>0) __recoverPlan.push({ srcDiv:d.id, srcName:(d.name||d.id), srcId:binId, srcDoc:doc, srcEtag:etag, objId, counts:c });
+    });
+  }
+  return __recoverPlan;
+}
+function objName(objId){ const o=(portfolio.objectives||[]).find(x=>x.id===objId); return o?(o.statement||o.id):objId; }
+function renderRecoverReport(){
+  const host=document.getElementById("recoverReport"); if(!host) return;
+  if(!__recoverPlan){ host.innerHTML=""; return; }
+  if(!__recoverPlan.length){ host.innerHTML='<p class="keynote" style="color:var(--ok)">No stranded execution data found for this division\u2019s objectives.</p>'; return; }
+  let h='<div class="recover-list">';
+  __recoverPlan.forEach((p,i)=>{ const c=p.counts; const bits=[];
+    if(c.keyResults)bits.push(c.keyResults+" KR"+(c.keyResults>1?"s":"")); if(c.kpis)bits.push(c.kpis+" KPI"+(c.kpis>1?"s":""));
+    if(c.stageGates)bits.push(c.stageGates+" gate"+(c.stageGates>1?"s":"")); if(c.tasks)bits.push(c.tasks+" task"+(c.tasks>1?"s":""));
+    if(c.boards)bits.push(c.boards+" board"+(c.boards>1?"s":"")); if(c.risks)bits.push(c.risks+" risk"+(c.risks>1?"s":""));
+    h+=`<div class="recover-row"><b>${esc(objName(p.objId))}</b><span class="muted"> \u2014 ${bits.join(", ")} stranded in <b>${esc(p.srcName)}</b></span></div>`;
+  });
+  h+='</div><div class="row" style="margin-top:8px"><button id="btnDoRecover" class="primary">Move it all here</button><button id="btnCancelRecover">Cancel</button></div>';
+  host.innerHTML=h;
+  document.getElementById("btnDoRecover").onclick=doRecover;
+  document.getElementById("btnCancelRecover").onclick=()=>{ __recoverPlan=null; renderRecoverReport(); setMsg("#recoverMsg","",""); };
+}
+async function doRecover(){
+  if(!__recoverPlan||!__recoverPlan.length) return;
+  const btn=document.getElementById("btnDoRecover"); if(btn){ btn.disabled=true; btn.textContent="Moving\u2026"; }
+  let okCount=0, failCount=0;
+  for(const p of __recoverPlan){
+    try{
+      const r = RD.moveObjectivePayload(p.srcDoc, exec, p.objId);
+      exec = r.toDoc;                                   // this bin gains the payload
+      await flushPersist();                             // 1) write THIS bin first (payload never absent from both)
+      await apiPut(p.srcId, r.fromDoc, p.srcEtag);      // 2) then write the source bin (payload removed)
+      okCount++;
+    }catch(e){ failCount++; }
+  }
+  __recoverPlan=null; renderRecoverReport();
+  setMsg("#recoverMsg", failCount? (okCount+" recovered, "+failCount+" failed \u2014 reopen to retry") : (okCount+" objective"+(okCount>1?"s":"")+" recovered"), failCount?"error":"ok");
+  renderAll();
+}
 
 /* ---------------- date <-> day-count ---------------- */
 const EPOCH = Date.UTC(2020,0,1);
@@ -4635,14 +4782,14 @@ function renderKanban(host){
   const head=`<tr><th class="kb-corner">Swimlane \\ Stage</th>`+board.columns.map(c=>
     `<th class="kb-colh"><span class="kb-colname">${esc(c.name)}</span><span class="kb-colcnt">${sum.perColumn[c.id]||0}</span></th>`).join("")+`</tr>`;
   const body=(board.swimlanes||[]).map(lane=>{
-    const rule=`<div class="kb-rule">${lane.maxDaysPerCol?`max <b>${lane.maxDaysPerCol}d</b>/col`:"no col limit"}${lane.deadline?` \\u00b7 due <b>${esc(lane.deadline)}</b>`:""}</div>`;
+    const rule=`<div class="kb-rule">${lane.maxDaysPerCol?`max <b>${lane.maxDaysPerCol}d</b>/col`:"no col limit"}${lane.deadline?` \u00b7 due <b>${esc(lane.deadline)}</b>`:""}</div>`;
     const cells=board.columns.map(c=>{
       const tiles=(board.tiles||[]).filter(t=>t.lane===lane.id && t.col===c.id);
       const tileHtml=tiles.map(t=>{
         const closed=(t.col===lastColId);
         const h=closed?{status:"closed",daysInCol:0,note:"done"}:RD.tileHealth(t, laneById[t.lane], today);
         const cls=closed?"closed":h.status;
-        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}"><div class="kb-tname">${esc(t.name||"(tile)")}</div><div class="kb-tmeta"><span class="kb-tdays">${closed?"\\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
+        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}"><div class="kb-tname">${esc(t.name||"(tile)")}</div><div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
       }).join("");
       return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
     }).join("");
@@ -6419,6 +6566,12 @@ function wire(){
   ETB_ROOT.querySelectorAll('.tabs button').forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
   $("#btnSettings").addEventListener("click",()=>openSettings(true));
   $("#btnCloseSettings").addEventListener("click",()=>openSettings(false));
+  { const rb=$("#btnRecoverStranded"); if(rb) rb.addEventListener("click",async()=>{
+      rb.disabled=true; const old=rb.textContent; rb.textContent="Scanning\u2026"; setMsg("#recoverMsg","","");
+      try{ await scanStranded(); renderRecoverReport(); if(__recoverPlan&&!__recoverPlan.length) setMsg("#recoverMsg","nothing stranded","ok"); }
+      catch(e){ setMsg("#recoverMsg", (e&&e.message)||"scan failed","error"); }
+      finally{ rb.disabled=false; rb.textContent=old; }
+    }); }
   $("#settings").addEventListener("click",(e)=>{if(e.target.id==="settings")openSettings(false);});
   $("#btnSaveCreds").addEventListener("click",()=>{
     state.editor=$("#editorName").value.trim();lsSet(LS.editor,state.editor);
