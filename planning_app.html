@@ -392,6 +392,8 @@
   .gbar.gsetbar.cancelled{opacity:.42;border-color:var(--none)!important}
   .gbar.gsetbar.cancelled .gbarfill{background:repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px)!important;opacity:.6}
   .gdia.done{background:var(--ok);border-color:var(--ok)}
+  .gdia.gsq .gsqn{position:absolute;left:50%;top:-13px;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink);line-height:1}
+  .gbar.kbspan{background:var(--line);opacity:.6;height:3px;top:13px}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
@@ -3037,6 +3039,7 @@ function hasArchChildren(entity,id){
 /* ---- health band → colour (shared by tree + gantt) ---- */
 function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
 function nodeBand(entity,id,em){ em=em||pfMap();
+  if(entity==="milestonekr" || entity==="board" || entity==="boardtile" || entity==="mstep") return null;
   if(entity==="stagegateset") return RD.band(RD.setScore(id, em, todayDay()));
   if(entity==="milestone"){ const ms=(portfolio.milestones||[]).find(m=>m.id===id); if(ms && RD.milestoneAchieved(ms,em)) return "on-track"; return RD.band(RD.milestoneScore(id,em)); }
   let s=null;
@@ -3045,6 +3048,7 @@ function nodeBand(entity,id,em){ em=em||pfMap();
   else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
   return RD.band(s); }
 const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegateset:1};
+const KANBAN_ENTITIES={milestonekr:1,mstep:1,board:1,boardtile:1};
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
@@ -3605,6 +3609,7 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+let ganttBoardSeen = new Set();   // boards we have already auto-collapsed once (so re-expand sticks)
 // Gantt view toggles. Seeded from ?ganttActive=1 / ?ganttQuarter=1, then owned by the toolbar.
 // They compose: filtering shrinks the tree (and, because the axis is derived from what survives, the axis with
 // it); the quarter clamp instead pins the window regardless of what is on screen.
@@ -3906,6 +3911,34 @@ function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
   function ganttTodayIso(){ return dayToIso(td); }
+  // latest due-day across tiles for gate column k (the "all clear by" point used on the collapsed board row)
+  function boardGateLatestDue(board, k){
+    let latest=null;
+    (board.tiles||[]).forEach(t=>{ const lane=(board.swimlanes||[]).find(l=>l.id===t.lane);
+      const iso=RD.gateDueDates(board.columns, lane, t).due[k]; const d=isoToDay(iso);
+      if(d!=null){ latest=(latest==null||d>latest)?d:latest; } });
+    return latest;
+  }
+  const GATE_WORST_CLS={red:"overdue", orange:"passed-late", green:"passed", none:"pending"};
+  // draw a gate-square series for a Kanban row. collapsed board -> one square per column at latest-due, with a
+  // passed-count label + worst-status colour; a tile row -> one square per column at that tile's due, per-tile status.
+  function kanbanGateSquares(n){
+    const g=n.g, board=g.__rec; let out="";
+    if(n.entity==="board"){
+      (board.columns||[]).forEach((c,k)=>{ const d=boardGateLatestDue(board,k); if(d==null) return;
+        const sm=RD.boardGateSummary(board,k,ganttTodayIso()); const cls=GATE_WORST_CLS[sm.worst]||"pending";
+        out+=`<div class="gdia gsq ${cls}" style="left:${x(d)}px" title="${esc(c.name)} — ${sm.passed}/${sm.total} passed">`+
+             `<span class="gsqn">${sm.passed}</span></div>`; });
+    } else if(n.entity==="boardtile"){
+      const tile=g.__rec, b=tile.__board, lane=(b.swimlanes||[]).find(l=>l.id===tile.lane);
+      const dd=RD.gateDueDates(b.columns, lane, tile).due;
+      (b.columns||[]).forEach((c,k)=>{ const d=isoToDay(dd[k]); if(d==null) return;
+        const st=RD.gateTileState(b, tile, k, ganttTodayIso());
+        const cls=(st==="passed-ontime")?"passed":st;   // reuse the stage-gate square colour classes
+        out+=`<div class="gdia gsq ${cls}" style="left:${x(d)}px" title="${esc(c.name)} — ${st}"></div>`; });
+    }
+    return out;
+  }
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
@@ -4126,10 +4159,12 @@ function renderGantt(){
   function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
   const ticks=quarterTicks(lo,hi);
   // ---- flatten respecting collapse ----
+  // boards collapse by default (show the gate-square summary row); only auto-collapse each once so the user can re-open.
+  (function seedBoardCollapse(nn){ nn.forEach(function walk(n){ if(n.entity==="board" && !ganttBoardSeen.has(n.key)){ ganttBoardSeen.add(n.key); ganttCollapsed.add(n.key); } n.kids.forEach(walk); }); })(roots);
   const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
   const hasGates = rows.some(n=>n.entity==="stagegate");
   const NAV={division:1,initiative:1,objective:1,milestone:1};
-  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegateset:"font-size:12.5px;font-weight:500;font-style:italic",stagegate:"font-size:12.5px;font-weight:400"};
+  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegateset:"font-size:12.5px;font-weight:500;font-style:italic",stagegate:"font-size:12.5px;font-weight:400",milestonekr:"font-size:12px;font-weight:600",mstep:"font-size:11.5px;font-weight:400",board:"font-size:12px;font-weight:600",boardtile:"font-size:11.5px;font-weight:400"}
   let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
   // quarter gridlines + today, spanning the full chart height behind the rows
   ticks.forEach(t=>{ if(t.day>=lo&&t.day<=hi){ html+=`<div class="ggrid" style="left:${LABELW+x(t.day)}px"></div>`; } });
@@ -4156,7 +4191,12 @@ function renderGantt(){
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
-    if(g.kind==="bar"){
+    if(n.entity==="board" || n.entity==="boardtile"){
+      // a faint span connecting the gates, then the gate squares on top
+      if(g.ds!=null && g.de!=null){ const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx);
+        html+=`<div class="gbar kbspan" style="left:${bx}px;width:${bw}px"></div>`; }
+      html+=kanbanGateSquares(n);
+    } else if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
@@ -4175,6 +4215,11 @@ function renderGantt(){
         html+=`<div class="gdia gsq ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
       html+=`<div class="gdia gsq ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+    } else if(n.entity==="mstep"){
+      // a milestone-KR step: a simple status diamond at its due date (done=green, overdue=red, pending=grey)
+      const st=(g.msStatus==="done")?"done":(g.msStatus==="overdue")?"overdue":"pending";
+      const ex=x(g.planned);
+      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${esc(nameOf(n.entity,n.rec))} — due ${dayToIso(g.planned)} · ${g.msStatus}"></div>`;
     } else {
       // Milestones read exactly like stage-gates: a grey ghost at the planned date, a connector, and a status
       // marker at the actual date (or the projection when it hasn't happened yet).
