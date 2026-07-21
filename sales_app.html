@@ -4659,7 +4659,7 @@ function renderKanban(host){
 }
 
 function kanbanConfigHtml(board){
-  const cols=board.columns.map(c=>`<div class="kb-cfgrow"><input type="text" data-kbcolname="${c.id}" value="${esc(c.name)}">${board.columns.length>1?`<button class="ghost mini danger" data-kbcoldel="${c.id}">\\u2715</button>`:""}</div>`).join("");
+  const cols=board.columns.map(c=>`<div class="kb-cfgrow"><input type="text" data-kbcolname="${c.id}" value="${esc(c.name)}">${board.columns.length>1?`<button class="ghost mini danger" data-kbcoldel="${c.id}">\u2715</button>`:""}</div>`).join("");
   const lanes=board.swimlanes.map(l=>`<tr><td><input type="text" data-kblanename="${l.id}" value="${esc(l.name)}"></td><td><input type="number" min="0" data-kblanemax="${l.id}" value="${l.maxDaysPerCol||""}"></td><td><input type="date" data-kblanedue="${l.id}" value="${l.deadline||""}"></td><td>${board.swimlanes.length>1?`<button class="ghost mini danger" data-kblanedel="${l.id}">\\u2715</button>`:""}</td></tr>`).join("");
   return `<div class="kb-cfg"><div class="kb-cfgcol"><h4>Board name</h4><input type="text" data-kbboardname="${board.id}" value="${esc(board.name)}" style="width:100%"><h4>Columns (stage-gates)</h4>${cols}<button class="ghost mini" data-kbaddcol="${board.id}">+ column</button></div><div class="kb-cfgcol"><h4>Swimlanes &amp; rules</h4><table class="kb-lanecfg"><thead><tr><th>Name</th><th>Max d/col</th><th>Deadline</th><th></th></tr></thead><tbody>${lanes}</tbody></table><button class="ghost mini" data-kbaddlane="${board.id}">+ swimlane</button></div><div class="kb-cfgclose"><button class="ghost mini" data-kbcfgclose="1">done</button></div></div>`;
 }
