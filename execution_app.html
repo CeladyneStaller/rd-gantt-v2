@@ -463,6 +463,9 @@
   .fmea-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
   .overlay{display:none;position:fixed;inset:0;background:var(--scrim);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
   .overlay.open{display:flex}
+  .concl-body{padding:4px 2px}
+  .concl-body .result{border:none;padding:0;margin:0}
+  .concl-body .result-top{margin-bottom:4px}
   .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
   .modal-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
   .modal-title{font-size:14px;font-weight:600;color:var(--ink);flex:1}
@@ -5653,41 +5656,32 @@ function closePanel(){
 }
 // Read-only detail modal for a completed experiment (has an actual_outcome). Edit button hands off to the panel.
 function closeExpDetailModal(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');if(ov){ov.classList.remove('open');if(ov.parentNode)ov.parentNode.removeChild(ov);}}
-function closeConclusionModal(){const o=document.getElementById("concl-overlay");if(o)o.remove();}
+let __conclModalCtx=null, __conclPainting=false;
+function closeConclusionModal(){__conclModalCtx=null;const o=(ETB_ROOT&&ETB_ROOT.querySelector)?ETB_ROOT.querySelector("#concl-overlay"):document.getElementById("concl-overlay");if(o)o.remove();}
 function openConclusionModal(expId,resultId){
   closeConclusionModal();
-  const t=state.tree;const exp=t.experiments[expId];if(!exp)return;
-  const res=(exp.possible_results||[]).find(x=>x.id===resultId);if(!res)return;
-  const complete=!!exp.actual_outcome;   // a recorded outcome locks the conclusion -> amend-with-reason
+  const t=state.tree;const exp0=t.experiments[expId];if(!exp0)return;
+  if(!(exp0.possible_results||[]).some(x=>x.id===resultId))return;
   const ov=el("div","overlay");ov.id="concl-overlay";
   ov.addEventListener("click",e=>{if(e.target===ov)closeConclusionModal();});
-  const sheet=el("div","sheet");sheet.style.maxWidth="520px";
+  const sheet=el("div","sheet");sheet.style.maxWidth="560px";
   const hd=el("div","exp-modal-head");
-  hd.appendChild(Object.assign(el("h3"),{innerHTML:`<span class="mono" style="font-weight:600">${esc(exp.code||expId)}</span> \u00b7 ${esc(res.label||resultId)} \u2014 conclusion`}));
+  hd.appendChild(Object.assign(el("h3"),{innerHTML:`<span class="mono" style="font-weight:600">${esc(exp0.code||expId)}</span> \u00b7 result`}));
   const hx=el("button","modal-x","\u2715");hx.title="Close";hx.addEventListener("click",closeConclusionModal);hd.appendChild(hx);
   sheet.appendChild(hd);
-
-  const body=el("div","exp-modal-sec");
-  const ta=el("textarea");ta.className="scoped-ta";ta.value=res.conclusion==null?"":res.conclusion;ta.spellcheck=false;ta.rows=5;ta.placeholder="Add conclusion\u2026";
-  body.appendChild(fRow(complete?"Conclusion (amending)":"Conclusion",ta));
-  let reason=null;
-  if(complete){ reason=el("input");reason.placeholder="Reason for amendment (required)";body.appendChild(fRow("Reason",reason)); }
-  const bar=el("div","scoped-bar");
-  const save=el("button","primary",complete?"Save amendment":"Save");
-  const cancel=el("button","","Cancel");
-  const msg=el("span","scoped-msg");
-  save.addEventListener("click",()=>{
-    if(complete && !reason.value.trim()){msg.textContent="A reason is required.";msg.style.color="var(--stop-fg)";return;}
-    const opts=complete?{user:state.editor,reason:reason.value.trim()}:{user:state.editor};
-    setResultField(t,expId,resultId,"conclusion",ta.value,opts);
-    closeConclusionModal();softRefresh();
-  });
-  cancel.addEventListener("click",closeConclusionModal);
-  bar.appendChild(save);bar.appendChild(cancel);bar.appendChild(msg);
-  body.appendChild(bar);
-  sheet.appendChild(body);
+  const body=el("div","concl-body");sheet.appendChild(body);
+  // paint (and repaint) the single-result editor — the SAME card the experiment setup renders, scoped to one result
+  function paint(){
+    const tree=state.tree;const exp=tree.experiments[expId];
+    const res=exp && (exp.possible_results||[]).find(x=>x.id===resultId);
+    if(!exp||!res){ closeConclusionModal(); return; }
+    const types=tree.terminal_types||{};const complete=(exp.status==="complete")||!!exp.actual_outcome;
+    body.innerHTML="";
+    body.appendChild(renderResultEditor(tree,expId,exp,res,types,complete));
+  }
+  __conclModalCtx={expId:expId,resultId:resultId,paint:paint};   // renderPanel repaints the modal via this
+  paint();
   ov.appendChild(sheet);ETB_ROOT.appendChild(ov);ov.classList.add("open");
-  setTimeout(()=>ta.focus(),0);
 }
 function openExpDetailModal(expId){
   closeExpDetailModal();
@@ -5806,6 +5800,8 @@ function renderPanel(expId,opts){
   const bar=el("div","scoped-bar");const apply=el("button","primary","Apply");const msg=el("span","scoped-msg");bar.appendChild(apply);bar.appendChild(msg);det.appendChild(bar);
   apply.addEventListener("click",()=>{let p;try{p=JSON.parse(ta.value);}catch(e){msg.textContent="Parse error: "+e.message;msg.style.color="var(--stop-fg)";return;}p.id=expId;t.experiments[expId]=p;normalizeTree(t);softRefresh();renderPanel(expId,{scopedOpen:true,flash:"Applied."});});
   c.appendChild(det);
+  // keep an open single-result modal in sync with the drawer's re-render (guarded against re-entrancy)
+  if(__conclModalCtx && __conclModalCtx.expId===expId && !__conclPainting){ __conclPainting=true; try{ __conclModalCtx.paint(); }catch(e){} __conclPainting=false; }
 }
 
 function renderAccomplishments(t,expId,exp,res){
