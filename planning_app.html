@@ -1591,6 +1591,7 @@
   function _msDimKey(m, dim, portfolio) {
     if (dim === 'initiative') return m.initiativeId || '';
     if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'unit') { var iu = initiativeOf(m, portfolio); return (iu && unitIdOfDivision(iu.divisionId, portfolio)) || ''; }
     if (dim === 'product') return effProduct(m, portfolio) || '';
     if (dim === 'model') return effModel(m, portfolio) || '';
     return '';
@@ -2109,6 +2110,77 @@
     var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
     return null;
   }
+  // ---- Move an objective's entire execution payload between two exec docs -------------------
+  // Used by the sales app's "recover stranded data" (an objective moved divisions, but its execution
+  // artifacts stayed in the OLD division's bin). Pure: returns fresh {fromDoc, toDoc}. Moves every
+  // objective-scoped artifact — direct (by objectiveId), indirect (kpiUpdates by kpiId, gate edges by
+  // endpoint), and map-keyed (gateMode/etbTrees by objId, chainGatesByDate by moved gate). Additive and
+  // de-duplicating: an id already present in toDoc is not added twice. Later reused by Option A.
+  function moveObjectivePayload(fromDoc, toDoc, objId) {
+    var from = JSON.parse(JSON.stringify(fromDoc || {}));
+    var to = JSON.parse(JSON.stringify(toDoc || {}));
+    // ensure the collections exist on both
+    var ARR = ['keyResults','kpis','stageGates','tasks','boards','risks','catchupPlans','objectiveState','stageGateSets','kpiUpdates','stageGateEdges'];
+    for (var i = 0; i < ARR.length; i++) { if (!Array.isArray(from[ARR[i]])) from[ARR[i]] = []; if (!Array.isArray(to[ARR[i]])) to[ARR[i]] = []; }
+    if (!from.gateMode) from.gateMode = {}; if (!to.gateMode) to.gateMode = {};
+    if (!from.etbTrees) from.etbTrees = {}; if (!to.etbTrees) to.etbTrees = {};
+    if (!from.chainGatesByDate) from.chainGatesByDate = {}; if (!to.chainGatesByDate) to.chainGatesByDate = {};
+
+    var moved = { keyResults:0, kpis:0, stageGates:0, tasks:0, boards:0, risks:0, catchupPlans:0, objectiveState:0, stageGateSets:0, kpiUpdates:0, stageGateEdges:0, gateMode:0, etbTree:0, chainGates:0 };
+
+    // partition an array on `pred`: kept stay in `from`, matched move to `to` (de-duped by id)
+    function move(name, pred) {
+      var keep = [], has = {};
+      to[name].forEach(function (x) { if (x && x.id != null) has[x.id] = 1; });
+      from[name].forEach(function (x) {
+        if (pred(x)) { if (!(x && x.id != null && has[x.id])) { to[name].push(x); moved[name]++; } }
+        else keep.push(x);
+      });
+      from[name] = keep;
+    }
+
+    // 1) direct by objectiveId
+    move('keyResults',    function (x) { return x.objectiveId === objId; });
+    move('kpis',          function (x) { return x.objectiveId === objId; });
+    move('stageGates',    function (x) { return x.objectiveId === objId; });
+    move('tasks',         function (x) { return x.objectiveId === objId; });
+    move('boards',        function (x) { return x.objectiveId === objId; });
+    move('risks',         function (x) { return x.objectiveId === objId; });
+    move('catchupPlans',  function (x) { return x.objectiveId === objId; });
+    move('objectiveState',function (x) { return x.objectiveId === objId; });
+    move('stageGateSets', function (x) { return x.objectiveId === objId; });
+
+    // 2) indirect: KPI updates whose kpiId is one of the moved KPIs; gate edges touching a moved gate
+    var movedKpiIds = {}; to.kpis.forEach(function (k) { if (k.objectiveId === objId && k.id != null) movedKpiIds[k.id] = 1; });
+    move('kpiUpdates', function (u) { return u && movedKpiIds[u.kpiId]; });
+    var movedGateIds = {}; to.stageGates.forEach(function (g) { if (g.objectiveId === objId && g.id != null) movedGateIds[g.id] = 1; });
+    move('stageGateEdges', function (e) { return e && (movedGateIds[e.fromGate] || movedGateIds[e.toGate]); });
+
+    // 3) map-keyed: per-objective gateMode + ETB tree
+    if (Object.prototype.hasOwnProperty.call(from.gateMode, objId)) { if (!Object.prototype.hasOwnProperty.call(to.gateMode, objId)) { to.gateMode[objId] = from.gateMode[objId]; moved.gateMode = 1; } delete from.gateMode[objId]; }
+    if (Object.prototype.hasOwnProperty.call(from.etbTrees, objId)) { if (!Object.prototype.hasOwnProperty.call(to.etbTrees, objId)) { to.etbTrees[objId] = from.etbTrees[objId]; moved.etbTree = 1; } delete from.etbTrees[objId]; }
+    // chainGatesByDate: entries keyed by a moved gate id
+    Object.keys(from.chainGatesByDate).forEach(function (gid) {
+      if (movedGateIds[gid]) { if (!Object.prototype.hasOwnProperty.call(to.chainGatesByDate, gid)) { to.chainGatesByDate[gid] = from.chainGatesByDate[gid]; moved.chainGates++; } delete from.chainGatesByDate[gid]; }
+    });
+
+    return { fromDoc: from, toDoc: to, moved: moved };
+  }
+
+  // Count what an objective has in a doc (for the recovery preview). Mirrors moveObjectivePayload's reach.
+  function objectivePayloadCounts(doc, objId) {
+    doc = doc || {};
+    var g = (doc.stageGates || []).filter(function (x) { return x.objectiveId === objId; });
+    return {
+      keyResults: (doc.keyResults || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      kpis: (doc.kpis || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      stageGates: g.length,
+      tasks: (doc.tasks || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      boards: (doc.boards || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      risks: (doc.risks || []).filter(function (x) { return x.objectiveId === objId; }).length
+    };
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -2157,6 +2229,8 @@
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    moveObjectivePayload: moveObjectivePayload,
+    objectivePayloadCounts: objectivePayloadCounts,
     gateTileState: gateTileState,
     boardGateSummary: boardGateSummary,
     milestoneGanttSteps: milestoneGanttSteps,
@@ -3145,10 +3219,11 @@ function wireTreeLinks(root){
   root.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); armedDelete=null; structDelete(s.slice(0,i), s.slice(i+1)); });
 }
 /* ---------------- filter & group (Structure + Gantt) ---------------- */
-function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
+function pfAnyFilter(){ const f=pfFilters; return !!(f.unit||f.division||f.product||f.quarter||f.status); }
 function pfWorkFilter(){ const f=pfFilters; return !!(f.quarter||f.status); }
 function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=byId("model",c.modelId); return m?m.productId:null; } return null; }
 function objMatches(o){ const f=pfFilters;
+  if(f.unit && (RD.unitIdOfDivision(o.divisionId,portfolio)||"")!==f.unit) return false;
   if(f.division && o.divisionId!==f.division) return false;
   if(f.product && effProductOf(o)!==f.product) return false;
   if(f.quarter && (o.quarter||"")!==f.quarter) return false;
@@ -3172,6 +3247,7 @@ function filterBarHtml(showGroup){
   const grp = showGroup ? groupByControlHtml() : `<span class="fb-lbl">Filter</span>`;
   const chips = pfActiveChips();
   return `<div class="fb-row">${grp}`+
+    ((portfolio.units&&portfolio.units.length)? sel("Unit","unit",portfolio.units.map(u=>[u.id,u.name]),f.unit) : "")+
     sel("Division","division",portfolio.divisions.map(d=>[d.id,d.name]),f.division)+
     sel("Product","product",portfolio.products.map(p=>[p.id,p.name]),f.product)+
     sel("Quarter","quarter",pfQuartersList().map(q=>[q,q]),f.quarter)+
@@ -3180,6 +3256,7 @@ function filterBarHtml(showGroup){
 }
 function pfActiveChips(){
   const f=pfFilters, out=[];
+  if(f.unit){ const u=(portfolio.units||[]).find(x=>x.id===f.unit); out.push(["unit","Unit: "+((u&&u.name)||f.unit)]); }
   if(f.division) out.push(["division","Division: "+(nameOf("division",byId("division",f.division))||f.division)]);
   if(f.product) out.push(["product","Product: "+(productName(f.product)||f.product)]);
   if(f.quarter) out.push(["quarter","Quarter: "+f.quarter]);
@@ -3210,7 +3287,7 @@ function wireFilterBar(host){
       else { const arr=pfGroupDims.slice(); arr[i]=nd; pfGroupDims=arr.filter((d,j)=>j===i||d!==nd); } }
     closeEditor(); renderPortfolio(); renderGantt(); renderMilestones();
   });
-  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.unit=pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
 function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
 function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
@@ -3454,9 +3531,9 @@ function structDivShows(d){
   if(pfFilters.unit && (d.unitId||null)!==pfFilters.unit) return false;
   return true;
 }
-function structProdShows(p){ if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
+function structProdShows(p){ if(pfFilters.unit && (RD.unitIdOfDivision(p.divisionId,portfolio)||"")!==pfFilters.unit) return false; if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
 function structObjsOf(i){ let os=SEL.objective().filter(o=>o.initiativeId===i.id); if(pfAnyFilter()) os=os.filter(objMatches); return byOrder(os); }
-function structInitShows(i){ if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
+function structInitShows(i){ if(pfFilters.unit && (RD.unitIdOfDivision(i.divisionId,portfolio)||"")!==pfFilters.unit) return false; if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
 function structAdd(child, parentId){
   let prefill={};
   if(child==="model") prefill={productId:parentId};
@@ -4189,7 +4266,7 @@ function renderGantt(){
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
-    else if(n.entity==="milestonekr") nm=`<span class="gname static" style="${fs}"><span class="gkrtag">(KR)</span> ${name}</span>`;
+    else if(n.entity==="milestonekr") nm=`<span class="gname static" style="${fs}"><span class="gkrtag">(KR-M${n.rec.__krm})</span> ${name}</span>`;
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
