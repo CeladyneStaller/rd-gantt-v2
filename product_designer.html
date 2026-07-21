@@ -242,7 +242,7 @@
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▤</span> Product Specification</h1>
   <span class="div-pill" id="docPill">—</span>
   <div class="spacer"></div>
@@ -334,7 +334,7 @@
   // ALLOCATION number, never a position: reordering existing ids never changes
   // the next id. Display order lives in the separate `order` field.
   var ID_PREFIX = {
-    division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
+    unit: 'UNIT', division: 'DIV', initiative: 'INIT', milestone: 'MS', objective: 'OBJ',
     keyResult: 'KR', stageGate: 'SG', task: 'TSK', kpi: 'KPI', kpiGroup: 'KPG',
     product: 'PRD', model: 'MDL', stageGateSet: 'SGSET'
   };
@@ -342,7 +342,7 @@
   var ID_PAD = { initiative: 2, milestone: 2, objective: 2 };
 
   function stemFromParent(type, parentId, opts) {
-    if (type === 'division') return opts.code;                 // explicit short code, e.g. "FC"
+    if (type === 'division' || type === 'unit') return opts.code;   // explicit short code, e.g. "FC" / "BIZ"
     var parentStem = parentId.substring(parentId.indexOf('-') + 1); // "DIV-FC"->"FC", "INIT-FC-01"->"FC-01"
     if (type === 'objective') return parentStem + '-' + opts.quarter; // parent is the division
     return parentStem;
@@ -357,9 +357,9 @@
     var prefix = ID_PREFIX[type];
     if (!prefix) throw new Error('allocId: unknown type ' + type);
     var stem = stemFromParent(type, parentId, opts);
-    if (type === 'division') {
+    if (type === 'division' || type === 'unit') {
       var did = prefix + '-' + stem;
-      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate division code ' + stem);
+      if (existingIds.indexOf(did) !== -1) throw new Error('allocId: duplicate ' + type + ' code ' + stem);
       return did;
     }
     var base = prefix + '-' + stem + '-';
@@ -787,6 +787,190 @@
   }
   // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
   // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
+  // ---- Milestone KR tracking (embedded steps) ------------------------------
+  // A milestone KR is a weighted checklist of dated steps. Weights are forced to
+  // total 100: explicit weights are kept, blank weights split the remainder evenly.
+  // creditMode is KR-level: 'binary' gives a step its full weight only when it is
+  // 100% complete (strict); 'partial' scales weight by the step's completion.
+  function milestoneEffectiveWeights(steps) {
+    steps = steps || [];
+    var explicit = 0, blanks = 0;
+    for (var i = 0; i < steps.length; i++) {
+      var w = steps[i].weight;
+      if (w == null || w === '') blanks++; else explicit += Number(w);
+    }
+    var share = blanks ? Math.max(0, 100 - explicit) / blanks : 0;
+    return steps.map(function (s) {
+      var isBlank = (s.weight == null || s.weight === '');
+      return { id: s.id, w: isBlank ? share : Number(s.weight), auto: isBlank };
+    });
+  }
+  function milestoneStepContribution(step, w, mode) {
+    var c = Math.max(0, Math.min(100, Number(step.completion) || 0));
+    return mode === 'binary' ? (c >= 100 ? w : 0) : w * c / 100;
+  }
+  // 0..100, or null when the KR has no steps (so it drops out of the objective mean,
+  // exactly like a KPI KR with nothing measured).
+  function milestoneKrScore(kr) {
+    if (!kr) return null;
+    var steps = kr.steps || [];
+    if (!steps.length) return null;
+    var eff = milestoneEffectiveWeights(steps);
+    var wOf = {};
+    for (var i = 0; i < eff.length; i++) wOf[eff[i].id] = eff[i].w;
+    var mode = kr.creditMode || 'binary';
+    var total = 0;
+    for (var j = 0; j < steps.length; j++) total += milestoneStepContribution(steps[j], wOf[steps[j].id] || 0, mode);
+    return total;
+  }
+
+  // ---- Kanban stage-gating (board = one gate sequence, tiles = parallel workstreams) --------
+  // A board's columns are an ordered stage-gate sequence; each tile is one workstream (a "driver")
+  // moving through them. Swimlanes carry the rules (max days per column, a deadline) that drive both
+  // tile health and — via gateDueDates — where the gates land on a timeline. Gates are binary; no score.
+  function _kIsoDay(iso) { if (!iso) return null; var t = Date.parse(iso + 'T00:00:00Z'); return isNaN(t) ? null : Math.round(t / 86400000); }
+  function _kDayIso(d) { return d == null ? '' : new Date(d * 86400000).toISOString().slice(0, 10); }
+
+  // Health of a NON-closed tile from its swimlane's rules. (A tile in the last column is "closed" — the
+  // caller buckets that separately; health here is purely days-in-column + deadline proximity.)
+  function tileHealth(tile, swimlane, todayIso) {
+    var today = _kIsoDay(todayIso);
+    var entered = _kIsoDay(tile && tile.enteredCol);
+    var days = (today != null && entered != null) ? Math.max(0, today - entered) : 0;
+    var status = 'on-track', notes = [];
+    var max = swimlane ? (Number(swimlane.maxDaysPerCol) || 0) : 0;
+    if (max) {
+      if (days > max) { status = 'breached'; notes.push('over ' + max + 'd in column'); }
+      else if (days >= Math.ceil(max * 0.8)) { status = 'at-risk'; notes.push(days + '/' + max + 'd'); }
+    }
+    if (swimlane && swimlane.deadline && today != null) {
+      var left = _kIsoDay(swimlane.deadline) - today;
+      if (left < 0) { status = 'breached'; notes.push('past deadline'); }
+      else if (left <= 7 && status !== 'breached') { status = 'at-risk'; notes.push(left + 'd to deadline'); }
+    }
+    return { status: status, daysInCol: days, note: notes.join(' \u00b7 ') };
+  }
+
+  // Roll-up a board into the metrics a KPI/KR can read. A tile in the last column counts as "closed"
+  // (not on/at-risk/breached). Also returns per-column tile counts.
+  function boardSummary(board, todayIso) {
+    board = board || {};
+    var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
+    var lastColId = cols.length ? cols[cols.length - 1].id : null;
+    var laneById = {}; for (var i = 0; i < lanes.length; i++) laneById[lanes[i].id] = lanes[i];
+    var perColumn = {}; for (var c = 0; c < cols.length; c++) perColumn[cols[c].id] = 0;
+    var sum = { onTrack: 0, atRisk: 0, breached: 0, closed: 0, total: tiles.length };
+    for (var t = 0; t < tiles.length; t++) {
+      var tile = tiles[t];
+      if (perColumn.hasOwnProperty(tile.col)) perColumn[tile.col]++;
+      if (tile.col === lastColId) { sum.closed++; continue; }
+      var h = tileHealth(tile, laneById[tile.lane], todayIso);
+      if (h.status === 'breached') sum.breached++;
+      else if (h.status === 'at-risk') sum.atRisk++;
+      else sum.onTrack++;
+    }
+    return { perColumn: perColumn, onTrack: sum.onTrack, atRisk: sum.atRisk, breached: sum.breached, closed: sum.closed, total: sum.total };
+  }
+
+  // Pure transition: move a tile. Advancing to a new column resets days-in-column (enteredCol = today);
+  // changing swimlane re-parents its rules. Returns a NEW board (original untouched).
+  function dropTile(board, tileId, toCol, toLane, todayIso) {
+    var nb = JSON.parse(JSON.stringify(board || {}));
+    var tiles = nb.tiles || [], cols = nb.columns || [];
+    var colIndex = {}; for (var ci = 0; ci < cols.length; ci++) colIndex[cols[ci].id] = ci;
+    for (var i = 0; i < tiles.length; i++) {
+      if (tiles[i].id === tileId) {
+        if (toCol != null && tiles[i].col !== toCol) { tiles[i].col = toCol; tiles[i].enteredCol = todayIso || tiles[i].enteredCol; }
+        if (toLane != null) tiles[i].lane = toLane;
+        // reconcile gate-crossing stamps against the tile's (possibly new) position
+        var cur = colIndex[tiles[i].col];
+        if (cur != null) {
+          var gp = tiles[i].gatePassed || {};
+          for (var k = 0; k < cols.length; k++) {
+            var cid = cols[k].id;
+            if (k < cur) { if (!gp[cid]) gp[cid] = todayIso || ''; }   // newly cleared -> stamp today
+            else if (gp[cid]) { delete gp[cid]; }                       // retreated past -> un-stamp
+          }
+          tiles[i].gatePassed = gp;
+        }
+        break;
+      }
+    }
+    return nb;
+  }
+
+  // ---- Kanban gate status for the Gantt ----------------------------------------------------
+  // Per (tile, gate-column-index): has the tile cleared this gate, and on time or late? or is it overdue/pending?
+  //   'passed-ontime' | 'passed-late' | 'overdue' | 'pending'
+  function gateTileState(board, tile, colIndex, todayIso) {
+    var cols = (board && board.columns) || [];
+    if (colIndex < 0 || colIndex >= cols.length) return 'pending';
+    var laneById = {}; ((board && board.swimlanes) || []).forEach(function (l) { laneById[l.id] = l; });
+    var lane = laneById[tile.lane];
+    var due = gateDueDates(cols, lane, tile).due[colIndex];   // iso or ''
+    var curIdx = -1; for (var i = 0; i < cols.length; i++) if (cols[i].id === tile.col) { curIdx = i; break; }
+    var col = cols[colIndex];
+    if (curIdx > colIndex) {                                  // cleared this gate
+      var crossed = (tile.gatePassed || {})[col.id];
+      if (crossed && due && crossed > due) return 'passed-late';
+      return 'passed-ontime';
+    }
+    // not cleared
+    if (due && todayIso && todayIso > due) return 'overdue';
+    return 'pending';
+  }
+
+  // Aggregate a gate column across all tiles for the collapsed board row: how many passed, and the WORST state
+  // (red = any overdue > orange = any late > green = all passed > none = some pending, none late/overdue).
+  function boardGateSummary(board, colIndex, todayIso) {
+    var tiles = (board && board.tiles) || [];
+    var passed = 0, anyOverdue = false, anyLate = false, allPassed = tiles.length > 0;
+    for (var i = 0; i < tiles.length; i++) {
+      var st = gateTileState(board, tiles[i], colIndex, todayIso);
+      if (st === 'passed-ontime' || st === 'passed-late') passed++; else allPassed = false;
+      if (st === 'overdue') anyOverdue = true;
+      if (st === 'passed-late') anyLate = true;
+    }
+    var worst = anyOverdue ? 'red' : (anyLate ? 'orange' : (allPassed ? 'green' : 'none'));
+    return { passed: passed, total: tiles.length, worst: worst };
+  }
+
+  // Dated milestone-KR steps for the Gantt: only steps WITH a due date, each with a completion-derived status.
+  //   'done' (100%) | 'overdue' (<100 & past due) | 'pending'
+  function milestoneGanttSteps(kr, todayIso) {
+    var steps = (kr && kr.steps) || [];
+    var out = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (!s.due) continue;                                   // undated steps don't go on the timeline
+      var c = Math.max(0, Math.min(100, Number(s.completion) || 0));
+      var status = c >= 100 ? 'done' : ((todayIso && todayIso > s.due) ? 'overdue' : 'pending');
+      out.push({ id: s.id, name: s.name, due: s.due, completion: c, status: status });
+    }
+    return out;
+  }
+
+  // Where each gate (column) lands on a timeline for a given tile, from its swimlane's rules.
+  // due[i] = the date the tile should have CLEARED column i.
+  //   no deadline  -> forward:  due[i] = start + (i+1)*maxDaysPerCol
+  //   deadline set -> backward: due[last] = deadline; due[i] = deadline - (N-1-i)*maxDaysPerCol
+  //                   feasible iff (deadline - start) >= N*maxDaysPerCol
+  function gateDueDates(columns, swimlane, tile) {
+    var N = (columns || []).length;
+    var M = swimlane ? (Number(swimlane.maxDaysPerCol) || 0) : 0;
+    var S = _kIsoDay(tile && tile.startDate);
+    var due = [], feasible = true;
+    if (swimlane && swimlane.deadline) {
+      var D = _kIsoDay(swimlane.deadline);
+      for (var i = 0; i < N; i++) due.push(D == null ? '' : _kDayIso(D - (N - 1 - i) * M));
+      feasible = (D != null && S != null) ? (D - S) >= N * M : true;
+    } else {
+      for (var j = 0; j < N; j++) due.push(S == null ? '' : _kDayIso(S + (j + 1) * M));
+      feasible = true;
+    }
+    return { due: due, feasible: feasible };
+  }
+
   function keyResultScore(krId, execDocs) {
     var kr = findKr(krId, execDocs);
     var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
@@ -795,6 +979,7 @@
       return clamp(Number(kr.progress), 0, 100);
     }
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
+    if (tt === 'milestone') return milestoneKrScore(kr);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
   // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
@@ -1057,6 +1242,7 @@
   function _msDimKey(m, dim, portfolio) {
     if (dim === 'initiative') return m.initiativeId || '';
     if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'unit') { var iu = initiativeOf(m, portfolio); return (iu && unitIdOfDivision(iu.divisionId, portfolio)) || ''; }
     if (dim === 'product') return effProduct(m, portfolio) || '';
     if (dim === 'model') return effModel(m, portfolio) || '';
     return '';
@@ -1575,6 +1761,77 @@
     var gs=p.gates||[]; for(var i=0;i<gs.length;i++) if(gs[i].gateId===gateId) return gs[i];
     return null;
   }
+  // ---- Move an objective's entire execution payload between two exec docs -------------------
+  // Used by the sales app's "recover stranded data" (an objective moved divisions, but its execution
+  // artifacts stayed in the OLD division's bin). Pure: returns fresh {fromDoc, toDoc}. Moves every
+  // objective-scoped artifact — direct (by objectiveId), indirect (kpiUpdates by kpiId, gate edges by
+  // endpoint), and map-keyed (gateMode/etbTrees by objId, chainGatesByDate by moved gate). Additive and
+  // de-duplicating: an id already present in toDoc is not added twice. Later reused by Option A.
+  function moveObjectivePayload(fromDoc, toDoc, objId) {
+    var from = JSON.parse(JSON.stringify(fromDoc || {}));
+    var to = JSON.parse(JSON.stringify(toDoc || {}));
+    // ensure the collections exist on both
+    var ARR = ['keyResults','kpis','stageGates','tasks','boards','risks','catchupPlans','objectiveState','stageGateSets','kpiUpdates','stageGateEdges'];
+    for (var i = 0; i < ARR.length; i++) { if (!Array.isArray(from[ARR[i]])) from[ARR[i]] = []; if (!Array.isArray(to[ARR[i]])) to[ARR[i]] = []; }
+    if (!from.gateMode) from.gateMode = {}; if (!to.gateMode) to.gateMode = {};
+    if (!from.etbTrees) from.etbTrees = {}; if (!to.etbTrees) to.etbTrees = {};
+    if (!from.chainGatesByDate) from.chainGatesByDate = {}; if (!to.chainGatesByDate) to.chainGatesByDate = {};
+
+    var moved = { keyResults:0, kpis:0, stageGates:0, tasks:0, boards:0, risks:0, catchupPlans:0, objectiveState:0, stageGateSets:0, kpiUpdates:0, stageGateEdges:0, gateMode:0, etbTree:0, chainGates:0 };
+
+    // partition an array on `pred`: kept stay in `from`, matched move to `to` (de-duped by id)
+    function move(name, pred) {
+      var keep = [], has = {};
+      to[name].forEach(function (x) { if (x && x.id != null) has[x.id] = 1; });
+      from[name].forEach(function (x) {
+        if (pred(x)) { if (!(x && x.id != null && has[x.id])) { to[name].push(x); moved[name]++; } }
+        else keep.push(x);
+      });
+      from[name] = keep;
+    }
+
+    // 1) direct by objectiveId
+    move('keyResults',    function (x) { return x.objectiveId === objId; });
+    move('kpis',          function (x) { return x.objectiveId === objId; });
+    move('stageGates',    function (x) { return x.objectiveId === objId; });
+    move('tasks',         function (x) { return x.objectiveId === objId; });
+    move('boards',        function (x) { return x.objectiveId === objId; });
+    move('risks',         function (x) { return x.objectiveId === objId; });
+    move('catchupPlans',  function (x) { return x.objectiveId === objId; });
+    move('objectiveState',function (x) { return x.objectiveId === objId; });
+    move('stageGateSets', function (x) { return x.objectiveId === objId; });
+
+    // 2) indirect: KPI updates whose kpiId is one of the moved KPIs; gate edges touching a moved gate
+    var movedKpiIds = {}; to.kpis.forEach(function (k) { if (k.objectiveId === objId && k.id != null) movedKpiIds[k.id] = 1; });
+    move('kpiUpdates', function (u) { return u && movedKpiIds[u.kpiId]; });
+    var movedGateIds = {}; to.stageGates.forEach(function (g) { if (g.objectiveId === objId && g.id != null) movedGateIds[g.id] = 1; });
+    move('stageGateEdges', function (e) { return e && (movedGateIds[e.fromGate] || movedGateIds[e.toGate]); });
+
+    // 3) map-keyed: per-objective gateMode + ETB tree
+    if (Object.prototype.hasOwnProperty.call(from.gateMode, objId)) { if (!Object.prototype.hasOwnProperty.call(to.gateMode, objId)) { to.gateMode[objId] = from.gateMode[objId]; moved.gateMode = 1; } delete from.gateMode[objId]; }
+    if (Object.prototype.hasOwnProperty.call(from.etbTrees, objId)) { if (!Object.prototype.hasOwnProperty.call(to.etbTrees, objId)) { to.etbTrees[objId] = from.etbTrees[objId]; moved.etbTree = 1; } delete from.etbTrees[objId]; }
+    // chainGatesByDate: entries keyed by a moved gate id
+    Object.keys(from.chainGatesByDate).forEach(function (gid) {
+      if (movedGateIds[gid]) { if (!Object.prototype.hasOwnProperty.call(to.chainGatesByDate, gid)) { to.chainGatesByDate[gid] = from.chainGatesByDate[gid]; moved.chainGates++; } delete from.chainGatesByDate[gid]; }
+    });
+
+    return { fromDoc: from, toDoc: to, moved: moved };
+  }
+
+  // Count what an objective has in a doc (for the recovery preview). Mirrors moveObjectivePayload's reach.
+  function objectivePayloadCounts(doc, objId) {
+    doc = doc || {};
+    var g = (doc.stageGates || []).filter(function (x) { return x.objectiveId === objId; });
+    return {
+      keyResults: (doc.keyResults || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      kpis: (doc.kpis || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      stageGates: g.length,
+      tasks: (doc.tasks || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      boards: (doc.boards || []).filter(function (x) { return x.objectiveId === objId; }).length,
+      risks: (doc.risks || []).filter(function (x) { return x.objectiveId === objId; }).length
+    };
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1616,6 +1873,18 @@
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    milestoneEffectiveWeights: milestoneEffectiveWeights,
+    milestoneStepContribution: milestoneStepContribution,
+    milestoneKrScore: milestoneKrScore,
+    tileHealth: tileHealth,
+    boardSummary: boardSummary,
+    dropTile: dropTile,
+    gateDueDates: gateDueDates,
+    moveObjectivePayload: moveObjectivePayload,
+    objectivePayloadCounts: objectivePayloadCounts,
+    gateTileState: gateTileState,
+    boardGateSummary: boardGateSummary,
+    milestoneGanttSteps: milestoneGanttSteps,
     keyResultPaceBand: keyResultPaceBand,
     keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,
@@ -1853,7 +2122,9 @@ async function loadAll(){
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio on the broker yet — create it in the Planning app first.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); return; }
     portfolio = p.doc; portfolioVersion = p.version; portfolioEtag = p.etag;
-    if(!divisionId) divisionId = resolveDivision() || (portfolio.divisions && portfolio.divisions[0] && portfolio.divisions[0].id);
+    if(!divisionId) divisionId = resolveDivision() || (pdDivisions()[0] && pdDivisions()[0].id);
+    // if the resolved division is a biz division (passed via ?division= or stored), redirect to the first product division
+    { const dd=(portfolio&&portfolio.divisions||[]).find(x=>x.id===divisionId); if(dd && RD.divisionKind(dd)==="biz") divisionId = (pdDivisions()[0] && pdDivisions()[0].id) || divisionId; }
     if(!divisionId){ setMsg("No divisions exist yet — add one in Planning.","err"); return; }
     localStorage.setItem("rd_division", divisionId);
     const s = await apiGet(specId());
@@ -1981,9 +2252,12 @@ function resolveRef(member){
 }
 
 /* ---------------- model select ---------------- */
+// The Product Designer is a product/hardware tool; kind="biz" divisions (sales/business dev) have no
+// product hierarchy, so they are excluded from the division picker and the default-division fallback.
+function pdDivisions(){ return ((portfolio&&portfolio.divisions)||[]).filter(d=>RD.divisionKind(d)!=="biz"); }
 function fillDivSelect(){
   const ds=document.getElementById("divSelect"); if(!ds) return;
-  const divs=(portfolio&&portfolio.divisions)||[];
+  const divs=pdDivisions();
   ds.innerHTML = divs.length ? divs.map(d=>`<option value="${d.id}">${esc(d.name||d.id)}</option>`).join("")
                              : `<option value="">no divisions</option>`;
   if(divisionId && divs.find(d=>d.id===divisionId)) ds.value=divisionId;

@@ -818,7 +818,7 @@ html[data-theme="dark"] #etb-view{
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
   <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <div class="spacer"></div>
@@ -1927,6 +1927,7 @@ html[data-theme="dark"] #etb-view{
   function _msDimKey(m, dim, portfolio) {
     if (dim === 'initiative') return m.initiativeId || '';
     if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'unit') { var iu = initiativeOf(m, portfolio); return (iu && unitIdOfDivision(iu.divisionId, portfolio)) || ''; }
     if (dim === 'product') return effProduct(m, portfolio) || '';
     if (dim === 'model') return effModel(m, portfolio) || '';
     return '';
