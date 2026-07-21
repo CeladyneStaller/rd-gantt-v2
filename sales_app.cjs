@@ -65,13 +65,18 @@ function boot(html, url){
   ok(isH(make('<button class="ghost mini" onclick="openFmeaModal()">+ Add problem</button>')),
      "the FMEA + Add problem button is hidden in the Sales app too");
 
-  // ---- 6. the two apps differ ONLY where intended: identical but for BIZ-/EXEC- and the branding strings ----
-  const norm=t=>t.replace(/BIZ-/g,'@NS@').replace(/EXEC-/g,'@NS@')
-                  .replace(/Sales/g,'@BR@').replace(/R&amp;D Execution/g,'@BR@').replace(/R&D Execution/g,'@BR@')
-                  // the one hand-added comment on the execId line is an intended, documented difference
-                  .replace(/   \/\/ @BR@\/Business workspace; R&D execution uses @NS@/,'');
-  ok(norm(SALES)===norm(EXEC),
-     "after masking the namespace prefix, the branding, and the one documented execId comment, the builds are byte-identical");
+  // ---- 6. the Sales app has now DIVERGED from the execution app (milestone KRs are sales-first) ----
+  // The byte-identical invariant is retired by design. The new invariant: both apps build, share the
+  // engine + namespace/branding delta, AND the Sales app carries its own milestone-KR machinery that the
+  // execution app does not yet have.
+  ok(SALES.length>0 && EXEC.length>0, "both apps build");
+  ok(SALES.indexOf('milestoneKrScore')>=0, "the Sales build carries the shared milestone engine");
+  ok(SALES.indexOf('msStatusPanel')>=0 && SALES.indexOf('data-msmode')>=0,
+     "the Sales app has milestone-KR UI (status drawer + credit-mode toggle)");
+  ok(EXEC.indexOf('msStatusPanel')<0,
+     "the execution app does NOT yet have the milestone UI — the two have intentionally diverged");
+  // the shared, hard-won protections must survive the divergence in the Sales app
+  ok(SALES.indexOf('readonly')>=0, "the Sales app still carries the read-only guard");
 
   out.forEach(l=>{ if(l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));

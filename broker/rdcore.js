@@ -496,6 +496,190 @@
   }
   // keyResultScore: percentage -> manual %, subkr -> weighted sub-KR mean,
   // else (kpi / absent) -> mean of the KR's KPIs' resolved scores
+  // ---- Milestone KR tracking (embedded steps) ------------------------------
+  // A milestone KR is a weighted checklist of dated steps. Weights are forced to
+  // total 100: explicit weights are kept, blank weights split the remainder evenly.
+  // creditMode is KR-level: 'binary' gives a step its full weight only when it is
+  // 100% complete (strict); 'partial' scales weight by the step's completion.
+  function milestoneEffectiveWeights(steps) {
+    steps = steps || [];
+    var explicit = 0, blanks = 0;
+    for (var i = 0; i < steps.length; i++) {
+      var w = steps[i].weight;
+      if (w == null || w === '') blanks++; else explicit += Number(w);
+    }
+    var share = blanks ? Math.max(0, 100 - explicit) / blanks : 0;
+    return steps.map(function (s) {
+      var isBlank = (s.weight == null || s.weight === '');
+      return { id: s.id, w: isBlank ? share : Number(s.weight), auto: isBlank };
+    });
+  }
+  function milestoneStepContribution(step, w, mode) {
+    var c = Math.max(0, Math.min(100, Number(step.completion) || 0));
+    return mode === 'binary' ? (c >= 100 ? w : 0) : w * c / 100;
+  }
+  // 0..100, or null when the KR has no steps (so it drops out of the objective mean,
+  // exactly like a KPI KR with nothing measured).
+  function milestoneKrScore(kr) {
+    if (!kr) return null;
+    var steps = kr.steps || [];
+    if (!steps.length) return null;
+    var eff = milestoneEffectiveWeights(steps);
+    var wOf = {};
+    for (var i = 0; i < eff.length; i++) wOf[eff[i].id] = eff[i].w;
+    var mode = kr.creditMode || 'binary';
+    var total = 0;
+    for (var j = 0; j < steps.length; j++) total += milestoneStepContribution(steps[j], wOf[steps[j].id] || 0, mode);
+    return total;
+  }
+
+  // ---- Kanban stage-gating (board = one gate sequence, tiles = parallel workstreams) --------
+  // A board's columns are an ordered stage-gate sequence; each tile is one workstream (a "driver")
+  // moving through them. Swimlanes carry the rules (max days per column, a deadline) that drive both
+  // tile health and — via gateDueDates — where the gates land on a timeline. Gates are binary; no score.
+  function _kIsoDay(iso) { if (!iso) return null; var t = Date.parse(iso + 'T00:00:00Z'); return isNaN(t) ? null : Math.round(t / 86400000); }
+  function _kDayIso(d) { return d == null ? '' : new Date(d * 86400000).toISOString().slice(0, 10); }
+
+  // Health of a NON-closed tile from its swimlane's rules. (A tile in the last column is "closed" — the
+  // caller buckets that separately; health here is purely days-in-column + deadline proximity.)
+  function tileHealth(tile, swimlane, todayIso) {
+    var today = _kIsoDay(todayIso);
+    var entered = _kIsoDay(tile && tile.enteredCol);
+    var days = (today != null && entered != null) ? Math.max(0, today - entered) : 0;
+    var status = 'on-track', notes = [];
+    var max = swimlane ? (Number(swimlane.maxDaysPerCol) || 0) : 0;
+    if (max) {
+      if (days > max) { status = 'breached'; notes.push('over ' + max + 'd in column'); }
+      else if (days >= Math.ceil(max * 0.8)) { status = 'at-risk'; notes.push(days + '/' + max + 'd'); }
+    }
+    if (swimlane && swimlane.deadline && today != null) {
+      var left = _kIsoDay(swimlane.deadline) - today;
+      if (left < 0) { status = 'breached'; notes.push('past deadline'); }
+      else if (left <= 7 && status !== 'breached') { status = 'at-risk'; notes.push(left + 'd to deadline'); }
+    }
+    return { status: status, daysInCol: days, note: notes.join(' \u00b7 ') };
+  }
+
+  // Roll-up a board into the metrics a KPI/KR can read. A tile in the last column counts as "closed"
+  // (not on/at-risk/breached). Also returns per-column tile counts.
+  function boardSummary(board, todayIso) {
+    board = board || {};
+    var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
+    var lastColId = cols.length ? cols[cols.length - 1].id : null;
+    var laneById = {}; for (var i = 0; i < lanes.length; i++) laneById[lanes[i].id] = lanes[i];
+    var perColumn = {}; for (var c = 0; c < cols.length; c++) perColumn[cols[c].id] = 0;
+    var sum = { onTrack: 0, atRisk: 0, breached: 0, closed: 0, total: tiles.length };
+    for (var t = 0; t < tiles.length; t++) {
+      var tile = tiles[t];
+      if (perColumn.hasOwnProperty(tile.col)) perColumn[tile.col]++;
+      if (tile.col === lastColId) { sum.closed++; continue; }
+      var h = tileHealth(tile, laneById[tile.lane], todayIso);
+      if (h.status === 'breached') sum.breached++;
+      else if (h.status === 'at-risk') sum.atRisk++;
+      else sum.onTrack++;
+    }
+    return { perColumn: perColumn, onTrack: sum.onTrack, atRisk: sum.atRisk, breached: sum.breached, closed: sum.closed, total: sum.total };
+  }
+
+  // Pure transition: move a tile. Advancing to a new column resets days-in-column (enteredCol = today);
+  // changing swimlane re-parents its rules. Returns a NEW board (original untouched).
+  function dropTile(board, tileId, toCol, toLane, todayIso) {
+    var nb = JSON.parse(JSON.stringify(board || {}));
+    var tiles = nb.tiles || [], cols = nb.columns || [];
+    var colIndex = {}; for (var ci = 0; ci < cols.length; ci++) colIndex[cols[ci].id] = ci;
+    for (var i = 0; i < tiles.length; i++) {
+      if (tiles[i].id === tileId) {
+        if (toCol != null && tiles[i].col !== toCol) { tiles[i].col = toCol; tiles[i].enteredCol = todayIso || tiles[i].enteredCol; }
+        if (toLane != null) tiles[i].lane = toLane;
+        // reconcile gate-crossing stamps against the tile's (possibly new) position
+        var cur = colIndex[tiles[i].col];
+        if (cur != null) {
+          var gp = tiles[i].gatePassed || {};
+          for (var k = 0; k < cols.length; k++) {
+            var cid = cols[k].id;
+            if (k < cur) { if (!gp[cid]) gp[cid] = todayIso || ''; }   // newly cleared -> stamp today
+            else if (gp[cid]) { delete gp[cid]; }                       // retreated past -> un-stamp
+          }
+          tiles[i].gatePassed = gp;
+        }
+        break;
+      }
+    }
+    return nb;
+  }
+
+  // ---- Kanban gate status for the Gantt ----------------------------------------------------
+  // Per (tile, gate-column-index): has the tile cleared this gate, and on time or late? or is it overdue/pending?
+  //   'passed-ontime' | 'passed-late' | 'overdue' | 'pending'
+  function gateTileState(board, tile, colIndex, todayIso) {
+    var cols = (board && board.columns) || [];
+    if (colIndex < 0 || colIndex >= cols.length) return 'pending';
+    var laneById = {}; ((board && board.swimlanes) || []).forEach(function (l) { laneById[l.id] = l; });
+    var lane = laneById[tile.lane];
+    var due = gateDueDates(cols, lane, tile).due[colIndex];   // iso or ''
+    var curIdx = -1; for (var i = 0; i < cols.length; i++) if (cols[i].id === tile.col) { curIdx = i; break; }
+    var col = cols[colIndex];
+    if (curIdx > colIndex) {                                  // cleared this gate
+      var crossed = (tile.gatePassed || {})[col.id];
+      if (crossed && due && crossed > due) return 'passed-late';
+      return 'passed-ontime';
+    }
+    // not cleared
+    if (due && todayIso && todayIso > due) return 'overdue';
+    return 'pending';
+  }
+
+  // Aggregate a gate column across all tiles for the collapsed board row: how many passed, and the WORST state
+  // (red = any overdue > orange = any late > green = all passed > none = some pending, none late/overdue).
+  function boardGateSummary(board, colIndex, todayIso) {
+    var tiles = (board && board.tiles) || [];
+    var passed = 0, anyOverdue = false, anyLate = false, allPassed = tiles.length > 0;
+    for (var i = 0; i < tiles.length; i++) {
+      var st = gateTileState(board, tiles[i], colIndex, todayIso);
+      if (st === 'passed-ontime' || st === 'passed-late') passed++; else allPassed = false;
+      if (st === 'overdue') anyOverdue = true;
+      if (st === 'passed-late') anyLate = true;
+    }
+    var worst = anyOverdue ? 'red' : (anyLate ? 'orange' : (allPassed ? 'green' : 'none'));
+    return { passed: passed, total: tiles.length, worst: worst };
+  }
+
+  // Dated milestone-KR steps for the Gantt: only steps WITH a due date, each with a completion-derived status.
+  //   'done' (100%) | 'overdue' (<100 & past due) | 'pending'
+  function milestoneGanttSteps(kr, todayIso) {
+    var steps = (kr && kr.steps) || [];
+    var out = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (!s.due) continue;                                   // undated steps don't go on the timeline
+      var c = Math.max(0, Math.min(100, Number(s.completion) || 0));
+      var status = c >= 100 ? 'done' : ((todayIso && todayIso > s.due) ? 'overdue' : 'pending');
+      out.push({ id: s.id, name: s.name, due: s.due, completion: c, status: status });
+    }
+    return out;
+  }
+
+  // Where each gate (column) lands on a timeline for a given tile, from its swimlane's rules.
+  // due[i] = the date the tile should have CLEARED column i.
+  //   no deadline  -> forward:  due[i] = start + (i+1)*maxDaysPerCol
+  //   deadline set -> backward: due[last] = deadline; due[i] = deadline - (N-1-i)*maxDaysPerCol
+  //                   feasible iff (deadline - start) >= N*maxDaysPerCol
+  function gateDueDates(columns, swimlane, tile) {
+    var N = (columns || []).length;
+    var M = swimlane ? (Number(swimlane.maxDaysPerCol) || 0) : 0;
+    var S = _kIsoDay(tile && tile.startDate);
+    var due = [], feasible = true;
+    if (swimlane && swimlane.deadline) {
+      var D = _kIsoDay(swimlane.deadline);
+      for (var i = 0; i < N; i++) due.push(D == null ? '' : _kDayIso(D - (N - 1 - i) * M));
+      feasible = (D != null && S != null) ? (D - S) >= N * M : true;
+    } else {
+      for (var j = 0; j < N; j++) due.push(S == null ? '' : _kDayIso(S + (j + 1) * M));
+      feasible = true;
+    }
+    return { due: due, feasible: feasible };
+  }
+
   function keyResultScore(krId, execDocs) {
     var kr = findKr(krId, execDocs);
     var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
@@ -504,6 +688,7 @@
       return clamp(Number(kr.progress), 0, 100);
     }
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
+    if (tt === 'milestone') return milestoneKrScore(kr);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
   }
   // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
@@ -1325,6 +1510,16 @@
     scoreEmbeddedKpi: scoreEmbeddedKpi,
     subKrScore: subKrScore,
     keyResultScore: keyResultScore,
+    milestoneEffectiveWeights: milestoneEffectiveWeights,
+    milestoneStepContribution: milestoneStepContribution,
+    milestoneKrScore: milestoneKrScore,
+    tileHealth: tileHealth,
+    boardSummary: boardSummary,
+    dropTile: dropTile,
+    gateDueDates: gateDueDates,
+    gateTileState: gateTileState,
+    boardGateSummary: boardGateSummary,
+    milestoneGanttSteps: milestoneGanttSteps,
     keyResultPaceBand: keyResultPaceBand,
     keyResultPace: keyResultPace,
     stageGateScore: stageGateScore,

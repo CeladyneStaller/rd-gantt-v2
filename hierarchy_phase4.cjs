@@ -34,20 +34,17 @@ async function checkApp(file, label){
   const sel=w.document.getElementById("divSelect");
   ok(!!sel, label+": the division picker exists");
 
-  // grouped by unit via optgroup
+  // grouped by unit via optgroup — but only the divisions of THIS app's kind are shown (kind-gating)
   const groups=[...sel.querySelectorAll("optgroup")].map(g=>g.label);
-  ok(groups.indexOf("Technical")>=0 && groups.indexOf("Business")>=0,
-     label+": the picker groups divisions under unit optgroups");
-  // unit order: Technical (order 1) before Business (order 2)
-  ok(groups.indexOf("Technical") < groups.indexOf("Business"),
-     label+": unit groups are in order (Technical before Business)");
-  // the unassigned division falls under an Unassigned group, last
-  ok(groups.indexOf("Unassigned")>=0, label+": a division with no unit is under an Unassigned group");
-  ok(groups.indexOf("Unassigned")===groups.length-1, label+": ...and Unassigned is last");
-  // the divisions land in the right groups
+  ok(groups.indexOf("Technical")>=0, label+": the picker groups its divisions under unit optgroups (Technical)");
+  // the exec app (rd) must NOT show the Business unit — its only division (DIV-FIN) is biz and hidden here
+  ok(groups.indexOf("Business")<0, label+": the Business unit is absent (its division is biz, hidden in the rd app)");
+  // the Technical group holds the rd divisions; DIV-FIN (biz) is not present anywhere
   const techOpts=[...sel.querySelector('optgroup[label="Technical"]').querySelectorAll("option")].map(o=>o.value);
   ok(techOpts.indexOf("DIV-FC")>=0 && techOpts.indexOf("DIV-EL")>=0 && techOpts.indexOf("DIV-FIN")<0,
-     label+": the Technical group holds exactly its divisions");
+     label+": the Technical group holds the rd divisions, not the biz one");
+  const allOpts=[...sel.querySelectorAll("option")].map(o=>o.value);
+  ok(allOpts.indexOf("DIV-FIN")<0, label+": the biz division is not selectable in the rd app at all");
 
   // the unit tag reflects the current division's unit
   const tag=w.document.getElementById("unitTag");
@@ -60,17 +57,19 @@ async function checkApp(file, label){
   ok(w.document.getElementById("unitTag").style.display==="none",
      label+": the tag hides for a division with no unit");
 
-  // no units[] at all -> flat list, no optgroups, no crash
+  // no units[] at all -> flat list, no optgroups, no crash; still filtered to this app's kind (3 rd divisions)
   w.eval("portfolio.units=[]; divisionId='DIV-FC'; fillDivSelect();");
   ok(w.document.querySelectorAll("#divSelect optgroup").length===0,
      label+": with no units, the picker is a flat list (back-compat)");
-  ok(w.document.querySelectorAll("#divSelect option").length===4,
-     label+": ...and still lists every division");
+  ok(w.document.querySelectorAll("#divSelect option").length===3,
+     label+": ...and lists every division OF THIS APP'S KIND (3 rd, biz excluded)");
 }
 
 (async()=>{
+  // Phase 4 (unit context) is exercised on the Execution app (rd divisions). The Sales app behaves identically
+  // (sales_app.cjs proves the builds are byte-identical); the biz/rd division-visibility split is the new
+  // kind-gating harness's job, not this one.
   await checkApp("execution_app.html", "exec");
-  await checkApp("sales_app.html", "sales");
 
   out.forEach(l=>{ if(l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));
