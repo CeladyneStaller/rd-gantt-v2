@@ -2746,6 +2746,7 @@ async function apiPut(id,doc,etag){ if(RO) return {version: etag||"0"}; const r=
    on confirmation, moves the full objective payload here (RD.moveObjectivePayload) — writing the source bin
    (payload removed) and this bin (payload added). Target is written FIRST so a mid-way failure never loses data. */
 let __recoverPlan = null;   // [{srcDiv, srcId, srcDoc, srcEtag, objId, counts}]
+function recoverSay(t,cls){ var e=document.getElementById("recoverMsg"); if(e){ e.textContent=t||""; e.className="io-msg "+(cls||"muted"); } }
 function bizDivisions(){ return (portfolio && portfolio.divisions || []).filter(d=>divisionKindOf(d)==="biz"); }
 function divisionKindOf(d){ return (d && d.kind) ? d.kind : (RD.divisionKind? RD.divisionKind(d.id, portfolio) : "rd"); }
 async function scanStranded(){
@@ -2782,7 +2783,7 @@ function renderRecoverReport(){
   h+='</div><div class="row" style="margin-top:8px"><button id="btnDoRecover" class="primary">Move it all here</button><button id="btnCancelRecover">Cancel</button></div>';
   host.innerHTML=h;
   document.getElementById("btnDoRecover").onclick=doRecover;
-  document.getElementById("btnCancelRecover").onclick=()=>{ __recoverPlan=null; renderRecoverReport(); setMsg("#recoverMsg","",""); };
+  document.getElementById("btnCancelRecover").onclick=()=>{ __recoverPlan=null; renderRecoverReport(); recoverSay("",""); };
 }
 async function doRecover(){
   if(!__recoverPlan||!__recoverPlan.length) return;
@@ -2798,7 +2799,7 @@ async function doRecover(){
     }catch(e){ failCount++; }
   }
   __recoverPlan=null; renderRecoverReport();
-  setMsg("#recoverMsg", failCount? (okCount+" recovered, "+failCount+" failed \u2014 reopen to retry") : (okCount+" objective"+(okCount>1?"s":"")+" recovered"), failCount?"error":"ok");
+  recoverSay(failCount? (okCount+" recovered, "+failCount+" failed \u2014 reopen to retry") : (okCount+" objective"+(okCount>1?"s":"")+" recovered"), failCount?"error":"ok");
   renderAll();
 }
 
@@ -5189,6 +5190,16 @@ function renderRisks(){
 /* ---------------- wiring ---------------- */
 document.getElementById("saveBtn").onclick = flushPersist;   // autosave handles it; this forces an immediate write
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
+(function(){ var rb=document.getElementById("btnRecoverStranded"); if(!rb) return;
+  var rmsg=document.getElementById("recoverMsg");
+  function say(t,cls){ if(rmsg){ rmsg.textContent=t||""; rmsg.className="io-msg "+(cls||"muted"); } }
+  rb.addEventListener("click", async function(){
+    rb.disabled=true; var old=rb.textContent; rb.textContent="Scanning\u2026"; say("","");
+    try{ await scanStranded(); renderRecoverReport(); if(__recoverPlan && !__recoverPlan.length) say("nothing stranded","ok"); }
+    catch(e){ say((e&&e.message)||"scan failed","error"); }
+    finally{ rb.disabled=false; rb.textContent=old; }
+  });
+})();
 (function(){
   function cur(){ return document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'; }
   function sync(){ var c=cur(); document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-theme-set')===c?'true':'false'); }); }
@@ -6564,12 +6575,6 @@ function wire(){
   ETB_ROOT.querySelectorAll('.tabs button').forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
   $("#btnSettings").addEventListener("click",()=>openSettings(true));
   $("#btnCloseSettings").addEventListener("click",()=>openSettings(false));
-  { const rb=$("#btnRecoverStranded"); if(rb) rb.addEventListener("click",async()=>{
-      rb.disabled=true; const old=rb.textContent; rb.textContent="Scanning\u2026"; setMsg("#recoverMsg","","");
-      try{ await scanStranded(); renderRecoverReport(); if(__recoverPlan&&!__recoverPlan.length) setMsg("#recoverMsg","nothing stranded","ok"); }
-      catch(e){ setMsg("#recoverMsg", (e&&e.message)||"scan failed","error"); }
-      finally{ rb.disabled=false; rb.textContent=old; }
-    }); }
   $("#settings").addEventListener("click",(e)=>{if(e.target.id==="settings")openSettings(false);});
   $("#btnSaveCreds").addEventListener("click",()=>{
     state.editor=$("#editorName").value.trim();lsSet(LS.editor,state.editor);
