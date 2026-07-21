@@ -5020,7 +5020,7 @@ function toRenderElements(nodes,edges){
     const d=e.data;const lab=(d.label==null?"":String(d.label)).trim();
     if(!lab){outEdges.push({data:Object.assign({},d)});continue;}
     const lid="lblN_"+d.id;
-    outNodes.push({data:{id:lid,kind:"edgelabel",label:(d.acc?"\u2691 ":"")+lab,branchState:d.branchState,viaKind:d.viaKind,expId:d.expId,resultId:d.resultId,observed:!!d.observed,acc:!!d.acc,accRealized:!!d.accRealized},grabbable:false,selectable:false});
+    outNodes.push({data:{id:lid,kind:"edgelabel",label:(d.acc?"\u2691 ":"")+lab,branchState:d.branchState,viaKind:d.viaKind,expId:d.expId,resultId:d.resultId,observed:!!d.observed,acc:!!d.acc,accRealized:!!d.accRealized},grabbable:false,selectable:true});
     outEdges.push({data:{id:d.id+"__in",source:d.source,target:lid,branchState:d.branchState,viaKind:d.viaKind,half:"in",noArrow:1}});
     outEdges.push({data:{id:d.id+"__out",source:lid,target:d.target,branchState:d.branchState,viaKind:d.viaKind,observed:!!d.observed,half:"out"}});
   }
@@ -5528,7 +5528,7 @@ function cyStyle(p){
     {selector:'node[kind="terminal"][branchState="not_pursued"]',style:{"opacity":0.5}},
     {selector:'node[kind="nonext"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1.5,"border-color":p.stopFg,"color":p.stopFg,"width":(e)=>nodeDims(e.data("label"),10,120).w,"height":(e)=>nodeDims(e.data("label"),10,120).h,"font-size":10}},
     {selector:'node[kind="nonext"][branchState="not_pursued"]',style:{"opacity":0.5,"border-style":"dashed"}},
-    {selector:'node[kind="edgelabel"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
+    {selector:'node[kind="edgelabel"]',style:{"events":"yes","shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
     {selector:'node[kind="edgelabel"][branchState="active"]',style:{"border-color":p.accent,"color":p.ink,"font-weight":600}},
     {selector:'node[kind="edgelabel"][branchState="pending"]',style:{"color":p.muted}},
     {selector:'node[kind="edgelabel"][branchState="not_pursued"]',style:{"color":p.faint,"border-style":"dashed","opacity":0.55}},
@@ -5537,7 +5537,8 @@ function cyStyle(p){
     {selector:'edge[branchState="pending"]',style:{"width":1.5,"line-color":p.muted,"target-arrow-color":p.muted}},
     {selector:'edge[branchState="not_pursued"]',style:{"width":1,"line-style":"dashed","line-color":p.faint,"target-arrow-color":p.faint}},
     {selector:'edge[noArrow]',style:{"target-arrow-shape":"none"}},
-    {selector:"node:selected",style:{"border-color":p.accent,"border-width":3}}
+    {selector:'node:selected[kind!="edgelabel"]',style:{"border-color":p.accent,"border-width":3}},
+    {selector:'node[kind="edgelabel"]:selected',style:{"border-color":p.accent,"border-width":2}}
   ];
 }
 const DAGRE_LAYOUT={name:"dagre",rankDir:"TB",nodeSep:34,rankSep:42,edgeSep:12,padding:18,animate:false};
