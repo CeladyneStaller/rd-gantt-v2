@@ -85,7 +85,13 @@
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
-  .note-mark{margin-left:6px;color:var(--muted);font-size:12px;cursor:help;opacity:.8}
+  .note-details{margin:6px 0 2px;font-size:12px}
+  .note-details summary{cursor:pointer;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none;padding:2px 0}
+  .note-details summary::-webkit-details-marker{display:none}
+  .note-details summary::before{content:"▸";font-size:9px;transition:transform .12s}
+  .note-details[open] summary::before{transform:rotate(90deg)}
+  .note-details .note-body{white-space:pre-wrap;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin:4px 0 0}
+  .note-tr td{padding-top:0!important;padding-bottom:6px!important;border:none!important}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
   .read-row{display:flex;gap:6px;align-items:center}
@@ -2644,13 +2650,24 @@ function renderModal(){
   openModal(title, body);
 }
 
-// A card whose record carries notes gets a small marker, so notes added in an editor don't
-// become invisible on the board. Full text on hover; no preview text (cards get noisy fast).
-function noteMark(rec){
+// Notes render as an inline expandable section on the card, COLLAPSED by default. Native <details>
+// handles the toggle; notesOpen keeps a record's section open across the app's frequent re-renders
+// (a fresh render would otherwise always come back collapsed). ontoggle (wired in wireExec) syncs it.
+const notesOpen = new Set();
+function noteBlock(rec){
   const n=String((rec&&rec.notes)||"").trim();
   if(!n) return "";
-  const tip=n.length>240?(n.slice(0,240)+"…"):n;
-  return `<span class="note-mark" title="${esc(tip)}">✎</span>`;
+  const id=String(rec.id);
+  const open=notesOpen.has(id)?" open":"";
+  return `<details class="note-details" data-noteid="${id}"${open}><summary>✎ Notes</summary><div class="note-body">${esc(n)}</div></details>`;
+}
+// same, as a full-width row inside a metrics table (component specifications live in a <table>)
+function noteRow(rec, cols){
+  const n=String((rec&&rec.notes)||"").trim();
+  if(!n) return "";
+  const id=String(rec.id);
+  const open=notesOpen.has(id)?" open":"";
+  return `<tr class="note-tr"><td colspan="${cols}"><details class="note-details" data-noteid="${id}"${open}><summary>✎ Notes</summary><div class="note-body">${esc(n)}</div></details></td></tr>`;
 }
 
 /* ---------------- component modal (was stage-gate) ---------------- */
@@ -3202,13 +3219,14 @@ function kpiTable(hostType, hostId, objScope){
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
     const grip = canReorder ? `<span class="drag-handle row-grip" draggable="true" title="drag to reorder">⠿</span>` : '';
     const trAttrs = canReorder ? ` data-droprow="${k.id}" data-rowhost="${esc(hostKey)}"` : '';
-    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${noteMark(k)} ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
+    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
       <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
       <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
         <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
       <td class="row-actions">${acts}
         <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
+    h += noteRow(k, 7);
   });
   h += `</tbody></table>`;
   return h;
@@ -3283,12 +3301,12 @@ function renderSpecs(){
     inner+=`<div class="icard" data-dropzone="${kr.id}"><div class="icard-top">
       <span class="drag-handle" draggable="true" data-draghandle="${kr.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
-      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>${noteMark(kr)}
+      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
       <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div>${noteBlock(kr)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
@@ -3309,14 +3327,14 @@ function renderComponents(){
     inner+=`<div class="icard" data-dropzone="${g.id}"><div class="icard-top">
       <span class="drag-handle" draggable="true" data-draghandle="${g.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">C${idx+1}</span>
-      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${noteMark(g)}
+      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
       ${tags.join(" ")}
       <span class="icard-score" style="color:${col(RD.band(s))}" title="conformance to component specifications">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions">
         <button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button>
         <button class="ghost mini" data-addlink="component:${g.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("component", g.id, selectedModel)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("component", g.id, selectedModel)}</div>${noteBlock(g)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
@@ -3351,10 +3369,10 @@ function renderSubProducts(){
     });
     rows+=`</tbody></table>`;
     inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-title click" data-edit="stageGate:${hst.id}" title="edit">${esc(hst.name||child)}</span>${noteMark(hst)}
+      <span class="icard-title click" data-edit="stageGate:${hst.id}" title="edit">${esc(hst.name||child)}</span>
       <span class="pill mono">${esc(child)}</span> ${note}
       <span class="icard-actions"><button class="ghost mini danger ${armedDel===hst.id?'armed':''}" data-delsub="${hst.id}">${armedDel===hst.id?'confirm':'remove'}</button></span>
-      </div><div class="icard-meta">${rows}</div></div>`;
+      </div><div class="icard-meta">${rows}</div>${noteBlock(hst)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addsub="1">+ add sub-product</button>`;
   host.innerHTML=`<div class="panel">${panelHead("CMP","Sub-products",hosts.length,acts)}<div class="item-list${listOpen("CMP")}">${inner}</div></div>`;
@@ -3412,6 +3430,7 @@ function wireSubAdd(mb){
 
 /* ---------------- shared wiring ---------------- */
 function wireExec(host){
+  host.querySelectorAll("details.note-details[data-noteid]").forEach(el=>{ el.ontoggle=()=>{ const id=el.dataset.noteid; if(el.open) notesOpen.add(id); else notesOpen.delete(id); }; });
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else if(ht==="keyResult") openTgtModal(hid, null, "keyResult"); else subOpenAdd("kpi",ht,hid); });
