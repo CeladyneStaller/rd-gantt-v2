@@ -85,6 +85,7 @@
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
+  .note-mark{margin-left:6px;color:var(--muted);font-size:12px;cursor:help;opacity:.8}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
   .read-row{display:flex;gap:6px;align-items:center}
@@ -212,7 +213,7 @@
   #kpiTgtBody{padding:16px 18px}
   #kpiTgtBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
   #kpiTgtBody .modal-field input[type=text],#kpiTgtBody .modal-field input[type=number],#kpiTgtBody .modal-field select{width:100%}
-  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
+  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{resize:vertical;width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
   /* quarter/week header */
   .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
   .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -2632,7 +2633,7 @@ function renderModal(){
   let title=null, body=null;
   if(editingSub){
     const id=editingSub.id;
-    if(editingSub.type==="stageGate"){ const g=doc.stageGates.find(x=>x.id===id); if(g){ title="Edit component"; body=componentModalBody(g); } }
+    if(editingSub.type==="stageGate"){ const g=doc.stageGates.find(x=>x.id===id); if(g){ title=g.refModel?"Edit sub-product":"Edit component"; body=componentModalBody(g); } }
     else if(editingSub.type==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k){ title=isMemberKpi(k)?"Override metric target":"Edit metric"; body=isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k); } }
   } else if(addingFor){
     if(addingFor.type==="stageGate"){ title="Add component"; body=componentModalBody(null); }
@@ -2643,15 +2644,29 @@ function renderModal(){
   openModal(title, body);
 }
 
+// A card whose record carries notes gets a small marker, so notes added in an editor don't
+// become invisible on the board. Full text on hover; no preview text (cards get noisy fast).
+function noteMark(rec){
+  const n=String((rec&&rec.notes)||"").trim();
+  if(!n) return "";
+  const tip=n.length>240?(n.slice(0,240)+"…"):n;
+  return `<span class="note-mark" title="${esc(tip)}">✎</span>`;
+}
+
 /* ---------------- component modal (was stage-gate) ---------------- */
 function componentModalBody(g){
   g=g||{}; const isEdit=!!g.id;
+  const isSub=!!g.refModel;
   let h=`<div class="ed">
-    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}" placeholder="e.g. Membrane Electrode Assembly (MEA)"/></label>
+    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}" placeholder="e.g. Membrane Electrode Assembly (MEA)"/></label>`;
+  if(!isSub) h+=`
     <label>Type (optional)<input data-f="ctype" type="text" value="${esc(g.ctype||'')}" placeholder="e.g. MEA"/></label>
-    <label>Status (optional)<input data-f="status" type="text" value="${esc(g.status||'')}" placeholder="e.g. Prototype"/></label>
+    <label>Status (optional)<input data-f="status" type="text" value="${esc(g.status||'')}" placeholder="e.g. Prototype"/></label>`;
+  h+=`
+    <label style="grid-column:1/-1">Notes<textarea data-f="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(g.notes||'')}</textarea></label>
   </div>`;
-  if(isEdit){
+  if(isSub) h+=`<p class="hint">This is a reference to another product — its specifications live on that product. Notes here describe using it in this one.</p>`;
+  if(isEdit && !isSub){
     h+=`<span class="modal-section-lbl">Component specifications</span>
       <div class="gt-head"><span class="hint" style="margin:0">measurable criteria this component must meet — link one to a product specification to feed its value upward, or add a component-only metric</span>
         <span class="gt-acts"><button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button><button class="ghost mini" data-addlink="component:${g.id}">+ link</button></span></div>
@@ -2678,6 +2693,7 @@ function initDraftKr(kr){
   return {
     id:isNew?null:kr.id,
     statement:isNew?"":(kr.statement||""),
+    notes:isNew?"":(kr.notes||""),
     trackingType:(kr&&kr.trackingType)||(isNew?"percentage":"kpi"),
     progress:(kr&&kr.progress!=null)?kr.progress:0,
     kpiType:pk?(pk.targetType||"demonstration"):"demonstration",
@@ -2729,6 +2745,7 @@ function krModalBody(){
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-specifications</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-spec</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
+    <div class="modal-field"><span class="lbl">Notes</span><textarea data-f="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(d.notes||"")}</textarea></div>
     <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
@@ -2756,6 +2773,7 @@ function saveKrModal(){
   let kr=d.id?doc.keyResults.find(x=>x.id===d.id):null;
   if(!kr){ const id=RD.allocId("keyResult", selectedModel, doc.keyResults.map(x=>x.id)); kr={ id, objectiveId:selectedModel }; doc.keyResults.push(kr); }
   kr.statement=String(d.statement).trim();
+  { const n=String(d.notes==null?"":d.notes).trim(); if(n) kr.notes=n; else delete kr.notes; }
   kr.trackingType=d.trackingType;
   if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; }
   else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
@@ -2875,7 +2893,8 @@ function openTgtModal(gateId, kpiId, hostType){
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
     readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
-    gates:(pk&&pk.gates)?pk.gates:""
+    gates:(pk&&pk.gates)?pk.gates:"",
+    notes:(pk&&pk.notes)?pk.notes:""
   };
   const noun = draftTgtHostType==="keyResult" ? "KPI" : "component specification";
   document.getElementById("kpiTgtTitle").textContent=(kpiId?"Edit ":"Add ")+noun;
@@ -2902,6 +2921,7 @@ function tgtModalBody(){
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
     ${gateField}
     <div class="hint" style="margin:0 0 12px">readings are posted from the ${isKr?"specification's metric":"component's specification"} table; statistical targets aggregate the latest reads</div>
+    <div class="modal-field" style="display:${draftTgtHostType==="component"?"block":"none"}"><span class="lbl">Notes</span><textarea data-tf="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(d.notes||"")}</textarea></div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update ":"Save "}${noun}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
 function wireTgtModal(){
@@ -2920,6 +2940,7 @@ function saveTgtModal(){
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
   if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:draftTgtHostType, hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
+  { const n=String(d.notes==null?"":d.notes).trim(); if(n) pk.notes=n; else delete pk.notes; }
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else {
     if(d.dir==="range"){ pk.direction="range"; const lo=parseTargetNum(d.targetLo), hi=parseTargetNum(d.targetHi); pk.target=(lo!=null&&hi!=null)?{lo,hi}:null; }
@@ -3181,7 +3202,7 @@ function kpiTable(hostType, hostId, objScope){
     const acts=member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:``;
     const grip = canReorder ? `<span class="drag-handle row-grip" draggable="true" title="drag to reorder">⠿</span>` : '';
     const trAttrs = canReorder ? ` data-droprow="${k.id}" data-rowhost="${esc(hostKey)}"` : '';
-    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a> ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
+    h += `<tr${trAttrs}><td>${grip}<a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${noteMark(k)} ${badge}</td><td class="mono">${dir||''}</td><td class="mono">${tgtCell}</td>
       <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
       <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
       <td><div class="read-row"><input class="tiny" type="number" data-read="${k.id}" placeholder="value"/>
@@ -3262,7 +3283,7 @@ function renderSpecs(){
     inner+=`<div class="icard" data-dropzone="${kr.id}"><div class="icard-top">
       <span class="drag-handle" draggable="true" data-draghandle="${kr.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="keyResult:${kr.id}" title="edit">S${idx+1}</span>
-      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>
+      <span class="icard-title click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span>${noteMark(kr)}
       <span class="icard-score" style="color:${col(RD.band(s))}">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
@@ -3288,7 +3309,7 @@ function renderComponents(){
     inner+=`<div class="icard" data-dropzone="${g.id}"><div class="icard-top">
       <span class="drag-handle" draggable="true" data-draghandle="${g.id}" title="drag to reorder">⠿</span>
       <span class="icard-num" data-edit="stageGate:${g.id}" title="edit">C${idx+1}</span>
-      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>
+      <span class="icard-title click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${noteMark(g)}
       ${tags.join(" ")}
       <span class="icard-score" style="color:${col(RD.band(s))}" title="conformance to component specifications">${s==null?'—':Math.round(s)}</span>
       <span class="icard-actions">
@@ -3330,7 +3351,7 @@ function renderSubProducts(){
     });
     rows+=`</tbody></table>`;
     inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-title">${esc(hst.name||child)}</span>
+      <span class="icard-title click" data-edit="stageGate:${hst.id}" title="edit">${esc(hst.name||child)}</span>${noteMark(hst)}
       <span class="pill mono">${esc(child)}</span> ${note}
       <span class="icard-actions"><button class="ghost mini danger ${armedDel===hst.id?'armed':''}" data-delsub="${hst.id}">${armedDel===hst.id?'confirm':'remove'}</button></span>
       </div><div class="icard-meta">${rows}</div></div>`;
