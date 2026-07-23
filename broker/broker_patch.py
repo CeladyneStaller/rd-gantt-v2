@@ -220,6 +220,7 @@ class StatePut(BaseModel):
 # ---------------------------------------------------------------------------
 ROSTER_FIELDS = ("email", "orgRole", "leadOf", "disabled")
 USERS_BIN = os.environ.get("USERS_BIN")
+ANALYSIS_INDEX_BIN = os.environ.get("ANALYSIS_INDEX_BIN")
 
 
 def _project_user(u: Dict[str, Any]) -> Dict[str, Any]:
@@ -243,6 +244,73 @@ def get_roster():
         raise HTTPException(status_code=502, detail="users bin unavailable")
     users = (raw.get("record") or raw).get("users") or []
     return {"users": [_project_user(u) for u in users if u.get("email")]}
+
+
+# ---------------------------------------------------------------------------
+# GET /analysis  -> the analysis portal's index bin
+#
+# READ-THROUGH, NOT _CACHE. The authoritative cache above is correct only because
+# this broker is the sole writer of those documents. The analysis portal writes
+# this bin from outside, so caching it authoritatively would serve stale metrics
+# forever. Same reasoning as /roster, which is uncached for the same reason.
+#
+# A short TTL still absorbs the burst of reads a picker generates while someone
+# types in the search box, without pinning a stale index.
+#
+# The master key never leaves the server: the browser sends only its broker
+# token and receives the index body.
+# ---------------------------------------------------------------------------
+
+_ANALYSIS_TTL_S = 60.0
+_analysis_cache: Dict[str, Any] = {"at": 0.0, "payload": None}
+_analysis_lock = threading.Lock()
+
+
+def _analysis_fetch() -> Optional[Dict[str, Any]]:
+    """Read the index bin, unwrapping JSONBin's {record, metadata} envelope."""
+    raw = _jsonbin_get(ANALYSIS_INDEX_BIN)
+    if raw is None:
+        return None
+    record = raw.get("record") if isinstance(raw, dict) else None
+    return record if isinstance(record, dict) else (raw if isinstance(raw, dict) else None)
+
+
+@state_router.get("/analysis")
+def get_analysis(response: Response):
+    """The analysis index, for the execution app's 'Connect data' picker.
+
+    Returned as-is so the client can hand it straight to validateAnalysisIndex();
+    shape errors are the client's to surface, not ours to mask.
+    """
+    if not ANALYSIS_INDEX_BIN:
+        raise HTTPException(status_code=503, detail="ANALYSIS_INDEX_BIN is not configured")
+
+    now = time.time()
+    with _analysis_lock:
+        cached = _analysis_cache["payload"]
+        age = now - _analysis_cache["at"]
+        if cached is not None and age < _ANALYSIS_TTL_S:
+            response.headers["X-Analysis-Age"] = str(int(age))
+            return cached
+
+    payload = _analysis_fetch()
+    if payload is None:
+        # Serve a stale copy rather than nothing if the portal is briefly unreachable;
+        # the age header tells the client how old it is.
+        with _analysis_lock:
+            stale = _analysis_cache["payload"]
+            stale_age = now - _analysis_cache["at"]
+        if stale is not None:
+            response.headers["X-Analysis-Age"] = str(int(stale_age))
+            response.headers["X-Analysis-Stale"] = "1"
+            return stale
+        raise HTTPException(status_code=502, detail="analysis index unavailable")
+
+    with _analysis_lock:
+        _analysis_cache["at"] = now
+        _analysis_cache["payload"] = payload
+    response.headers["X-Analysis-Age"] = "0"
+    return payload
 
 
 # ---------------------------------------------------------------------------

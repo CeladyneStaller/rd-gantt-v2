@@ -951,6 +951,7 @@
   function _msDimKey(m, dim, portfolio) {
     if (dim === 'initiative') return m.initiativeId || '';
     if (dim === 'division') { var i = initiativeOf(m, portfolio); return (i && i.divisionId) || ''; }
+    if (dim === 'unit') { var iu = initiativeOf(m, portfolio); return (iu && unitIdOfDivision(iu.divisionId, portfolio)) || ''; }
     if (dim === 'product') return effProduct(m, portfolio) || '';
     if (dim === 'model') return effModel(m, portfolio) || '';
     return '';
@@ -1540,6 +1541,205 @@
     };
   }
 
+  // ---- Analysis-portal index: sample grouping, search, import ------------------------------
+  // The portal (record.py / jsonbin.py) publishes an index bin { schema:2, runs:[ entry ] } where
+  // each entry is ONE JOB: { job_id, sample_name, script, timestamp, bin_id, Data:[unit] } and each
+  // unit is { Analysis, step, Conditions, key_values }. Values are already promoted through the
+  // portal's KEY_VALUES allowlist, so a metric is addressed by (Analysis bucket, canonical key) and
+  // is immune to filename/annotation churn.
+  //
+  // v1 is a ONE-SHOT IMPORT, not a binding: the user picks a sample, ticks values, they become
+  // ordinary kpiUpdates carrying provenance. Nothing here re-reads later.
+
+  var ANALYSIS_SCHEMA = 2;
+
+  // Units implied per canonical key (mirrors the portal's KEY_VALUE_UNITS).
+  var ANALYSIS_KEY_UNITS = {
+    'OCV': 'V',
+    'V @ 1 A/cm\u00b2': 'V',
+    'HFR': '\u03a9\u00b7cm\u00b2',
+    '|j_xover|': 'mA/cm\u00b2',
+    'Average ECSA': 'm\u00b2/g'
+  };
+  function analysisKeyUnit(key) { return ANALYSIS_KEY_UNITS[key] || ''; }
+
+  // Guard the index shape so a malformed/rotated bin degrades to a visible state, never a throw.
+  function validateAnalysisIndex(raw) {
+    if (!raw || typeof raw !== 'object') return { ok: false, schema: null, runs: [], reason: 'not an object' };
+    var schema = raw.schema == null ? null : raw.schema;
+    if (!Array.isArray(raw.runs)) return { ok: false, schema: schema, runs: [], reason: 'runs is not an array' };
+    if (schema !== ANALYSIS_SCHEMA) return { ok: false, schema: schema, runs: raw.runs, reason: 'unsupported schema ' + String(schema) };
+    return { ok: true, schema: schema, runs: raw.runs, reason: null };
+  }
+
+  function _finiteNum(v) {
+    if (typeof v === 'boolean' || v == null || v === '') return null;
+    var n = Number(v);
+    return isFinite(n) ? n : null;
+  }
+
+  // Group index runs into SAMPLES. A sample spans several runs — a polcurve job and an H2-crossover
+  // job on the same MEA are separate entries sharing sample_name — so the units are unioned and each
+  // keeps its own run identity. Units with no numeric promoted values are dropped (aggregate plots).
+  function analysisIndexSamples(index) {
+    var v = validateAnalysisIndex(index);
+    var runs = v.ok ? v.runs : [];
+    var by = {}, order = [];
+    runs.forEach(function (run) {
+      if (!run || typeof run !== 'object') return;
+      var name = run.sample_name || '';
+      if (!name) return;
+      var s = by[name];
+      if (!s) { s = by[name] = { sample: name, last: '', units: [] }; order.push(name); }
+      var ts = run.timestamp || '';
+      if (ts > s.last) s.last = ts;
+      var data = Array.isArray(run.Data) ? run.Data : [];
+      data.forEach(function (u, i) {
+        if (!u || typeof u !== 'object') return;
+        var kv = u.key_values || {};
+        var vals = {};
+        Object.keys(kv).forEach(function (k) {
+          var n = _finiteNum(kv[k]);
+          if (n !== null) vals[k] = n;
+        });
+        if (!Object.keys(vals).length) return;   // nothing selectable here
+        s.units.push({
+          uid: String(run.job_id || '') + ':' + i,
+          Analysis: u.Analysis || '',
+          step: u.step || '',
+          Conditions: u.Conditions || {},
+          key_values: vals,
+          job_id: run.job_id || '',
+          bin_id: run.bin_id || '',
+          script: run.script || '',
+          timestamp: ts
+        });
+      });
+    });
+    var out = order.map(function (n) { return by[n]; }).filter(function (s) { return s.units.length; });
+    out.sort(function (a, b) { return a.last < b.last ? 1 : a.last > b.last ? -1 : (a.sample < b.sample ? -1 : 1); });
+    return out;
+  }
+
+  // The default modal view: the N most recent DISTINCT samples (not the N most recent runs).
+  function analysisRecentSamples(index, n) {
+    var lim = (n == null) ? 5 : n;
+    return analysisIndexSamples(index).slice(0, lim);
+  }
+
+  // Filters: { analysis, name, nameMode:'contains'|'exact'|'starts', T_C, RH_pct, P_value, P_unit, step }
+  // Conditions live per unit, so a condition filter selects UNITS; a sample matches when any of its
+  // units match, and only the matching units are returned. Pressure carries a unit (kPa/barg/psi/bar):
+  // the number must match, and the unit too when the caller supplies one.
+  function analysisFiltersActive(f) {
+    f = f || {};
+    return !!(f.analysis || (f.name && String(f.name).trim()) ||
+      _finiteNum(f.T_C) !== null || _finiteNum(f.RH_pct) !== null ||
+      _finiteNum(f.P_value) !== null || (f.step && String(f.step).trim()));
+  }
+
+  function _unitMatches(u, f) {
+    if (f.analysis && u.Analysis !== f.analysis) return false;
+    var c = u.Conditions || {};
+    var t = _finiteNum(f.T_C); if (t !== null && _finiteNum(c.T_C) !== t) return false;
+    var rh = _finiteNum(f.RH_pct); if (rh !== null && _finiteNum(c.RH_pct) !== rh) return false;
+    var p = _finiteNum(f.P_value);
+    if (p !== null) {
+      if (_finiteNum(c.P_value) !== p) return false;
+      if (f.P_unit && String(c.P_unit || '').toLowerCase() !== String(f.P_unit).toLowerCase()) return false;
+    }
+    if (f.step && String(f.step).trim()) {
+      if (String(c.step || '').toLowerCase() !== String(f.step).trim().toLowerCase()) return false;
+    }
+    return true;
+  }
+
+  function _nameMatches(sample, f) {
+    var q = (f.name == null ? '' : String(f.name)).trim();
+    if (!q) return true;
+    var a = String(sample).toLowerCase(), b = q.toLowerCase();
+    var mode = f.nameMode || 'contains';
+    if (mode === 'exact') return a === b;
+    if (mode === 'starts') return a.indexOf(b) === 0;
+    return a.indexOf(b) >= 0;
+  }
+
+  function analysisSearch(index, filters) {
+    var f = filters || {};
+    var all = analysisIndexSamples(index);
+    if (!analysisFiltersActive(f)) return all;
+    var out = [];
+    all.forEach(function (s) {
+      if (!_nameMatches(s.sample, f)) return;
+      var units = s.units.filter(function (u) { return _unitMatches(u, f); });
+      if (units.length) out.push({ sample: s.sample, last: s.last, units: units });
+    });
+    return out;
+  }
+
+  // Flatten a sample's units into pickable values, for the selection list.
+  function analysisSampleValues(sample) {
+    var out = [];
+    ((sample && sample.units) || []).forEach(function (u) {
+      Object.keys(u.key_values).forEach(function (k) {
+        out.push({
+          selId: u.uid + '|' + k,
+          sample: sample.sample, key: k, value: u.key_values[k], unit: analysisKeyUnit(k),
+          analysis: u.Analysis, step: u.step, cond: u.Conditions,
+          job_id: u.job_id, bin_id: u.bin_id, script: u.script, timestamp: u.timestamp
+        });
+      });
+    });
+    return out;
+  }
+
+  // Identity of an imported reading, for duplicate detection across repeat imports.
+  function analysisSrcKey(src) {
+    if (!src) return '';
+    var c = src.cond || {};
+    var ck = Object.keys(c).sort().map(function (k) { return k + '=' + c[k]; }).join(',');
+    return [src.job_id || '', src.bucket || '', src.key || '', src.step || '', ck].join('|');
+  }
+
+  // Materialise picks as ordinary kpiUpdates. Each pick must carry a RESOLVED kpiId — creating a new
+  // KPI needs id allocation, which is the app layer's job; picks without one are reported, not dropped
+  // silently. The reading's `timestamp` is the RUN's time, not the import time, so an imported value
+  // slots into KPI history where the measurement actually happened; `src.imported_t` records the pull.
+  function buildImportUpdates(picks, existingUpdates, importedIso) {
+    var now = importedIso || new Date().toISOString();
+    var seen = {};
+    (existingUpdates || []).forEach(function (u) {
+      if (u && u.src) seen[(u.kpiId || '') + '#' + analysisSrcKey(u.src)] = true;
+    });
+    var updates = [], duplicates = [], unresolved = [];
+    (picks || []).forEach(function (p) {
+      if (!p) return;
+      if (!p.kpiId) { unresolved.push(p); return; }
+      var val = _finiteNum(p.value);
+      if (val === null) { unresolved.push(p); return; }
+      var src = {
+        portal: 'analysis', job_id: p.job_id || '', bin_id: p.bin_id || '',
+        sample: p.sample || '', bucket: p.analysis || '', key: p.key || '',
+        step: p.step || '', cond: p.cond || {},
+        run_t: p.timestamp || '', imported_t: now
+      };
+      var dupKey = p.kpiId + '#' + analysisSrcKey(src);
+      if (seen[dupKey]) { duplicates.push({ kpiId: p.kpiId, key: p.key, sample: p.sample, job_id: p.job_id }); return; }
+      seen[dupKey] = true;
+      var runMs = Date.parse(p.timestamp || '');
+      if (!isFinite(runMs)) runMs = Date.parse(now);
+      updates.push({
+        id: 'UPD-' + p.kpiId + '-' + runMs + '-' + String(p.key || '').replace(/[^A-Za-z0-9]+/g, '').slice(0, 8),
+        kpiId: p.kpiId,
+        value: val,
+        timestamp: runMs,
+        note: 'analysis: ' + (p.analysis || '?') + '/' + (p.key || '?'),
+        src: src
+      });
+    });
+    return { updates: updates, duplicates: duplicates, unresolved: unresolved };
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1588,6 +1788,15 @@
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    validateAnalysisIndex: validateAnalysisIndex,
+    analysisIndexSamples: analysisIndexSamples,
+    analysisRecentSamples: analysisRecentSamples,
+    analysisSearch: analysisSearch,
+    analysisSampleValues: analysisSampleValues,
+    analysisFiltersActive: analysisFiltersActive,
+    analysisKeyUnit: analysisKeyUnit,
+    analysisSrcKey: analysisSrcKey,
+    buildImportUpdates: buildImportUpdates,
     moveObjectivePayload: moveObjectivePayload,
     objectivePayloadCounts: objectivePayloadCounts,
     gateTileState: gateTileState,
