@@ -19,6 +19,26 @@ Exit status alone cannot distinguish "all assertions passed" from "no assertions
 import glob, json, os, re, shutil, subprocess, sys
 
 
+# Harnesses that boot a whole built app in jsdom. Each costs seconds, not milliseconds, and together
+# they push a full sweep past a typical tool/CI command window — which led to the sweep being skipped
+# or hand-batched, the worst of both worlds. Splitting them out means BOTH halves finish comfortably
+# and the suite can still be reported in full by running the two in sequence.
+SLOW = {
+    "connect_data_ui.cjs", "pd_notes.cjs", "recover_stranded.cjs", "kpi_readsfrom.cjs",
+    "etb_graph_modal.cjs", "gantt_view_toggles.cjs", "gantt_patches.cjs", "stat_recorder_ui.cjs",
+}
+
+
+def _select(names, mode):
+    """mode: 'all' | 'fast' | 'slow'. Unknown names default to fast, so a NEW harness is never
+    silently skipped — it has to be added to SLOW deliberately."""
+    if mode == "fast":
+        return [n for n in names if n not in SLOW]
+    if mode == "slow":
+        return [n for n in names if n in SLOW]
+    return names
+
+
 def _harness_paths(d):
     """Every harness in d. *.test.py runs under python3 (the broker projection is Python)."""
     return (sorted(glob.glob(f"{d}/*.cjs"))
@@ -87,10 +107,20 @@ def run(name):
 
 def main():
     update = "--update" in sys.argv
+    mode = "fast" if "--fast" in sys.argv else ("slow" if "--slow" in sys.argv else "all")
+    if update and mode != "all":
+        print("refusing --update on a partial run: re-baselining from --fast/--slow would drop the\n"
+              "counts for the harnesses that did not run. Re-baseline with a full sweep.")
+        sys.exit(2)
     base = json.load(open(BASE, encoding="utf-8")) if os.path.exists(BASE) else {}
     copied = refresh(); etb_plumbing()
-    names = sorted(os.path.basename(p) for p in _harness_paths(OUT))
-    print(f"harness dir : {OUT}\nrun dir     : {CWD}\nfound       : {copied} harness file(s)\n")
+    all_names = sorted(os.path.basename(p) for p in _harness_paths(OUT))
+    names = _select(all_names, mode)
+    banner = f"harness dir : {OUT}\nrun dir     : {CWD}\nfound       : {copied} harness file(s)"
+    if mode != "all":
+        banner += (f"\nmode        : --{mode}  ({len(names)} of {len(all_names)} harnesses)"
+                   f"\n              PARTIAL RUN \u2014 the suite is only green once --fast AND --slow both pass")
+    print(banner + "\n")
     if not names:
         print(f"FAIL: no harnesses found in {OUT}\n"
               f"      Finding nothing is NOT a pass. Point the runner at the directory holding the\n"
