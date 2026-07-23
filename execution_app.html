@@ -841,7 +841,10 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
-.statbadge{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;cursor:help}
+  .kr-observed{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px}
+  .kr-pass{color:var(--ok);font-weight:600;margin-left:4px}
+  .kr-fail{color:var(--bad);font-weight:600;margin-left:4px}
+  .statbadge{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;cursor:help}
   #expRecBody .erk-stat{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;display:block}
   #expRecBody .erk-stat.short{color:var(--warn)}
   #expRecBody .erk-input.multi{width:170px}
@@ -3346,6 +3349,39 @@ function cdDoImport(){
 function __erFmt(v){ if(v==null) return '\u2014'; var n=Number(v); if(!isFinite(n)) return '\u2014';
   var a=Math.abs(n); var s=(a!==0&&(a<0.001||a>=100000))?n.toExponential(2):n.toFixed(a<1?4:3);
   return String(parseFloat(s)); }
+/* The measured value(s) recorded for a key read, rendered under its target so an experiment shows the
+   evidence beside its conclusion. Applies to EVERY key read: single-valued reads were write-only too
+   (stored and used for matching, but never displayed) — statistical reads just add n / statistic / sd. */
+function __erObservedRow(k, exp){
+  try{
+    var ao = exp && exp.actual_outcome;
+    var kv = ao && ao.key_read_values;
+    if(!kv) return null;
+    var xs = RD.keyReadValueList(kv[k.id]);
+    if(!xs.length) return null;
+    var st  = RD.keyReadStat(k, __erKpiFor(k));
+    var sum = RD.statSummary(xs, st.statistic || 'average');
+    var row = document.createElement('div'); row.className = 'kr-observed';
+    var txt = 'measured ' + __erFmt(sum.value) + (k.unit ? (' ' + k.unit) : '');
+    if(st.statistical && sum.n > 1){
+      txt += '  \u00b7  n = ' + sum.n + (st.readCount ? (' of ' + st.readCount) : '')
+           + ' \u00b7 ' + (st.statistic || 'average')
+           + (sum.sd != null ? (' \u00b7 sd ' + __erFmt(sum.sd)) : '');
+    }
+    row.appendChild(document.createTextNode(txt));
+    var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
+    if(tgt != null && isFinite(tgt) && sum.value != null){
+      var down = String(k.direction || '').indexOf('<') >= 0 || k.direction === 'down' || k.direction === 'decrease';
+      var ok_ = down ? (sum.value <= tgt) : (sum.value >= tgt);
+      var b = document.createElement('span');
+      b.className = ok_ ? 'kr-pass' : 'kr-fail';
+      b.textContent = ok_ ? '\u2713 meets target' : '\u2717 misses target';
+      row.appendChild(document.createTextNode(' '));
+      row.appendChild(b);
+    }
+    return row;
+  }catch(e){ return null; }
+}
 function __erKpiFor(kr){
   if(!kr || !kr.source_kpi_gid) return null;
   try{ return (exec.kpis||[]).find(function(x){ return x.id===kr.source_kpi_gid; }) || null; }catch(e){ return null; }
@@ -6689,6 +6725,7 @@ function renderKeyReads(t,expId,exp){
     const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
     const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
     pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    { const __obs=__erObservedRow(k, exp); if(__obs) card.appendChild(__obs); }
     wrap.appendChild(card);
   });
   const add=el("button","mini2","+ Add key read");add.addEventListener("click",()=>{addKeyRead(t,expId);softRefresh();renderPanel(expId);});add.style.marginTop="6px";wrap.appendChild(add);
