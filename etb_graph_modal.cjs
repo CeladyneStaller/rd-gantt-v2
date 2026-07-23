@@ -4,10 +4,10 @@
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
 let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
- "\ninit(); window.__H={ setTree:function(tr){state.tree=tr;try{normalizeTree(state.tree);}catch(e){}}, build:function(){var reach=computeReachability(state.tree);return buildGraphElements(state.tree,reach);}, openModal:function(id){openExpDetailModal(id);}, overlay:function(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');return ov?ov.outerHTML:null;}, closeModal:function(){closeExpDetailModal();}, openPanel:function(id){openPanel(id);}, drawerOpen:function(){return $('#drawer').classList.contains('open');}, openKpiPicker:function(id){try{openKeyReadKpiPicker(state.tree,id);}catch(e){return 'ERR:'+e.message;}}, pickerOpen:function(){return !!ETB_ROOT.querySelector('#kr-kpi-overlay.open');} };\n\n})();");
+ "\ninit(); window.__H={ setTree:function(tr){state.tree=tr;try{normalizeTree(state.tree);}catch(e){}}, build:function(){var reach=computeReachability(state.tree);return buildGraphElements(state.tree,reach);}, render:function(){var reach=computeReachability(state.tree);var ge=buildGraphElements(state.tree,reach);return toRenderElements(ge.nodes,ge.edges);}, openConcl:function(e,r){openConclusionModal(e,r);}, renderGraph:function(){try{renderGraph();}catch(e){}}, conclOverlay:function(){var ov=(typeof ETB_ROOT!=='undefined'&&ETB_ROOT.querySelector)?ETB_ROOT.querySelector('#concl-overlay'):document.getElementById('concl-overlay');return ov||null;}, conclVisible:function(){var ov=(typeof ETB_ROOT!=='undefined'&&ETB_ROOT.querySelector)?ETB_ROOT.querySelector('#concl-overlay'):null;return !!(ov&&ov.classList.contains('open')&&ov.parentNode);}, closeConcl:function(){closeConclusionModal();}, getRes:function(e,r){var x=state.tree.experiments[e];return x?(x.possible_results||[]).find(function(p){return p.id===r;}):null;}, openModal:function(id){openExpDetailModal(id);}, overlay:function(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');return ov?ov.outerHTML:null;}, closeModal:function(){closeExpDetailModal();}, openPanel:function(id){openPanel(id);}, drawerOpen:function(){return $('#drawer').classList.contains('open');}, openKpiPicker:function(id){try{openKeyReadKpiPicker(state.tree,id);}catch(e){return 'ERR:'+e.message;}}, pickerOpen:function(){return !!ETB_ROOT.querySelector('#kr-kpi-overlay.open');} };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function mockCy(w){ w.__cyCreated=0; w.cytoscape=function(opts){ w.__cyCreated++; w.__cyEls=(opts&&opts.elements)?opts.elements:[]; return {
-  on:function(){}, ready:function(cb){ if(typeof cb==="function"){ try{cb();}catch(e){} } }, fit:function(){}, resize:function(){}, destroy:function(){},
+function mockCy(w){ w.__cyCreated=0; w.__cyHandlers=[]; w.cytoscape=function(opts){ w.__cyCreated++; w.__cyEls=(opts&&opts.elements)?opts.elements:[]; w.__cyHandlers=[]; return {
+  on:function(ev,sel,cb){ if(typeof sel==="function"){cb=sel;sel=null;} w.__cyHandlers.push({ev:ev,sel:sel,cb:cb}); }, ready:function(cb){ if(typeof cb==="function"){ try{cb();}catch(e){} } }, fit:function(){}, resize:function(){}, destroy:function(){},
   getElementById:function(){ return {length:0, select:function(){}}; }, zoom:function(){return 1;}, width:function(){return 800;}, height:function(){return 560;},
   layout:function(){ return {run:function(){}}; }, elements:function(){ return {length:0}; }, $:function(){return {unselect:function(){}};} }; }; }
 function makeFetch(store){ return function(url,opts){ opts=opts||{}; const m=/\/state\/([^/?]+)/.exec(String(url)); const id=m?decodeURIComponent(m[1]):null;
@@ -65,6 +65,55 @@ const testTree={ project_id:"O1", root_experiment_id:"exp_001", terminal_types:{
   ok(pr!=="ERR", "KPI picker opened without error ("+(pr||"ok")+")");
   ok(H.pickerOpen()===true, "KPI picker overlay is open");
   ok(H.drawerOpen()===true, "drawer STAYS open when the picker opens (layering fix — picker no longer sits behind it)");
+
+  // ---- conclusion-on-arrow: the pill node carries expId+resultId, and tapping it opens an editor/amend modal ----
+  H.setTree(testTree);
+  const rel = H.render();
+  const pills = rel.nodes.filter(x => x.data.kind === "edgelabel");
+  ok(pills.length > 0, "graph has edgelabel pill nodes on the arrows");
+  const pill1a = pills.find(x => x.data.resultId === "res_1a");
+  ok(!!pill1a && pill1a.data.expId === "exp_001", "the arrow pill carries expId+resultId so a tap can recover the result");
+  ok(pill1a && /High conductivity/.test(pill1a.data.label), "the pill still shows the RESULT LABEL (not the conclusion text)");
+
+  // exp_001 tap on res_1a -> the modal is now the FULL single-result editor (Result, Criteria, Conclusion,
+  // Accomplishments + SG select, Leads-to) — the same card the experiment setup renders, scoped to one result.
+  H.openConcl("exp_001", "res_1a");
+  let cov = H.conclOverlay();
+  ok(!!cov, "tapping a result pill opens the result modal");
+  ok(H.conclVisible(), "the modal is visible (ETB_ROOT + .open)");
+  ok(!!cov && !!cov.querySelector(".result"), "the modal renders the full result card (.result), not a bare textarea");
+  const modalTxt = cov ? cov.textContent : "";
+  ok(/Criteria/i.test(modalTxt), "section: Criteria of the result");
+  ok(/Conclusion/i.test(modalTxt), "section: Conclusion");
+  ok(/Accomplishments/i.test(modalTxt), "section: Accomplishments");
+  ok(/stage-gate/i.test(modalTxt), "the Accomplishments section has the stage-gate select");
+  ok(/(Next|Leads|next step|Go to)/i.test(modalTxt), "section: Leads-to (next step)");
+  // the result's own fields are present + seeded (label input, conclusion textarea)
+  const inputs = [...cov.querySelectorAll("input,textarea")];
+  ok(inputs.some(i => (i.value || "") === "High conductivity"), "the Result label is shown and seeded");
+  ok(modalTxt.indexOf("meets spec") >= 0, "the result's conclusion (meets spec) is shown in the modal");
+  H.closeConcl();
+  ok(!H.conclOverlay(), "closing the modal removes it");
+
+  // ---- WIRING: replay the actual cy.on("tap",'node[kind="edgelabel"]') path (the browser path, not a direct call) ----
+  H.setTree(testTree);
+  H.renderGraph();   // registers the tap handlers via the recording mock
+  const handlers = A.w.__cyHandlers || [];
+  const tapEdge = handlers.find(h => h.ev === "tap" && h.sel === 'node[kind="edgelabel"]');
+  ok(!!tapEdge, "a tap handler IS registered for edgelabel pills");
+  // build the exact data object a real pill carries, and fire the handler as Cytoscape would
+  const rel2 = H.render();
+  const pillNode = rel2.nodes.find(x => x.data.kind === "edgelabel" && x.data.resultId);
+  ok(!!pillNode, "there is a pill node carrying a resultId to tap");
+  if (tapEdge && pillNode) {
+    H.closeConcl();
+    const fakeEvt = { target: { id: () => pillNode.data.id, data: () => pillNode.data } };
+    let threw = null; try { tapEdge.cb(fakeEvt); } catch (e) { threw = e.message; }
+    ok(threw === null, "invoking the tap handler does not throw (" + (threw || "ok") + ")");
+    ok(!!H.conclOverlay(), "firing the edgelabel tap handler OPENS the conclusion modal (the real wiring works)");
+    ok(H.conclVisible(), "the opened modal is actually VISIBLE — attached to ETB_ROOT with the .open class (not display:none)");
+    H.closeConcl();
+  }
 
   console.log(f?('\n'+f+' / '+n+' FAILED'):('\nPASS — '+n+' ETB nonext + detail-modal + layering assertions green'));
   process.exit(f?1:0);

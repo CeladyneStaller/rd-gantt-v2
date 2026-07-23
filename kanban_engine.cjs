@@ -108,6 +108,80 @@ const TODAY = '2026-03-01';
   ok(tight.due[4] === D, '...but the dates still render (last gate still at the deadline)');
 })();
 
+// ---------- dropTile records gate-crossing stamps (for on-time/late) ----------
+(function () {
+  const board = {
+    columns: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }],
+    swimlanes: [{ id: 'L', maxDaysPerCol: 10, deadline: '' }],
+    tiles: [{ id: 't1', lane: 'L', col: 'c1', startDate: '2026-01-01', enteredCol: '2026-01-01' }],
+  };
+  // advance c1 -> c2 : the tile clears gate c1, stamped today
+  const b1 = C.dropTile(board, 't1', 'c2', 'L', '2026-02-01');
+  ok(b1.tiles[0].gatePassed && b1.tiles[0].gatePassed.c1 === '2026-02-01', 'advancing stamps the cleared gate with today');
+  ok(!b1.tiles[0].gatePassed.c2, 'the current column is not stamped as passed');
+  // advance again c2 -> c3 : now c1 and c2 both stamped
+  const b2 = C.dropTile(b1, 't1', 'c3', 'L', '2026-02-15');
+  ok(b2.tiles[0].gatePassed.c1 === '2026-02-01' && b2.tiles[0].gatePassed.c2 === '2026-02-15', 'each advance stamps the newly-cleared gate; earlier stamps persist');
+  // retreat c3 -> c2 : c2 is no longer cleared, its stamp is dropped; c1 remains
+  const b3 = C.dropTile(b2, 't1', 'c2', 'L', '2026-03-01');
+  ok(!b3.tiles[0].gatePassed.c2 && b3.tiles[0].gatePassed.c1 === '2026-02-01', 'retreating drops the stamp for a gate now ahead of the tile');
+})();
+
+// ---------- gateTileState ----------
+(function () {
+  const cols = [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }];
+  // gate due dates for this tile: forward, M=10, start Jan1 -> c1 due Jan11, c2 due Jan21, c3 due Jan31
+  const base = { columns: cols, swimlanes: [{ id: 'L', maxDaysPerCol: 10, deadline: '' }] };
+  // tile at c3 (passed c1,c2), crossed c1 on Jan10 (on time, due Jan11) and c2 on Jan25 (LATE, due Jan21)
+  const tile = { id: 't', lane: 'L', col: 'c3', startDate: '2026-01-01', gatePassed: { c1: '2026-01-10', c2: '2026-01-25' } };
+  const board = Object.assign({}, base, { tiles: [tile] });
+  ok(C.gateTileState(board, tile, 0, '2026-02-01') === 'passed-ontime', 'a gate cleared before its due date is passed-ontime');
+  ok(C.gateTileState(board, tile, 1, '2026-02-01') === 'passed-late', 'a gate cleared after its due date is passed-late');
+  // a tile still at c1 (not cleared c1), today past c1's due (Jan11) -> overdue at c1
+  const t2 = { id: 't2', lane: 'L', col: 'c1', startDate: '2026-01-01', gatePassed: {} };
+  const b2 = Object.assign({}, base, { tiles: [t2] });
+  ok(C.gateTileState(b2, t2, 0, '2026-02-01') === 'overdue', 'an uncleared gate past its due date is overdue');
+  ok(C.gateTileState(b2, t2, 1, '2026-01-05') === 'pending', 'an uncleared gate before its due date is pending');
+})();
+
+// ---------- boardGateSummary (collapsed gate square: passed count + worst status) ----------
+(function () {
+  const cols = [{ id: 'c1' }, { id: 'c2' }];
+  const lane = { id: 'L', maxDaysPerCol: 10, deadline: '' };   // c1 due start+10
+  const today = '2026-02-01';
+  // 3 tiles, all started Jan1 (c1 due Jan11): one passed on time, one passed late, one overdue
+  const board = { columns: cols, swimlanes: [lane], tiles: [
+    { id: 'a', lane: 'L', col: 'c2', startDate: '2026-01-01', gatePassed: { c1: '2026-01-05' } },  // ontime
+    { id: 'b', lane: 'L', col: 'c2', startDate: '2026-01-01', gatePassed: { c1: '2026-01-20' } },  // late
+    { id: 'c', lane: 'L', col: 'c1', startDate: '2026-01-01', gatePassed: {} },                    // overdue (past Jan11)
+  ] };
+  let sum = C.boardGateSummary(board, 0, today);
+  ok(sum.passed === 2, 'gate square count = tiles that cleared the gate (2 of 3)');
+  ok(sum.total === 3, 'total tiles reported');
+  ok(sum.worst === 'red', 'worst status is red when any tile is overdue at the gate');
+  // remove the overdue tile -> worst becomes orange (a late crossing remains)
+  board.tiles = board.tiles.slice(0, 2);
+  ok(C.boardGateSummary(board, 0, today).worst === 'orange', 'worst is orange when some passed late, none overdue');
+  // both on time -> green
+  board.tiles[1].gatePassed.c1 = '2026-01-05';
+  ok(C.boardGateSummary(board, 0, today).worst === 'green', 'worst is green when all tiles cleared the gate on time');
+})();
+
+// ---------- milestoneGanttSteps (dated only) ----------
+(function () {
+  const kr = { creditMode: 'binary', steps: [
+    { id: 's1', name: 'A', weight: 25, due: '2026-01-15', completion: 100 },   // done
+    { id: 's2', name: 'B', weight: 25, due: '2026-01-20', completion: 0 },      // overdue (past today)
+    { id: 's3', name: 'C', weight: 25, due: '2026-06-01', completion: 0 },      // pending (future)
+    { id: 's4', name: 'D', weight: 25, due: '', completion: 0 },                // UNDATED -> omitted
+  ] };
+  const steps = C.milestoneGanttSteps(kr, '2026-02-01');
+  ok(steps.length === 3, 'undated steps are omitted from the Gantt (3 of 4 dated)');
+  ok(steps.find(s => s.id === 's1').status === 'done', 'a 100% step is done');
+  ok(steps.find(s => s.id === 's2').status === 'overdue', 'an incomplete step past its due is overdue');
+  ok(steps.find(s => s.id === 's3').status === 'pending', 'an incomplete step before its due is pending');
+})();
+
 out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
 const fails = out.filter(x => x.startsWith('FAIL'));
 console.log(fails.length ? `\n${fails.length}/${out.length} FAILED` : `\nPASS - ${out.length} kanban-engine (K1) assertions green`);

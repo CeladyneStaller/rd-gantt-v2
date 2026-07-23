@@ -11,7 +11,7 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     execDocs={ "EXEC-D1":{ objectiveState:[],keyResults:[],kpis:[],kpiUpdates:[],tasks:[],stageGateEdges:[],stageGateSets:[],
       stageGates:[{id:'G1',objectiveId:'O1',name:'Gate A',plannedDate:TD+30,workstream:'W'},
                   {id:'G2',objectiveId:'O1',name:'Gate B',plannedDate:TD+60,workstream:'W'}] } };
-    portfolio={ divisions:[{id:'D1',name:'DivOne'}], products:[{id:'P1',name:'ProdOne',divisionId:'D1'}],
+    portfolio={ units:[{id:'U1',name:'UnitOne'}], divisions:[{id:'D1',name:'DivOne',unitId:'U1'}], products:[{id:'P1',name:'ProdOne',divisionId:'D1'}],
       models:[{id:'M1',name:'ModelOne',productId:'P1'}], kpis:[], milestones:[],
       initiatives:[{id:'I1',divisionId:'D1',name:'InitOne',productId:'P1',plannedStart:TD-20,plannedEnd:TD+300}],
       objectives:[{id:'O1',divisionId:'D1',initiativeId:'I1',productId:'P1',statement:'ObjOne',plannedStart:TD-10,plannedEnd:TD+120}] };
@@ -19,9 +19,10 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     // ---------- hierarchy mode ----------
     pfGroupMode="hierarchy"; ganttCollapsed=new Set(); renderGantt();
     var bar=document.getElementById('ganttLevelBar');
-    ok(!!bar && bar.querySelectorAll('[data-lvl]').length===4, 'hierarchy: a button per level + Expand all');
+    ok(!!bar && bar.querySelectorAll('[data-lvl]').length===5, 'hierarchy: a button per level (Units..Objectives) + Expand all');
     var labels=Array.from(bar.querySelectorAll('[data-lvl]')).map(b=>b.textContent);
-    ok(labels.indexOf('Initiatives')>=0 && labels.indexOf('Objectives')>=0, 'hierarchy: Initiatives and Objectives buttons exist');
+    ok(labels.indexOf('Units')>=0 && labels[0]==='Units', 'hierarchy: Units is the FIRST collapse level');
+    ok(labels.indexOf('Divisions')>=0 && labels.indexOf('Initiatives')>=0 && labels.indexOf('Objectives')>=0, 'hierarchy: Divisions, Initiatives and Objectives buttons exist');
     var all=document.getElementById('ganttWrap').innerHTML;
     ok(all.indexOf('Gate A')>=0, 'expanded: stage-gates chart');
 
@@ -43,6 +44,19 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     ganttCollapseTo(null);
     h=document.getElementById('ganttWrap').innerHTML;
     ok(h.indexOf('Gate A')>=0 && ganttCollapsed.size===0, 'Expand all reopens every level');
+
+    // ---- unit tier: the hierarchy preset now roots at Unit -> Division -> Initiative -> Objective ----
+    ok(ganttRoots.length>0 && ganttRoots.every(function(r){return r.synthetic && r.dim==='unit';}), 'hierarchy roots are unit group nodes');
+    ok(ganttRoots.some(function(r){return r.label==='UnitOne';}), 'the unit node is labelled by unit name');
+    ok(document.getElementById('ganttWrap').innerHTML.indexOf('UnitOne')>=0, 'the unit row renders on the Gantt above the division');
+    var uNode=ganttRoots.find(function(r){return r.label==='UnitOne';});
+    ok(uNode && uNode.kids.some(function(k){return k.entity==='division' && k.rec && k.rec.name==='DivOne';}), 'the division nests under its unit');
+    // collapse to unit -> unit visible, everything below (division/initiative/objective) hidden
+    ganttCollapseTo('unit');
+    var hu=document.getElementById('ganttWrap').innerHTML;
+    ok(hu.indexOf('UnitOne')>=0, 'collapse to unit: the unit is still shown');
+    ok(hu.indexOf('DivOne')<0 && hu.indexOf('ObjOne')<0 && hu.indexOf('Gate A')<0, '...and divisions/objectives/gates below it are hidden');
+    ganttCollapseTo(null);
 
     // buttons are wired, not just rendered
     ganttCollapsed=new Set(); renderGantt();

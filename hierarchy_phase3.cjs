@@ -90,6 +90,25 @@ function seed(w){
   ok(w.eval("RD.groupObjectives(portfolio.objectives, ['unit'], portfolio).length")>=2,
      "grouping objectives by unit yields the unit buckets");
 
+  // ---- 'unit' is a first-class FILTER in the planning filter bar (dropdown + predicate + chip) ----
+  w=await boot("https://x.test/?token=t"); seed(w);
+  ok(w.eval("filterBarHtml(true).indexOf('data-fb=\"unit\"')>=0"), "the filter bar renders a Unit dropdown");
+  ok(w.eval("filterBarHtml(true).indexOf('Technical')>=0"), "...and the Unit dropdown lists unit names");
+  // objMatches gates on unit: an objective whose division is in another unit is filtered out
+  w.eval("pfFilters.unit='UNIT-TECH';");
+  ok(w.eval("pfAnyFilter()")===true, "a unit-only filter is recognised as active (pfAnyFilter)");
+  const inTech = w.eval("(portfolio.objectives.find(function(o){return RD.unitIdOfDivision(o.divisionId,portfolio)==='UNIT-TECH';})||{}).id");
+  const inBiz  = w.eval("(portfolio.objectives.find(function(o){return RD.unitIdOfDivision(o.divisionId,portfolio)==='UNIT-BIZ';})||{}).id");
+  if (inTech) ok(w.eval("objMatches(portfolio.objectives.find(function(o){return o.id==='"+inTech+"';}))")===true, "objMatches keeps an objective in the filtered unit");
+  if (inBiz)  ok(w.eval("objMatches(portfolio.objectives.find(function(o){return o.id==='"+inBiz+"';}))")===false, "objMatches drops an objective in a different unit");
+  // the active-filter chip names the unit, and clearing removes it
+  ok(w.eval("pfActiveChips().indexOf('Unit: Technical')>=0"), "the active-filter chip shows the unit name");
+  w.eval("pfFilters.unit=pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status='';");
+  ok(w.eval("pfAnyFilter()")===false, "clearing the unit filter deactivates it");
+
+  // milestones resolve unit too (via the initiative's division)
+  ok(w.eval("typeof RD.groupMilestones")==="function" ? w.eval("(function(){try{var ms=(portfolio.milestones||[]);var g=RD.groupMilestones(ms,['unit'],portfolio);return true;}catch(e){return false;}})()") : true, "grouping milestones by unit does not throw (unit dim resolves for milestones)");
+
   // ---- Structure: a division's unitId and kind are editable ----
   w=await boot("https://x.test/?token=t"); seed(w);
   const schema=w.eval("JSON.stringify(SCHEMAS.division)");
