@@ -841,7 +841,11 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
-#expRecBody .erk-input{width:110px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.statbadge{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;cursor:help}
+  #expRecBody .erk-stat{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;display:block}
+  #expRecBody .erk-stat.short{color:var(--warn)}
+  #expRecBody .erk-input.multi{width:170px}
+  #expRecBody .erk-input{width:110px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
 #expRecBody .erk-unit{color:var(--muted);font-size:12px;min-width:40px}
 #expRecBody .erp{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin:5px 0;cursor:pointer}
 #expRecBody .erp-dot{width:16px;text-align:center;font-weight:700}
@@ -2763,6 +2767,131 @@ html[data-theme="dark"] #etb-view{
     return { updates: updates, duplicates: duplicates, unresolved: unresolved };
   }
 
+  // ---- Statistical key reads (ETB) ---------------------------------------------------------
+  // A key read may be a STATISTIC over several measurements rather than one number.
+  //
+  // Single source of truth: when a key read is linked to a KPI (source_kpi_gid) and that KPI is
+  // statistical, the statistic and expected sample size come from the KPI. A key read never
+  // overrides a linked KPI — otherwise "median of 5" on one side and "average of 3" on the other
+  // would silently disagree. A key read with no link may carry its own config.
+  //
+  // The recorder writes the RAW reads (N kpiUpdate rows), never a pre-computed statistic: the KPI
+  // layer reduces readings itself, so writing a mean would double-reduce. Everything below derives;
+  // nothing derived is stored.
+
+  // Read a recorded key_read_value in EITHER shape. The ETB tree historically stored one number per
+  // key read; a statistical entry stores the array of raw reads. Existing scalars keep working and are
+  // read as n = 1, so no migration pass is needed and old trees stay valid.
+  function keyReadValueList(v) {
+    if (v == null) return [];
+    if (Array.isArray(v)) { var a=[]; for (var i=0;i<v.length;i++){ var n=Number(v[i]); if(isFinite(n)) a.push(n); } return a; }
+    var s = Number(v);
+    return isFinite(s) ? [s] : [];
+  }
+
+  function parseReads(input) {
+    if (Array.isArray(input)) {
+      var a = [];
+      for (var i = 0; i < input.length; i++) { var n = Number(input[i]); if (isFinite(n)) a.push(n); }
+      return a;
+    }
+    if (input == null) return [];
+    var s = String(input).trim();
+    if (!s) return [];
+    var parts = s.split(/[\s,;]+/), out = [];
+    for (var j = 0; j < parts.length; j++) {
+      if (parts[j] === '') continue;
+      var v = Number(parts[j]);
+      if (isFinite(v)) out.push(v);
+    }
+    return out;
+  }
+
+  // {n, value, sd, min, max, values}. value is the chosen statistic; sd travels alongside it so the
+  // spread is visible without a second call. n===0 -> value null (never 0, which reads as a result).
+  function statSummary(input, statistic) {
+    var xs = parseReads(input);
+    var stat = statistic || 'average';
+    if (!xs.length) return { n: 0, value: null, sd: null, min: null, max: null, values: [] };
+    return {
+      n: xs.length,
+      value: computeStat(stat, xs),
+      sd: xs.length > 1 ? computeStat('stddev', xs) : 0,
+      min: computeStat('min', xs),
+      max: computeStat('max', xs),
+      values: xs
+    };
+  }
+
+  // Resolve which statistic a key read uses, and where that came from.
+  // source: 'kpi' (linked statistical KPI) | 'local' (unlinked key read's own config) | 'none' (single-valued)
+  function keyReadStat(keyRead, kpi) {
+    var kr = keyRead || {};
+    if (kpi && kpi.targetType === 'statistical') {
+      return {
+        statistical: true,
+        statistic: kpi.statistic || 'average',
+        readCount: (kpi.readCount === '' || kpi.readCount == null) ? null : Number(kpi.readCount),
+        source: 'kpi',
+        overriddenLocal: !!kr.statistic          // surfaced, not silently dropped
+      };
+    }
+    if (kr.statistic) {
+      return {
+        statistical: true,
+        statistic: kr.statistic,
+        readCount: (kr.readCount === '' || kr.readCount == null) ? null : Number(kr.readCount),
+        source: 'local',
+        overriddenLocal: false
+      };
+    }
+    return { statistical: false, statistic: null, readCount: null, source: 'none', overriddenLocal: false };
+  }
+
+  // Completeness of ONE entry against the expected sample size. Deliberately separate from the KPI's
+  // pooled reading count: a 5-read experiment run twice is entry-complete (5 of 5) while the KPI sits
+  // at n=10. Conflating the two makes pooling look like a bug.
+  function readsComplete(n, readCount) {
+    var have = Number(n) || 0;
+    if (readCount == null || !isFinite(Number(readCount)) || Number(readCount) <= 0) {
+      return { complete: have > 0, have: have, expected: null, short: 0, over: 0 };
+    }
+    var want = Number(readCount);
+    return {
+      complete: have >= want,
+      have: have, expected: want,
+      short: have < want ? (want - have) : 0,
+      over: have > want ? (have - want) : 0
+    };
+  }
+
+  // The number a criterion should be tested against, given an acceptance mode.
+  // 'statistic' (default) tests the summary value; 'all'/'any' are per-read claims and return the
+  // worst/best read for the comparison direction, so the caller's existing scalar comparison still works.
+  function keyReadTestValue(summary, mode, direction) {
+    if (!summary || !summary.n) return null;
+    var m = mode || 'statistic';
+    if (m === 'statistic') return summary.value;
+    var down = (direction === 'down' || direction === 'decrease');
+    if (m === 'all') return down ? summary.max : summary.min;   // the hardest read must still pass
+    if (m === 'any') return down ? summary.min : summary.max;   // the easiest read may pass
+    return summary.value;
+  }
+
+  // Materialise one entry as RAW readings for a KPI — N rows, not a reduced value.
+  function buildStatReadings(kpiId, values, meta) {
+    var xs = parseReads(values);
+    var m = meta || {};
+    var ts = m.timestamp != null ? m.timestamp : Date.now();
+    var out = [];
+    for (var i = 0; i < xs.length; i++) {
+      var row = { id: 'UPD-' + kpiId + '-' + ts + '-' + i, kpiId: kpiId, value: xs[i], timestamp: ts, note: m.note || '' };
+      if (m.src) row.src = m.src;
+      out.push(row);
+    }
+    return out;
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -2811,6 +2940,13 @@ html[data-theme="dark"] #etb-view{
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    parseReads: parseReads,
+    keyReadValueList: keyReadValueList,
+    statSummary: statSummary,
+    keyReadStat: keyReadStat,
+    readsComplete: readsComplete,
+    keyReadTestValue: keyReadTestValue,
+    buildStatReadings: buildStatReadings,
     validateAnalysisIndex: validateAnalysisIndex,
     analysisIndexSamples: analysisIndexSamples,
     analysisRecentSamples: analysisRecentSamples,
@@ -3202,14 +3338,76 @@ function cdDoImport(){
   setMsg(msg, res.updates.length?"ok":"warn");
 }
 
-function __erReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
+/* ---- statistical key reads ------------------------------------------------------------------
+   A key read linked to a statistical KPI is a STATISTIC over several measurements. The statistic and
+   expected sample size come from that KPI (single source of truth — RD.keyReadStat enforces it); an
+   unlinked key read may carry its own. The field then accepts several numbers, the raw reads are what
+   get written, and the criterion is tested against the statistic. */
+function __erFmt(v){ if(v==null) return '\u2014'; var n=Number(v); if(!isFinite(n)) return '\u2014';
+  var a=Math.abs(n); var s=(a!==0&&(a<0.001||a>=100000))?n.toExponential(2):n.toFixed(a<1?4:3);
+  return String(parseFloat(s)); }
+function __erKpiFor(kr){
+  if(!kr || !kr.source_kpi_gid) return null;
+  try{ return (exec.kpis||[]).find(function(x){ return x.id===kr.source_kpi_gid; }) || null; }catch(e){ return null; }
+}
+function __erStatOf(kr){ return RD.keyReadStat(kr||{}, __erKpiFor(kr)); }
+function __erKeyRead(krId){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
+  if(!exp) return null;
+  return ((exp.key_reads)||[]).find(function(k){ return k.id===krId; })||null;
+}
+/* raw reads per key read, as arrays — what gets stored and written */
+function __erReadValues(){
+  var o={}, ins=document.querySelectorAll('#expRecBody .erk-input');
+  for(var i=0;i<ins.length;i++){
+    var id=ins[i].getAttribute('data-kr');
+    var xs=RD.parseReads(ins[i].value);
+    if(xs.length) o[id]=xs;
+  }
+  return o;
+}
+/* the scalar each key read contributes to result matching: the STATISTIC when statistical,
+   otherwise the single number. Keeps etbMatchResults' scalar comparison working unchanged. */
+function __erReadings(){
+  var o={}, vals=__erReadValues();
+  Object.keys(vals).forEach(function(id){
+    var xs=vals[id], kr=__erKeyRead(id), st=__erStatOf(kr);
+    if(st.statistical){
+      var sum=RD.statSummary(xs, st.statistic);
+      if(sum.value!=null) o[id]=sum.value;
+    } else if(xs.length){
+      o[id]=xs[xs.length-1];        // single-valued: the last number typed
+    }
+  });
+  return o;
+}
+/* live "n · statistic · sd" under each statistical field */
+function __erStatSync(){
+  var ins=document.querySelectorAll('#expRecBody .erk-input');
+  for(var i=0;i<ins.length;i++){
+    var id=ins[i].getAttribute('data-kr');
+    var out=document.querySelector('#expRecBody .erk-stat[data-krstat="'+id+'"]');
+    if(!out) continue;
+    var kr=__erKeyRead(id), st=__erStatOf(kr);
+    if(!st.statistical){ out.textContent=''; continue; }
+    var xs=RD.parseReads(ins[i].value), sum=RD.statSummary(xs, st.statistic);
+    var comp=RD.readsComplete(sum.n, st.readCount);
+    if(!sum.n){ out.textContent='n = 0'+(comp.expected?(' of '+comp.expected):'')+' \u00b7 '+st.statistic; out.className='erk-stat short'; continue; }
+    var bits=['n = '+sum.n+(comp.expected?(' of '+comp.expected):''),
+              st.statistic+' '+__erFmt(sum.value)];
+    if(sum.n>1 && sum.sd!=null) bits.push('sd '+__erFmt(sum.sd));
+    out.textContent=bits.join(' \u00b7 ');
+    out.className = comp.complete ? 'erk-stat' : 'erk-stat short';
+  }
+}
+function __erOldReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
 function expRecSync(){ var picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked'); var b=document.getElementById('erRecord'); if(b) b.disabled=!picked; }
 function openExpRecorder(expId){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
   window.__expRecId=expId;
   document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
   var krs=exp.key_reads||[], prs=exp.possible_results||[];
-  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="number" step="any" class="erk-input" data-kr="'+esc(k.id)+'" oninput="expRecEval()" placeholder="measured"><span class="erk-unit">'+esc(k.unit||'')+'</span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
+  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
   var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('') : '<div class="exs-none">No possible results defined.</div>';
   document.getElementById('expRecBody').innerHTML =
     '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values'+
@@ -3244,7 +3442,15 @@ function recordExpOutcome(){
   if(!expId||!picked) return;
   var d=document.getElementById('erDate');
   var readings=__erReadings();
-  var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:readings };
+  /* the experiment's own record keeps the RAW reads: an array for a statistical key read, the plain
+     number for a single-valued one. RD.keyReadValueList reads either shape, so old trees stay valid. */
+  var __rawVals={}; try{ __rawVals=__erReadValues(); }catch(e){}
+  var __recVals={};
+  Object.keys(readings).forEach(function(id){
+    var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
+    __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
+  });
+  var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
   var wrote=writeKpiUpdatesFromReads(expId, readings);
   closeExpRecorder();
@@ -3277,13 +3483,17 @@ window.hubProjectKpis = function(){
 };
 function writeKpiUpdatesFromReads(expId, readings){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return 0;
+  /* raw per-key-read arrays, read while the recorder is still mounted; falls back to the scalar */
+  var __erRawValues={}; try{ if(typeof __erReadValues==='function') __erRawValues=__erReadValues(); }catch(e){}
   var byId={}; (exp.key_reads||[]).forEach(function(k){ byId[k.id]=k; });
   var valid={}; try{ allKpisPool().forEach(function(k){ if(k.objectiveId===selectedObj && k.hostType!=='task') valid[k.id]=1; }); }catch(e){}
   if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
   var ts=Date.now(), wrote=0;
   Object.keys(readings||{}).forEach(function(krId){
     var k=byId[krId]; if(!k||!k.source_kpi_gid||!valid[k.source_kpi_gid]) return;
-    exec.kpiUpdates.push({ kpiId:k.source_kpi_gid, value:Number(readings[krId]), timestamp:ts, note:'exp '+(exp.code||exp.id) });
+    var __xs=(__erRawValues && __erRawValues[krId]) ? __erRawValues[krId] : [Number(readings[krId])];
+      var __rows=RD.buildStatReadings(k.source_kpi_gid, __xs, { timestamp:ts, note:'exp '+(exp.code||exp.id) });
+      for(var __r=0;__r<__rows.length;__r++) exec.kpiUpdates.push(__rows[__r]);
     wrote++;
   });
   return wrote;
@@ -6458,6 +6668,14 @@ function renderKeyReads(t,expId,exp){
     if(__lk.linked||__lk.unlinked){
       name=el("div","kr-name");name.style.cssText="flex:2;display:flex;align-items:center;gap:8px;font-size:13px";
       const nmtxt=el("span",null,k.name||"(KPI)");nmtxt.style.fontWeight="500";name.appendChild(nmtxt);
+      { const __st=RD.keyReadStat(k, __erKpiFor(k));   // the REAL KPI: __etbKpiById holds a projection with no targetType
+        if(__st.statistical){
+          const b=el("span","statbadge", __st.statistic + (__st.readCount?(" of "+__st.readCount):"") );
+          b.title = __st.source==="kpi"
+            ? ("statistic and sample size come from the linked KPI" + (__st.overriddenLocal?" — this key read's own setting is overridden":""))
+            : "statistic set on this key read (no linked KPI)";
+          name.appendChild(b);
+        } }
       const tag=el("span",null,__lk.linked?("linked · "+(__lk.label||"KR")):"unlinked");tag.style.cssText="font-size:10px;font-weight:600;color:"+(__lk.unlinked?"#A32D2D":"#185FA5");name.appendChild(tag);
       name.title=__lk.linked?("Linked to "+(__lk.label||"KPI")+" — name & unit follow the KPI"):"Linked KPI was removed";
       unit=el("div","kr-unit",k.unit||"");unit.style.cssText="flex:1;min-width:54px;color:#888;font-size:12px";

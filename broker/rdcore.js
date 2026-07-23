@@ -1740,6 +1740,131 @@
     return { updates: updates, duplicates: duplicates, unresolved: unresolved };
   }
 
+  // ---- Statistical key reads (ETB) ---------------------------------------------------------
+  // A key read may be a STATISTIC over several measurements rather than one number.
+  //
+  // Single source of truth: when a key read is linked to a KPI (source_kpi_gid) and that KPI is
+  // statistical, the statistic and expected sample size come from the KPI. A key read never
+  // overrides a linked KPI — otherwise "median of 5" on one side and "average of 3" on the other
+  // would silently disagree. A key read with no link may carry its own config.
+  //
+  // The recorder writes the RAW reads (N kpiUpdate rows), never a pre-computed statistic: the KPI
+  // layer reduces readings itself, so writing a mean would double-reduce. Everything below derives;
+  // nothing derived is stored.
+
+  // Read a recorded key_read_value in EITHER shape. The ETB tree historically stored one number per
+  // key read; a statistical entry stores the array of raw reads. Existing scalars keep working and are
+  // read as n = 1, so no migration pass is needed and old trees stay valid.
+  function keyReadValueList(v) {
+    if (v == null) return [];
+    if (Array.isArray(v)) { var a=[]; for (var i=0;i<v.length;i++){ var n=Number(v[i]); if(isFinite(n)) a.push(n); } return a; }
+    var s = Number(v);
+    return isFinite(s) ? [s] : [];
+  }
+
+  function parseReads(input) {
+    if (Array.isArray(input)) {
+      var a = [];
+      for (var i = 0; i < input.length; i++) { var n = Number(input[i]); if (isFinite(n)) a.push(n); }
+      return a;
+    }
+    if (input == null) return [];
+    var s = String(input).trim();
+    if (!s) return [];
+    var parts = s.split(/[\s,;]+/), out = [];
+    for (var j = 0; j < parts.length; j++) {
+      if (parts[j] === '') continue;
+      var v = Number(parts[j]);
+      if (isFinite(v)) out.push(v);
+    }
+    return out;
+  }
+
+  // {n, value, sd, min, max, values}. value is the chosen statistic; sd travels alongside it so the
+  // spread is visible without a second call. n===0 -> value null (never 0, which reads as a result).
+  function statSummary(input, statistic) {
+    var xs = parseReads(input);
+    var stat = statistic || 'average';
+    if (!xs.length) return { n: 0, value: null, sd: null, min: null, max: null, values: [] };
+    return {
+      n: xs.length,
+      value: computeStat(stat, xs),
+      sd: xs.length > 1 ? computeStat('stddev', xs) : 0,
+      min: computeStat('min', xs),
+      max: computeStat('max', xs),
+      values: xs
+    };
+  }
+
+  // Resolve which statistic a key read uses, and where that came from.
+  // source: 'kpi' (linked statistical KPI) | 'local' (unlinked key read's own config) | 'none' (single-valued)
+  function keyReadStat(keyRead, kpi) {
+    var kr = keyRead || {};
+    if (kpi && kpi.targetType === 'statistical') {
+      return {
+        statistical: true,
+        statistic: kpi.statistic || 'average',
+        readCount: (kpi.readCount === '' || kpi.readCount == null) ? null : Number(kpi.readCount),
+        source: 'kpi',
+        overriddenLocal: !!kr.statistic          // surfaced, not silently dropped
+      };
+    }
+    if (kr.statistic) {
+      return {
+        statistical: true,
+        statistic: kr.statistic,
+        readCount: (kr.readCount === '' || kr.readCount == null) ? null : Number(kr.readCount),
+        source: 'local',
+        overriddenLocal: false
+      };
+    }
+    return { statistical: false, statistic: null, readCount: null, source: 'none', overriddenLocal: false };
+  }
+
+  // Completeness of ONE entry against the expected sample size. Deliberately separate from the KPI's
+  // pooled reading count: a 5-read experiment run twice is entry-complete (5 of 5) while the KPI sits
+  // at n=10. Conflating the two makes pooling look like a bug.
+  function readsComplete(n, readCount) {
+    var have = Number(n) || 0;
+    if (readCount == null || !isFinite(Number(readCount)) || Number(readCount) <= 0) {
+      return { complete: have > 0, have: have, expected: null, short: 0, over: 0 };
+    }
+    var want = Number(readCount);
+    return {
+      complete: have >= want,
+      have: have, expected: want,
+      short: have < want ? (want - have) : 0,
+      over: have > want ? (have - want) : 0
+    };
+  }
+
+  // The number a criterion should be tested against, given an acceptance mode.
+  // 'statistic' (default) tests the summary value; 'all'/'any' are per-read claims and return the
+  // worst/best read for the comparison direction, so the caller's existing scalar comparison still works.
+  function keyReadTestValue(summary, mode, direction) {
+    if (!summary || !summary.n) return null;
+    var m = mode || 'statistic';
+    if (m === 'statistic') return summary.value;
+    var down = (direction === 'down' || direction === 'decrease');
+    if (m === 'all') return down ? summary.max : summary.min;   // the hardest read must still pass
+    if (m === 'any') return down ? summary.min : summary.max;   // the easiest read may pass
+    return summary.value;
+  }
+
+  // Materialise one entry as RAW readings for a KPI — N rows, not a reduced value.
+  function buildStatReadings(kpiId, values, meta) {
+    var xs = parseReads(values);
+    var m = meta || {};
+    var ts = m.timestamp != null ? m.timestamp : Date.now();
+    var out = [];
+    for (var i = 0; i < xs.length; i++) {
+      var row = { id: 'UPD-' + kpiId + '-' + ts + '-' + i, kpiId: kpiId, value: xs[i], timestamp: ts, note: m.note || '' };
+      if (m.src) row.src = m.src;
+      out.push(row);
+    }
+    return out;
+  }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -1788,6 +1913,13 @@
     boardSummary: boardSummary,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
+    parseReads: parseReads,
+    keyReadValueList: keyReadValueList,
+    statSummary: statSummary,
+    keyReadStat: keyReadStat,
+    readsComplete: readsComplete,
+    keyReadTestValue: keyReadTestValue,
+    buildStatReadings: buildStatReadings,
     validateAnalysisIndex: validateAnalysisIndex,
     analysisIndexSamples: analysisIndexSamples,
     analysisRecentSamples: analysisRecentSamples,
