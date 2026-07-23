@@ -841,6 +841,8 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
+  .er-concl.er-prov{border-left:3px solid var(--warn);background:#2a2410}
+  .er-prov-sub{color:var(--muted);font-size:11px;margin-top:4px}
   .kr-statrow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;flex-wrap:wrap}
   .kr-statlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .kr-statro{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
@@ -3496,6 +3498,21 @@ function expRecEval(){
   if(matched.length===1){ var r=matched[0]; panel.className='er-concl er-match'; panel.innerHTML='<b>\u2713 Matched:</b> '+esc(r.label||r.id)+(r.conclusion?(' \u2014 '+esc(r.conclusion)):''); var radio=document.querySelector('#expRecBody input[name="erp-pick"][value="'+String(r.id).replace(/"/g,'')+'"]'); if(radio) radio.checked=true; }
   else if(matched.length>1){ panel.className='er-concl er-multi'; panel.innerHTML='Multiple results match \u2014 pick one below.'; }
   else if(m.complete){ panel.className='er-concl er-none'; panel.innerHTML='No defined result matches \u2014 pick one below to record manually.'; }
+  else if(m.provisional && m.provisional.length===1){
+    var pid=m.provisional[0];
+    var pr=(exp.possible_results||[]).find(function(x){return x.id===pid;})||{};
+    var miss=(m.missingBy&&m.missingBy[pid])||[];
+    var krNm={}; (exp.key_reads||[]).forEach(function(k){krNm[k.id]=k.name||k.id;});
+    var names=miss.map(function(id){return krNm[id]||id;});
+    panel.className='er-concl er-prov';
+    panel.innerHTML='<b>\u25cb Trending toward:</b> '+esc(pr.label||pid)
+      +'<div class="er-prov-sub">provisional \u2014 still awaiting '+esc(names.join(', ')||'more data')
+      +'. Record now to accept it, or finish entering values.</div>';
+  }
+  else if(m.provisional && m.provisional.length>1){
+    panel.className='er-concl er-prov';
+    panel.innerHTML='<b>\u25cb '+m.provisional.length+' results still possible</b><div class="er-prov-sub">enter more values to narrow it down.</div>';
+  }
   else { panel.className='er-concl er-pending'; panel.innerHTML='Enter measured values to auto-determine the result\u2026'; }
   expRecSync();
 }
