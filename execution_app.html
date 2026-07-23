@@ -3309,15 +3309,32 @@ function cdUpdateCount(){
 function cdDoImport(){
   const picks=Object.values(__cdSel); if(!picks.length) return;
   if(__cdHost.type==="record"){
-    let filled=0;
-    picks.forEach(p=>{
-      if(!p.target) return;
-      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+p.target+'"]');
-      if(inp){ inp.value=p.value; filled++; }
+    /* Group by target first. A STATISTICAL key read wants N measurements, and the portal often has
+       them — the same canonical key across several runs of one sample — so several ticked values
+       ACCUMULATE into that one field instead of the last one overwriting the rest. A single-valued
+       key read keeps last-one-wins, which is the only sensible reading of two numbers for one slot. */
+    const byTarget={};
+    picks.forEach(p=>{ if(!p.target) return; (byTarget[p.target]=byTarget[p.target]||[]).push(p); });
+    let filled=0, multi=0;
+    Object.keys(byTarget).forEach(tid=>{
+      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+tid+'"]');
+      if(!inp) return;
+      const group=byTarget[tid];
+      const st=__erStatOf(__erKeyRead(tid));
+      if(st.statistical){
+        /* keep anything already typed, then append — importing must not silently discard hand entry */
+        const existing=RD.parseReads(inp.value);
+        const merged=existing.concat(group.map(g=>Number(g.value)));
+        inp.value=merged.join(" ");
+        if(group.length>1) multi++;
+      } else {
+        inp.value=group[group.length-1].value;
+      }
+      filled++;
     });
     closeConnectData();
     if(typeof expRecEval==="function"){ try{ expRecEval(); }catch(e){} }
-    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal \u2014 not saved until you record the outcome.","ok");
+    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal"+(multi?(" ("+picks.length+" reads)"):"")+" \u2014 not saved until you record the outcome.","ok");
     return;
   }
   /* create KPIs for any "+ create new KPI" targets, then materialise readings */
