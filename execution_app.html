@@ -107,6 +107,13 @@
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
+  .src-chip{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;margin-left:6px;white-space:nowrap;cursor:help}
+  tr.prov-tr td{border-top:none!important;padding-top:0!important;padding-bottom:6px!important}
+  .prov-d summary{cursor:pointer;color:var(--muted);font-size:11px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
+  .prov-d summary::-webkit-details-marker{display:none}
+  .prov-d summary::before{content:"\u25b8";font-size:9px;transition:transform .12s}
+  .prov-d[open] summary::before{transform:rotate(90deg)}
+  .prov-body{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-top:5px;white-space:pre-wrap}
   .read-row{display:flex;gap:6px;align-items:center}
   code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
   .settings label{display:block;margin-bottom:10px;max-width:520px}
@@ -3736,6 +3743,53 @@ function delSub(type, id){
 // to read its link again. Returns how many were removed, or -1 if there were none. Single source of truth:
 // both the inline cell and postRead() call this.
 function ownReadingsOf(kpiId){ return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId); }
+
+/* ---- provenance for imported readings -------------------------------------------------------
+   A reading pulled from the analysis portal carries src{portal,job_id,bin_id,sample,bucket,key,
+   cond,run_t,imported_t}. Surface it so an imported number is never indistinguishable from a typed
+   one: a chip beside the value, and a collapsible source line under the row. __provOpen keeps a row
+   expanded across the app's frequent re-renders (a fresh <details> would always come back shut). */
+const __provOpen = new Set();
+function cdLatestSrc(kpiId){
+  let best=null;
+  ownReadingsOf(kpiId).forEach(u=>{
+    if(!u || !u.src || u.src.portal!=="analysis") return;
+    if(!best || (u.timestamp||0) > (best.timestamp||0)) best=u;
+  });
+  return best;
+}
+function cdCondSummary(c){
+  const p=[]; c=c||{};
+  if(c.T_C!=null)p.push(c.T_C+" \u00b0C");
+  if(c.RH_pct!=null)p.push(c.RH_pct+" %RH");
+  if(c.P_value!=null)p.push(c.P_value+" "+(c.P_unit||""));
+  if(c.step)p.push("step "+c.step);
+  return p.join(" \u00b7 ");
+}
+function cdChipHtml(kpiId){
+  const u=cdLatestSrc(kpiId); if(!u) return "";
+  const s=u.src, bits=[s.sample||"", cdCondSummary(s.cond), (s.run_t||"").slice(0,10)].filter(Boolean);
+  return `<span class="src-chip" title="${esc(bits.join(" \u00b7 "))}">\u21a7 analysis</span>`;
+}
+function cdProvRowHtml(kpiId, cols){
+  const u=cdLatestSrc(kpiId); if(!u) return "";
+  const s=u.src;
+  const open=__provOpen.has(kpiId)?" open":"";
+  const n=ownReadingsOf(kpiId).filter(x=>x&&x.src&&x.src.portal==="analysis").length;
+  const body=[
+    "sample    "+(s.sample||"\u2014"),
+    "analysis  "+(s.bucket||"\u2014")+" \u00b7 "+(s.key||"\u2014"),
+    "condition "+(cdCondSummary(s.cond)||"none recorded"),
+    "run       "+(s.run_t||"\u2014")+(s.script?(" \u00b7 "+s.script):""),
+    "job       "+(s.job_id||"\u2014")+(s.bin_id?("  bin "+s.bin_id):""),
+    "imported  "+(s.imported_t||"\u2014")
+  ].join("\n");
+  return `<tr class="prov-tr"><td colspan="${cols}"><details class="prov-d" data-provkpi="${esc(kpiId)}"${open} ontoggle="cdProvToggle(this)"><summary>\u21a7 imported from analysis${n>1?(" \u00b7 "+n+" readings"):""}</summary><div class="prov-body">${esc(body)}</div></details></td></tr>`;
+}
+function cdProvToggle(el){
+  const id=el&&el.getAttribute("data-provkpi"); if(!id) return;
+  if(el.open) __provOpen.add(id); else __provOpen.delete(id);
+}
 function clearOwnReadings(kpiId){
   const own=ownReadingsOf(kpiId);
   if(!own.length) return -1;
@@ -4733,9 +4787,9 @@ function kpiTable(hostType, hostId, objScope){
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
       <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
-      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}</td>
+      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}${cdChipHtml(k.id)}</td>
       <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
-      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
+      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>` + cdProvRowHtml(k.id, 6);
   });
   h += `</tbody></table>`;
   return h;
