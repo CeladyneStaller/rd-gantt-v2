@@ -841,6 +841,10 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
+  .kr-statrow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;flex-wrap:wrap}
+  .kr-statlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kr-statro{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .kr-statnote{font-size:10px;color:var(--muted);font-style:italic;cursor:help}
   .kr-observed{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px}
   .kr-pass{color:var(--ok);font-weight:600;margin-left:4px}
   .kr-fail{color:var(--bad);font-weight:600;margin-left:4px}
@@ -6706,6 +6710,50 @@ function openKeyReadKpiPicker(t, expId){
   ov.addEventListener('click',function(e){ if(e.target===ov) closeKeyReadKpiPicker(); });
   ETB_ROOT.appendChild(ov); ov.classList.add('open');
 }
+/* Statistic + expected read count for a key read.
+   Editable ONLY when the key read has no linked KPI — when it is linked the KPI is the single source
+   of truth (fork S-A), so the pair is shown read-only with where it came from. Without this control an
+   UNLINKED key read could never be made statistical, which left the engine's local-config path
+   unreachable from the UI. */
+function __erStatControls(t, expId, k){
+  const row=document.createElement('div'); row.className='kr-statrow';
+  const kpi=__erKpiFor(k);
+  const st=RD.keyReadStat(k, kpi);
+  const lab=document.createElement('span'); lab.className='kr-statlab'; lab.textContent='statistic';
+  row.appendChild(lab);
+  /* Keyed off HAVING a link, not off the KPI being statistical: a key read linked to a
+     single-value KPI must not be made statistical locally either, or it would collect N reads for a
+     KPI that only ever reports the latest one. Editable strictly when there is no linked KPI. */
+  if(k.source_kpi_gid){
+    const v=document.createElement('span'); v.className='kr-statro';
+    v.textContent = st.statistical ? (st.statistic+(st.readCount?(' of '+st.readCount):'')) : 'single value';
+    const note=document.createElement('span'); note.className='kr-statnote';
+    note.textContent='inherited from KPI';
+    note.title='the linked KPI defines the statistic and sample size'
+      +(st.overriddenLocal?' \u2014 this key read\u2019s own setting is ignored while linked':'');
+    row.appendChild(v); row.appendChild(note);
+    return row;
+  }
+  /* fSelect takes {value,label} objects. The statistics offered are exactly the ones
+     RD.computeStat implements — offering any other would silently fall back to average. */
+  const OPTS=[{value:'',label:'\u2014 single value \u2014'},{value:'average',label:'average'},
+              {value:'median',label:'median'},{value:'stddev',label:'stddev'},{value:'cv',label:'cv'},
+              {value:'range',label:'range'},{value:'max',label:'max'},{value:'min',label:'min'}];
+  const sel=fSelect(k.statistic||'', OPTS, function(v){
+    setKeyReadField(t,expId,k.id,'statistic', v||null); softRefresh(); renderPanel(expId);
+  });
+  row.appendChild(sel);
+  if(k.statistic){
+    const n=fText(k.readCount==null?'':String(k.readCount), function(v){
+      const num=(String(v).trim()==='')?null:Number(v);
+      setKeyReadField(t,expId,k.id,'readCount',(num!=null&&isFinite(num)&&num>0)?num:null);
+      softRefresh(); renderPanel(expId);
+    }, {placeholder:'reads'});
+    const of=document.createElement('span'); of.className='kr-statlab'; of.textContent='over';
+    row.appendChild(of); row.appendChild(n);
+  }
+  return row;
+}
 function renderKeyReads(t,expId,exp){
   const wrap=el("div","keyreads");const h=el("div","p-lab","Key reads");h.style.marginTop="14px";wrap.appendChild(h);
   const repeat=!!exp.repeat_of;const ov=exp.overrides||{};
@@ -6742,6 +6790,7 @@ function renderKeyReads(t,expId,exp){
     const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
     const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
     pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    card.appendChild(__erStatControls(t, expId, k));
     { const __obs=__erObservedRow(k, exp); if(__obs) card.appendChild(__obs); }
     wrap.appendChild(card);
   });
