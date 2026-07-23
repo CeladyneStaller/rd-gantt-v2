@@ -3181,9 +3181,11 @@ function cdTargets(){
                         .map(k=>({id:k.id,name:k.name||k.id,unit:k.unit||""}));
 }
 function cdGuessTarget(key){
-  const t=cdTargets().find(x=>String(x.name).toLowerCase()===String(key).toLowerCase());
+  const ts=cdTargets();
+  const t=ts.find(x=>String(x.name).toLowerCase()===String(key).toLowerCase());
   if(t) return t.id;
-  return (__cdHost&&__cdHost.type==="record") ? "" : "__new__";
+  if(__cdHost&&__cdHost.type==="record") return ts.length? ts[0].id : "";   // key-read names rarely match a canonical key
+  return "__new__";
 }
 
 function openConnectData(type,id){
@@ -3279,7 +3281,7 @@ function cdUnitHtml(sm,u){
       <td style="width:24px"><input type="checkbox" ${on?"checked":""} data-cdpick="${esc(selId)}" onchange="cdPick(this,'${esc(sm.sample)}','${esc(u.uid)}',this.getAttribute('data-key'))" data-key="${esc(k)}"></td>
       <td>${esc(k)}${matched?'<div class="cd-match">matches a target here</div>':""}</td>
       <td class="cd-v">${u.key_values[k]}</td><td class="cd-u">${esc(unit)}</td>
-      <td class="cd-t">${on?`<select onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
+      <td class="cd-t">${on?`<select data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
   }).join("");
   return `<div class="cd-unit"><div class="cd-uhead"><span class="cd-an">${esc(u.Analysis)}</span>
       <span class="cd-cond">${esc(cdCondText(u.Conditions))}</span>
@@ -3311,6 +3313,10 @@ function cdUpdateCount(){
 }
 
 function cdDoImport(){
+  document.querySelectorAll('#cdBody select[data-selid]').forEach(sel=>{
+    const id=sel.getAttribute('data-selid');
+    if(__cdSel[id] && sel.value) __cdSel[id].target=sel.value;      // what the user sees is what imports
+  });
   const picks=Object.values(__cdSel); if(!picks.length) return;
   if(__cdHost.type==="record"){
     /* Group by target first. A STATISTICAL key read wants N measurements, and the portal often has
