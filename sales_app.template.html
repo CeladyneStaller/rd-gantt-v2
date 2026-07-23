@@ -68,6 +68,7 @@
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
   body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
+  .unit-tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);padding:3px 9px;border-radius:6px;margin-right:8px;align-self:center}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
@@ -228,6 +229,60 @@
   .tgt-toggle.add:hover{border-color:var(--accent);color:var(--accent)}
   .tgt-toggle + .tgt-toggle{margin-left:6px}
   .tgt-panel{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+  /* recover stranded data (settings > maintenance) */
+  .mz{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:14px}
+  .mz-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+  .recover-list{border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-top:6px}
+  .recover-row{padding:7px 10px;border-bottom:1px solid var(--line);font-size:12.5px} .recover-row:last-child{border-bottom:none}
+  /* Kanban board (K2) */
+  .gate-mode-seg{margin-right:8px} .gate-mode-seg .seg{transform:scale(.92);transform-origin:right}
+  .kb-root{padding:6px 12px 12px}
+  .kb-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .kb-tabs{display:flex;gap:4px;flex-wrap:wrap} .kb-tab{background:transparent;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:4px 11px;border-radius:7px;cursor:pointer}
+  .kb-tab.on{background:var(--pill-active-bg);border-color:var(--pill-active-bd);color:var(--pill-active-fg)}
+  .kb-baracts{display:flex;gap:5px}
+  .kb-wrap{border:1px solid var(--line);border-radius:9px;overflow:auto;background:var(--bg)}
+  .kb-table{border-collapse:collapse;min-width:100%}
+  .kb-table th{position:sticky;top:0;background:var(--panel2);text-align:left;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap}
+  .kb-corner{left:0;position:sticky;z-index:3;min-width:140px} .kb-colh{z-index:2}
+  .kb-colname{font-weight:700;color:var(--ink);font-size:11px} .kb-colcnt{margin-left:8px;font-family:var(--mono);color:var(--muted)}
+  .kb-laneh{position:sticky;left:0;background:var(--panel2);border-right:1px solid var(--line);border-bottom:1px solid var(--line);vertical-align:top;padding:9px 10px;min-width:140px;z-index:1}
+  .kb-lanename{font-weight:700;font-size:12.5px;margin-bottom:3px} .kb-rule{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5} .kb-rule b{color:var(--ink)}
+  .kb-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);vertical-align:top;padding:7px;min-width:170px;background:var(--bg)}
+  .kb-cell.kb-over{background:#132030;outline:1.5px dashed var(--accent);outline-offset:-4px}
+  .kb-tile{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--none);border-radius:8px;padding:7px 8px;margin-bottom:7px;cursor:grab}
+  .kb-tile:last-child{margin-bottom:0} .kb-tile.dragging{opacity:.45}
+  .kb-tname{font-weight:600;font-size:12.5px} .kb-tmeta{display:flex;gap:7px;align-items:center;margin-top:4px;font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+  .kb-tdays{padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .kb-tile.on-track{border-left-color:var(--ok)} .kb-tile.on-track .kb-tdays{background:var(--pill-ok-bg);border-color:var(--pill-ok-bd);color:var(--ok)}
+  .kb-tile.at-risk{border-left-color:var(--warn)} .kb-tile.at-risk .kb-tdays{background:var(--pill-warn-bg);border-color:var(--pill-warn-bd);color:var(--warn)}
+  .kb-tile.breached{border-left-color:var(--bad)} .kb-tile.breached .kb-tdays{background:var(--pill-bad-bg);border-color:var(--pill-bad-bd);color:var(--bad)}
+  .kb-tile.closed{border-left-color:var(--accent);opacity:.75}
+  .kb-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px} .kb-chip{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 8px}
+  .kb-chip.ok{color:var(--ok);border-color:var(--pill-ok-bd)} .kb-chip.risk{color:var(--warn);border-color:var(--pill-warn-bd)} .kb-chip.bad{color:var(--bad);border-color:var(--pill-bad-bd)}
+  .kb-legend{color:var(--muted);font-size:11px;margin:10px 0 0}
+  .kb-cfg{display:flex;gap:18px;flex-wrap:wrap;border:1px dashed var(--line);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--panel)}
+  .kb-cfg h4{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+  .kb-cfgcol{flex:1;min-width:220px} .kb-cfgrow{display:flex;gap:6px;margin-bottom:6px} .kb-cfgrow input{flex:1}
+  .kb-lanecfg{width:100%;border-collapse:collapse;font-size:12px} .kb-lanecfg th{text-align:left;font-family:var(--mono);font-size:9px;color:var(--muted);font-weight:400;padding:3px 5px} .kb-lanecfg td{padding:3px 5px} .kb-lanecfg input[type=number]{width:60px} .kb-lanecfg input[type=text]{width:100%}
+  .kb-cfgclose{width:100%;text-align:right}
+  /* milestone KR — modal editor + status drawer */
+  .ms-sum{font-family:var(--mono);font-size:11px;font-weight:700}
+  .ms-ok{color:var(--ok)} .ms-bad{color:var(--warn)}
+  table.ms-edit,table.ms-status{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.ms-edit th,table.ms-status th{text-align:left;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:400;padding:5px 8px;border-bottom:1px solid var(--line)}
+  table.ms-edit td,table.ms-status td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.ms-status tbody tr:last-child td{border-bottom:1px solid var(--line)}
+  table.ms-edit input[type=text]{width:100%}
+  .ms-wt{white-space:nowrap} .ms-wt input{width:56px;text-align:right} .ms-wt .auto{color:var(--muted);font-style:italic;font-size:11px;margin-left:4px}
+  .ms-drawer-head{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .ms-mode{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--pill-active-bd);background:var(--pill-active-bg);border-radius:5px;padding:2px 8px}
+  .ms-status{padding:0}
+  .ms-st{text-align:center;width:44px} .ms-compl{width:52px;text-align:right} .ms-pct{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:2px}
+  .ms-wro,.ms-dro{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap} .ms-wro .auto{font-style:italic}
+  .ms-rdone .ms-nm{color:var(--muted);text-decoration:line-through}
+  .ms-od{color:var(--bad);font-family:var(--mono);font-size:10px}
+  .ms-contrib{font-family:var(--mono);font-size:10px;color:var(--ok);border:1px solid var(--pill-ok-bd);background:var(--pill-ok-bg);border-radius:4px;padding:1px 6px;margin-left:8px}
   .tgt-foot{padding:8px 12px;border-top:1px solid var(--line);background:var(--panel2);display:flex;gap:8px}
   .ws-choice{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px}
   .ws-opt{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;background:var(--panel);transition:border-color .12s,background .12s}
@@ -814,10 +869,11 @@ html[data-theme="dark"] #etb-view{
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> Sales</h1>
   <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <div class="spacer"></div>
+  <span id="unitTag" class="unit-tag" style="display:none"></span>
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
@@ -841,6 +897,10 @@ html[data-theme="dark"] #etb-view{
       <button type="button" class="theme-opt" data-theme-set="light">Light</button>
       <button type="button" class="theme-opt" data-theme-set="dark">Dark</button>
     </div>
+    <h3 style="margin-top:16px">Maintenance</h3>
+    <p class="hint">If an objective was moved to this division from another, its key results, KPIs, stage-gates, tasks, boards and ETB tree may still live in the old division's bin. This scans the other business divisions and moves any stranded execution data for this division's objectives into this bin.</p>
+    <div class="row"><button class="act" id="btnRecoverStranded">Recover stranded execution data</button><span id="recoverMsg" class="io-msg muted" style="margin-left:8px"></span></div>
+    <div id="recoverReport"></div>
   </div>
 
   <div id="objHeadWrap"></div>
@@ -1022,6 +1082,70 @@ async function apiGet(id){ const r=await fetch(`${BROKER}/state/${id}`,{headers:
 async function apiPut(id,doc,etag){ if(RO) return {version: etag||"0"}; const r=await fetch(`${BROKER}/state/${id}`,{method:"PUT",
   headers:{...auth(),"Content-Type":"application/json","If-Match":etag||"0"},body:JSON.stringify({doc})}); if(!r.ok) throw r; return r.json(); }
 
+/* ---------------- Recover stranded execution data (Option B stopgap) ----------------
+   An objective can be moved to a different division (portfolio edit), but its execution artifacts stay in the
+   OLD division's bin — so they vanish from this division's view while still showing in cross-division rollups.
+   This scans the OTHER business divisions' bins for artifacts belonging to THIS division's objectives, and,
+   on confirmation, moves the full objective payload here (RD.moveObjectivePayload) — writing the source bin
+   (payload removed) and this bin (payload added). Target is written FIRST so a mid-way failure never loses data. */
+let __recoverPlan = null;   // [{srcDiv, srcId, srcDoc, srcEtag, objId, counts}]
+function recoverSay(t,cls){ var e=document.getElementById("recoverMsg"); if(e){ e.textContent=t||""; e.className="io-msg "+(cls||"muted"); } }
+function bizDivisions(){ return (portfolio && portfolio.divisions || []).filter(d=>divisionKindOf(d)==="biz"); }
+function divisionKindOf(d){ return (d && d.kind) ? d.kind : (RD.divisionKind? RD.divisionKind(d.id, portfolio) : "rd"); }
+async function scanStranded(){
+  __recoverPlan = [];
+  const myObjIds = new Set((portfolio.objectives||[]).filter(o=>o.divisionId===divisionId).map(o=>o.id));
+  const others = bizDivisions().filter(d=>d.id!==divisionId);
+  for(const d of others){
+    const binId = "BIZ-"+d.id;
+    let res=null; try{ res=await apiGet(binId); }catch(e){ continue; }
+    const doc = res && res.doc ? res.doc : res;   // apiGet may return {doc,etag} or the doc
+    const etag = res && res.etag!=null ? res.etag : (res && res.version!=null ? res.version : "0");
+    if(!doc || typeof doc!=="object") continue;
+    // any of MY objectives with artifacts sitting in THIS other bin?
+    myObjIds.forEach(objId=>{
+      const c = RD.objectivePayloadCounts(doc, objId);
+      const total = c.keyResults+c.kpis+c.stageGates+c.tasks+c.boards+c.risks;
+      if(total>0) __recoverPlan.push({ srcDiv:d.id, srcName:(d.name||d.id), srcId:binId, srcDoc:doc, srcEtag:etag, objId, counts:c });
+    });
+  }
+  return __recoverPlan;
+}
+function objName(objId){ const o=(portfolio.objectives||[]).find(x=>x.id===objId); return o?(o.statement||o.id):objId; }
+function renderRecoverReport(){
+  const host=document.getElementById("recoverReport"); if(!host) return;
+  if(!__recoverPlan){ host.innerHTML=""; return; }
+  if(!__recoverPlan.length){ host.innerHTML='<p class="keynote" style="color:var(--ok)">No stranded execution data found for this division\u2019s objectives.</p>'; return; }
+  let h='<div class="recover-list">';
+  __recoverPlan.forEach((p,i)=>{ const c=p.counts; const bits=[];
+    if(c.keyResults)bits.push(c.keyResults+" KR"+(c.keyResults>1?"s":"")); if(c.kpis)bits.push(c.kpis+" KPI"+(c.kpis>1?"s":""));
+    if(c.stageGates)bits.push(c.stageGates+" gate"+(c.stageGates>1?"s":"")); if(c.tasks)bits.push(c.tasks+" task"+(c.tasks>1?"s":""));
+    if(c.boards)bits.push(c.boards+" board"+(c.boards>1?"s":"")); if(c.risks)bits.push(c.risks+" risk"+(c.risks>1?"s":""));
+    h+=`<div class="recover-row"><b>${esc(objName(p.objId))}</b><span class="muted"> \u2014 ${bits.join(", ")} stranded in <b>${esc(p.srcName)}</b></span></div>`;
+  });
+  h+='</div><div class="row" style="margin-top:8px"><button id="btnDoRecover" class="primary">Move it all here</button><button id="btnCancelRecover">Cancel</button></div>';
+  host.innerHTML=h;
+  document.getElementById("btnDoRecover").onclick=doRecover;
+  document.getElementById("btnCancelRecover").onclick=()=>{ __recoverPlan=null; renderRecoverReport(); recoverSay("",""); };
+}
+async function doRecover(){
+  if(!__recoverPlan||!__recoverPlan.length) return;
+  const btn=document.getElementById("btnDoRecover"); if(btn){ btn.disabled=true; btn.textContent="Moving\u2026"; }
+  let okCount=0, failCount=0;
+  for(const p of __recoverPlan){
+    try{
+      const r = RD.moveObjectivePayload(p.srcDoc, exec, p.objId);
+      exec = r.toDoc;                                   // this bin gains the payload
+      await flushPersist();                             // 1) write THIS bin first (payload never absent from both)
+      await apiPut(p.srcId, r.fromDoc, p.srcEtag);      // 2) then write the source bin (payload removed)
+      okCount++;
+    }catch(e){ failCount++; }
+  }
+  __recoverPlan=null; renderRecoverReport();
+  recoverSay(failCount? (okCount+" recovered, "+failCount+" failed \u2014 reopen to retry") : (okCount+" objective"+(okCount>1?"s":"")+" recovered"), failCount?"error":"ok");
+  renderAll();
+}
+
 /* ---------------- date <-> day-count ---------------- */
 const EPOCH = Date.UTC(2020,0,1);
 const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
@@ -1183,7 +1307,7 @@ let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "
 let pendingObjective = URLP.objective;   // ?objective=<id> deep-link (robust-resolve); consumed once by fillObjSelect
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],boards:[],gateMode:{},kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
 function execId(){ return "BIZ-"+divisionId; }   // Sales/Business workspace; R&D execution uses EXEC-
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -1296,9 +1420,23 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
   if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
 
 /* ---------------- division resolution ---------------- */
+// This app's kind: the Sales app writes BIZ-<div>, the Execution app writes EXEC-<div>. Derive it from
+// execId()'s prefix so the two builds need no extra difference. The Sales app shows only kind=biz divisions;
+// the Execution app only kind=rd.
+function appKind(){ return execId().indexOf("BIZ-")===0 ? "biz" : "rd"; }
+function divInThisApp(d){ return d && RD.divisionKind(d)===appKind(); }
+function firstAppDivision(){ const d=((portfolio&&portfolio.divisions)||[]).find(divInThisApp); return d?d.id:null; }
 function resolveDivision(){
   const u = new URL(location.href);
-  return u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  // a requested/remembered division only counts if it belongs to THIS app's kind — otherwise the Execution
+  // app could land on a biz division (whose data lives in BIZ-, not EXEC-) and vice-versa.
+  const want = u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  if(!want) return null;
+  // portfolio not loaded yet -> can't judge kind here; accept the wanted division and let loadAll re-validate
+  // it against this app's kind once the divisions are known.
+  if(!portfolio || !portfolio.divisions) return want;
+  const d=portfolio.divisions.find(x=>x.id===want);
+  return divInThisApp(d) ? want : null;
 }
 
 /* ---------------- load / save ---------------- */
@@ -1325,8 +1463,10 @@ async function loadAll(){
     portfolio = p.doc; portfolioVersion = p.version;
     if(pendingObjective){ const _to=(portfolio.objectives||[]).find(o=>o.id===pendingObjective);
       if(_to) divisionId=_to.divisionId; else pendingObjective=""; }   // ?objective= robust-resolve: switch to its division; drop an unknown id
-    if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
-    if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
+    if(!divisionId || !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===divisionId))){
+      divisionId = resolveDivision() || firstAppDivision();
+    }
+    if(!divisionId){ setMsg(appKind()==="biz" ? "No business (kind=biz) divisions yet — add one in the Planning app." : "No R&D (kind=rd) divisions yet — add one in the Planning app.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
     fillDivSelect();   // populate + select the resolved division (header selector)
     const ex = await apiGet(execId());
@@ -1417,6 +1557,10 @@ function ownerLine(objId){
   return ow.length ? ow.join(", ") : "";
 }
 async function switchDivision(newDiv){
+  if(newDiv && !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===newDiv))){
+    setMsg("That division isn't a "+(appKind()==="biz"?"business":"R&D")+" division for this app.", "err");
+    const s=document.getElementById("divSelect"); if(s) s.value=divisionId; return;
+  }
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
   await flushPersist();                                                       // save the current division fully before repointing the bin
@@ -1434,9 +1578,31 @@ async function switchDivision(newDiv){
   startPoll();
 }
 function fillDivSelect(){ const s=document.getElementById("divSelect");
-  s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
+  const divs=(portfolio.divisions||[]).filter(divInThisApp), units=portfolio.units||[];
+  const opt=d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`;
+  if(units.length){
+    // group by unit (ordered), then an "Unassigned" group for divisions with no unitId
+    const uord=units.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    let html="";
+    uord.forEach(u=>{ const ds=divs.filter(d=>(d.unitId||null)===u.id);
+      if(ds.length) html+=`<optgroup label="${esc(u.name)}">`+ds.map(opt).join("")+`</optgroup>`; });
+    const orphan=divs.filter(d=>!units.some(u=>u.id===(d.unitId||null)));
+    if(orphan.length) html+=`<optgroup label="Unassigned">`+orphan.map(opt).join("")+`</optgroup>`;
+    s.innerHTML=html;
+  } else s.innerHTML=divs.map(opt).join("");
+  if(!divs.length) s.innerHTML=`<option value="">${appKind()==="biz"?"no business divisions":"no R&D divisions"}</option>`;
   if(divisionId) s.value=divisionId;
-  s.onchange=()=>switchDivision(s.value); }
+  s.onchange=()=>switchDivision(s.value);
+  updateUnitTag(); }
+// a small header tag showing which unit the current division sits in — orientation only, nothing gated.
+function updateUnitTag(){
+  const el=document.getElementById("unitTag"); if(!el) return;
+  const d=(portfolio.divisions||[]).find(x=>x.id===divisionId);
+  const uid=RD.unitIdOfDivision(divisionId, portfolio);
+  const u=(portfolio.units||[]).find(x=>x.id===uid);
+  if(u){ el.textContent=u.name; el.title="Unit — grouped in the planning app"; el.style.display=""; }
+  else { el.textContent=""; el.style.display="none"; }
+}
 function fillQtrSelect(){
   const s=document.getElementById("qtrSelect"); if(!s) return;
   const qs=[...new Set(myObjectives().map(o=>o.quarter).filter(Boolean))];
@@ -2036,8 +2202,23 @@ function initDraftKr(kr){
     kpiReadsFrom:(pk&&pk.readsFrom)?pk.readsFrom:"",
     kpiId:(pk&&pk.id)?pk.id:"",           // for the sample picker: exclude self, and only in krModalBody scope
     kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
-    subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
+    subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s))),
+    creditMode:(kr&&kr.creditMode)||"binary",
+    steps:(kr&&kr.steps?kr.steps:[]).map(s=>JSON.parse(JSON.stringify(s)))
   };
+}
+// effective weights for the milestone editor (mirror of rdcore, for the live sum-to-100 display)
+function draftMsWeights(){ return RD.milestoneEffectiveWeights(draftKr.steps||[]); }
+function draftMsStepsHtml(){
+  const steps=draftKr.steps||[]; if(!steps.length) return `<div class="skr-empty">no steps yet — add the accomplishments that complete this KR</div>`;
+  const eff=draftMsWeights(); const byId={}; eff.forEach(e=>byId[e.id]=e);
+  return `<table class="ms-edit"><thead><tr><th>Step / accomplishment</th><th>Weight</th><th>Due</th><th></th></tr></thead><tbody>`+
+    steps.map((s,i)=>{ const e=byId[s.id]||{w:0,auto:true};
+      return `<tr><td><input type="text" data-msname="${i}" value="${esc(s.name||"")}" placeholder="step ${i+1}"></td>`+
+        `<td class="ms-wt"><input type="number" min="0" max="100" data-mswt="${i}" value="${(s.weight==null||s.weight==="")?"":s.weight}" placeholder="auto">${e.auto?`<span class="auto">${e.w.toFixed(1)}%</span>`:""}</td>`+
+        `<td><input type="date" data-msdue="${i}" value="${s.due||""}"></td>`+
+        `<td>${steps.length>1?`<button type="button" class="ghost mini danger" data-msdel="${i}">\u2715</button>`:""}</td></tr>`;
+    }).join("")+`</tbody></table>`;
 }
 function draftSubKrListHtml(){
   const subs=draftKr.subKrs;
@@ -2073,11 +2254,19 @@ function krModalBody(){
         <option value="percentage"${tt==="percentage"?" selected":""}>% completion</option>
         <option value="kpi"${tt==="kpi"?" selected":""}>KPI-based</option>
         <option value="subkr"${tt==="subkr"?" selected":""}>Sub-key results</option>
+        <option value="milestone"${tt==="milestone"?" selected":""}>Milestone steps</option>
       </select></div>
     <div style="display:${tt==="percentage"?"block":"none"}">
       <div class="modal-field"><span class="lbl">Progress</span><div class="pct-row"><input type="range" min="0" max="100" data-f="progress" value="${esc(d.progress)}" style="flex:1" data-pctslider><span class="pct-val" data-pctval>${Number(d.progress)||0}%</span></div></div>
     </div>
     <div style="display:${tt==="kpi"?"block":"none"}">${kpiSection}</div>
+    <div style="display:${tt==="milestone"?"block":"none"}">
+      <div class="modal-field"><span class="lbl">Credit mode</span>${segHtml([["binary","Binary"],["partial","Partial"]], d.creditMode, "msmode")}
+        <span class="hint" style="margin-left:8px">${d.creditMode==="partial"?"weight scales by % complete":"full weight only when a step is done — strictly at 100%"}</span></div>
+      <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Steps</span>${(function(){const eff=draftMsWeights();const tot=eff.reduce((a,e)=>a+e.w,0);const exp=(draftKr.steps||[]).filter(x=>x.weight!=null&&x.weight!=="").reduce((a,x)=>a+Number(x.weight),0);const ok=Math.abs(tot-100)<0.05&&exp<=100;return `<span class="ms-sum ${ok?"ms-ok":"ms-bad"}">${tot.toFixed(1)}% / 100%</span>`;})()}</div>
+        <div id="krMsList">${draftMsStepsHtml()}</div>
+        <button class="ghost mini" type="button" data-msadd style="margin-top:8px">+ step</button></div>
+    </div>
     <div style="display:${tt==="subkr"?"block":"none"}">
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
@@ -2095,6 +2284,13 @@ function wireKrModal(){
   if(tsel) tsel.onchange=()=>{ draftKr.trackingType=tsel.value; krRerenderBody(); };
   body.querySelectorAll("[data-krktype]").forEach(b=>b.onclick=()=>{ draftKr.kpiType=b.dataset.krktype; krRerenderBody(); });
   body.querySelectorAll("[data-krkdir]").forEach(b=>b.onclick=()=>{ draftKr.kpiDir=b.dataset.krkdir; body.querySelectorAll("[data-krkdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  // milestone: mode toggle + step editors (re-render body on structural change so the sum + auto-weights refresh)
+  body.querySelectorAll("[data-msmode]").forEach(b=>b.onclick=()=>{ draftKr.creditMode=b.dataset.msmode; krRerenderBody(); });
+  body.querySelectorAll("[data-msname]").forEach(el=>el.oninput=()=>{ draftKr.steps[Number(el.dataset.msname)].name=el.value; });
+  body.querySelectorAll("[data-mswt]").forEach(el=>el.onchange=()=>{ draftKr.steps[Number(el.dataset.mswt)].weight=el.value===""?null:Number(el.value); krRerenderBody(); });
+  body.querySelectorAll("[data-msdue]").forEach(el=>el.onchange=()=>{ draftKr.steps[Number(el.dataset.msdue)].due=el.value; });
+  body.querySelectorAll("[data-msdel]").forEach(el=>el.onclick=()=>{ draftKr.steps.splice(Number(el.dataset.msdel),1); krRerenderBody(); });
+  const msadd=body.querySelector("[data-msadd]"); if(msadd) msadd.onclick=()=>{ (draftKr.steps=draftKr.steps||[]).push({id:"MS"+Date.now().toString(36)+Math.floor(Math.random()*1000),name:"",weight:null,due:"",completion:0}); krRerenderBody(); };
   const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
   body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
   body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
@@ -2111,9 +2307,10 @@ function saveKrModal(thenLink){
   if(!kr){ const id=RD.allocId("keyResult", selectedObj, exec.keyResults.map(x=>x.id)); kr={ id, objectiveId:selectedObj }; exec.keyResults.push(kr); }
   kr.statement=String(d.statement).trim();
   kr.trackingType=d.trackingType;
-  if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; }
-  else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
-  else { delete kr.progress; delete kr.subKrs; }
+  if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; delete kr.steps; delete kr.creditMode; }
+  else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; delete kr.steps; delete kr.creditMode; }
+  else if(d.trackingType==="milestone"){ kr.creditMode=d.creditMode||"binary"; kr.steps=(d.steps||[]).map(x=>({id:x.id,name:x.name,weight:(x.weight===""?null:x.weight),due:x.due||"",completion:x.completion==null?0:x.completion})); delete kr.progress; delete kr.subKrs; }
+  else { delete kr.progress; delete kr.subKrs; delete kr.steps; delete kr.creditMode; }
   if(d.trackingType==="kpi"){
     let pk=krPrimaryKpi(kr.id);
     if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
@@ -2563,6 +2760,31 @@ function initKpiTableRO(initId){
   return h;
 }
 
+// milestone status drawer — the ONLY editable field here is each step's status (done / % complete).
+// Names, weights, due dates and credit mode are edited in the KR modal (the pencil).
+function msStatusPanel(kr){
+  const steps=kr.steps||[];
+  if(!steps.length) return `<div class="hint">no steps yet — edit this KR (\u270e) to add them.</div>`;
+  const eff=RD.milestoneEffectiveWeights(steps); const byId={}; eff.forEach(e=>byId[e.id]=e);
+  const partial=(kr.creditMode==="partial"); const tot=eff.reduce((a,e)=>a+e.w,0); const td=todayDay();
+  const rows=steps.map(x=>{
+    const e=byId[x.id]||{w:0,auto:true}; const c=Math.max(0,Math.min(100,Number(x.completion)||0)); const done=c>=100;
+    const overdue=!done && x.due && (isoToDay(x.due)!=null) && isoToDay(x.due)<td;
+    const contrib=RD.milestoneStepContribution(x, e.w, kr.creditMode);
+    const status=partial
+      ? `<input type="number" min="0" max="100" class="ms-compl" data-mscompl="${kr.id}:${x.id}" value="${c}"><span class="ms-pct">%</span>`
+      : `<input type="checkbox" data-mscheck="${kr.id}:${x.id}" ${done?"checked":""}>`;
+    const tag=partial?`<span class="ms-contrib">${contrib.toFixed(1)}%</span>`:"";
+    return `<tr class="${done?"ms-rdone":""}"><td class="ms-st">${status}</td>`+
+      `<td class="ms-nm">${esc(x.name||"(step)")}${tag}</td>`+
+      `<td class="ms-wro">${e.w.toFixed(e.auto?1:0)}%${e.auto?' <span class="auto">auto</span>':""}</td>`+
+      `<td class="ms-dro">${x.due||"\u2014"}${overdue?' <span class="ms-od">overdue</span>':""}</td></tr>`;
+  }).join("");
+  return `<div class="ms-drawer-head"><span class="ms-mode">${partial?"Partial credit":"Binary credit"}</span>`+
+    `<span class="hint">update status here \u00b7 edit the plan with \u270e</span></div>`+
+    `<table class="ms-status"><thead><tr><th>Status</th><th>Step</th><th>Weight</th><th>Due</th></tr></thead><tbody>${rows}</tbody>`+
+    `<tfoot><tr><td></td><td>Sum of weights</td><td>${tot.toFixed(0)}%</td><td></td></tr></tfoot></table>`;
+}
 function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
@@ -2613,15 +2835,20 @@ function renderKRs(){
       cap = gap<=0 ? `<div class="pace-cap ok"><span class="ico">\u25b2</span>${gap===0?'on pace':'ahead of pace'} <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`
                    : `<div class="pace-cap ${band==='off-track'?'behind':'risk'}"><span class="ico">\u25bc</span>${gap} pts behind pace <span class="el">\u00b7 ${Math.round(el)}% elapsed</span></div>`; }
     else if(att!=null){ cap=`<div class="pace-cap ok"><span class="el">no objective dates \u2014 score only</span></div>`; }
+    const isMs=(kr.trackingType==="milestone");
     const kk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="keyResult" && k.hostId===kr.id);
     const metCnt=kk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
     const open=expandedKRs.has(kr.id);
-    const toggle = kk.length
+    const msDone=isMs?(kr.steps||[]).filter(x=>(Number(x.completion)||0)>=100).length:0;
+    const msTot=isMs?(kr.steps||[]).length:0;
+    const toggle = isMs
+      ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>${msDone}/${msTot} step${msTot===1?"":"s"} \u00b7 ${att==null?"\u2014":Math.round(att)+"%"}</button>`
+      : kk.length
       ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
       : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
-    const panel = open ? `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>` : '';
+    const panel = open ? (isMs ? `<div class="tgt-panel">${msStatusPanel(kr)}</div>` : `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>`) : '';
     inner+=`<div class="kr-block b-${bCls}"><div class="krow">
-      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
+      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">${isMs?("KR-M"+(krs.slice(0,idx+1).filter(r=>r.trackingType==="milestone").length)):("KR"+(idx+1))}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
       <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
       <div class="g-ready">
         <div class="r-top"><span class="r-lab">Attainment</span><span class="r-val" style="color:${c}">${attTxt}${att==null?'':'<span class="u">%</span>'}</span></div>
@@ -2794,8 +3021,34 @@ function openWorkstreamModal(setId){
     closeModal(); persist(); renderAll(); setMsg("Workstream deleted"+(gts.length?" \u2014 gates moved to "+esc(others[0].name||'another'):""),"ok");
   }; }
 }
+// ---- Kanban stage-gating (K2) -------------------------------------------------------------
+// Per-objective gate mode: 'classic' shows the stage-gate sets; 'kanban' shows board(s).
+function gateModeOf(objId){ return (exec.gateMode&&exec.gateMode[objId]==='kanban')?'kanban':'classic'; }
+function setGateMode(objId, mode){ (exec.gateMode=exec.gateMode||{})[objId]=mode; renderAll(); }
+function boardsFor(objId){ return (exec.boards||[]).filter(b=>b.objectiveId===objId); }
+function activeBoardId(){ const bs=boardsFor(selectedObj); if(!bs.length) return null;
+  if(kanbanBoardSel && bs.some(b=>b.id===kanbanBoardSel)) return kanbanBoardSel; return bs[0].id; }
+let kanbanBoardSel=null;
+function newId(pre){ return pre+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36); }
+function mintGateId(boardId, colId){ return boardId+"/"+colId; }   // stable identity the Gantt/Tracker gate_id resolves to
+function addBoard(){
+  const id=newId("BRD");
+  const c1=newId("col"), c2=newId("col"), c3=newId("col");
+  const lane=newId("lane");
+  const b={ id, objectiveId:selectedObj, name:"Board "+(boardsFor(selectedObj).length+1),
+    columns:[ {id:c1,name:"Prospect",gate_id:mintGateId(id,c1)},
+              {id:c2,name:"Working",gate_id:mintGateId(id,c2)},
+              {id:c3,name:"Closed",gate_id:mintGateId(id,c3)} ],
+    swimlanes:[ {id:lane,name:"Standard",maxDaysPerCol:14,deadline:""} ],
+    tiles:[] };
+  (exec.boards=exec.boards||[]).push(b); kanbanBoardSel=id; renderAll();
+}
+function boardById(id){ return (exec.boards||[]).find(b=>b.id===id); }
+function todayIso(){ return dayToIso ? dayToIso(todayDay()) : new Date().toISOString().slice(0,10); }
+
 function renderGates(){
   const host=document.getElementById("subSG");
+  if(gateModeOf(selectedObj)==='kanban'){ renderKanban(host); return; }
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const objEnded=!!objEndState(selectedObj);
@@ -2844,7 +3097,7 @@ function renderGates(){
     inner+=`</div>`;
   });
   if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
-  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
+  const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "classic", "gatemode")}</span><button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
   const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
   let cuBanner="";
   if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
@@ -2852,6 +3105,92 @@ function renderGates(){
   host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
+// ---- Kanban render (K2): board tabs + columns x swimlanes grid + tiles + config ----
+let kanbanCfgOpen=null;
+let _kbDrag=null;
+function renderKanban(host){
+  const boards=boardsFor(selectedObj);
+  const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "kanban", "gatemode")}</span><button class="ghost mini" data-kbaddboard="1">+ board</button>`;
+  if(!boards.length){
+    host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",0,acts)}<div class="item-list${listOpen("SG")}"><p class="hint" style="padding:4px 12px 12px">No boards yet. A Kanban board is a stage-gate sequence (columns) that parallel workstreams (tiles) move through. <button class="ghost mini" data-kbaddboard="1">+ board</button></p></div></div>`;
+    wireKanban(host); return;
+  }
+  const bid=activeBoardId(); const board=boardById(bid); const today=todayIso();
+  const tabs=boards.map(b=>`<button class="kb-tab${b.id===bid?" on":""}" data-kbtab="${b.id}">${esc(b.name)}</button>`).join("");
+  const lastColId=board.columns.length?board.columns[board.columns.length-1].id:null;
+  const laneById={}; (board.swimlanes||[]).forEach(l=>laneById[l.id]=l);
+  const sum=RD.boardSummary(board, today);
+
+  const head=`<tr><th class="kb-corner">Swimlane \\ Stage</th>`+board.columns.map(c=>
+    `<th class="kb-colh"><span class="kb-colname">${esc(c.name)}</span><span class="kb-colcnt">${sum.perColumn[c.id]||0}</span></th>`).join("")+`</tr>`;
+  const body=(board.swimlanes||[]).map(lane=>{
+    const rule=`<div class="kb-rule">${lane.maxDaysPerCol?`max <b>${lane.maxDaysPerCol}d</b>/col`:"no col limit"}${lane.deadline?` \u00b7 due <b>${esc(lane.deadline)}</b>`:""}</div>`;
+    const cells=board.columns.map(c=>{
+      const tiles=(board.tiles||[]).filter(t=>t.lane===lane.id && t.col===c.id);
+      const tileHtml=tiles.map(t=>{
+        const closed=(t.col===lastColId);
+        const h=closed?{status:"closed",daysInCol:0,note:"done"}:RD.tileHealth(t, laneById[t.lane], today);
+        const cls=closed?"closed":h.status;
+        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}"><div class="kb-tname">${esc(t.name||"(tile)")}</div><div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
+      }).join("");
+      return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
+    }).join("");
+    return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}</td>${cells}</tr>`;
+  }).join("");
+
+  const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span></div>`;
+  const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
+  const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
+  const grid=`<div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",sum.total,acts)}<div class="item-list${listOpen("SG")}"><div class="kb-root">${bar}${cfg}${grid}${summary}<p class="kb-legend">drag a tile between columns to advance its stage, or between swimlanes to change its rules.</p></div></div></div>`;
+  wireKanban(host);
+}
+
+function kanbanConfigHtml(board){
+  const cols=board.columns.map(c=>`<div class="kb-cfgrow"><input type="text" data-kbcolname="${c.id}" value="${esc(c.name)}">${board.columns.length>1?`<button class="ghost mini danger" data-kbcoldel="${c.id}">\u2715</button>`:""}</div>`).join("");
+  const lanes=board.swimlanes.map(l=>`<tr><td><input type="text" data-kblanename="${l.id}" value="${esc(l.name)}"></td><td><input type="number" min="0" data-kblanemax="${l.id}" value="${l.maxDaysPerCol||""}"></td><td><input type="date" data-kblanedue="${l.id}" value="${l.deadline||""}"></td><td>${board.swimlanes.length>1?`<button class="ghost mini danger" data-kblanedel="${l.id}">\u2715</button>`:""}</td></tr>`).join("");
+  return `<div class="kb-cfg"><div class="kb-cfgcol"><h4>Board name</h4><input type="text" data-kbboardname="${board.id}" value="${esc(board.name)}" style="width:100%"><h4>Columns (stage-gates)</h4>${cols}<button class="ghost mini" data-kbaddcol="${board.id}">+ column</button></div><div class="kb-cfgcol"><h4>Swimlanes &amp; rules</h4><table class="kb-lanecfg"><thead><tr><th>Name</th><th>Max d/col</th><th>Deadline</th><th></th></tr></thead><tbody>${lanes}</tbody></table><button class="ghost mini" data-kbaddlane="${board.id}">+ swimlane</button></div><div class="kb-cfgclose"><button class="ghost mini" data-kbcfgclose="1">done</button></div></div>`;
+}
+
+function wireKanban(host){
+  host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
+  host.querySelectorAll("[data-kbaddboard]").forEach(b=>b.onclick=()=>addBoard());
+  host.querySelectorAll("[data-kbtab]").forEach(b=>b.onclick=()=>{ kanbanBoardSel=b.dataset.kbtab; kanbanCfgOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbdelboard]").forEach(b=>b.onclick=()=>{ if(confirm("Delete this board?")){ exec.boards=(exec.boards||[]).filter(x=>x.id!==b.dataset.kbdelboard); kanbanBoardSel=null; renderAll(); } });
+  host.querySelectorAll("[data-kbcfg]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=(kanbanCfgOpen===b.dataset.kbcfg)?null:b.dataset.kbcfg; renderAll(); });
+  host.querySelectorAll("[data-kbcfgclose]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbaddtile]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddtile); const nm=prompt("Tile (workstream driver) name:"); if(!nm)return; (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,lane:board.swimlanes[0].id,col:board.columns[0].id,startDate:todayIso(),enteredCol:todayIso()}); renderAll(); });
+  host.querySelectorAll("[data-kbboardname]").forEach(el=>el.onchange=()=>{ boardById(el.dataset.kbboardname).name=el.value; renderAll(); });
+  host.querySelectorAll("[data-kbcolname]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const c=board.columns.find(x=>x.id===el.dataset.kbcolname); if(c){ c.name=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kbcoldel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.columns.length<=1)return; board.columns=board.columns.filter(x=>x.id!==b.dataset.kbcoldel); board.tiles=(board.tiles||[]).filter(t=>t.col!==b.dataset.kbcoldel); renderAll(); });
+  host.querySelectorAll("[data-kbaddcol]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddcol); const cid=newId("col"); board.columns.push({id:cid,name:"Stage "+(board.columns.length+1),gate_id:mintGateId(board.id,cid)}); renderAll(); });
+  host.querySelectorAll("[data-kblanename]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanename); if(l){ l.name=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kblanemax]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanemax); if(l){ l.maxDaysPerCol=el.value?Number(el.value):0; renderAll(); } });
+  host.querySelectorAll("[data-kblanedue]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanedue); if(l){ l.deadline=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kblanedel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.swimlanes.length<=1)return; board.swimlanes=board.swimlanes.filter(x=>x.id!==b.dataset.kblanedel); board.tiles=(board.tiles||[]).filter(t=>t.lane!==b.dataset.kblanedel); renderAll(); });
+  host.querySelectorAll("[data-kbaddlane]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddlane); board.swimlanes.push({id:newId("lane"),name:"Swimlane "+(board.swimlanes.length+1),maxDaysPerCol:14,deadline:""}); renderAll(); });
+  wireKanbanDnd(host);
+}
+
+function wireKanbanDnd(host){
+  host.querySelectorAll(".kb-tile").forEach(el=>{
+    el.addEventListener("dragstart",e=>{ _kbDrag=el.dataset.kbtile; el.classList.add("dragging"); if(e.dataTransfer){e.dataTransfer.effectAllowed="move";} });
+    el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); _kbDrag=null; });
+  });
+  host.querySelectorAll(".kb-cell").forEach(cell=>{
+    cell.addEventListener("dragover",e=>{ e.preventDefault(); cell.classList.add("kb-over"); });
+    cell.addEventListener("dragleave",()=>cell.classList.remove("kb-over"));
+    cell.addEventListener("drop",e=>{ e.preventDefault(); cell.classList.remove("kb-over");
+      const id=_kbDrag; if(!id)return; const parts=cell.dataset.kbcell.split(":"); const laneId=parts[0], colId=parts[1];
+      const board=boardById(activeBoardId()); if(!board)return;
+      const nb=RD.dropTile(board, id, colId, laneId, todayIso());
+      const idx=exec.boards.findIndex(b=>b.id===board.id); if(idx>=0) exec.boards[idx]=nb;
+      renderAll();
+    });
+  });
+}
+
 function renderTasks(){
   const host=document.getElementById("subTASK");
   const rows=exec.tasks.filter(r=>r.objectiveId===selectedObj);
@@ -2979,9 +3318,12 @@ function wireExec(host){
   host.querySelectorAll("[data-markcomplete]").forEach(b=>b.onclick=()=>openMarkComplete(b.dataset.markcomplete));
   host.querySelectorAll("[data-completion]").forEach(b=>b.onclick=()=>openGateDetail(b.dataset.completion));
   host.querySelectorAll("[data-addsg-set]").forEach(b=>b.onclick=()=>{ pendingGateSet=b.dataset.addsgSet; subOpenAdd("stageGate"); });
+  host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
   host.querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>openWorkstreamModal(null));
   host.querySelectorAll("[data-wsedit]").forEach(b=>b.onclick=()=>openWorkstreamModal(b.dataset.wsedit));
   host.querySelectorAll("[data-gtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.gtoggle; if(expandedGates.has(id)) expandedGates.delete(id); else expandedGates.add(id); renderGates(); });
+  host.querySelectorAll("[data-mscheck]").forEach(el=>el.onchange=()=>{ const [kid,sid]=el.dataset.mscheck.split(":"); const kr=exec.keyResults.find(k=>k.id===kid); const st=kr&&(kr.steps||[]).find(x=>x.id===sid); if(st){ st.completion=el.checked?100:0; renderAll(); } });
+  host.querySelectorAll("[data-mscompl]").forEach(el=>el.onchange=()=>{ const [kid,sid]=el.dataset.mscompl.split(":"); const kr=exec.keyResults.find(k=>k.id===kid); const st=kr&&(kr.steps||[]).find(x=>x.id===sid); if(st){ st.completion=Math.max(0,Math.min(100,Number(el.value)||0)); renderAll(); } });
   host.querySelectorAll("[data-krtoggle]").forEach(b=>b.onclick=()=>{ const id=b.dataset.krtoggle; if(expandedKRs.has(id)) expandedKRs.delete(id); else expandedKRs.add(id); renderKRs(); });
   host.querySelectorAll("[data-setrename]").forEach(b=>b.onclick=()=>{ sgSetEditor={mode:"rename", setId:b.dataset.setrename}; armedDelSet=null; renderAll(); });
   host.querySelectorAll("[data-setsave]").forEach(b=>b.onclick=()=>{ const inp=host.querySelector("[data-setname]"); const nm=(inp?inp.value:"").trim(); if(!nm){ setMsg("Set name required","err"); return; } if(sgSetEditor&&sgSetEditor.mode==="add") addSet(nm); else if(sgSetEditor&&sgSetEditor.mode==="rename") renameSet(sgSetEditor.setId, nm); sgSetEditor=null; renderAll(); });
@@ -3191,6 +3533,16 @@ function renderRisks(){
 /* ---------------- wiring ---------------- */
 document.getElementById("saveBtn").onclick = flushPersist;   // autosave handles it; this forces an immediate write
 document.getElementById("settingsBtn").onclick = ()=>{ const p=document.getElementById("settingsPanel"); p.style.display=p.style.display==="none"?"block":"none"; };
+(function(){ var rb=document.getElementById("btnRecoverStranded"); if(!rb) return;
+  var rmsg=document.getElementById("recoverMsg");
+  function say(t,cls){ if(rmsg){ rmsg.textContent=t||""; rmsg.className="io-msg "+(cls||"muted"); } }
+  rb.addEventListener("click", async function(){
+    rb.disabled=true; var old=rb.textContent; rb.textContent="Scanning\u2026"; say("","");
+    try{ await scanStranded(); renderRecoverReport(); if(__recoverPlan && !__recoverPlan.length) say("nothing stranded","ok"); }
+    catch(e){ say((e&&e.message)||"scan failed","error"); }
+    finally{ rb.disabled=false; rb.textContent=old; }
+  });
+})();
 (function(){
   function cur(){ return document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'; }
   function sync(){ var c=cur(); document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-theme-set')===c?'true':'false'); }); }

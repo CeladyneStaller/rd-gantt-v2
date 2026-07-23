@@ -365,6 +365,7 @@
   .gname.static{color:var(--muted);cursor:default}
   .gname.static:hover{color:var(--muted);text-decoration:none}
   .gsetnum{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-right:4px}
+  .gkrtag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--accent);margin-right:5px;letter-spacing:.02em}
   .gtrack{position:relative;width:720px;flex:none;height:100%;overflow:hidden}
   .gaxis{display:flex;align-items:flex-end;height:22px}
   .gaxislab{position:absolute;font-size:10px;color:var(--muted);font-family:var(--mono);opacity:.8}
@@ -392,6 +393,8 @@
   .gbar.gsetbar.cancelled{opacity:.42;border-color:var(--none)!important}
   .gbar.gsetbar.cancelled .gbarfill{background:repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px)!important;opacity:.6}
   .gdia.done{background:var(--ok);border-color:var(--ok)}
+  .gdia.gsq .gsqn{position:absolute;left:50%;top:-13px;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink);line-height:1}
+  .gbar.kbspan{background:var(--line);opacity:.6;height:3px;top:13px}
   .gconn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;pointer-events:none}
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
@@ -431,6 +434,14 @@
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
 
   /* ===== Overall tab — tiled active view (scoped under .ovwrap) ===== */
+  .ov-company{display:flex;align-items:center;gap:16px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .ov-company .ovc-score{font-size:40px;font-weight:800;line-height:1}
+  .ov-company .ovc-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink)}
+  .ov-company .ovc-note{font-size:11px;color:var(--muted);margin-top:2px}
+  .ov-unit{margin-bottom:18px}
+  .ov-unit-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .ov-unit-head .ovu-name{font-size:13px;font-weight:700;letter-spacing:.02em}
+  .ov-unit-head .ovu-score{font-size:15px;font-weight:800;margin-left:auto}
   .ovwrap .seclbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:var(--mono);margin:0 0 11px}
   .ovwrap .cards{margin-bottom:26px}
   .ovwrap .card{cursor:pointer;transition:box-shadow .15s,transform .1s}
@@ -519,7 +530,7 @@
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">◆</span> R&amp;D Planning</h1>
   <nav id="nav">
     <button data-tab="overview" class="active">Overview</button>
@@ -665,7 +676,7 @@ const URLP = (function(){
   const present = flag("present");
   return { present: present, readonly: phas("readonly") || present,
            division: pget("division")||"", product: pget("product")||"", quarter: rq==="active" ? currentQuarter() : (rq||""),
-           tab: (pget("tab")||"").trim().toLowerCase(),
+           tab: (pget("tab")||"").trim().toLowerCase(), unit: pget("unit")||"",
            ganttActive: flag("ganttActive"), ganttQuarter: flag("ganttQuarter") };   // ?tab=gantt opens on that tab
 })();
 const RO = URLP.readonly;
@@ -695,8 +706,21 @@ let pollTimer = null;
 
 function blankPortfolio(){ return { units:[],divisions:[],products:[],models:[],initiatives:[],
   milestones:[],milestoneEdges:[],objectives:[],objectiveEdges:[],kpis:[],kpiDefs:[],kpiUpdates:[],composition:[] }; }
-function execIdFor(divId){ return "EXEC-"+divId; }
-function execMap(){ const m={}; for(const id in execDocs){ m[id.slice(5)] = execDocs[id]; } return m; }
+function divisionKindOf(divId){
+  const d = (portfolio.divisions||[]).find(x=>x.id===divId);
+  return RD.divisionKind(d);                 // 'rd' | 'biz', absent -> rd
+}
+// The execution workspace doc id for a division. rd -> EXEC-<div>, biz -> BIZ-<div>. So a full Company rollup
+// pulls a Business division's KR/KPI readings from its BIZ- doc automatically.
+function execIdFor(divId){ return (divisionKindOf(divId)==="biz" ? "BIZ-" : "EXEC-") + divId; }
+// docId is <workspace-prefix>+<divId>. Strip the known workspace prefixes (EXEC- / BIZ-, what execIdFor
+// prepends) rather than assuming a fixed length or that divId starts with "DIV-".
+function stripDocPrefix(docId){
+  if(docId.indexOf("EXEC-")===0) return docId.slice(5);
+  if(docId.indexOf("BIZ-")===0)  return docId.slice(4);
+  return docId;
+}
+function execMap(){ const m={}; for(const id in execDocs){ m[stripDocPrefix(id)] = execDocs[id]; } return m; }
 // docs map for cross-document KPI resolution: portfolio targets + exec readings
 function pfMap(){ return RD.withPortfolio(portfolio, execMap()); }
 // flatten every doc's KPIs into the resolution pool (mirrors core allKpis)
@@ -935,12 +959,13 @@ function ownerOptions(){
   return known.map(e=>({id:e, name:e}))
     .concat(extra.map(e=>({id:e, name:e+" \u2014 not in roster"})));
 }
-const SEL = { division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
+const SEL = { unit:()=>(portfolio.units||(portfolio.units=[])), division:()=>portfolio.divisions, product:()=>portfolio.products, model:()=>portfolio.models,
   user:ownerOptions,
   initiative:()=>portfolio.initiatives, milestone:()=>portfolio.milestones, objective:()=>portfolio.objectives };
 const DATE_FIELDS = new Set(["plannedStart","plannedEnd","plannedDate"]);
 const SCHEMAS = {
-  division:   [["name","Name","text"],["order","Order","number"]],
+  unit:       [["name","Name","text"],["order","Order","number"]],
+  division:   [["name","Name","text"],["unitId","Unit","ref:unit?"],["kind","Kind","enum:rd,biz"],["order","Order","number"]],
   product:    [["name","Name","text"],["divisionId","Division","ref:division"],["order","Order","number"]],
   model:      [["name","Name","text"],["productId","Product","ref:product"],["order","Order","number"]],
   initiative: [["name","Name","text"],["divisionId","Division","ref:division"],["desc","Description","text"],
@@ -961,7 +986,7 @@ let pfView = "tree";
 let lens = "division";   // Overview: by division vs by product/model
 let pfGroupMode = "hierarchy";                     // "hierarchy" (entity tree) | "dims" (custom layered grouping)
 let pfGroupDims = ["division"];                    // ordered grouping dimensions used when pfGroupMode==="dims"
-const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"" };   // seeded from URL params (seed-on-load)
+const pfFilters = { division:URLP.division, product:URLP.product, quarter:URLP.quarter, status:"", unit:URLP.unit };   // seeded from URL params (seed-on-load)
 
 function renderPortfolio(){
   const fb=document.getElementById("pfFilterBar"); if(fb){ fb.innerHTML=filterBarHtml(true); wireFilterBar(fb); }
@@ -997,6 +1022,10 @@ function openEditor(id, entityOverride, prefill){
       const cur = Array.isArray(rec[k]) ? rec[k] : (rec[k]!=null && rec[k]!=="" ? [rec[k]] : []);
       html += `<select data-f="${k}" multiple size="3">`+
         SEL[kind]().map(o=>`<option value="${o.id}" ${cur.indexOf(o.id)>=0?'selected':''}>${esc(o.name||o.id)}</option>`).join("")+`</select>`;
+    } else if(type.startsWith("enum:")){
+      const vals = type.slice(5).split(","); const cur = rec[k]!=null ? String(rec[k]) : vals[0];
+      html += `<select data-f="${k}">`+
+        vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join("")+`</select>`;
     } else if(type==="quarter"){
       const opts = RD.quarterList(pfQuartersList(), new Date().getFullYear(), 1, 2);
       const cur = rec[k]!=null ? String(rec[k]) : "";
@@ -1427,6 +1456,7 @@ function hasArchChildren(entity,id){
 /* ---- health band → colour (shared by tree + gantt) ---- */
 function bandColor(b){ return b==='on-track'?'var(--ok)':b==='at-risk'?'var(--warn)':b==='off-track'?'var(--bad)':'var(--none)'; }
 function nodeBand(entity,id,em){ em=em||pfMap();
+  if(entity==="milestonekr" || entity==="board" || entity==="boardtile" || entity==="mstep") return null;
   if(entity==="stagegateset") return RD.band(RD.setScore(id, em, todayDay()));
   if(entity==="milestone"){ const ms=(portfolio.milestones||[]).find(m=>m.id===id); if(ms && RD.milestoneAchieved(ms,em)) return "on-track"; return RD.band(RD.milestoneScore(id,em)); }
   let s=null;
@@ -1435,6 +1465,7 @@ function nodeBand(entity,id,em){ em=em||pfMap();
   else if(entity==="objective") s=RD.rollupObjective(id,portfolio,em);
   return RD.band(s); }
 const STATUS_ENTITIES={division:1,initiative:1,objective:1,milestone:1,stagegateset:1};
+const KANBAN_ENTITIES={milestonekr:1,mstep:1,board:1,boardtile:1};
 const TREE_NAME_STYLE={division:"font-size:14px;font-weight:600",initiative:"font-size:13.5px;font-weight:500",objective:"font-size:13px;font-weight:500",product:"font-size:13px;font-weight:500",model:"font-size:12.5px;font-weight:400",milestone:"font-size:12.5px;font-weight:400"};
 const TREE_MUTED={model:1,milestone:1};
 function rowDot(entity,id){ if(!STATUS_ENTITIES[entity]) return ""; const b=nodeBand(entity,id); return `<span class="tdot" style="background:${bandColor(b)}" title="${b}"></span>`; }
@@ -1530,19 +1561,21 @@ function wireTreeLinks(root){
   root.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const s=b.dataset.sdel,i=s.indexOf(":"); armedDelete=null; structDelete(s.slice(0,i), s.slice(i+1)); });
 }
 /* ---------------- filter & group (Structure + Gantt) ---------------- */
-function pfAnyFilter(){ const f=pfFilters; return !!(f.division||f.product||f.quarter||f.status); }
+function pfAnyFilter(){ const f=pfFilters; return !!(f.unit||f.division||f.product||f.quarter||f.status); }
 function pfWorkFilter(){ const f=pfFilters; return !!(f.quarter||f.status); }
 function effProductOf(o){ const c=RD.effClass(o,portfolio); if(c.kind==="product") return c.productId; if(c.kind==="model"){ const m=byId("model",c.modelId); return m?m.productId:null; } return null; }
 function objMatches(o){ const f=pfFilters;
+  if(f.unit && (RD.unitIdOfDivision(o.divisionId,portfolio)||"")!==f.unit) return false;
   if(f.division && o.divisionId!==f.division) return false;
   if(f.product && effProductOf(o)!==f.product) return false;
   if(f.quarter && (o.quarter||"")!==f.quarter) return false;
   if(f.status && nodeBand("objective",o.id)!==f.status) return false;
   return true; }
 function pfQuartersList(){ const s=new Set(); portfolio.objectives.forEach(o=>{ if(o.quarter) s.add(o.quarter); }); return Array.from(s).sort(); }
-const GROUP_DIMS=[["division","Division"],["product","Product"],["model","Model"],["quarter","Quarter"],["owner","Owner"],["initiative","Initiative"]];
+const GROUP_DIMS=[["unit","Unit"],["division","Division"],["product","Product"],["model","Model"],["quarter","Quarter"],["owner","Owner"],["initiative","Initiative"]];
 function dimLabel(dim,key){
   if(key===""||key==null||key==="__all__") return "— none —";
+  if(dim==="unit"){ const u=(portfolio.units||[]).find(x=>x.id===key); return u?u.name:key; }
   if(dim==="division")   return nameOf("division",byId("division",key))||key;
   if(dim==="product")    return productName(key)||key;
   if(dim==="model")      return (byId("model",key)||{}).name||key;
@@ -1556,6 +1589,7 @@ function filterBarHtml(showGroup){
   const grp = showGroup ? groupByControlHtml() : `<span class="fb-lbl">Filter</span>`;
   const chips = pfActiveChips();
   return `<div class="fb-row">${grp}`+
+    ((portfolio.units&&portfolio.units.length)? sel("Unit","unit",portfolio.units.map(u=>[u.id,u.name]),f.unit) : "")+
     sel("Division","division",portfolio.divisions.map(d=>[d.id,d.name]),f.division)+
     sel("Product","product",portfolio.products.map(p=>[p.id,p.name]),f.product)+
     sel("Quarter","quarter",pfQuartersList().map(q=>[q,q]),f.quarter)+
@@ -1564,6 +1598,7 @@ function filterBarHtml(showGroup){
 }
 function pfActiveChips(){
   const f=pfFilters, out=[];
+  if(f.unit){ const u=(portfolio.units||[]).find(x=>x.id===f.unit); out.push(["unit","Unit: "+((u&&u.name)||f.unit)]); }
   if(f.division) out.push(["division","Division: "+(nameOf("division",byId("division",f.division))||f.division)]);
   if(f.product) out.push(["product","Product: "+(productName(f.product)||f.product)]);
   if(f.quarter) out.push(["quarter","Quarter: "+f.quarter]);
@@ -1594,7 +1629,7 @@ function wireFilterBar(host){
       else { const arr=pfGroupDims.slice(); arr[i]=nd; pfGroupDims=arr.filter((d,j)=>j===i||d!==nd); } }
     closeEditor(); renderPortfolio(); renderGantt(); renderMilestones();
   });
-  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
+  host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.unit=pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
 function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
 function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
@@ -1817,6 +1852,10 @@ function allocFor(entity, data){
     const code = (data.name||"DIV").replace(/[^A-Za-z0-9]/g,"").slice(0,4).toUpperCase()||"DIV";
     return RD.allocId("division", null, portfolio.divisions.map(x=>x.id), {code});
   }
+  if(entity==="unit"){
+    const code = (data.name||"UNIT").replace(/[^A-Za-z0-9]/g,"").slice(0,6).toUpperCase()||"UNIT";
+    return RD.allocId("unit", null, (portfolio.units||[]).map(x=>x.id), {code});
+  }
   if(entity==="product") return RD.allocId("product", data.divisionId, portfolio.products.map(x=>x.id));
   if(entity==="model")   return RD.allocId("model", data.productId, portfolio.models.map(x=>x.id));
   if(entity==="initiative") return RD.allocId("initiative", data.divisionId, portfolio.initiatives.map(x=>x.id));
@@ -1829,10 +1868,14 @@ let armedDelete = null;
 const ordOf = x => (x && x.order!=null ? x.order : 1e9);
 const byOrder = arr => arr.slice().sort((a,b)=>ordOf(a)-ordOf(b));
 function structRefName(entity,id){ const r=byId(entity,id); return r ? esc(nameOf(entity,r)) : '<span class="pill">—</span>'; }
-function structDivShows(d){ return !pfFilters.division || d.id===pfFilters.division; }
-function structProdShows(p){ if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
+function structDivShows(d){
+  if(pfFilters.division && d.id!==pfFilters.division) return false;
+  if(pfFilters.unit && (d.unitId||null)!==pfFilters.unit) return false;
+  return true;
+}
+function structProdShows(p){ if(pfFilters.unit && (RD.unitIdOfDivision(p.divisionId,portfolio)||"")!==pfFilters.unit) return false; if(pfFilters.division && p.divisionId!==pfFilters.division) return false; if(pfFilters.product && p.id!==pfFilters.product) return false; return true; }
 function structObjsOf(i){ let os=SEL.objective().filter(o=>o.initiativeId===i.id); if(pfAnyFilter()) os=os.filter(objMatches); return byOrder(os); }
-function structInitShows(i){ if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
+function structInitShows(i){ if(pfFilters.unit && (RD.unitIdOfDivision(i.divisionId,portfolio)||"")!==pfFilters.unit) return false; if(pfFilters.division && i.divisionId!==pfFilters.division) return false; if((pfFilters.product||pfFilters.quarter||pfFilters.status) && structObjsOf(i).length===0) return false; return true; }
 function structAdd(child, parentId){
   let prefill={};
   if(child==="model") prefill={productId:parentId};
@@ -1840,8 +1883,10 @@ function structAdd(child, parentId){
   else if(child==="milestone") prefill={initiativeId:parentId};
   openEditor(null, child, prefill);
 }
+function unitMemberDivs(uid){ return (portfolio.divisions||[]).filter(d=>(d.unitId||null)===uid); }
 function cascadeSet(ent, id){   // owned descendants that a cascade delete would also remove
   const out=[];
+  if(ent==="unit") return out;   // a unit owns nothing; member divisions only reference it (not deleted)
   if(ent==="product"){
     SEL.model().filter(m=>m.productId===id).forEach(m=>out.push({ent:"model",id:m.id}));
   } else if(ent==="initiative"){
@@ -1859,6 +1904,9 @@ function cascadeSet(ent, id){   // owned descendants that a cascade delete would
   const seen=new Set(); return out.filter(x=>{ const k=x.ent+":"+x.id; if(seen.has(k))return false; seen.add(k); return true; });
 }
 function applyStructDelete(targets){   // targets: [{ent,id}] — splice each, then strip dangling milestone refs
+  // deleting a unit must not leave a division pointing at a dead unit id -> clear unitId (Unassigned)
+  targets.filter(x=>x.ent==="unit").forEach(x=>{
+    (portfolio.divisions||[]).forEach(d=>{ if((d.unitId||null)===x.id) d.unitId=null; }); });
   targets.forEach(x=>{ const arr=SEL[x.ent](); const idx=arr.findIndex(r=>r.id===x.id); if(idx>=0) arr.splice(idx,1); });
   const delMs=targets.filter(x=>x.ent==="milestone").map(x=>x.id);
   if(delMs.length) portfolio.objectives.forEach(o=>{ if(o.milestoneIds) o.milestoneIds=o.milestoneIds.filter(mid=>delMs.indexOf(mid)<0); });
@@ -1871,7 +1919,11 @@ function structDelete(ent, id){
   document.getElementById("delTitle").textContent="Delete "+ent;
   const name=esc(nameOf(ent,rec));
   const body=document.getElementById("delBody"), acts=document.getElementById("delActions");
-  if(!kids.length){
+  const unitMembers = ent==="unit" ? unitMemberDivs(id) : [];
+  if(ent==="unit" && unitMembers.length){
+    body.innerHTML=`<p class="del-lead">Delete unit <b>${name}</b>?</p><p class="hint">${unitMembers.length} division${unitMembers.length>1?"s":""} in this unit will become <b>Unassigned</b> (they are not deleted).</p>`;
+    acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete unit</button>`;
+  } else if(!kids.length){
     body.innerHTML=`<p class="del-lead">Delete <b>${name}</b>?</p><p class="hint">This can't be undone.</p>`;
     acts.innerHTML=`<button class="ghost" data-delcancel>Cancel</button><button class="act danger armed" data-delgo="self">Delete</button>`;
   } else {
@@ -1908,6 +1960,16 @@ function renderStructTables(){
   };
   const newBtn=ent=>RO?"":`<button class="act" data-addnew="${ent}">+ New ${ent}</button>`;
   let html="";
+  // 0) Units (flat) — the top of the hierarchy. A division's Unit column (below) says which unit it sits in.
+  const units=byOrder(SEL.unit());
+  html+=`<div class="struct-section"><div class="struct-head"><h3>Units</h3>${newBtn("unit")}</div>`;
+  html+= units.length
+    ? `<table><thead><tr><th>id</th><th>Name</th><th>Order</th><th>Divisions</th><th></th></tr></thead><tbody>`+
+        units.map(u=>`<tr class="s-parent">`+idCell("unit",u.id)+`<td><b>${esc(u.name)}</b></td>`+
+          `<td class="mono">${ordOf(u)===1e9?"—":ordOf(u)}</td>`+
+          `<td class="mono">${unitMemberDivs(u.id).length}</td>`+acts("unit",u.id)+`</tr>`).join("")+`</tbody></table>`
+    : `<p class="hint">No units yet. Units group divisions (e.g. Business, Technical).</p>`;
+  html+=`</div>`;
   // 1) Divisions (flat)
   const divs=byOrder(SEL.division().filter(structDivShows));
   html+=`<div class="struct-section"><div class="struct-head"><h3>Divisions</h3>${newBtn("division")}</div>`;
@@ -1967,6 +2029,7 @@ function cellVal(col,v){
 
 /* ---------------- GANTT tab ---------------- */
 let ganttCollapsed = new Set();
+let ganttBoardSeen = new Set();   // boards we have already auto-collapsed once (so re-expand sticks)
 // Gantt view toggles. Seeded from ?ganttActive=1 / ?ganttQuarter=1, then owned by the toolbar.
 // They compose: filtering shrinks the tree (and, because the axis is derived from what survives, the axis with
 // it); the quarter clamp instead pins the window regardless of what is on screen.
@@ -1997,7 +2060,7 @@ function pfLevels(tab){
   if(tab!=="gantt") return [];
   const dims = (pfGroupMode==="dims") ? (pfGroupDims||[]).slice() : null;
   if(dims) return dims.map(d=>({ id:d, label:dimLabel(d,null)||d })).concat([{id:"objective",label:"Objectives"}]);
-  return [{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
+  return [{id:"unit",label:"Units"},{id:"division",label:"Divisions"},{id:"initiative",label:"Initiatives"},{id:"objective",label:"Objectives"}];
 }
 
 function nodeLevel(n){ return n.synthetic ? n.dim : n.entity; }
@@ -2267,6 +2330,35 @@ function wireMsReport(){
 function renderGantt(){
   const fbar=document.getElementById("ganttFilterBar"); if(fbar){ fbar.innerHTML=filterBarHtml(true); wireFilterBar(fbar); }
   const em = pfMap(), casc = RD.cascade(portfolio, em, todayDay()), td = todayDay(), P = portfolio;
+  function ganttTodayIso(){ return dayToIso(td); }
+  // latest due-day across tiles for gate column k (the "all clear by" point used on the collapsed board row)
+  function boardGateLatestDue(board, k){
+    let latest=null;
+    (board.tiles||[]).forEach(t=>{ const lane=(board.swimlanes||[]).find(l=>l.id===t.lane);
+      const iso=RD.gateDueDates(board.columns, lane, t).due[k]; const d=isoToDay(iso);
+      if(d!=null){ latest=(latest==null||d>latest)?d:latest; } });
+    return latest;
+  }
+  const GATE_WORST_CLS={red:"overdue", orange:"passed-late", green:"passed", none:"pending"};
+  // draw a gate-square series for a Kanban row. collapsed board -> one square per column at latest-due, with a
+  // passed-count label + worst-status colour; a tile row -> one square per column at that tile's due, per-tile status.
+  function kanbanGateSquares(n){
+    const g=n.g, board=g.__rec; let out="";
+    if(n.entity==="board"){
+      (board.columns||[]).forEach((c,k)=>{ const d=boardGateLatestDue(board,k); if(d==null) return;
+        const sm=RD.boardGateSummary(board,k,ganttTodayIso()); const cls=GATE_WORST_CLS[sm.worst]||"pending";
+        out+=`<div class="gdia gsq ${cls}" style="left:${x(d)}px" title="${esc(c.name)} — ${sm.passed}/${sm.total} passed">`+
+             `<span class="gsqn">${sm.passed}</span></div>`; });
+    } else if(n.entity==="boardtile"){
+      const tile=g.__rec, b=tile.__board, lane=(b.swimlanes||[]).find(l=>l.id===tile.lane);
+      const dd=RD.gateDueDates(b.columns, lane, tile).due;
+      (b.columns||[]).forEach((c,k)=>{ const d=isoToDay(dd[k]); if(d==null) return;
+        const st=RD.gateTileState(b, tile, k, ganttTodayIso());
+        const cls=(st==="passed-ontime")?"passed":st;   // reuse the stage-gate square colour classes
+        out+=`<div class="gdia gsq ${cls}" style="left:${x(d)}px" title="${esc(c.name)} — ${st}"></div>`; });
+    }
+    return out;
+  }
   const gatesOf = o => (execDocs["EXEC-"+o.divisionId]?.stageGates||[]).filter(g=>g.objectiveId===o.id);
   const pfGate = g => g.actualDate!=null ? g.actualDate : Math.max(g.plannedDate, td);
   // ---- geometry per node: bars (span) for div/init/obj, diamonds (point) for milestone/gate ----
@@ -2283,6 +2375,21 @@ function renderGantt(){
     if(entity==="stagegate"){ return {kind:"diamond", gate:true, planned:r.plannedDate, eff:gateDisplayEff(r), baseline:(r.baselineDate!=null?r.baselineDate:null), slipped:!!(casc.gateSlipped&&casc.gateSlipped[r.id]), state:RD.classifyGate(r, td)}; }
     if(entity==="stagegateset"){ const gts=r.__gates||[]; const planned=gts.map(g=>g.plannedDate).filter(v=>v!=null); const effs=gts.map(gateDisplayEff).filter(v=>v!=null); const _obj=byId("objective", r.objectiveId); const _objDs=_obj?geom("objective",_obj).ds:null; const ds=_objDs!=null?_objDs:(planned.length?Math.min.apply(null,planned):null); const de=effs.length?Math.max.apply(null,effs):ds; return {kind:"bar", set:true, ds, de, pe:null, slip:0, derived:false}; }
     if(entity==="milestone") return {kind:"diamond", planned:r.plannedDate, eff:casc.milestoneEffective[r.id], actual:r.completedDate};   // eff is the PROJECTION; the completion date is separate
+    // ---- new: milestone-KR step (diamond at its due), and its parent KR-M row (bar spanning steps) ----
+    if(entity==="mstep"){ const d=isoToDay(r.due); return {kind:"diamond", planned:d, eff:d, actual:(r.status==="done"?d:null), msStatus:r.status}; }
+    if(entity==="milestonekr"){ const ds=RD.milestoneGanttSteps(r, ganttTodayIso()).map(st=>isoToDay(st.due)).filter(v=>v!=null);
+      const lo=ds.length?Math.min.apply(null,ds):null, hi=ds.length?Math.max.apply(null,ds):null;
+      return {kind:"bar", ds:lo, de:hi, pe:hi, slip:0, derived:true, krm:true}; }
+    // ---- new: Kanban board (bar spanning all gate dates) and per-tile workstream (bar + gate squares) ----
+    if(entity==="board"){ let lo=null, hi=null;
+      (r.tiles||[]).forEach(t=>{ const dd=RD.gateDueDates(r.columns, (r.swimlanes||[]).find(l=>l.id===t.lane), t).due;
+        dd.forEach(iso=>{ const d=isoToDay(iso); if(d!=null){ lo=(lo==null||d<lo)?d:lo; hi=(hi==null||d>hi)?d:hi; } });
+        const sd=isoToDay(t.startDate); if(sd!=null){ lo=(lo==null||sd<lo)?sd:lo; } });
+      return {kind:"bar", ds:lo, de:hi, pe:hi, slip:0, derived:true, board:true, __rec:r}; }
+    if(entity==="boardtile"){ const b=r.__board; const lane=(b.swimlanes||[]).find(l=>l.id===r.lane);
+      const dd=RD.gateDueDates(b.columns, lane, r).due.map(isoToDay);
+      const sd=isoToDay(r.startDate); const lo=sd!=null?sd:(dd.filter(v=>v!=null)[0]||null); const hi=dd.filter(v=>v!=null).slice(-1)[0]||null;
+      return {kind:"bar", ds:lo, de:hi, pe:hi, slip:0, derived:true, tile:true, __rec:r}; }
     if(entity==="objective"){
       const starts=gatesOf(r).map(g=>g.plannedDate).filter(v=>v!=null);
       const peRaw=casc.objectiveProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
@@ -2347,11 +2454,19 @@ function renderGantt(){
     if(entity==="division") return P.initiatives.filter(i=>i.divisionId===r.id).map(i=>({entity:"initiative",rec:i}));
     if(entity==="initiative") return P.milestones.filter(m=>m.initiativeId===r.id).map(m=>({entity:"milestone",rec:m}))
       .concat(P.objectives.filter(o=>o.initiativeId===r.id).map(o=>({entity:"objective",rec:o})));
-    if(entity==="objective"){ const doc=execDocs["EXEC-"+r.divisionId];
+    if(entity==="objective"){ const doc=execDocs[execIdFor(r.divisionId)];
       const grps=planGroupGates(doc, r.id).filter(grp=>grp.gates.length);
-      if(grps.length===1) return grps[0].gates.map(g=>({entity:"stagegate",rec:g}));   // lone workstream: hang the gates straight off the objective
-      return grps.map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }})); }
+      let out=[];
+      if(grps.length===1) out=grps[0].gates.map(g=>({entity:"stagegate",rec:g}));
+      else out=grps.map(grp=>({entity:"stagegateset", rec:{ id:grp.set.id, name:grp.set.name, objectiveId:r.id, __gates:grp.gates }}));
+      let mi=0;
+      ((doc&&doc.keyResults)||[]).filter(k=>k.objectiveId===r.id).forEach(k=>{ if(k.trackingType==="milestone"){ mi++;
+        if(RD.milestoneGanttSteps(k, ganttTodayIso()).length) out.push({entity:"milestonekr", rec:Object.assign({__krm:mi, objectiveId:r.id}, k)}); } });
+      ((doc&&doc.boards)||[]).filter(b=>b.objectiveId===r.id).forEach(b=>{ out.push({entity:"board", rec:b}); });
+      return out; }
     if(entity==="stagegateset") return (r.__gates||[]).map(g=>({entity:"stagegate",rec:g}));
+    if(entity==="milestonekr") return RD.milestoneGanttSteps(r, ganttTodayIso()).map(st=>({entity:"mstep", rec:Object.assign({__krId:r.id, __krm:r.__krm}, st)}));
+    if(entity==="board") return (r.tiles||[]).map(t=>({entity:"boardtile", rec:Object.assign({__board:r}, t)}));
     return [];
   };
   const visible=g=> g.kind==="bar" ? (g.ds!=null && g.de!=null) : (g.planned!=null);
@@ -2408,6 +2523,34 @@ function renderGantt(){
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
+  // Hierarchy preset: Unit -> Division -> Initiative -> Objective. Divisions are wrapped in a synthetic unit
+  // node (depth 0), divisions at depth 1. Divisions with no unitId fall under a synthetic "Unassigned" unit so
+  // nothing is hidden. A synthetic node with dim:"unit" is collapse-level "unit" via nodeLevel(), so
+  // "Collapse to Units" folds the tree to the unit tier.
+  function buildUnitHierarchyRoots(P){
+    const units=(P.units||[]);
+    // order: declared units first, then an Unassigned bucket for division.unitId absent/unknown
+    const buckets=[]; const byUnit={};
+    units.forEach(u=>{ const b={unit:u, divs:[]}; byUnit[u.id]=b; buckets.push(b); });
+    const unassigned={unit:null, divs:[]};
+    P.divisions.forEach(d=>{ const b=(d.unitId && byUnit[d.unitId]) ? byUnit[d.unitId] : unassigned; b.divs.push(d); });
+    buckets.push(unassigned);
+    const out=[];
+    buckets.forEach(b=>{
+      const kids=[]; b.divs.forEach(d=>{ const n=build("division", d, 1); if(n) kids.push(n); });
+      if(!kids.length) return;                                    // an empty unit (all divisions filtered out) drops away
+      const dss=[], des=[];
+      (function span(list){ list.forEach(node=>{ if(node.synthetic){ span(node.kids); }
+        else { const gg=node.g; if(gg&&gg.ds!=null)dss.push(gg.ds); const e=gg?(gg.de!=null?gg.de:(gg.pe!=null?gg.pe:gg.ds)):null; if(e!=null)des.push(e); } }); })(kids);
+      const under=[]; kids.forEach(k=>{ collectObjs(k).forEach(o=>under.push(o)); });
+      const vs=under.map(o=>RD.rollupObjective(o.id,em)).filter(v=>v!=null);
+      const gband=RD.band(vs.length?vs.reduce((a,c)=>a+c,0)/vs.length:null);
+      const uid = b.unit ? b.unit.id : "__none__";
+      out.push({ synthetic:true, dim:"unit", label: b.unit ? (b.unit.name||b.unit.id) : "Unassigned", band:gband, depth:0, key:"grp:unit:"+uid, kids,
+        g:{ kind:"bar", ds:dss.length?Math.min.apply(null,dss):null, de:des.length?Math.max.apply(null,des):null, pe:null, slip:0, derived:false } });
+    });
+    return out;
+  }
   function buildGroupRoots(nodes, depth, keyPrefix){
     const out=[];
     nodes.forEach(n=>{
@@ -2438,7 +2581,7 @@ function renderGantt(){
     const gobjs = P.objectives.filter(o=>!pfAnyFilter()||objMatches(o));
     roots = gobjs.map(o=>build("objective",o,0)).filter(Boolean).sort(objEndCmp);
   } else {
-    P.divisions.forEach(d=>{ const n=build("division",d,0); if(n) roots.push(n); });
+    roots = buildUnitHierarchyRoots(P);
   }
   if(!roots.length){ document.getElementById("ganttWrap").innerHTML=`<p class="hint">${pfAnyFilter()?'No matching items to chart.':'No scheduled, dated items to chart.'}</p>`; return; }
   // ---- domain over the full tree (+ today) ----
@@ -2464,10 +2607,12 @@ function renderGantt(){
   function quarterTicks(a,b){ const s=new Date(EPOCH+a*86400000); let ty=s.getUTCFullYear(), tm=Math.floor(s.getUTCMonth()/3)*3; const out=[]; for(let i=0;i<80;i++){ const day=Math.round((Date.UTC(ty,tm,1)-EPOCH)/86400000); if(day>b) break; out.push({day,label:"Q"+(tm/3+1)+" "+ty}); tm+=3; if(tm>=12){tm-=12;ty++;} } return out; }
   const ticks=quarterTicks(lo,hi);
   // ---- flatten respecting collapse ----
+  // boards collapse by default (show the gate-square summary row); only auto-collapse each once so the user can re-open.
+  (function seedBoardCollapse(nn){ nn.forEach(function walk(n){ if(n.entity==="board" && !ganttBoardSeen.has(n.key)){ ganttBoardSeen.add(n.key); ganttCollapsed.add(n.key); } n.kids.forEach(walk); }); })(roots);
   const rows=[]; roots.forEach(function go(n){ rows.push(n); if(!ganttCollapsed.has(n.key)) n.kids.forEach(go); });
   const hasGates = rows.some(n=>n.entity==="stagegate");
   const NAV={division:1,initiative:1,objective:1,milestone:1};
-  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegateset:"font-size:12.5px;font-weight:500;font-style:italic",stagegate:"font-size:12.5px;font-weight:400"};
+  const NS={division:"font-size:13.5px;font-weight:600",initiative:"font-size:13px;font-weight:500",objective:"font-size:13px;font-weight:500",milestone:"font-size:12.5px;font-weight:400",stagegateset:"font-size:12.5px;font-weight:500;font-style:italic",stagegate:"font-size:12.5px;font-weight:400",milestonekr:"font-size:12px;font-weight:600",mstep:"font-size:11.5px;font-weight:400",board:"font-size:12px;font-weight:600",boardtile:"font-size:11.5px;font-weight:400"}
   let html=`<div class="gchart" style="width:${LABELW+TRACKW}px">`;
   // quarter gridlines + today, spanning the full chart height behind the rows
   ticks.forEach(t=>{ if(t.day>=lo&&t.day<=hi){ html+=`<div class="ggrid" style="left:${LABELW+x(t.day)}px"></div>`; } });
@@ -2491,10 +2636,17 @@ function renderGantt(){
     let nm;
     if(n.entity==="stagegate") nm=`<span class="gname static" style="${fs}"><span class="gsetnum">${esc(ganttGateLabel(n.rec))}</span> ${name}</span>`;
     else if(NAV[n.entity]){ const dim=(n.entity==="milestone")?" dim":""; nm=`<a class="gname${dim}" style="${fs}" data-lineage="${n.entity}:${n.rec.id}">${name}</a>`; }
+    else if(n.entity==="milestonekr") nm=`<span class="gname static" style="${fs}"><span class="gkrtag">(KR)</span> ${name}</span>`;
+    else if(n.entity==="mstep") nm=`<span class="gname static" style="${fs}"><span class="gkrtag">(KR-M${n.rec.__krm})</span> ${name}</span>`;
     else nm=`<span class="gname static" style="${fs}">${name}</span>`;
     html+=`<div class="grow"><div class="glabel" style="padding-left:${n.depth*16+6}px">${tri}${dot}${nm}${ganttActs(n.entity,n.rec.id)}</div><div class="gtrack">`;
     const _oEnd = n.entity==="objective" ? pfObjEnd(n.rec) : (n.entity==="stagegate"||n.entity==="stagegateset") ? pfObjEnd(byId("objective", n.rec.objectiveId)) : null; const _ended=!!_oEnd;
-    if(g.kind==="bar"){
+    if(n.entity==="board" || n.entity==="boardtile"){
+      // a faint span connecting the gates, then the gate squares on top
+      if(g.ds!=null && g.de!=null){ const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx);
+        html+=`<div class="gbar kbspan" style="left:${bx}px;width:${bw}px"></div>`; }
+      html+=kanbanGateSquares(n);
+    } else if(g.kind==="bar"){
       const bx=x(g.ds), bw=Math.max(2,x(g.de)-bx), c=bandColor(nodeBand(n.entity,n.rec.id,em));
       html+=`<div class="gbar${g.derived?' derived':''}${g.set?' gsetbar':''}${_ended&&g.set?' cancelled':''}" style="left:${bx}px;width:${bw}px;border-color:${c}"><div class="gbarfill" style="background:${c}"></div></div>`;
       if(g.slip>0 && g.pe!=null){ const sx=x(g.slipFrom!=null?g.slipFrom:g.de); html+=`<div class="gslip" style="left:${sx}px;width:${Math.max(2,x(g.pe)-sx)}px"></div>`; }
@@ -2513,6 +2665,11 @@ function renderGantt(){
         html+=`<div class="gdia gsq ghost" style="left:${px}px" title="planned ${dayToIso(g.planned)}"></div>`;
       }
       html+=`<div class="gdia gsq ${st}${_cnl?' cancelled':''}${_missed?' missed':''}" style="left:${ex}px" title="${_missed?'missed':_cnl?'cancelled':st}${!_cnl&&g.eff!=null?' · forecast '+dayToIso(g.eff):''}${g.planned!=null?' · planned '+dayToIso(g.planned):''}"></div>`;
+    } else if(n.entity==="mstep"){
+      // a milestone-KR step: a simple status diamond at its due date (done=green, overdue=red, pending=grey)
+      const st=(g.msStatus==="done")?"done":(g.msStatus==="overdue")?"overdue":"pending";
+      const ex=x(g.planned);
+      html+=`<div class="gdia ${st}" style="left:${ex}px" title="${esc(nameOf(n.entity,n.rec))} — due ${dayToIso(g.planned)} · ${g.msStatus}"></div>`;
     } else {
       // Milestones read exactly like stage-gates: a grey ghost at the planned date, a connector, and a status
       // marker at the actual date (or the projection when it hasn't happened yet).
@@ -2663,9 +2820,35 @@ function ovRpnPill(r){ const b=RD.rpnBand(r); return b==="high"?"bad":b==="med"?
 function overviewTilesHtml(){
   const em=pfMap(), pool=poolOf(em), casc=RD.cascade(portfolio, em, todayDay());
   const ovDivs=portfolio.divisions.filter(structDivShows);
-  let cards='<div class="cards">';
-  for(const d of ovDivs){ cards+=ovDivCard(d, em, casc); }
-  cards+='</div>';
+  // Company hero: the score plus the note that explains it is a mean of DIVISION scores (not of objectives or
+  // units), so a reader who watched the number shift from the old flat mean knows why.
+  const comp = RD.rollupCompany(portfolio, em);
+  const company = `<div class="ov-company">
+      <div class="ovc-score" style="color:${scoreColor(comp)}">${fmtScore(comp)}</div>
+      <div class="ovc-meta"><div class="ovc-lbl">Company</div>
+        <div class="ovc-note">Mean of division scores</div></div></div>`;
+
+  // Division cards, grouped under their Unit. Units don't overlap, so this is a straight partition — each
+  // division falls in exactly one unit (or the Unassigned bucket for a division with no unitId).
+  const unitOrder = (portfolio.units||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const seenUnits = unitOrder.map(u=>u.id);
+  // any unitId referenced by a division but not declared in units[] still gets a section, then Unassigned last
+  ovDivs.forEach(d=>{ const u=d.unitId||null; if(u && seenUnits.indexOf(u)<0) seenUnits.push(u); });
+  const unitName = uid => { const u=(portfolio.units||[]).find(x=>x.id===uid); return u ? u.name : uid; };
+  let cards='';
+  const renderUnitSection = (uid, label) => {
+    const dvs = ovDivs.filter(d=>(d.unitId||null)===uid);
+    if(!dvs.length) return '';
+    const us = uid==null ? null : RD.rollupUnit(uid, portfolio, em);
+    const head = `<div class="ov-unit-head"><span class="ovu-name">${esc(label)}</span>`
+      + (uid==null ? '' : `<span class="ovu-score" style="color:${scoreColor(us)}">${fmtScore(us)}</span>`)
+      + `</div>`;
+    return `<div class="ov-unit">${head}<div class="cards">`
+      + dvs.map(d=>ovDivCard(d, em, casc)).join('') + `</div></div>`;
+  };
+  for(const uid of seenUnits) cards += renderUnitSection(uid, unitName(uid));
+  cards += renderUnitSection(null, "Unassigned");
+  cards = company + cards;
   if(!portfolio.divisions.length) cards='<p class="hint">No divisions yet. Add one in the Structure tab to begin.</p>';
   // "No divisions yet" is only true when there are none. A filter hiding them all — including a mistyped
   // ?division=fuelcell, which matches no id and renders a convincingly empty page — must say so instead.
@@ -2714,7 +2897,7 @@ function overviewTilesHtml(){
     groups+='</div>';
   }
   if(!groups) groups='<p class="hint" style="margin-top:18px">No active objectives or milestones this quarter.</p>';
-  return '<div class="seclbl">Divisions</div>'+cards+groups;
+  return '<div class="seclbl">Portfolio</div>'+cards+groups;
 }
 function ovDivCard(d, em, casc){
   const overall=RD.rollupDivision(d.id, portfolio, em);

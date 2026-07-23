@@ -68,6 +68,7 @@
   /* the spans keep their text but stop behaving like affordances — their onclick handlers do not check RO, so
      without pointer-events:none the newly-visible names would open editors in a read-only view */
   body.readonly span[data-edit], body.readonly span[data-editsubkr]{pointer-events:none;cursor:default}
+  .unit-tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);padding:3px 9px;border-radius:6px;margin-right:8px;align-self:center}
   .ro-badge{display:none;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);padding:3px 9px;border-radius:6px}
   body.readonly .ro-badge{display:inline-flex;align-items:center;gap:6px}
   main{padding:18px;max-width:1080px;margin:0 auto}
@@ -106,6 +107,13 @@
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
+  .src-chip{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;margin-left:6px;white-space:nowrap;cursor:help}
+  tr.prov-tr td{border-top:none!important;padding-top:0!important;padding-bottom:6px!important}
+  .prov-d summary{cursor:pointer;color:var(--muted);font-size:11px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
+  .prov-d summary::-webkit-details-marker{display:none}
+  .prov-d summary::before{content:"\u25b8";font-size:9px;transition:transform .12s}
+  .prov-d[open] summary::before{transform:rotate(90deg)}
+  .prov-body{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-top:5px;white-space:pre-wrap}
   .read-row{display:flex;gap:6px;align-items:center}
   code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
   .settings label{display:block;margin-bottom:10px;max-width:520px}
@@ -462,6 +470,9 @@
   .fmea-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
   .overlay{display:none;position:fixed;inset:0;background:var(--scrim);z-index:100;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
   .overlay.open{display:flex}
+  .concl-body{padding:4px 2px}
+  .concl-body .result{border:none;padding:0;margin:0}
+  .concl-body .result-top{margin-bottom:4px}
   .overlay .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto;overflow:hidden}
   .modal-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
   .modal-title{font-size:14px;font-weight:600;color:var(--ink);flex:1}
@@ -793,13 +804,51 @@ html[data-theme="dark"] #etb-view{
 #expSummary .exs-none,#expSummary .exs-empty{color:var(--muted);font-size:12px;font-style:italic;padding:4px 0}
 #expSummary .exs-actions{margin-top:8px}
 #expSummary button.mini{padding:5px 12px;font-size:12px}
+  /* Connect data picker */
+  #cdBody .cd-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:8px}
+  #cdBody .cd-f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+  #cdBody .cd-f input,#cdBody .cd-f select{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:5px 7px;font-size:12.5px}
+  #cdBody .cd-name{display:flex;gap:4px}
+  #cdBody .cd-name select{flex:0 0 84px}
+  #cdBody .cd-name input{flex:1;min-width:0}
+  #cdBody .cd-list{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:8px}
+  #cdBody .cd-srow{border-bottom:1px solid var(--line)}
+  #cdBody .cd-srow:last-child{border-bottom:none}
+  #cdBody .cd-shead{display:flex;align-items:center;gap:9px;padding:8px 10px;cursor:pointer;background:var(--panel)}
+  #cdBody .cd-shead:hover{background:var(--panel2)}
+  #cdBody .cd-sname{font-weight:600;font-size:13px}
+  #cdBody .cd-smeta{margin-left:auto;color:var(--muted);font-size:11px;text-align:right}
+  #cdBody .cd-sbody{padding:2px 10px 10px}
+  #cdBody .cd-unit{border:1px solid var(--line);border-radius:7px;margin:8px 0;overflow:hidden}
+  #cdBody .cd-uhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 9px;background:var(--panel);font-size:12px}
+  #cdBody .cd-an{font-family:var(--mono);color:var(--accent);font-size:11px;text-transform:uppercase}
+  #cdBody .cd-cond{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  #cdBody .cd-run{margin-left:auto;font-size:11px;color:var(--muted)}
+  #cdBody table.cd-vals{width:100%;border-collapse:collapse}
+  #cdBody table.cd-vals td,#cdBody table.cd-vals th{padding:6px 9px;border-top:1px solid var(--line);font-size:12.5px;text-align:left}
+  #cdBody table.cd-vals th{color:var(--muted);font-weight:500;font-size:10.5px;text-transform:uppercase}
+  #cdBody td.cd-v{font-family:var(--mono)}
+  #cdBody td.cd-u{font-family:var(--mono);color:var(--muted);font-size:11px}
+  #cdBody td.cd-t select{width:100%;font-size:12px;padding:3px 5px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:5px}
+  #cdBody .cd-match{color:var(--ok);font-size:10px;font-family:var(--mono)}
+  #cdBody .cd-warn{color:var(--warn);font-size:10px}
+  #cdBody .cd-empty{color:var(--muted);font-size:12.5px;padding:14px;text-align:center}
+  .cd-btn{background:none;border:1px solid var(--accent);color:var(--accent);padding:2px 8px;border-radius:6px;font-size:11px;margin-left:6px;cursor:pointer}
+  .cd-btn:hover{background:rgba(63,208,201,.12)}
 #expRecBody .er-sec{margin:12px 0}
 #expRecBody .er-lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:6px}
 #expRecBody .erk{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
-#expRecBody .erk-input{width:110px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+  .kr-observed{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px}
+  .kr-pass{color:var(--ok);font-weight:600;margin-left:4px}
+  .kr-fail{color:var(--bad);font-weight:600;margin-left:4px}
+  .statbadge{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;cursor:help}
+  #expRecBody .erk-stat{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;display:block}
+  #expRecBody .erk-stat.short{color:var(--warn)}
+  #expRecBody .erk-input.multi{width:170px}
+  #expRecBody .erk-input{width:110px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
 #expRecBody .erk-unit{color:var(--muted);font-size:12px;min-width:40px}
 #expRecBody .erp{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin:5px 0;cursor:pointer}
 #expRecBody .erp-dot{width:16px;text-align:center;font-weight:700}
@@ -814,10 +863,11 @@ html[data-theme="dark"] #etb-view{
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▣</span> R&amp;D Execution</h1>
   <span id="objOwners" class="obj-owners" title="owners — set in the planning app"></span>
   <div class="spacer"></div>
+  <span id="unitTag" class="unit-tag" style="display:none"></span>
   <select class="obj" id="divSelect"><option>loading…</option></select>
   <select class="obj" id="qtrSelect" style="margin-left:6px;min-width:150px"><option value="">All quarters</option></select>
   <select class="obj" id="prodSelect" style="margin-left:6px;min-width:150px"><option value="">All products</option></select>
@@ -967,6 +1017,15 @@ html[data-theme="dark"] #etb-view{
 <div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
 <div id="fmeaOverlay" class="overlay" style="z-index:140"><div class="modal" style="max-width:840px"><div class="modal-head"><span class="modal-title" id="fmeaTitle"></span><button class="modal-x" id="fmeaX" title="Close">×</button></div><div id="fmeaBody"></div></div></div>
 
+<div id="cdOverlay" class="overlay" style="z-index:160"><div class="modal" style="max-width:780px">
+  <div class="modal-head"><span class="modal-title" id="cdTitle">Connect data</span><span class="pill" id="cdCtx" style="margin-left:8px"></span><button class="modal-x" onclick="closeConnectData()">✕</button></div>
+  <div class="modal-body" id="cdBody"></div>
+  <div class="modal-foot" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)">
+    <span id="cdCount" class="hint" style="margin:0">nothing selected</span><span style="flex:1"></span>
+    <button class="ghost mini" onclick="closeConnectData()">Cancel</button>
+    <button class="act mini" id="cdImport" onclick="cdDoImport()" disabled>Import</button>
+  </div>
+</div></div>
 <div id="expRecOverlay" class="overlay" style="z-index:150"><div class="modal" style="max-width:600px"><div class="modal-head"><span class="modal-title" id="expRecTitle"></span><button class="modal-x" id="expRecX" title="Close">×</button></div><div id="expRecBody"></div></div></div>
 <script>/*__CORE__*/</script>
 <script>
@@ -1093,17 +1152,304 @@ function renderExpSummary(){
   if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph'); if(gc && window.ETB && ETB.renderFocusedGraph){ ETB.renderFocusedGraph(gc, cur.map(function(e){return e.id;})); } }
 }
 
-function __erReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
+/* ---------------- Connect data: one-shot import from the analysis portal ----------------
+   v1 is an IMPORT, not a binding: pick one sample, tick values, they become ordinary kpiUpdates
+   carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
+   read-through /analysis route, so no JSONBin key is ever in the browser. */
+let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={};
+
+async function cdLoadIndex(force){
+  if(__cdIndex && !force) return __cdIndex;
+  const r=await fetch(`${BROKER}/analysis`,{headers:auth()});
+  if(!r.ok) throw new Error("analysis index unavailable ("+r.status+")");
+  const raw=await r.json();
+  const v=RD.validateAnalysisIndex(raw);
+  if(!v.ok) throw new Error("analysis index unreadable: "+v.reason);
+  __cdIndex=raw; return raw;
+}
+
+/* the import targets for the current host: KPIs on a KR/gate, or the experiment's key reads */
+function cdTargets(){
+  const h=__cdHost||{};
+  if(h.type==="record"){
+    const exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(h.id):null;
+    return ((exp&&exp.key_reads)||[]).map(k=>({id:k.id,name:k.name||k.id,unit:k.unit||""}));
+  }
+  return (exec.kpis||[]).filter(k=>k.hostType===h.type && k.hostId===h.id)
+                        .map(k=>({id:k.id,name:k.name||k.id,unit:k.unit||""}));
+}
+function cdGuessTarget(key){
+  const t=cdTargets().find(x=>String(x.name).toLowerCase()===String(key).toLowerCase());
+  if(t) return t.id;
+  return (__cdHost&&__cdHost.type==="record") ? "" : "__new__";
+}
+
+function openConnectData(type,id){
+  __cdHost={type,id}; __cdOpenSample=null; __cdSel={};
+  const ov=document.getElementById("cdOverlay");
+  document.getElementById("cdTitle").textContent = type==="record" ? "Connect data \u2014 fill key reads" : "Connect data";
+  document.getElementById("cdCtx").textContent = cdHostLabel();
+  document.getElementById("cdBody").innerHTML = '<p class="hint">Loading the analysis index\u2026</p>';
+  ov.classList.add("open");
+  cdLoadIndex().then(()=>cdRender()).catch(e=>{
+    document.getElementById("cdBody").innerHTML = '<p class="hint" style="color:var(--bad)">'+esc(e.message||"could not load the analysis index")+'</p>';
+  });
+}
+function closeConnectData(){ document.getElementById("cdOverlay").classList.remove("open"); __cdSel={}; __cdOpenSample=null; }
+function cdHostLabel(){
+  const h=__cdHost||{};
+  if(h.type==="record") return "key reads";
+  if(h.type==="keyResult"){ const kr=(exec.keyResults||[]).find(x=>x.id===h.id); return kr?(kr.statement||kr.id):h.id; }
+  const g=(exec.stageGates||[]).find(x=>x.id===h.id); return g?(g.name||g.id):String(h.id||"");
+}
+
+function cdFilters(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const p=g("cdP").trim(); let P_value=null,P_unit="";
+  if(p){ const m=/^\s*([\d.]+)\s*(\w+)?/.exec(p); if(m){ P_value=Number(m[1]); P_unit=m[2]||""; } }
+  return { analysis:g("cdAn"), name:g("cdName").trim(), nameMode:g("cdMode"),
+           T_C:g("cdT").trim()===""?null:Number(g("cdT")), RH_pct:g("cdRH").trim()===""?null:Number(g("cdRH")),
+           P_value:P_value, P_unit:P_unit };
+}
+
+function cdFilterBarHtml(f){
+  const buckets=["polcurve","eis","crossover","ecsa"];
+  return `<div class="cd-filters">
+    <label class="cd-f">Analysis<select id="cdAn" onchange="cdRender()"><option value="">any</option>${buckets.map(b=>`<option value="${b}"${f&&f.analysis===b?" selected":""}>${b}</option>`).join("")}</select></label>
+    <label class="cd-f">Sample<span class="cd-name"><select id="cdMode" onchange="cdRender()"><option value="contains">contains</option><option value="exact">exact</option><option value="starts">starts</option></select><input id="cdName" placeholder="e.g. MEA" oninput="cdRender()"></span></label>
+    <label class="cd-f">Temp (\u00b0C)<input id="cdT" type="number" placeholder="any" oninput="cdRender()"></label>
+    <label class="cd-f">RH (%)<input id="cdRH" type="number" placeholder="any" oninput="cdRender()"></label>
+    <label class="cd-f">Pressure<input id="cdP" placeholder="e.g. 150 kPa" oninput="cdRender()"></label>
+  </div>`;
+}
+
+function cdRender(){
+  const body=document.getElementById("cdBody"); if(!body) return;
+  const had=!!document.getElementById("cdAn");
+  const f=had?cdFilters():null;
+  const active=f?RD.analysisFiltersActive(f):false;
+  const list = active ? RD.analysisSearch(__cdIndex,f) : RD.analysisRecentSamples(__cdIndex,5);
+  const label = active ? (list.length+" sample"+(list.length===1?"":"s")+" match") : "Last 5 samples";
+  const rows = list.length ? list.map(sm=>cdSampleHtml(sm)).join("")
+                           : '<div class="cd-empty">No samples match those filters.</div>';
+  body.innerHTML = (had?document.querySelector("#cdBody .cd-filters").outerHTML:cdFilterBarHtml(null))
+                 + `<p class="hint">${label}</p><div class="cd-list">${rows}</div>`;
+  if(f){ /* restore filter values after the re-render */
+    const set=(id,v)=>{const e=document.getElementById(id); if(e&&v!=null) e.value=v;};
+    set("cdAn",f.analysis); set("cdMode",f.nameMode); set("cdName",f.name);
+    set("cdT",f.T_C==null?"":f.T_C); set("cdRH",f.RH_pct==null?"":f.RH_pct);
+    const pe=document.getElementById("cdP"); if(pe) pe.value=(f.P_value==null?"":(f.P_value+(f.P_unit?" "+f.P_unit:"")));
+  }
+  cdUpdateCount();
+}
+
+function cdSampleHtml(sm){
+  const open = sm.sample===__cdOpenSample;
+  const ans=[...new Set(sm.units.map(u=>u.Analysis))].join(" \u00b7 ");
+  const when=(sm.last||"").slice(0,10);
+  const inner = open ? sm.units.map(u=>cdUnitHtml(sm,u)).join("") : "";
+  return `<div class="cd-srow">
+    <div class="cd-shead" onclick="cdToggle('${esc(sm.sample)}')"><span class="cd-sname">${esc(sm.sample)}</span>
+      <span class="pill">${esc(ans)}</span><span class="cd-smeta">${esc(when)}<br>${sm.units.length} unit${sm.units.length===1?"":"s"}</span></div>
+    ${open?`<div class="cd-sbody">${inner}</div>`:""}</div>`;
+}
+
+function cdCondText(c){
+  const p=[]; c=c||{};
+  if(c.T_C!=null)p.push(c.T_C+" \u00b0C");
+  if(c.RH_pct!=null)p.push(c.RH_pct+" %RH");
+  if(c.P_value!=null)p.push(c.P_value+" "+(c.P_unit||""));
+  if(c.step)p.push("step "+c.step);
+  return p.length?p.join(" \u00b7 "):"no conditions recorded";
+}
+
+function cdUnitHtml(sm,u){
+  const tgts=cdTargets();
+  const rows=Object.keys(u.key_values).map(k=>{
+    const selId=u.uid+"|"+k, on=!!__cdSel[selId], unit=RD.analysisKeyUnit(k);
+    const cur = on ? __cdSel[selId].target : cdGuessTarget(k);
+    const matched = tgts.some(x=>String(x.name).toLowerCase()===k.toLowerCase());
+    const opts = tgts.map(x=>`<option value="${esc(x.id)}"${cur===x.id?" selected":""}>${esc(x.name)}</option>`).join("")
+      + (__cdHost.type==="record" ? "" : `<option value="__new__"${cur==="__new__"?" selected":""}>+ create new KPI</option>`);
+    const chosen=tgts.find(x=>x.id===cur);
+    const warn = (chosen&&unit&&chosen.unit&&chosen.unit!==unit) ? `<div class="cd-warn">unit differs (${esc(chosen.unit)}) \u2014 no conversion</div>` : "";
+    return `<tr>
+      <td style="width:24px"><input type="checkbox" ${on?"checked":""} data-cdpick="${esc(selId)}" onchange="cdPick(this,'${esc(sm.sample)}','${esc(u.uid)}',this.getAttribute('data-key'))" data-key="${esc(k)}"></td>
+      <td>${esc(k)}${matched?'<div class="cd-match">matches a target here</div>':""}</td>
+      <td class="cd-v">${u.key_values[k]}</td><td class="cd-u">${esc(unit)}</td>
+      <td class="cd-t">${on?`<select onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
+  }).join("");
+  return `<div class="cd-unit"><div class="cd-uhead"><span class="cd-an">${esc(u.Analysis)}</span>
+      <span class="cd-cond">${esc(cdCondText(u.Conditions))}</span>
+      <span class="cd-run">${esc(u.script||"")} \u00b7 ${esc((u.timestamp||"").slice(0,10))}</span></div>
+    <table class="cd-vals"><tr><th></th><th>Reading</th><th>Value</th><th>Unit</th><th style="width:180px">Import into</th></tr>${rows}</table></div>`;
+}
+
+function cdToggle(name){ __cdOpenSample = (__cdOpenSample===name?null:name); cdRender(); }
+
+function cdPick(cb,sample,uid,key){
+  const selId=uid+"|"+key;
+  if(cb.checked){
+    const sm=RD.analysisIndexSamples(__cdIndex).find(x=>x.sample===sample);
+    const u=sm&&sm.units.find(x=>x.uid===uid); if(!u) return;
+    __cdSel[selId]={ sample, key, value:u.key_values[key], unit:RD.analysisKeyUnit(key),
+      analysis:u.Analysis, step:u.step, cond:u.Conditions, job_id:u.job_id, bin_id:u.bin_id,
+      script:u.script, timestamp:u.timestamp, target:cdGuessTarget(key) };
+  } else delete __cdSel[selId];
+  cdRender();
+}
+function cdSetTarget(selId,v){ if(__cdSel[selId]) __cdSel[selId].target=v; cdRender(); }
+
+function cdUpdateCount(){
+  const n=Object.keys(__cdSel).length;
+  const el=document.getElementById("cdCount"), btn=document.getElementById("cdImport");
+  const names=[...new Set(Object.values(__cdSel).map(x=>x.sample))];
+  if(el) el.textContent = n ? (n+" value"+(n===1?"":"s")+" selected from "+names.join(", ")) : "nothing selected";
+  if(btn) btn.disabled = !n;
+}
+
+function cdDoImport(){
+  const picks=Object.values(__cdSel); if(!picks.length) return;
+  if(__cdHost.type==="record"){
+    let filled=0;
+    picks.forEach(p=>{
+      if(!p.target) return;
+      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+p.target+'"]');
+      if(inp){ inp.value=p.value; filled++; }
+    });
+    closeConnectData();
+    if(typeof expRecEval==="function"){ try{ expRecEval(); }catch(e){} }
+    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal \u2014 not saved until you record the outcome.","ok");
+    return;
+  }
+  /* create KPIs for any "+ create new KPI" targets, then materialise readings */
+  const resolved=picks.map(p=>{
+    let kpiId=p.target;
+    if(kpiId==="__new__"){
+      kpiId=RD.allocId("kpi", selectedObj, (exec.kpis||[]).map(x=>x.id));
+      exec.kpis.push({ id:kpiId, objectiveId:selectedObj, hostType:__cdHost.type, hostId:__cdHost.id,
+                       groupId:null, isDefiner:false, name:p.key, unit:p.unit||null,
+                       targetType:"statistical", direction:"up", target:null });
+    }
+    return Object.assign({},p,{kpiId});
+  });
+  const res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], new Date().toISOString());
+  exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
+  closeConnectData();
+  persist(); renderAll();
+  let msg=res.updates.length+" reading"+(res.updates.length===1?"":"s")+" imported";
+  if(res.duplicates.length) msg+=" \u00b7 "+res.duplicates.length+" already imported (skipped)";
+  if(res.unresolved.length) msg+=" \u00b7 "+res.unresolved.length+" skipped";
+  setMsg(msg, res.updates.length?"ok":"warn");
+}
+
+/* ---- statistical key reads ------------------------------------------------------------------
+   A key read linked to a statistical KPI is a STATISTIC over several measurements. The statistic and
+   expected sample size come from that KPI (single source of truth — RD.keyReadStat enforces it); an
+   unlinked key read may carry its own. The field then accepts several numbers, the raw reads are what
+   get written, and the criterion is tested against the statistic. */
+function __erFmt(v){ if(v==null) return '\u2014'; var n=Number(v); if(!isFinite(n)) return '\u2014';
+  var a=Math.abs(n); var s=(a!==0&&(a<0.001||a>=100000))?n.toExponential(2):n.toFixed(a<1?4:3);
+  return String(parseFloat(s)); }
+/* The measured value(s) recorded for a key read, rendered under its target so an experiment shows the
+   evidence beside its conclusion. Applies to EVERY key read: single-valued reads were write-only too
+   (stored and used for matching, but never displayed) — statistical reads just add n / statistic / sd. */
+function __erObservedRow(k, exp){
+  try{
+    var ao = exp && exp.actual_outcome;
+    var kv = ao && ao.key_read_values;
+    if(!kv) return null;
+    var xs = RD.keyReadValueList(kv[k.id]);
+    if(!xs.length) return null;
+    var st  = RD.keyReadStat(k, __erKpiFor(k));
+    var sum = RD.statSummary(xs, st.statistic || 'average');
+    var row = document.createElement('div'); row.className = 'kr-observed';
+    var txt = 'measured ' + __erFmt(sum.value) + (k.unit ? (' ' + k.unit) : '');
+    if(st.statistical && sum.n > 1){
+      txt += '  \u00b7  n = ' + sum.n + (st.readCount ? (' of ' + st.readCount) : '')
+           + ' \u00b7 ' + (st.statistic || 'average')
+           + (sum.sd != null ? (' \u00b7 sd ' + __erFmt(sum.sd)) : '');
+    }
+    row.appendChild(document.createTextNode(txt));
+    var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
+    if(tgt != null && isFinite(tgt) && sum.value != null){
+      var down = String(k.direction || '').indexOf('<') >= 0 || k.direction === 'down' || k.direction === 'decrease';
+      var ok_ = down ? (sum.value <= tgt) : (sum.value >= tgt);
+      var b = document.createElement('span');
+      b.className = ok_ ? 'kr-pass' : 'kr-fail';
+      b.textContent = ok_ ? '\u2713 meets target' : '\u2717 misses target';
+      row.appendChild(document.createTextNode(' '));
+      row.appendChild(b);
+    }
+    return row;
+  }catch(e){ return null; }
+}
+function __erKpiFor(kr){
+  if(!kr || !kr.source_kpi_gid) return null;
+  try{ return (exec.kpis||[]).find(function(x){ return x.id===kr.source_kpi_gid; }) || null; }catch(e){ return null; }
+}
+function __erStatOf(kr){ return RD.keyReadStat(kr||{}, __erKpiFor(kr)); }
+function __erKeyRead(krId){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
+  if(!exp) return null;
+  return ((exp.key_reads)||[]).find(function(k){ return k.id===krId; })||null;
+}
+/* raw reads per key read, as arrays — what gets stored and written */
+function __erReadValues(){
+  var o={}, ins=document.querySelectorAll('#expRecBody .erk-input');
+  for(var i=0;i<ins.length;i++){
+    var id=ins[i].getAttribute('data-kr');
+    var xs=RD.parseReads(ins[i].value);
+    if(xs.length) o[id]=xs;
+  }
+  return o;
+}
+/* the scalar each key read contributes to result matching: the STATISTIC when statistical,
+   otherwise the single number. Keeps etbMatchResults' scalar comparison working unchanged. */
+function __erReadings(){
+  var o={}, vals=__erReadValues();
+  Object.keys(vals).forEach(function(id){
+    var xs=vals[id], kr=__erKeyRead(id), st=__erStatOf(kr);
+    if(st.statistical){
+      var sum=RD.statSummary(xs, st.statistic);
+      if(sum.value!=null) o[id]=sum.value;
+    } else if(xs.length){
+      o[id]=xs[xs.length-1];        // single-valued: the last number typed
+    }
+  });
+  return o;
+}
+/* live "n · statistic · sd" under each statistical field */
+function __erStatSync(){
+  var ins=document.querySelectorAll('#expRecBody .erk-input');
+  for(var i=0;i<ins.length;i++){
+    var id=ins[i].getAttribute('data-kr');
+    var out=document.querySelector('#expRecBody .erk-stat[data-krstat="'+id+'"]');
+    if(!out) continue;
+    var kr=__erKeyRead(id), st=__erStatOf(kr);
+    if(!st.statistical){ out.textContent=''; continue; }
+    var xs=RD.parseReads(ins[i].value), sum=RD.statSummary(xs, st.statistic);
+    var comp=RD.readsComplete(sum.n, st.readCount);
+    if(!sum.n){ out.textContent='n = 0'+(comp.expected?(' of '+comp.expected):'')+' \u00b7 '+st.statistic; out.className='erk-stat short'; continue; }
+    var bits=['n = '+sum.n+(comp.expected?(' of '+comp.expected):''),
+              st.statistic+' '+__erFmt(sum.value)];
+    if(sum.n>1 && sum.sd!=null) bits.push('sd '+__erFmt(sum.sd));
+    out.textContent=bits.join(' \u00b7 ');
+    out.className = comp.complete ? 'erk-stat' : 'erk-stat short';
+  }
+}
+function __erOldReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
 function expRecSync(){ var picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked'); var b=document.getElementById('erRecord'); if(b) b.disabled=!picked; }
 function openExpRecorder(expId){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
   window.__expRecId=expId;
   document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
   var krs=exp.key_reads||[], prs=exp.possible_results||[];
-  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="number" step="any" class="erk-input" data-kr="'+esc(k.id)+'" oninput="expRecEval()" placeholder="measured"><span class="erk-unit">'+esc(k.unit||'')+'</span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
+  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
   var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('') : '<div class="exs-none">No possible results defined.</div>';
   document.getElementById('expRecBody').innerHTML =
-    '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values</div>'+krHtml+'</div>'+
+    '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values'+
+      '<button class="cd-btn" onclick="openConnectData(\'record\',window.__expRecId)">Connect data</button></div>'+krHtml+'</div>'+
     '<div id="erConclusion" class="er-concl er-pending"></div>'+
     '<div class="er-sec"><div class="er-lab">Result</div>'+prHtml+'</div>'+
     '<div class="er-sec"><div class="er-lab">Recorded date</div><input type="date" id="erDate"></div>'+
@@ -1134,7 +1480,15 @@ function recordExpOutcome(){
   if(!expId||!picked) return;
   var d=document.getElementById('erDate');
   var readings=__erReadings();
-  var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:readings };
+  /* the experiment's own record keeps the RAW reads: an array for a statistical key read, the plain
+     number for a single-valued one. RD.keyReadValueList reads either shape, so old trees stay valid. */
+  var __rawVals={}; try{ __rawVals=__erReadValues(); }catch(e){}
+  var __recVals={};
+  Object.keys(readings).forEach(function(id){
+    var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
+    __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
+  });
+  var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
   var wrote=writeKpiUpdatesFromReads(expId, readings);
   closeExpRecorder();
@@ -1167,13 +1521,17 @@ window.hubProjectKpis = function(){
 };
 function writeKpiUpdatesFromReads(expId, readings){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return 0;
+  /* raw per-key-read arrays, read while the recorder is still mounted; falls back to the scalar */
+  var __erRawValues={}; try{ if(typeof __erReadValues==='function') __erRawValues=__erReadValues(); }catch(e){}
   var byId={}; (exp.key_reads||[]).forEach(function(k){ byId[k.id]=k; });
   var valid={}; try{ allKpisPool().forEach(function(k){ if(k.objectiveId===selectedObj && k.hostType!=='task') valid[k.id]=1; }); }catch(e){}
   if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
   var ts=Date.now(), wrote=0;
   Object.keys(readings||{}).forEach(function(krId){
     var k=byId[krId]; if(!k||!k.source_kpi_gid||!valid[k.source_kpi_gid]) return;
-    exec.kpiUpdates.push({ kpiId:k.source_kpi_gid, value:Number(readings[krId]), timestamp:ts, note:'exp '+(exp.code||exp.id) });
+    var __xs=(__erRawValues && __erRawValues[krId]) ? __erRawValues[krId] : [Number(readings[krId])];
+      var __rows=RD.buildStatReadings(k.source_kpi_gid, __xs, { timestamp:ts, note:'exp '+(exp.code||exp.id) });
+      for(var __r=0;__r<__rows.length;__r++) exec.kpiUpdates.push(__rows[__r]);
     wrote++;
   });
   return wrote;
@@ -1296,9 +1654,23 @@ function setMsg(t,k){ const el=document.getElementById("msg"); el.textContent=t;
   if(k==="ok") setTimeout(()=>el.classList.remove("show"),2500); }
 
 /* ---------------- division resolution ---------------- */
+// This app's kind: the Sales app writes BIZ-<div>, the Execution app writes EXEC-<div>. Derive it from
+// execId()'s prefix so the two builds need no extra difference. The Sales app shows only kind=biz divisions;
+// the Execution app only kind=rd.
+function appKind(){ return execId().indexOf("BIZ-")===0 ? "biz" : "rd"; }
+function divInThisApp(d){ return d && RD.divisionKind(d)===appKind(); }
+function firstAppDivision(){ const d=((portfolio&&portfolio.divisions)||[]).find(divInThisApp); return d?d.id:null; }
 function resolveDivision(){
   const u = new URL(location.href);
-  return u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  // a requested/remembered division only counts if it belongs to THIS app's kind — otherwise the Execution
+  // app could land on a biz division (whose data lives in BIZ-, not EXEC-) and vice-versa.
+  const want = u.searchParams.get("division") || localStorage.getItem("rd_division") || null;
+  if(!want) return null;
+  // portfolio not loaded yet -> can't judge kind here; accept the wanted division and let loadAll re-validate
+  // it against this app's kind once the divisions are known.
+  if(!portfolio || !portfolio.divisions) return want;
+  const d=portfolio.divisions.find(x=>x.id===want);
+  return divInThisApp(d) ? want : null;
 }
 
 /* ---------------- load / save ---------------- */
@@ -1325,8 +1697,10 @@ async function loadAll(){
     portfolio = p.doc; portfolioVersion = p.version;
     if(pendingObjective){ const _to=(portfolio.objectives||[]).find(o=>o.id===pendingObjective);
       if(_to) divisionId=_to.divisionId; else pendingObjective=""; }   // ?objective= robust-resolve: switch to its division; drop an unknown id
-    if(!divisionId){ divisionId = resolveDivision() || (portfolio.divisions[0] && portfolio.divisions[0].id); }
-    if(!divisionId){ setMsg("No divisions exist yet.", "err"); return; }
+    if(!divisionId || !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===divisionId))){
+      divisionId = resolveDivision() || firstAppDivision();
+    }
+    if(!divisionId){ setMsg(appKind()==="biz" ? "No business (kind=biz) divisions yet — add one in the Planning app." : "No R&D (kind=rd) divisions yet — add one in the Planning app.", "err"); return; }
     localStorage.setItem("rd_division", divisionId);
     fillDivSelect();   // populate + select the resolved division (header selector)
     const ex = await apiGet(execId());
@@ -1417,6 +1791,10 @@ function ownerLine(objId){
   return ow.length ? ow.join(", ") : "";
 }
 async function switchDivision(newDiv){
+  if(newDiv && !divInThisApp(((portfolio&&portfolio.divisions)||[]).find(d=>d.id===newDiv))){
+    setMsg("That division isn't a "+(appKind()==="biz"?"business":"R&D")+" division for this app.", "err");
+    const s=document.getElementById("divSelect"); if(s) s.value=divisionId; return;
+  }
   if(!newDiv || newDiv===divisionId){ const s=document.getElementById("divSelect"); if(s) s.value=divisionId||""; return; }
   stopPoll();
   await flushPersist();                                                       // save the current division fully before repointing the bin
@@ -1434,9 +1812,31 @@ async function switchDivision(newDiv){
   startPoll();
 }
 function fillDivSelect(){ const s=document.getElementById("divSelect");
-  s.innerHTML=(portfolio.divisions||[]).map(d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`).join("");
+  const divs=(portfolio.divisions||[]).filter(divInThisApp), units=portfolio.units||[];
+  const opt=d=>`<option value="${d.id}">${esc(d.name)} (${d.id})</option>`;
+  if(units.length){
+    // group by unit (ordered), then an "Unassigned" group for divisions with no unitId
+    const uord=units.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    let html="";
+    uord.forEach(u=>{ const ds=divs.filter(d=>(d.unitId||null)===u.id);
+      if(ds.length) html+=`<optgroup label="${esc(u.name)}">`+ds.map(opt).join("")+`</optgroup>`; });
+    const orphan=divs.filter(d=>!units.some(u=>u.id===(d.unitId||null)));
+    if(orphan.length) html+=`<optgroup label="Unassigned">`+orphan.map(opt).join("")+`</optgroup>`;
+    s.innerHTML=html;
+  } else s.innerHTML=divs.map(opt).join("");
+  if(!divs.length) s.innerHTML=`<option value="">${appKind()==="biz"?"no business divisions":"no R&D divisions"}</option>`;
   if(divisionId) s.value=divisionId;
-  s.onchange=()=>switchDivision(s.value); }
+  s.onchange=()=>switchDivision(s.value);
+  updateUnitTag(); }
+// a small header tag showing which unit the current division sits in — orientation only, nothing gated.
+function updateUnitTag(){
+  const el=document.getElementById("unitTag"); if(!el) return;
+  const d=(portfolio.divisions||[]).find(x=>x.id===divisionId);
+  const uid=RD.unitIdOfDivision(divisionId, portfolio);
+  const u=(portfolio.units||[]).find(x=>x.id===uid);
+  if(u){ el.textContent=u.name; el.title="Unit — grouped in the planning app"; el.style.display=""; }
+  else { el.textContent=""; el.style.display="none"; }
+}
 function fillQtrSelect(){
   const s=document.getElementById("qtrSelect"); if(!s) return;
   const qs=[...new Set(myObjectives().map(o=>o.quarter).filter(Boolean))];
@@ -1591,6 +1991,53 @@ function delSub(type, id){
 // to read its link again. Returns how many were removed, or -1 if there were none. Single source of truth:
 // both the inline cell and postRead() call this.
 function ownReadingsOf(kpiId){ return (exec.kpiUpdates||[]).filter(u=>u.kpiId===kpiId); }
+
+/* ---- provenance for imported readings -------------------------------------------------------
+   A reading pulled from the analysis portal carries src{portal,job_id,bin_id,sample,bucket,key,
+   cond,run_t,imported_t}. Surface it so an imported number is never indistinguishable from a typed
+   one: a chip beside the value, and a collapsible source line under the row. __provOpen keeps a row
+   expanded across the app's frequent re-renders (a fresh <details> would always come back shut). */
+const __provOpen = new Set();
+function cdLatestSrc(kpiId){
+  let best=null;
+  ownReadingsOf(kpiId).forEach(u=>{
+    if(!u || !u.src || u.src.portal!=="analysis") return;
+    if(!best || (u.timestamp||0) > (best.timestamp||0)) best=u;
+  });
+  return best;
+}
+function cdCondSummary(c){
+  const p=[]; c=c||{};
+  if(c.T_C!=null)p.push(c.T_C+" \u00b0C");
+  if(c.RH_pct!=null)p.push(c.RH_pct+" %RH");
+  if(c.P_value!=null)p.push(c.P_value+" "+(c.P_unit||""));
+  if(c.step)p.push("step "+c.step);
+  return p.join(" \u00b7 ");
+}
+function cdChipHtml(kpiId){
+  const u=cdLatestSrc(kpiId); if(!u) return "";
+  const s=u.src, bits=[s.sample||"", cdCondSummary(s.cond), (s.run_t||"").slice(0,10)].filter(Boolean);
+  return `<span class="src-chip" title="${esc(bits.join(" \u00b7 "))}">\u21a7 analysis</span>`;
+}
+function cdProvRowHtml(kpiId, cols){
+  const u=cdLatestSrc(kpiId); if(!u) return "";
+  const s=u.src;
+  const open=__provOpen.has(kpiId)?" open":"";
+  const n=ownReadingsOf(kpiId).filter(x=>x&&x.src&&x.src.portal==="analysis").length;
+  const body=[
+    "sample    "+(s.sample||"\u2014"),
+    "analysis  "+(s.bucket||"\u2014")+" \u00b7 "+(s.key||"\u2014"),
+    "condition "+(cdCondSummary(s.cond)||"none recorded"),
+    "run       "+(s.run_t||"\u2014")+(s.script?(" \u00b7 "+s.script):""),
+    "job       "+(s.job_id||"\u2014")+(s.bin_id?("  bin "+s.bin_id):""),
+    "imported  "+(s.imported_t||"\u2014")
+  ].join("\n");
+  return `<tr class="prov-tr"><td colspan="${cols}"><details class="prov-d" data-provkpi="${esc(kpiId)}"${open} ontoggle="cdProvToggle(this)"><summary>\u21a7 imported from analysis${n>1?(" \u00b7 "+n+" readings"):""}</summary><div class="prov-body">${esc(body)}</div></details></td></tr>`;
+}
+function cdProvToggle(el){
+  const id=el&&el.getAttribute("data-provkpi"); if(!id) return;
+  if(el.open) __provOpen.add(id); else __provOpen.delete(id);
+}
 function clearOwnReadings(kpiId){
   const own=ownReadingsOf(kpiId);
   if(!own.length) return -1;
@@ -2588,9 +3035,9 @@ function kpiTable(hostType, hostId, objScope){
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
       <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
-      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}</td>
+      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}${cdChipHtml(k.id)}</td>
       <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
-      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
+      <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>` + cdProvRowHtml(k.id, 6);
   });
   h += `</tbody></table>`;
   return h;
@@ -2621,7 +3068,7 @@ function renderKRs(){
       : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
     const panel = open ? `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>` : '';
     inner+=`<div class="kr-block b-${bCls}"><div class="krow">
-      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
+      <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">KR${idx+1}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span><button class="cd-btn" onclick="event.stopPropagation();openConnectData('keyResult','${kr.id}')" title="import measured values from the analysis portal">Connect data</button></div>
       <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
       <div class="g-ready">
         <div class="r-top"><span class="r-lab">Attainment</span><span class="r-val" style="color:${c}">${attTxt}${att==null?'':'<span class="u">%</span>'}</span></div>
@@ -2833,7 +3280,7 @@ function renderGates(){
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
-        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span><button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
@@ -3351,14 +3798,14 @@ function buildGraphElements(tree,reach){
       if(r.terminal){
         const tid="term_"+eid+"_"+r.id;
         nodes.push({data:{id:tid,kind:"terminal",termType:r.terminal.type,label:r.terminal.label||r.terminal.type,branchState:bs}});
-        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+tid,source:eid,target:tid,label:r.label||"",viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+tid,source:eid,target:tid,label:r.label||"",viaKind:"result",expId:eid,resultId:r.id,branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
       } else if(nextId){
         const lbl=(exps[nextId]&&exps[nextId].repeat_of===eid)?"repeat":(r.label||"");
-        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nextId,source:eid,target:nextId,label:lbl,viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nextId,source:eid,target:nextId,label:lbl,viaKind:"result",expId:eid,resultId:r.id,branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
       } else {
         const nn="nonext_"+eid+"_"+r.id;
         nodes.push({data:{id:nn,kind:"nonext",label:"No next step",branchState:bs}});
-        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nn,source:eid,target:nn,label:r.label||"",viaKind:"result",branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
+        edges.push({data:{id:"edge_"+eid+"_"+r.id+"_"+nn,source:eid,target:nn,label:r.label||"",viaKind:"result",expId:eid,resultId:r.id,branchState:bs,observed:!!observed,acc:accN>0,accRealized:accR}});
       }
     }
     if(ao&&isSentinel(ao.result_id)){
@@ -3392,7 +3839,7 @@ function toRenderElements(nodes,edges){
     const d=e.data;const lab=(d.label==null?"":String(d.label)).trim();
     if(!lab){outEdges.push({data:Object.assign({},d)});continue;}
     const lid="lblN_"+d.id;
-    outNodes.push({data:{id:lid,kind:"edgelabel",label:(d.acc?"\u2691 ":"")+lab,branchState:d.branchState,viaKind:d.viaKind,observed:!!d.observed,acc:!!d.acc,accRealized:!!d.accRealized},grabbable:false,selectable:false});
+    outNodes.push({data:{id:lid,kind:"edgelabel",label:(d.acc?"\u2691 ":"")+lab,branchState:d.branchState,viaKind:d.viaKind,expId:d.expId,resultId:d.resultId,observed:!!d.observed,acc:!!d.acc,accRealized:!!d.accRealized},grabbable:false,selectable:true});
     outEdges.push({data:{id:d.id+"__in",source:d.source,target:lid,branchState:d.branchState,viaKind:d.viaKind,half:"in",noArrow:1}});
     outEdges.push({data:{id:d.id+"__out",source:lid,target:d.target,branchState:d.branchState,viaKind:d.viaKind,observed:!!d.observed,half:"out"}});
   }
@@ -3900,7 +4347,7 @@ function cyStyle(p){
     {selector:'node[kind="terminal"][branchState="not_pursued"]',style:{"opacity":0.5}},
     {selector:'node[kind="nonext"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1.5,"border-color":p.stopFg,"color":p.stopFg,"width":(e)=>nodeDims(e.data("label"),10,120).w,"height":(e)=>nodeDims(e.data("label"),10,120).h,"font-size":10}},
     {selector:'node[kind="nonext"][branchState="not_pursued"]',style:{"opacity":0.5,"border-style":"dashed"}},
-    {selector:'node[kind="edgelabel"]',style:{"shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
+    {selector:'node[kind="edgelabel"]',style:{"events":"yes","shape":"round-rectangle","background-color":p.surface,"border-width":1,"border-color":p.line,"width":(e)=>nodeDims(e.data("label"),10.5,150).w,"height":(e)=>nodeDims(e.data("label"),10.5,150).h,"font-size":10.5,"font-family":FF,"color":p.ink,"text-wrap":"wrap","text-max-width":150,"text-valign":"center","text-halign":"center"}},
     {selector:'node[kind="edgelabel"][branchState="active"]',style:{"border-color":p.accent,"color":p.ink,"font-weight":600}},
     {selector:'node[kind="edgelabel"][branchState="pending"]',style:{"color":p.muted}},
     {selector:'node[kind="edgelabel"][branchState="not_pursued"]',style:{"color":p.faint,"border-style":"dashed","opacity":0.55}},
@@ -3909,7 +4356,8 @@ function cyStyle(p){
     {selector:'edge[branchState="pending"]',style:{"width":1.5,"line-color":p.muted,"target-arrow-color":p.muted}},
     {selector:'edge[branchState="not_pursued"]',style:{"width":1,"line-style":"dashed","line-color":p.faint,"target-arrow-color":p.faint}},
     {selector:'edge[noArrow]',style:{"target-arrow-shape":"none"}},
-    {selector:"node:selected",style:{"border-color":p.accent,"border-width":3}}
+    {selector:'node:selected[kind!="edgelabel"]',style:{"border-color":p.accent,"border-width":3}},
+    {selector:'node[kind="edgelabel"]:selected',style:{"border-color":p.accent,"border-width":2}}
   ];
 }
 const DAGRE_LAYOUT={name:"dagre",rankDir:"TB",nodeSep:34,rankSep:42,edgeSep:12,padding:18,animate:false};
@@ -3923,6 +4371,9 @@ function renderGraph(){
   if(cy){try{cy.destroy();}catch(e){}cy=null;}
   cy=cytoscape({container:host,elements:[...R.nodes,...R.edges],style:cyStyle(p),layout:DAGRE_LAYOUT,minZoom:0.2,maxZoom:2.5});
   cy.on("tap",'node[kind="experiment"]',(evt)=>{const __id=evt.target.id();const __e=state.tree.experiments[__id];if(__e&&__e.actual_outcome)openExpDetailModal(__id);else openPanel(__id);});
+  cy.on("tap",'node[kind="edgelabel"]',(evt)=>{const d=evt.target.data();if(d&&d.expId&&d.resultId)openConclusionModal(d.expId,d.resultId);});
+  cy.on("mouseover",'node[kind="edgelabel"]',()=>{if(host)host.style.cursor="pointer";});
+  cy.on("mouseout",'node[kind="edgelabel"]',()=>{if(host)host.style.cursor="default";});
   cy.ready(()=>cy.fit(undefined,28));
   if(typeof requestAnimationFrame==="function") requestAnimationFrame(function(){ if(cy){ try{ cy.resize(); cy.fit(undefined,28); }catch(e){} } });   // iframe: correct size/frame once layout settles
   if(state.panelExpId){const n=cy.getElementById(state.panelExpId);if(n&&n.length)n.select();}
@@ -3948,6 +4399,33 @@ function closePanel(){
 }
 // Read-only detail modal for a completed experiment (has an actual_outcome). Edit button hands off to the panel.
 function closeExpDetailModal(){var ov=ETB_ROOT.querySelector('#exp-detail-overlay');if(ov){ov.classList.remove('open');if(ov.parentNode)ov.parentNode.removeChild(ov);}}
+let __conclModalCtx=null, __conclPainting=false;
+function closeConclusionModal(){__conclModalCtx=null;const o=(ETB_ROOT&&ETB_ROOT.querySelector)?ETB_ROOT.querySelector("#concl-overlay"):document.getElementById("concl-overlay");if(o)o.remove();}
+function openConclusionModal(expId,resultId){
+  closeConclusionModal();
+  const t=state.tree;const exp0=t.experiments[expId];if(!exp0)return;
+  if(!(exp0.possible_results||[]).some(x=>x.id===resultId))return;
+  const ov=el("div","overlay");ov.id="concl-overlay";
+  ov.addEventListener("click",e=>{if(e.target===ov)closeConclusionModal();});
+  const sheet=el("div","sheet");sheet.style.maxWidth="560px";
+  const hd=el("div","exp-modal-head");
+  hd.appendChild(Object.assign(el("h3"),{innerHTML:`<span class="mono" style="font-weight:600">${esc(exp0.code||expId)}</span> \u00b7 result`}));
+  const hx=el("button","modal-x","\u2715");hx.title="Close";hx.addEventListener("click",closeConclusionModal);hd.appendChild(hx);
+  sheet.appendChild(hd);
+  const body=el("div","concl-body");sheet.appendChild(body);
+  // paint (and repaint) the single-result editor — the SAME card the experiment setup renders, scoped to one result
+  function paint(){
+    const tree=state.tree;const exp=tree.experiments[expId];
+    const res=exp && (exp.possible_results||[]).find(x=>x.id===resultId);
+    if(!exp||!res){ closeConclusionModal(); return; }
+    const types=tree.terminal_types||{};const complete=(exp.status==="complete")||!!exp.actual_outcome;
+    body.innerHTML="";
+    body.appendChild(renderResultEditor(tree,expId,exp,res,types,complete));
+  }
+  __conclModalCtx={expId:expId,resultId:resultId,paint:paint};   // renderPanel repaints the modal via this
+  paint();
+  ov.appendChild(sheet);ETB_ROOT.appendChild(ov);ov.classList.add("open");
+}
 function openExpDetailModal(expId){
   closeExpDetailModal();
   const t=state.tree;const exp=t.experiments[expId];if(!exp)return;
@@ -4065,6 +4543,8 @@ function renderPanel(expId,opts){
   const bar=el("div","scoped-bar");const apply=el("button","primary","Apply");const msg=el("span","scoped-msg");bar.appendChild(apply);bar.appendChild(msg);det.appendChild(bar);
   apply.addEventListener("click",()=>{let p;try{p=JSON.parse(ta.value);}catch(e){msg.textContent="Parse error: "+e.message;msg.style.color="var(--stop-fg)";return;}p.id=expId;t.experiments[expId]=p;normalizeTree(t);softRefresh();renderPanel(expId,{scopedOpen:true,flash:"Applied."});});
   c.appendChild(det);
+  // keep an open single-result modal in sync with the drawer's re-render (guarded against re-entrancy)
+  if(__conclModalCtx && __conclModalCtx.expId===expId && !__conclPainting){ __conclPainting=true; try{ __conclModalCtx.paint(); }catch(e){} __conclPainting=false; }
 }
 
 function renderAccomplishments(t,expId,exp,res){
@@ -4226,6 +4706,14 @@ function renderKeyReads(t,expId,exp){
     if(__lk.linked||__lk.unlinked){
       name=el("div","kr-name");name.style.cssText="flex:2;display:flex;align-items:center;gap:8px;font-size:13px";
       const nmtxt=el("span",null,k.name||"(KPI)");nmtxt.style.fontWeight="500";name.appendChild(nmtxt);
+      { const __st=RD.keyReadStat(k, __erKpiFor(k));   // the REAL KPI: __etbKpiById holds a projection with no targetType
+        if(__st.statistical){
+          const b=el("span","statbadge", __st.statistic + (__st.readCount?(" of "+__st.readCount):"") );
+          b.title = __st.source==="kpi"
+            ? ("statistic and sample size come from the linked KPI" + (__st.overriddenLocal?" — this key read's own setting is overridden":""))
+            : "statistic set on this key read (no linked KPI)";
+          name.appendChild(b);
+        } }
       const tag=el("span",null,__lk.linked?("linked · "+(__lk.label||"KR")):"unlinked");tag.style.cssText="font-size:10px;font-weight:600;color:"+(__lk.unlinked?"#A32D2D":"#185FA5");name.appendChild(tag);
       name.title=__lk.linked?("Linked to "+(__lk.label||"KPI")+" — name & unit follow the KPI"):"Linked KPI was removed";
       unit=el("div","kr-unit",k.unit||"");unit.style.cssText="flex:1;min-width:54px;color:#888;font-size:12px";
@@ -4239,6 +4727,7 @@ function renderKeyReads(t,expId,exp){
     const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
     const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
     pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    { const __obs=__erObservedRow(k, exp); if(__obs) card.appendChild(__obs); }
     wrap.appendChild(card);
   });
   const add=el("button","mini2","+ Add key read");add.addEventListener("click",()=>{addKeyRead(t,expId);softRefresh();renderPanel(expId);});add.style.marginTop="6px";wrap.appendChild(add);

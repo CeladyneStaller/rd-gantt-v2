@@ -85,6 +85,13 @@
   .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
   .ed label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
+  .note-details{margin:6px 0 2px;font-size:12px}
+  .note-details summary{cursor:pointer;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none;padding:2px 0}
+  .note-details summary::-webkit-details-marker{display:none}
+  .note-details summary::before{content:"▸";font-size:9px;transition:transform .12s}
+  .note-details[open] summary::before{transform:rotate(90deg)}
+  .note-details .note-body{white-space:pre-wrap;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin:4px 0 0}
+  .note-tr td{padding-top:0!important;padding-bottom:6px!important;border:none!important}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
   .read-row{display:flex;gap:6px;align-items:center}
@@ -212,7 +219,7 @@
   #kpiTgtBody{padding:16px 18px}
   #kpiTgtBody .row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin:14px 0 0}
   #kpiTgtBody .modal-field input[type=text],#kpiTgtBody .modal-field input[type=number],#kpiTgtBody .modal-field select{width:100%}
-  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
+  #subkrBody textarea,#kpiTgtBody textarea,#modalBody textarea{resize:vertical;width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:12px;box-sizing:border-box}
   /* quarter/week header */
   .qweek{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
   .qw-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -242,7 +249,7 @@
 </head>
 <body>
 <header>
-  <a class="home" href="index.html" title="Back to all apps" aria-label="Back to all apps">⌂</a>
+  <a class="home" href="https://celadynestaller.github.io/CeladyneHQ/" title="Back to all apps" aria-label="Back to all apps">⌂</a>
   <h1><span class="dot">▤</span> Product Specification</h1>
   <span class="div-pill" id="docPill">—</span>
   <div class="spacer"></div>
@@ -464,7 +471,9 @@ async function loadAll(){
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio on the broker yet — create it in the Planning app first.","err"); loadLocal(); fillModelSelect(); renderProdList(); renderAll(); return; }
     portfolio = p.doc; portfolioVersion = p.version; portfolioEtag = p.etag;
-    if(!divisionId) divisionId = resolveDivision() || (portfolio.divisions && portfolio.divisions[0] && portfolio.divisions[0].id);
+    if(!divisionId) divisionId = resolveDivision() || (pdDivisions()[0] && pdDivisions()[0].id);
+    // if the resolved division is a biz division (passed via ?division= or stored), redirect to the first product division
+    { const dd=(portfolio&&portfolio.divisions||[]).find(x=>x.id===divisionId); if(dd && RD.divisionKind(dd)==="biz") divisionId = (pdDivisions()[0] && pdDivisions()[0].id) || divisionId; }
     if(!divisionId){ setMsg("No divisions exist yet — add one in Planning.","err"); return; }
     localStorage.setItem("rd_division", divisionId);
     const s = await apiGet(specId());
@@ -592,9 +601,12 @@ function resolveRef(member){
 }
 
 /* ---------------- model select ---------------- */
+// The Product Designer is a product/hardware tool; kind="biz" divisions (sales/business dev) have no
+// product hierarchy, so they are excluded from the division picker and the default-division fallback.
+function pdDivisions(){ return ((portfolio&&portfolio.divisions)||[]).filter(d=>RD.divisionKind(d)!=="biz"); }
 function fillDivSelect(){
   const ds=document.getElementById("divSelect"); if(!ds) return;
-  const divs=(portfolio&&portfolio.divisions)||[];
+  const divs=pdDivisions();
   ds.innerHTML = divs.length ? divs.map(d=>`<option value="${d.id}">${esc(d.name||d.id)}</option>`).join("")
                              : `<option value="">no divisions</option>`;
   if(divisionId && divs.find(d=>d.id===divisionId)) ds.value=divisionId;
@@ -969,7 +981,7 @@ function renderModal(){
   let title=null, body=null;
   if(editingSub){
     const id=editingSub.id;
-    if(editingSub.type==="stageGate"){ const g=doc.stageGates.find(x=>x.id===id); if(g){ title="Edit component"; body=componentModalBody(g); } }
+    if(editingSub.type==="stageGate"){ const g=doc.stageGates.find(x=>x.id===id); if(g){ title=g.refModel?"Edit sub-product":"Edit component"; body=componentModalBody(g); } }
     else if(editingSub.type==="kpi"){ const k=doc.kpis.find(x=>x.id===id); if(k){ title=isMemberKpi(k)?"Override metric target":"Edit metric"; body=isMemberKpi(k)?renderKpiOverrideEditor(k):renderSubEditor("kpi", k); } }
   } else if(addingFor){
     if(addingFor.type==="stageGate"){ title="Add component"; body=componentModalBody(null); }
@@ -980,15 +992,40 @@ function renderModal(){
   openModal(title, body);
 }
 
+// Notes render as an inline expandable section on the card, COLLAPSED by default. Native <details>
+// handles the toggle; notesOpen keeps a record's section open across the app's frequent re-renders
+// (a fresh render would otherwise always come back collapsed). ontoggle (wired in wireExec) syncs it.
+const notesOpen = new Set();
+function noteBlock(rec){
+  const n=String((rec&&rec.notes)||"").trim();
+  if(!n) return "";
+  const id=String(rec.id);
+  const open=notesOpen.has(id)?" open":"";
+  return `<details class="note-details" data-noteid="${id}"${open}><summary>✎ Notes</summary><div class="note-body">${esc(n)}</div></details>`;
+}
+// same, as a full-width row inside a metrics table (component specifications live in a <table>)
+function noteRow(rec, cols){
+  const n=String((rec&&rec.notes)||"").trim();
+  if(!n) return "";
+  const id=String(rec.id);
+  const open=notesOpen.has(id)?" open":"";
+  return `<tr class="note-tr"><td colspan="${cols}"><details class="note-details" data-noteid="${id}"${open}><summary>✎ Notes</summary><div class="note-body">${esc(n)}</div></details></td></tr>`;
+}
+
 /* ---------------- component modal (was stage-gate) ---------------- */
 function componentModalBody(g){
   g=g||{}; const isEdit=!!g.id;
+  const isSub=!!g.refModel;
   let h=`<div class="ed">
-    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}" placeholder="e.g. Membrane Electrode Assembly (MEA)"/></label>
+    <label style="grid-column:1/-1">Name<input data-f="name" type="text" value="${esc(g.name||'')}" placeholder="e.g. Membrane Electrode Assembly (MEA)"/></label>`;
+  if(!isSub) h+=`
     <label>Type (optional)<input data-f="ctype" type="text" value="${esc(g.ctype||'')}" placeholder="e.g. MEA"/></label>
-    <label>Status (optional)<input data-f="status" type="text" value="${esc(g.status||'')}" placeholder="e.g. Prototype"/></label>
+    <label>Status (optional)<input data-f="status" type="text" value="${esc(g.status||'')}" placeholder="e.g. Prototype"/></label>`;
+  h+=`
+    <label style="grid-column:1/-1">Notes<textarea data-f="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(g.notes||'')}</textarea></label>
   </div>`;
-  if(isEdit){
+  if(isSub) h+=`<p class="hint">This is a reference to another product — its specifications live on that product. Notes here describe using it in this one.</p>`;
+  if(isEdit && !isSub){
     h+=`<span class="modal-section-lbl">Component specifications</span>
       <div class="gt-head"><span class="hint" style="margin:0">measurable criteria this component must meet — link one to a product specification to feed its value upward, or add a component-only metric</span>
         <span class="gt-acts"><button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button><button class="ghost mini" data-addlink="component:${g.id}">+ link</button></span></div>
@@ -1015,6 +1052,7 @@ function initDraftKr(kr){
   return {
     id:isNew?null:kr.id,
     statement:isNew?"":(kr.statement||""),
+    notes:isNew?"":(kr.notes||""),
     trackingType:(kr&&kr.trackingType)||(isNew?"percentage":"kpi"),
     progress:(kr&&kr.progress!=null)?kr.progress:0,
     kpiType:pk?(pk.targetType||"demonstration"):"demonstration",
@@ -1066,6 +1104,7 @@ function krModalBody(){
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-specifications</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-spec</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
+    <div class="modal-field"><span class="lbl">Notes</span><textarea data-f="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(d.notes||"")}</textarea></div>
     <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update specification":"Save specification"}</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
@@ -1093,6 +1132,7 @@ function saveKrModal(){
   let kr=d.id?doc.keyResults.find(x=>x.id===d.id):null;
   if(!kr){ const id=RD.allocId("keyResult", selectedModel, doc.keyResults.map(x=>x.id)); kr={ id, objectiveId:selectedModel }; doc.keyResults.push(kr); }
   kr.statement=String(d.statement).trim();
+  { const n=String(d.notes==null?"":d.notes).trim(); if(n) kr.notes=n; else delete kr.notes; }
   kr.trackingType=d.trackingType;
   if(d.trackingType==="percentage"){ kr.progress=clampPct(d.progress); delete kr.subKrs; }
   else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
@@ -1212,7 +1252,8 @@ function openTgtModal(gateId, kpiId, hostType){
     unit:(pk&&pk.unit)?pk.unit:"",
     statistic:(pk&&pk.statistic)?pk.statistic:"average",
     readCount:(pk&&pk.readCount!=null)?pk.readCount:"",
-    gates:(pk&&pk.gates)?pk.gates:""
+    gates:(pk&&pk.gates)?pk.gates:"",
+    notes:(pk&&pk.notes)?pk.notes:""
   };
   const noun = draftTgtHostType==="keyResult" ? "KPI" : "component specification";
   document.getElementById("kpiTgtTitle").textContent=(kpiId?"Edit ":"Add ")+noun;
@@ -1239,6 +1280,7 @@ function tgtModalBody(){
     <div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-tf="unit" value="${esc(d.unit)}" placeholder="e.g. mg/cm²"></div>
     ${gateField}
     <div class="hint" style="margin:0 0 12px">readings are posted from the ${isKr?"specification's metric":"component's specification"} table; statistical targets aggregate the latest reads</div>
+    <div class="modal-field" style="display:${draftTgtHostType==="component"?"block":"none"}"><span class="lbl">Notes</span><textarea data-tf="notes" rows="3" placeholder="free text — context, rationale, open questions">${esc(d.notes||"")}</textarea></div>
     <div class="row-actions"><button class="act mini" type="button" data-tgtsave>${draftTgtId?"Update ":"Save "}${noun}</button><button class="ghost mini" type="button" data-tgtcancel>Cancel</button></div>`;
 }
 function wireTgtModal(){
@@ -1257,6 +1299,7 @@ function saveTgtModal(){
   let pk=draftTgtId?doc.kpis.find(k=>k.id===draftTgtId):null;
   if(!pk){ const id=RD.allocId("kpi", selectedModel, allKpis().map(x=>x.id)); pk={ id, objectiveId:selectedModel, hostType:draftTgtHostType, hostId:draftTgtGate, linkParent:null }; doc.kpis.push(pk); }
   pk.name=String(d.name).trim(); pk.targetType=d.type;
+  { const n=String(d.notes==null?"":d.notes).trim(); if(n) pk.notes=n; else delete pk.notes; }
   if(d.type==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
   else {
     if(d.dir==="range"){ pk.direction="range"; const lo=parseTargetNum(d.targetLo), hi=parseTargetNum(d.targetHi); pk.target=(lo!=null&&hi!=null)?{lo,hi}:null; }
@@ -1525,6 +1568,7 @@ function kpiTable(hostType, hostId, objScope){
         <button class="ghost mini" data-postread="${k.id}">post</button></div></td>
       <td class="row-actions">${acts}
         <button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'del'}</button></td></tr>`;
+    h += noteRow(k, 7);
   });
   h += `</tbody></table>`;
   return h;
@@ -1604,7 +1648,7 @@ function renderSpecs(){
       <span class="icard-actions"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button>
         <button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}">${armedDel===kr.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("keyResult", kr.id, selectedModel)}${gatesHtml}${subHtml}</div>${noteBlock(kr)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addkr="1">+ add specification</button>`;
   host.innerHTML=`<div class="panel">${panelHead("KR","Product specifications",specs.length,acts)}<div class="item-list${listOpen("KR")}">${inner}</div></div>`;
@@ -1632,7 +1676,7 @@ function renderComponents(){
         <button class="ghost mini" data-addkpi="component:${g.id}">+ spec</button>
         <button class="ghost mini" data-addlink="component:${g.id}">+ link</button>
         <button class="ghost mini danger ${armedDel===g.id?'armed':''}" data-del="stageGate:${g.id}">${armedDel===g.id?'confirm':'del'}</button></span>
-      </div><div class="icard-meta">${kpiTable("component", g.id, selectedModel)}</div></div>`;
+      </div><div class="icard-meta">${kpiTable("component", g.id, selectedModel)}</div>${noteBlock(g)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addsg="1">+ add component</button>`;
   host.innerHTML=`<div class="panel">${panelHead("SG","Components",comps.length,acts)}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
@@ -1667,10 +1711,10 @@ function renderSubProducts(){
     });
     rows+=`</tbody></table>`;
     inner+=`<div class="icard"><div class="icard-top">
-      <span class="icard-title">${esc(hst.name||child)}</span>
+      <span class="icard-title click" data-edit="stageGate:${hst.id}" title="edit">${esc(hst.name||child)}</span>
       <span class="pill mono">${esc(child)}</span> ${note}
       <span class="icard-actions"><button class="ghost mini danger ${armedDel===hst.id?'armed':''}" data-delsub="${hst.id}">${armedDel===hst.id?'confirm':'remove'}</button></span>
-      </div><div class="icard-meta">${rows}</div></div>`;
+      </div><div class="icard-meta">${rows}</div>${noteBlock(hst)}</div>`;
   });
   const acts=`<button class="ghost mini" data-addsub="1">+ add sub-product</button>`;
   host.innerHTML=`<div class="panel">${panelHead("CMP","Sub-products",hosts.length,acts)}<div class="item-list${listOpen("CMP")}">${inner}</div></div>`;
@@ -1728,6 +1772,7 @@ function wireSubAdd(mb){
 
 /* ---------------- shared wiring ---------------- */
 function wireExec(host){
+  host.querySelectorAll("details.note-details[data-noteid]").forEach(el=>{ el.ontoggle=()=>{ const id=el.dataset.noteid; if(el.open) notesOpen.add(id); else notesOpen.delete(id); }; });
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>subOpenAdd("stageGate"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="component") openTgtModal(hid, null); else if(ht==="keyResult") openTgtModal(hid, null, "keyResult"); else subOpenAdd("kpi",ht,hid); });

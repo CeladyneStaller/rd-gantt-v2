@@ -159,6 +159,34 @@ function makeFetch(store){
   ok(badges.length === 1 && /of 5/.test(badges[0].textContent), "…and the expected sample size");
   ok(badges.length === 1 && /linked KPI/.test(badges[0].getAttribute("title") || ""), "…and attributes the definition to the linked KPI");
   ok(probe.textContent.indexOf("Leak") >= 0, "the non-statistical key read still renders (it just has no badge)");
+
+  // ---------- observed values render for EVERY key read ----------
+  // Values live at exp.actual_outcome.key_read_values — array for statistical, scalar for single-valued.
+  w.eval("(function(){var t=window.__ETBH.tree(); var e=t.experiments.exp_1;"
+       + " e.status='complete';"
+       + " e.actual_outcome={result_id:'res_1',recorded_date:'2026-07-20',recorded_by:'x',"
+       + "   key_read_values:{ kr_a:[0.66,0.68,0.70,0.67,0.69], kr_b:0.4 } };})()");
+  const probe2 = d.createElement("div"); probe2.id = "krProbe2"; d.body.appendChild(probe2);
+  w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.getElementById('krProbe2').appendChild(n);})()");
+  const rows = [...probe2.querySelectorAll(".kr-observed")];
+  ok(rows.length === 2, "an observed line renders for BOTH key reads — single-valued reads are no longer write-only (" + rows.length + ")");
+  const statRow = rows.find(r => /n = /.test(r.textContent));
+  const oneRow  = rows.find(r => !/n = /.test(r.textContent));
+  ok(!!statRow && /measured 0\.68/.test(statRow.textContent), "the statistical read shows its computed statistic");
+  ok(!!statRow && /n = 5 of 5/.test(statRow.textContent), "…with n against the expected sample size");
+  ok(!!statRow && /sd/.test(statRow.textContent), "…and the spread");
+  ok(!!oneRow && /measured 0\.4/.test(oneRow.textContent), "the single-valued read shows its measured number");
+  ok(!!oneRow && !/n = /.test(oneRow.textContent), "…without a spurious n/statistic line");
+  // legacy shape: a scalar recorded for a STATISTICAL read still renders (migration safety)
+  w.eval("window.__ETBH.tree().experiments.exp_1.actual_outcome.key_read_values.kr_a=0.68;");
+  const probe3 = d.createElement("div"); d.body.appendChild(probe3);
+  w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.body.lastChild.appendChild(n);})()");
+  ok([...probe3.querySelectorAll(".kr-observed")].some(r => /measured 0\.68/.test(r.textContent)), "a LEGACY scalar on a statistical key read still renders (n = 1)");
+  // no outcome -> no observed rows
+  w.eval("delete window.__ETBH.tree().experiments.exp_1.actual_outcome;");
+  const probe4 = d.createElement("div"); d.body.appendChild(probe4);
+  w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.body.lastChild.appendChild(n);})()");
+  ok(probe4.querySelectorAll(".kr-observed").length === 0, "an experiment with no recorded outcome shows no observed line");
   }
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
