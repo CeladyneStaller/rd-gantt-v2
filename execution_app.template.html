@@ -107,7 +107,7 @@
   .hint{color:var(--muted);font-size:12px;margin:8px 0}
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
-  .src-chip{font-family:var(--mono);font-size:10px;color:var(--accent);background:#132a33;border:1px solid #1d4650;border-radius:20px;padding:0 6px;margin-left:6px;white-space:nowrap;cursor:help}
+  .src-chip{font-family:var(--mono);font-size:10px;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:4px;padding:0 6px;margin-left:6px;white-space:nowrap;cursor:help;vertical-align:middle}
   tr.prov-tr td{border-top:none!important;padding-top:0!important;padding-bottom:6px!important}
   .prov-d summary{cursor:pointer;color:var(--muted);font-size:11px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
   .prov-d summary::-webkit-details-marker{display:none}
@@ -1309,6 +1309,12 @@ function renderExpSummary(){
    carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
    read-through /analysis route, so no JSONBin key is ever in the browser. */
 let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={}, __cdPreset=null;
+/* Selections survive closing and reopening the picker: a user ticks values, closes to check
+   something, and reopens expecting their picks intact. Keyed by host (the KR / gate / experiment the
+   import targets), because two hosts have independent selections; cleared for a host only once its
+   import lands. The sel keys are uid|key = job_id:idx|key, stable across index reloads. */
+let __cdSelByHost={};
+function __cdHostKey(h){ h=h||__cdHost||{}; return String(h.type||'')+':'+String(h.id||''); }
 /* What the portal filled into each key read this session. The objective side already records origin on
    every kpiUpdate (src), but the EXPERIMENT could not answer "where did this measurement come from"
    without going via the KPI. Captured here, written onto the outcome at record time. */
@@ -1343,7 +1349,10 @@ function cdGuessTarget(key){
 }
 
 function openConnectData(type,id){
-  __cdHost={type,id}; __cdOpenSample=null; __cdSel={}; __cdPreset=null;
+  __cdHost={type,id}; __cdOpenSample=null; __cdPreset=null;
+  __cdSel=__cdSelByHost[__cdHostKey({type,id})]||{};    // reopen with this host's selections intact
+  /* if selections were restored, open on the sample they belong to so the ticked rows are visible */
+  try{ var __first=Object.keys(__cdSel)[0]; if(__first && __cdSel[__first]) __cdOpenSample=__cdSel[__first].sample; }catch(e){}
   /* an experiment that has already imported is ATTACHED to a sample — reopen on it rather than on a
      blank list, and filter by name so the sample is reachable even when it is not in the recent five */
   if(type==="record"){
@@ -1362,7 +1371,11 @@ function openConnectData(type,id){
     document.getElementById("cdBody").innerHTML = '<p class="hint" style="color:var(--bad)">'+esc(e.message||"could not load the analysis index")+'</p>';
   });
 }
-function closeConnectData(){ document.getElementById("cdOverlay").classList.remove("open"); __cdSel={}; __cdOpenSample=null; }
+function __cdSaveSel(){ if(__cdHost) __cdSelByHost[__cdHostKey()]=__cdSel; }
+/* import consumed the selection, so clear it rather than saving it — reopening should start clean,
+   not re-offer values already imported (the dedup would skip them, but re-showing them is confusing). */
+function __cdCommitClose(){ document.getElementById("cdOverlay").classList.remove("open"); if(__cdHost) delete __cdSelByHost[__cdHostKey()]; __cdSel={}; __cdOpenSample=null; }
+function closeConnectData(){ document.getElementById("cdOverlay").classList.remove("open"); __cdSaveSel(); __cdOpenSample=null; }
 function cdHostLabel(){
   const h=__cdHost||{};
   if(h.type==="record") return "key reads";
@@ -1463,9 +1476,9 @@ function cdPick(cb,sample,uid,key){
       analysis:u.Analysis, step:u.step, cond:u.Conditions, job_id:u.job_id, bin_id:u.bin_id,
       script:u.script, timestamp:u.timestamp, target:cdGuessTarget(key) };
   } else delete __cdSel[selId];
-  cdRender();
+  __cdSaveSel(); cdRender();
 }
-function cdSetTarget(selId,v){ if(__cdSel[selId]) __cdSel[selId].target=v; cdRender(); }
+function cdSetTarget(selId,v){ if(__cdSel[selId]) __cdSel[selId].target=v; __cdSaveSel(); cdRender(); }
 
 function cdUpdateCount(){
   const n=Object.keys(__cdSel).length;
@@ -1518,7 +1531,7 @@ function cdDoImport(){
         if(r.added) filled++;
       }
     });
-    closeConnectData();
+    __cdCommitClose();
     if(window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
     try{ persist(); }catch(e){}
     try{ renderAll(); }catch(e){}
@@ -1544,7 +1557,7 @@ function cdDoImport(){
   });
   const res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], new Date().toISOString());
   exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
-  closeConnectData();
+  __cdCommitClose();
   persist(); renderAll();
   let msg=res.updates.length+" reading"+(res.updates.length===1?"":"s")+" imported";
   if(res.duplicates.length) msg+=" \u00b7 "+res.duplicates.length+" already imported (skipped)";

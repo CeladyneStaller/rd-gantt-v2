@@ -121,10 +121,11 @@ function makeFetch(store){
 
   // ---------- 7) re-importing the same value is skipped ----------
   w.eval("openConnectData('keyResult','KR1')"); await sleep(150);
-  w.eval("cdToggle('MEA-17')"); await sleep(80);
+  if(!d.querySelector("#cdBody .cd-sbody")){ w.eval("cdToggle('MEA-17')"); await sleep(80); }
   const b2=[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')].find(b=>b.getAttribute("data-key")===V1);
-  b2.checked=true; b2.dispatchEvent(new w.Event("change")); await sleep(80);
-  d.getElementById("cdImport").click(); await sleep(200);
+  ok(!!b2, "the previously-imported value is still listed");
+  if(b2){ b2.checked=true; b2.dispatchEvent(new w.Event("change")); await sleep(80);
+    d.getElementById("cdImport").click(); await sleep(200); }
   ok(JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length===1, "re-importing the same measurement does not double-count");
 
   // ---------- 8) create-new-KPI path ----------
@@ -144,6 +145,46 @@ function makeFetch(store){
   const ups2=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)"));
   ok(ups2.length===2 && ups2.some(u=>u.kpiId===(made||{}).id), "the reading is written against the newly created KPI");
 
+  // ---------- selections survive closing and reopening the picker ----------
+  // The reported bug: reopening the modal lost every ticked value. Selections must persist per host
+  // across a close, and clear only once imported.
+  const picksFor=()=>[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')];
+  const checkedKeys=()=>picksFor().filter(b=>b.checked).map(b=>b.getAttribute("data-key")).sort();
+
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(150);
+  w.eval("cdToggle('MEA-15')"); await sleep(80);          // a sample not yet imported from
+  const p15=picksFor().find(b=>b.getAttribute("data-key")==="OCV");
+  ok(!!p15, "a fresh value is selectable");
+  p15.checked=true; p15.dispatchEvent(new w.Event("change")); await sleep(80);
+  ok(checkedKeys().join(",")==="OCV", "the value is ticked before closing");
+  // assert the STORE directly: a pick must be saved as it happens, not only reconstructed on reopen,
+  // or a mutation that stops saving on pick/close would be masked by open-time restore.
+  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "the pick is written to the per-host store immediately");
+  w.eval("closeConnectData()"); await sleep(80);
+  ok(!visible(), "the picker closes without importing");
+  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "…and the selection persists in the store after close");
+
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  ok(visible(), "the picker reopens");
+  ok(w.eval("__cdOpenSample")==="MEA-15", "…reopening on the sample the selection belongs to");
+  ok(checkedKeys().join(",")==="OCV", "the ticked value is STILL ticked after reopening ("+checkedKeys().join(",")+")");
+  ok(d.getElementById("cdCount").textContent.indexOf("1 value")>=0, "…and the selection count reflects it");
+
+  // ---------- selections are scoped per host ----------
+  w.eval("openConnectData('stageGate','SG1')"); await sleep(200);
+  ok(checkedKeys().length===0, "a DIFFERENT host opens with none of the first host's selections");
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  ok(checkedKeys().join(",")==="OCV", "…and switching back restores the first host's selection intact");
+
+  // ---------- importing clears the selection for that host ----------
+  const beforeImp=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length;
+  d.getElementById("cdImport").click(); await sleep(200);
+  ok(JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length===beforeImp+1, "the persisted selection imports");
+  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===0, "…and the host's stored selection is emptied on import");
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  ok(checkedKeys().length===0, "after importing, reopening starts clean — the consumed selection is gone");
+  w.eval("closeConnectData()"); await sleep(60);
+
   // ---------- 9) provenance is VISIBLE on the reading surface ----------
   // kpiTable is the table a KR / stage-gate actually renders (data-postcell current value).
   const host = d.createElement("div"); host.id = "provProbe"; d.body.appendChild(host);
@@ -153,6 +194,12 @@ function makeFetch(store){
   ok(!!chip && chip.textContent.indexOf("analysis") >= 0, "the chip reads as a real glyph + label, not a literal escape");
   ok(!!chip && (chip.getAttribute("title") || "").indexOf("MEA-17") >= 0, "the chip's tooltip names the sample it came from");
   ok(!!chip && /80/.test(chip.getAttribute("title") || ""), "...and the conditions taken");
+  // the chip must theme with the app, not carry a fixed color that vanishes in one mode. jsdom does
+  // not resolve CSS custom properties in getComputedStyle, so assert on the RULE the app ships.
+  const chipRule = [...d.styleSheets].flatMap(ss=>{try{return [...ss.cssRules]}catch(e){return[]}})
+    .find(r=>r.selectorText===".src-chip");
+  ok(!!chipRule && /var\(--pill-info/.test(chipRule.style.cssText), "the chip's color is driven by theme tokens, so it adapts to light and dark");
+  ok(!!chipRule && !/#13/.test(chipRule.style.cssText), "…with no hardcoded dark-only hex left behind");
 
   const det = host.querySelector("tr.prov-tr details.prov-d");
   ok(!!det, "a collapsible source row is rendered under the reading");

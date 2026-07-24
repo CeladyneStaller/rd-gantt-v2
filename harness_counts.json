@@ -5,7 +5,7 @@
   "broker_sync.test.py": 16,
   "catchup_ui.cjs": 28,
   "clickoff.cjs": 12,
-  "connect_data_ui.cjs": 42,
+  "connect_data_ui.cjs": 59,
   "core.test.js": 390,
   "division_move.cjs": 20,
   "etb_autosave.test.cjs": 5,
