@@ -194,8 +194,39 @@
       return { values: xs, n: xs.length, source: 'kpi', kpiId: srcId };
     }
     var store = (ctx.experiment && ctx.experiment.key_read_readings) || {};
-    var local = parseReads(store[kr.id]);
-    return { values: local, n: local.length, source: 'local', kpiId: null };
+    var raw = store[kr.id];
+    var vals = readingValues(raw);
+    return { values: vals, n: vals.length, source: 'local', kpiId: null };
+  }
+
+  // A stored unlinked reading is EITHER a bare number (hand-entered, legacy) OR {v, src} (imported,
+  // carries per-reading provenance). readingValues pulls the numbers from either shape so every caller
+  // that only wants values keeps working across the migration; readingEntries keeps v alongside src.
+  function readingValue(entry) {
+    if (entry && typeof entry === 'object') return _finiteNum(entry.v);
+    return _finiteNum(entry);
+  }
+  function readingValues(raw) {
+    var out = [];
+    if (Array.isArray(raw)) {
+      for (var i = 0; i < raw.length; i++) { var v = readingValue(raw[i]); if (v !== null) out.push(v); }
+      return out;
+    }
+    return parseReads(raw);                       // a string or scalar still parses (legacy safety)
+  }
+  function readingEntries(raw) {
+    var out = [];
+    if (Array.isArray(raw)) {
+      for (var i = 0; i < raw.length; i++) {
+        var e = raw[i], v = readingValue(e);
+        if (v === null) continue;
+        out.push({ v: v, src: (e && typeof e === 'object' && e.src) ? e.src : null });
+      }
+      return out;
+    }
+    var xs = parseReads(raw);
+    for (var j = 0; j < xs.length; j++) out.push({ v: xs[j], src: null });
+    return out;
   }
 
   // Everything the current-step cell and the matcher need about one key read, from ONE reading list.
@@ -1763,6 +1794,77 @@
     return [src.job_id || '', src.bucket || '', src.key || '', src.step || '', ck].join('|');
   }
 
+  // The join key that ties an imported reading's provenance (src) back to a live index unit's value.
+  // A reading is uniquely a (job, analysis, key) within a sample; step + conditions disambiguate the
+  // rare multi-condition run. Both sides build the SAME key so a match is exact.
+  function connSrcKey(o) {
+    o = o || {};
+    var c = o.cond || o.Conditions || {};
+    var ck = Object.keys(c).sort().map(function (k) { return k + '=' + c[k]; }).join(',');
+    return [o.job_id || '', (o.bucket || o.analysis || o.Analysis || ''), (o.key || ''), (o.step || ''), ck].join('|');
+  }
+
+  // Reconstruct what a host has CONNECTED, grouped by sample, from the readings themselves — never a
+  // stored selection. Each connected reading is joined back to a live index unit by connSrcKey; a
+  // reading whose source is gone from the index is returned as an orphan (untickable-to-remove, but
+  // not re-targetable). This is the source of truth for the "Currently connected" section AND for the
+  // per-key-read sample chip.
+  //   connectedReadings: [{ krId, target, src, value, matched, unit, analysis, sample }]
+  //     - linked reads come from kpiUpdates carrying src (one per reading)
+  //     - unlinked reads come from key_read_readings entries carrying {v, src}
+  // Returns { samples:[{sample, readings:[...]}], orphans:[...], byKeyRead:{krId:[sampleNames]} }.
+  function reconstructConnected(keyReads, ctx) {
+    ctx = ctx || {};
+    var index = ctx.index, kpis = ctx.kpis || [], docs = ctx.execDocs || {};
+    var exp = ctx.experiment || {};
+    var idxByKey = {};                                   // connSrcKey -> {unit, sample, value}
+    analysisIndexSamples(index).forEach(function (s) {
+      s.units.forEach(function (u) {
+        Object.keys(u.key_values).forEach(function (k) {
+          idxByKey[connSrcKey({ job_id: u.job_id, analysis: u.Analysis, key: k, step: u.step, cond: u.Conditions })] =
+            { unit: u, sample: s.sample, key: k, value: u.key_values[k] };
+        });
+      });
+    });
+    var reads = [];
+    (keyReads || []).forEach(function (kr) {
+      if (kr.source_kpi_gid) {
+        var kpi = kpiById(kr.source_kpi_gid, kpis);
+        var srcId = kpi ? readingSourceId(kpi, kpis) : kr.source_kpi_gid;
+        readingsFor(srcId, docs).forEach(function (u) {
+          if (!u || !u.src) return;                      // hand-posted readings have no analysis origin
+          reads.push({ krId: kr.id, target: kr.id, src: u.src, value: _finiteNum(u.value), _upId: u.id });
+        });
+      } else {
+        var raw = (exp.key_read_readings || {})[kr.id];
+        readingEntries(raw).forEach(function (e, i) {
+          if (!e.src) return;                            // hand-entered value, not from the portal
+          reads.push({ krId: kr.id, target: kr.id, src: e.src, value: e.v, _localIdx: i });
+        });
+      }
+    });
+    var byName = {}, order = [], orphans = [], byKeyRead = {};
+    reads.forEach(function (r) {
+      var hit = idxByKey[connSrcKey(r.src)];
+      var sample = (r.src && r.src.sample) || (hit && hit.sample) || '';
+      var row = {
+        krId: r.krId, target: r.target, src: r.src, value: r.value,
+        matched: !!hit, sample: sample,
+        analysis: (r.src && (r.src.bucket || r.src.analysis)) || (hit && hit.unit.Analysis) || '',
+        key: (r.src && r.src.key) || (hit && hit.key) || '',
+        unit: analysisKeyUnit((r.src && r.src.key) || (hit && hit.key) || ''),
+        _upId: r._upId, _localIdx: r._localIdx
+      };
+      if (!byKeyRead[r.krId]) byKeyRead[r.krId] = [];
+      if (sample && byKeyRead[r.krId].indexOf(sample) < 0) byKeyRead[r.krId].push(sample);
+      if (!hit) { orphans.push(row); return; }
+      if (!byName[sample]) { byName[sample] = { sample: sample, readings: [] }; order.push(sample); }
+      byName[sample].readings.push(row);
+    });
+    return { samples: order.map(function (n) { return byName[n]; }), orphans: orphans, byKeyRead: byKeyRead };
+  }
+
+
   // Materialise picks as ordinary kpiUpdates. Each pick must carry a RESOLVED kpiId — creating a new
   // KPI needs id allocation, which is the app layer's job; picks without one are reported, not dropped
   // silently. The reading's `timestamp` is the RUN's time, not the import time, so an imported value
@@ -1980,6 +2082,10 @@
     statSummary: statSummary,
     keyReadStat: keyReadStat,
     keyReadReadings: keyReadReadings,
+    readingValues: readingValues,
+    readingEntries: readingEntries,
+    reconstructConnected: reconstructConnected,
+    connSrcKey: connSrcKey,
     keyReadCurrent: keyReadCurrent,
     experimentDataComplete: experimentDataComplete,
     readsComplete: readsComplete,

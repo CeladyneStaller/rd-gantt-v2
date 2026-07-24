@@ -108,6 +108,26 @@
   .pill{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .kpi-now{font-family:var(--mono);font-size:12px}
   .src-chip{font-family:var(--mono);font-size:10px;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:4px;padding:0 6px;margin-left:6px;white-space:nowrap;cursor:help;vertical-align:middle}
+  .cd-connected{margin-bottom:16px}
+  .cd-cntitle{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--pill-active-fg);margin-bottom:4px}
+  .cd-cnicon{font-size:13px}
+  .cd-cnsum{margin-left:auto;color:var(--muted);font-size:10px}
+  .cd-cnhint{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px}
+  .cd-cnbox{border:1px solid var(--pill-active-bd);border-radius:var(--radius);overflow:hidden}
+  .cd-cnhead{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pill-active-bg)}
+  .cd-cnhead+.cd-cnhead,.cd-cnrow+.cd-cnhead{border-top:1px solid var(--pill-active-bd)}
+  .cd-cnsample{font-weight:600;font-size:12.5px;color:var(--pill-active-fg)}
+  .cd-cncount{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--pill-active-fg)}
+  .cd-cnorphhead .cd-cnsample,.cd-cnorphhead .cd-cncount{color:var(--warn)}
+  .cd-cnrow{display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--panel)}
+  .cd-cnrow input[type=checkbox]{flex:0 0 auto;width:15px;height:15px}
+  .cd-cnlab{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
+  .cd-cnkey{font-size:12.5px;color:var(--ink)}
+  .cd-cnmeta{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+  .cd-cnval{font-family:var(--mono);font-size:12px;color:var(--ink);flex:0 0 auto}
+  .cd-cnsel{flex:0 0 auto;width:auto;min-width:150px;height:30px;font-size:12px;padding:0 8px}
+  .cd-orphan{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--warn);min-width:150px;text-align:right}
+  .cd-cnorphan .cd-cnkey{color:var(--muted)}
   tr.prov-tr td{border-top:none!important;padding-top:0!important;padding-bottom:6px!important}
   .prov-d summary{cursor:pointer;color:var(--muted);font-size:11px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
   .prov-d summary::-webkit-details-marker{display:none}
@@ -1250,8 +1270,39 @@ html[data-theme="dark"] #etb-view{
       return { values: xs, n: xs.length, source: 'kpi', kpiId: srcId };
     }
     var store = (ctx.experiment && ctx.experiment.key_read_readings) || {};
-    var local = parseReads(store[kr.id]);
-    return { values: local, n: local.length, source: 'local', kpiId: null };
+    var raw = store[kr.id];
+    var vals = readingValues(raw);
+    return { values: vals, n: vals.length, source: 'local', kpiId: null };
+  }
+
+  // A stored unlinked reading is EITHER a bare number (hand-entered, legacy) OR {v, src} (imported,
+  // carries per-reading provenance). readingValues pulls the numbers from either shape so every caller
+  // that only wants values keeps working across the migration; readingEntries keeps v alongside src.
+  function readingValue(entry) {
+    if (entry && typeof entry === 'object') return _finiteNum(entry.v);
+    return _finiteNum(entry);
+  }
+  function readingValues(raw) {
+    var out = [];
+    if (Array.isArray(raw)) {
+      for (var i = 0; i < raw.length; i++) { var v = readingValue(raw[i]); if (v !== null) out.push(v); }
+      return out;
+    }
+    return parseReads(raw);                       // a string or scalar still parses (legacy safety)
+  }
+  function readingEntries(raw) {
+    var out = [];
+    if (Array.isArray(raw)) {
+      for (var i = 0; i < raw.length; i++) {
+        var e = raw[i], v = readingValue(e);
+        if (v === null) continue;
+        out.push({ v: v, src: (e && typeof e === 'object' && e.src) ? e.src : null });
+      }
+      return out;
+    }
+    var xs = parseReads(raw);
+    for (var j = 0; j < xs.length; j++) out.push({ v: xs[j], src: null });
+    return out;
   }
 
   // Everything the current-step cell and the matcher need about one key read, from ONE reading list.
@@ -2819,6 +2870,77 @@ html[data-theme="dark"] #etb-view{
     return [src.job_id || '', src.bucket || '', src.key || '', src.step || '', ck].join('|');
   }
 
+  // The join key that ties an imported reading's provenance (src) back to a live index unit's value.
+  // A reading is uniquely a (job, analysis, key) within a sample; step + conditions disambiguate the
+  // rare multi-condition run. Both sides build the SAME key so a match is exact.
+  function connSrcKey(o) {
+    o = o || {};
+    var c = o.cond || o.Conditions || {};
+    var ck = Object.keys(c).sort().map(function (k) { return k + '=' + c[k]; }).join(',');
+    return [o.job_id || '', (o.bucket || o.analysis || o.Analysis || ''), (o.key || ''), (o.step || ''), ck].join('|');
+  }
+
+  // Reconstruct what a host has CONNECTED, grouped by sample, from the readings themselves — never a
+  // stored selection. Each connected reading is joined back to a live index unit by connSrcKey; a
+  // reading whose source is gone from the index is returned as an orphan (untickable-to-remove, but
+  // not re-targetable). This is the source of truth for the "Currently connected" section AND for the
+  // per-key-read sample chip.
+  //   connectedReadings: [{ krId, target, src, value, matched, unit, analysis, sample }]
+  //     - linked reads come from kpiUpdates carrying src (one per reading)
+  //     - unlinked reads come from key_read_readings entries carrying {v, src}
+  // Returns { samples:[{sample, readings:[...]}], orphans:[...], byKeyRead:{krId:[sampleNames]} }.
+  function reconstructConnected(keyReads, ctx) {
+    ctx = ctx || {};
+    var index = ctx.index, kpis = ctx.kpis || [], docs = ctx.execDocs || {};
+    var exp = ctx.experiment || {};
+    var idxByKey = {};                                   // connSrcKey -> {unit, sample, value}
+    analysisIndexSamples(index).forEach(function (s) {
+      s.units.forEach(function (u) {
+        Object.keys(u.key_values).forEach(function (k) {
+          idxByKey[connSrcKey({ job_id: u.job_id, analysis: u.Analysis, key: k, step: u.step, cond: u.Conditions })] =
+            { unit: u, sample: s.sample, key: k, value: u.key_values[k] };
+        });
+      });
+    });
+    var reads = [];
+    (keyReads || []).forEach(function (kr) {
+      if (kr.source_kpi_gid) {
+        var kpi = kpiById(kr.source_kpi_gid, kpis);
+        var srcId = kpi ? readingSourceId(kpi, kpis) : kr.source_kpi_gid;
+        readingsFor(srcId, docs).forEach(function (u) {
+          if (!u || !u.src) return;                      // hand-posted readings have no analysis origin
+          reads.push({ krId: kr.id, target: kr.id, src: u.src, value: _finiteNum(u.value), _upId: u.id });
+        });
+      } else {
+        var raw = (exp.key_read_readings || {})[kr.id];
+        readingEntries(raw).forEach(function (e, i) {
+          if (!e.src) return;                            // hand-entered value, not from the portal
+          reads.push({ krId: kr.id, target: kr.id, src: e.src, value: e.v, _localIdx: i });
+        });
+      }
+    });
+    var byName = {}, order = [], orphans = [], byKeyRead = {};
+    reads.forEach(function (r) {
+      var hit = idxByKey[connSrcKey(r.src)];
+      var sample = (r.src && r.src.sample) || (hit && hit.sample) || '';
+      var row = {
+        krId: r.krId, target: r.target, src: r.src, value: r.value,
+        matched: !!hit, sample: sample,
+        analysis: (r.src && (r.src.bucket || r.src.analysis)) || (hit && hit.unit.Analysis) || '',
+        key: (r.src && r.src.key) || (hit && hit.key) || '',
+        unit: analysisKeyUnit((r.src && r.src.key) || (hit && hit.key) || ''),
+        _upId: r._upId, _localIdx: r._localIdx
+      };
+      if (!byKeyRead[r.krId]) byKeyRead[r.krId] = [];
+      if (sample && byKeyRead[r.krId].indexOf(sample) < 0) byKeyRead[r.krId].push(sample);
+      if (!hit) { orphans.push(row); return; }
+      if (!byName[sample]) { byName[sample] = { sample: sample, readings: [] }; order.push(sample); }
+      byName[sample].readings.push(row);
+    });
+    return { samples: order.map(function (n) { return byName[n]; }), orphans: orphans, byKeyRead: byKeyRead };
+  }
+
+
   // Materialise picks as ordinary kpiUpdates. Each pick must carry a RESOLVED kpiId — creating a new
   // KPI needs id allocation, which is the app layer's job; picks without one are reported, not dropped
   // silently. The reading's `timestamp` is the RUN's time, not the import time, so an imported value
@@ -3036,6 +3158,10 @@ html[data-theme="dark"] #etb-view{
     statSummary: statSummary,
     keyReadStat: keyReadStat,
     keyReadReadings: keyReadReadings,
+    readingValues: readingValues,
+    readingEntries: readingEntries,
+    reconstructConnected: reconstructConnected,
+    connSrcKey: connSrcKey,
     keyReadCurrent: keyReadCurrent,
     experimentDataComplete: experimentDataComplete,
     readsComplete: readsComplete,
@@ -3230,6 +3356,17 @@ function __etbCtx(exp){
   var docs={}; try{ docs=emForCore(); }catch(e){}
   return { kpis:kpis, execDocs:docs, experiment:exp };
 }
+/* Which samples a key read's readings came from, derived from the readings themselves (never a stored
+   scalar). Needs the live index to name samples for linked reads whose kpiUpdate src carries the name;
+   falls back to the src's own sample when the index is not loaded. */
+function __erConnSamples(exp, krId){
+  try{
+    var idx=(typeof __cdIndex!=='undefined'&&__cdIndex)?__cdIndex:{schema:2,runs:[]};
+    var kr=(exp.key_reads||[]).filter(function(k){return k.id===krId;})[0]; if(!kr) return [];
+    var r=RD.reconstructConnected([kr], { index:idx, kpis:allKpisPool(), execDocs:emForCore(), experiment:exp });
+    return (r.byKeyRead&&r.byKeyRead[krId])||[];
+  }catch(e){ return []; }
+}
 /* Status follows the DATA: nothing measured -> planned, anything measured -> in progress, and only a
    recorded outcome -> complete. A status set by hand in the ETB panel is respected; derivation only
    ever advances the default 'planned'. */
@@ -3251,12 +3388,13 @@ function __exsReadRow(exp,k,ctx){
        +' \u00b7 '+c.n+(want?('/'+want):'')+' '+(c.complete?'\u2713':'\u26a0')+'</span>';
   }
   var val=(c.value==null)?'<span class="m-noread">no read</span>':esc(__erFmt(c.value));
-  /* where the number came from, named rather than hidden in a tooltip: an imported reading should be
-     distinguishable from a hand-entered one at a glance, and by WHICH sample. */
-  var ksrc=(exp.key_read_sources||{})[k.id], chip='';
-  if(ksrc){
-    var tip=[ksrc.sample||'', cdCondSummary(ksrc.cond), (ksrc.run_t||'').slice(0,10)].filter(Boolean).join(' \u00b7 ');
-    chip='<span class="src-chip" title="'+esc(tip)+'">\u21a7 '+esc(ksrc.sample||'analysis')+'</span>';
+  /* where the number came from, named rather than hidden in a tooltip. A key read can now draw from
+     several samples (statistical work), so the chip is plural: one sample by name, many as a count. */
+  var samps=__erConnSamples(exp, k.id), chip='';
+  if(samps.length===1){
+    chip='<span class="src-chip" title="'+esc(samps[0])+'">\u21a7 '+esc(samps[0])+'</span>';
+  } else if(samps.length>1){
+    chip='<span class="src-chip" title="'+esc(samps.join(' \u00b7 '))+'">\u21a7 '+samps.length+' samples</span>';
   }
   return '<tr><td class="m-name">'+esc(k.name||k.id)+'</td>'
     +'<td class="num m-crit">'+esc(etbCritText(k))+'</td>'
@@ -3371,13 +3509,11 @@ function renderExpSummary(){
    v1 is an IMPORT, not a binding: pick one sample, tick values, they become ordinary kpiUpdates
    carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
    read-through /analysis route, so no JSONBin key is ever in the browser. */
-let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={}, __cdPreset=null;
-/* Selections survive closing and reopening the picker: a user ticks values, closes to check
-   something, and reopens expecting their picks intact. Keyed by host (the KR / gate / experiment the
-   import targets), because two hosts have independent selections; cleared for a host only once its
-   import lands. The sel keys are uid|key = job_id:idx|key, stable across index reloads. */
-let __cdSelByHost={};
-function __cdHostKey(h){ h=h||__cdHost||{}; return String(h.type||'')+':'+String(h.id||''); }
+let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={};
+let __cdConnected={samples:[],orphans:[],byKeyRead:{}};
+/* CONNECTED state is reconstructed from the readings on open (RD.reconstructConnected), never a
+   stored selection — so there is no per-host selection cache to keep. __cdSel holds only the ticks
+   the user is actively toggling this session, seeded from the reconstruction. */
 /* What the portal filled into each key read this session. The objective side already records origin on
    every kpiUpdate (src), but the EXPERIMENT could not answer "where did this measurement come from"
    without going via the KPI. Captured here, written onto the outcome at record time. */
@@ -3412,39 +3548,52 @@ function cdGuessTarget(key){
 }
 
 function openConnectData(type,id){
-  __cdHost={type,id}; __cdOpenSample=null; __cdPreset=null;
-  __cdSel=__cdSelByHost[__cdHostKey({type,id})]||{};    // reopen with this host's selections intact
-  /* If selections were restored, open ON and FILTERED TO the sample they belong to. Filtering is the
-     part that was missing: the default list is only the recent five, so a selected sample older than
-     that never rendered and its checkbox could not show as ticked. Seed the name filter so the row
-     is present regardless of recency — this applies to EVERY host, not just the record path. */
-  try{
-    var __first=Object.keys(__cdSel)[0], __s=__first&&__cdSel[__first]&&__cdSel[__first].sample;
-    if(__s){ __cdOpenSample=__s; __cdPreset={analysis:"",name:__s,nameMode:"exact",T_C:null,RH_pct:null,P_value:null,P_unit:""}; }
-  }catch(e){}
-  /* an experiment that has already imported is ATTACHED to a sample — if nothing is selected yet,
-     still reopen on that sample rather than a blank recent-five list */
-  if(type==="record" && !__cdPreset){
-    try{
-      var xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(id):null;
-      var s=xp&&xp.analysis_sample;
-      if(s){ __cdOpenSample=s; __cdPreset={analysis:"",name:s,nameMode:"exact",T_C:null,RH_pct:null,P_value:null,P_unit:""}; }
-    }catch(e){}
-  }
+  __cdHost={type,id}; __cdOpenSample=null; __cdSel={};
+  /* Filter bar always starts empty. Whatever is already connected is shown by the reconstruction in
+     its own pinned section, so there is nothing to seed into the search — the search is only for
+     finding NEW data to add. */
   const ov=document.getElementById("cdOverlay");
   document.getElementById("cdTitle").textContent = type==="record" ? "Connect data \u2014 fill key reads" : "Connect data";
   document.getElementById("cdCtx").textContent = cdHostLabel();
   document.getElementById("cdBody").innerHTML = '<p class="hint">Loading the analysis index\u2026</p>';
   ov.classList.add("open");
-  cdLoadIndex().then(()=>cdRender()).catch(e=>{
+  cdLoadIndex().then(()=>{ __cdSeedConnected(); cdRender(); }).catch(e=>{
     document.getElementById("cdBody").innerHTML = '<p class="hint" style="color:var(--bad)">'+esc(e.message||"could not load the analysis index")+'</p>';
   });
 }
-function __cdSaveSel(){ if(__cdHost) __cdSelByHost[__cdHostKey()]=__cdSel; }
-/* import consumed the selection, so clear it rather than saving it — reopening should start clean,
-   not re-offer values already imported (the dedup would skip them, but re-showing them is confusing). */
-function __cdCommitClose(){ document.getElementById("cdOverlay").classList.remove("open"); if(__cdHost) delete __cdSelByHost[__cdHostKey()]; __cdSel={}; __cdOpenSample=null; }
-function closeConnectData(){ document.getElementById("cdOverlay").classList.remove("open"); __cdSaveSel(); __cdOpenSample=null; }
+/* Seed __cdSel with the CONNECTED readings so they render pre-ticked. The identity of a connected
+   reading is its src (connSrcKey); unticking it in the UI drops it from __cdSel, and Apply treats a
+   was-connected-now-unticked reading as a removal. */
+function __cdSeedConnected(){
+  __cdConnected = cdReconstruct();
+  __cdSel = {};
+  (__cdConnected.samples||[]).forEach(function(s){ s.readings.forEach(function(r){ __cdSel[__cdConnKey(r)]=__cdSelFromConn(r); }); });
+  (__cdConnected.orphans||[]).forEach(function(r){ __cdSel[__cdConnKey(r)]=__cdSelFromConn(r); });
+}
+function cdReconstruct(){
+  var h=__cdHost||{};
+  var krs = cdHostKeyReads();
+  var exp = (h.type==="record" && window.ETB && ETB.experimentById) ? ETB.experimentById(h.id) : null;
+  try{ return RD.reconstructConnected(krs, { index:__cdIndex, kpis:allKpisPool(), execDocs:emForCore(), experiment:exp }); }
+  catch(e){ return { samples:[], orphans:[], byKeyRead:{} }; }
+}
+/* the "key reads" a host connects into: an experiment's real key_reads, or a synthetic key read per
+   KPI on a KR/gate so the same reconstruction serves every host. */
+function cdHostKeyReads(){
+  var h=__cdHost||{};
+  if(h.type==="record"){ var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(h.id):null; return (exp&&exp.key_reads)||[]; }
+  return (exec.kpis||[]).filter(function(k){ return k.hostType===h.type && k.hostId===h.id; })
+                        .map(function(k){ return { id:k.id, source_kpi_gid:k.id }; });
+}
+function __cdConnKey(r){ return (r.target||r.krId||'')+'#'+RD.connSrcKey(r.src||{}); }
+function __cdSelFromConn(r){
+  var s=r.src||{};
+  return { sample:s.sample||r.sample||'', key:s.key||r.key||'', value:r.value, unit:r.unit||'',
+           analysis:s.bucket||r.analysis||'', step:s.step||'', cond:s.cond||{}, job_id:s.job_id||'',
+           bin_id:s.bin_id||'', timestamp:s.run_t||'', target:r.target||r.krId,
+           __connected:true, __upId:r._upId, __localIdx:r._localIdx, __krId:r.krId, __orphan:!r.matched };
+}
+function closeConnectData(){ document.getElementById("cdOverlay").classList.remove("open"); __cdSel={}; __cdOpenSample=null; }
 function cdHostLabel(){
   const h=__cdHost||{};
   if(h.type==="record") return "key reads";
@@ -3475,13 +3624,14 @@ function cdFilterBarHtml(f){
 function cdRender(){
   const body=document.getElementById("cdBody"); if(!body) return;
   const had=!!document.getElementById("cdAn");
-  const f=had?cdFilters():(__cdPreset||null);   // first render may be seeded with the attached sample
+  const f=had?cdFilters():null;                  // filter bar always starts empty
   const active=f?RD.analysisFiltersActive(f):false;
   const list = active ? RD.analysisSearch(__cdIndex,f) : RD.analysisRecentSamples(__cdIndex,5);
   const label = active ? (list.length+" sample"+(list.length===1?"":"s")+" match") : "Last 5 samples";
   const rows = list.length ? list.map(sm=>cdSampleHtml(sm)).join("")
                            : '<div class="cd-empty">No samples match those filters.</div>';
-  body.innerHTML = (had?document.querySelector("#cdBody .cd-filters").outerHTML:cdFilterBarHtml(null))
+  body.innerHTML = cdConnectedHtml()
+                 + (had?document.querySelector("#cdBody .cd-filters").outerHTML:cdFilterBarHtml(null))
                  + `<p class="hint">${label}</p><div class="cd-list">${rows}</div>`;
   if(f){ /* restore filter values after the re-render */
     const set=(id,v)=>{const e=document.getElementById(id); if(e&&v!=null) e.value=v;};
@@ -3490,6 +3640,49 @@ function cdRender(){
     const pe=document.getElementById("cdP"); if(pe) pe.value=(f.P_value==null?"":(f.P_value+(f.P_unit?" "+f.P_unit:"")));
   }
   cdUpdateCount();
+}
+/* the pinned "Currently connected" section: sample groups from the reconstruction, each reading
+   pre-ticked, plus any orphans whose source has left the index. Absent when nothing is connected. */
+function cdConnectedHtml(){
+  var C=__cdConnected||{samples:[],orphans:[]};
+  var groups=C.samples||[], orphans=C.orphans||[];
+  var nRead=0; groups.forEach(function(s){ nRead+=s.readings.length; }); nRead+=orphans.length;
+  if(!nRead) return "";
+  var tgts=cdTargets();
+  function tgtSel(r){
+    var cur=r.target||r.krId;
+    var opts=tgts.map(function(x){ return '<option value="'+esc(x.id)+'"'+(cur===x.id?" selected":"")+'>'+esc(x.name)+'</option>'; }).join("");
+    return '<select class="cd-cnsel" data-connsel="'+esc(__cdConnKey(r))+'" onchange="cdConnTarget(this.getAttribute(\'data-connsel\'),this.value)">'+opts+'</select>';
+  }
+  function readingRow(r,orphan){
+    var k=__cdConnKey(r), on=!!__cdSel[k];
+    var meta=esc((r.analysis||'')+(r.src&&r.src.cond&&r.src.cond.T_C!=null?(' \u00b7 '+r.src.cond.T_C+'\u00b0C'):'')+(r.src&&r.src.job_id?(' \u00b7 '+r.src.job_id):''));
+    var right = orphan
+      ? '<span class="cd-orphan">source no longer in index</span>'
+      : tgtSel(r);
+    return '<div class="cd-cnrow'+(orphan?' cd-cnorphan':'')+'">'
+      +'<input type="checkbox" '+(on?"checked":"")+' data-connpick="'+esc(k)+'" onchange="cdConnPick(this,this.getAttribute(\'data-connpick\'))">'
+      +'<span class="cd-cnlab"><span class="cd-cnkey">'+esc(r.key||'')+'</span><span class="cd-cnmeta">'+meta+'</span></span>'
+      +'<span class="cd-cnval">'+esc(__erFmt!=null?__erFmt(r.value):String(r.value))+(r.unit?(' '+esc(r.unit)):'')+'</span>'
+      +right+'</div>';
+  }
+  var body="";
+  groups.forEach(function(s){
+    body+='<div class="cd-cnhead"><span class="cd-cnsample">'+esc(s.sample||'(unknown sample)')+'</span>'
+        +'<span class="cd-cncount">'+s.readings.length+' reading'+(s.readings.length===1?'':'s')+'</span></div>';
+    s.readings.forEach(function(r){ body+=readingRow(r,false); });
+  });
+  if(orphans.length){
+    body+='<div class="cd-cnhead cd-cnorphhead"><span class="cd-cnsample">source removed from index</span>'
+        +'<span class="cd-cncount">'+orphans.length+'</span></div>';
+    orphans.forEach(function(r){ body+=readingRow(r,true); });
+  }
+  var nSamp=groups.length+(orphans.length?1:0);
+  return '<div class="cd-connected">'
+    +'<div class="cd-cntitle"><span class="cd-cnicon">\u21a4</span>Currently connected'
+    +'<span class="cd-cnsum">'+nSamp+' sample'+(nSamp===1?'':'s')+' \u00b7 '+nRead+' reading'+(nRead===1?'':'s')+'</span></div>'
+    +'<div class="cd-cnhint">untick any reading to remove it on apply</div>'
+    +'<div class="cd-cnbox">'+body+'</div></div>';
 }
 
 function cdSampleHtml(sm){
@@ -3545,93 +3738,147 @@ function cdPick(cb,sample,uid,key){
       analysis:u.Analysis, step:u.step, cond:u.Conditions, job_id:u.job_id, bin_id:u.bin_id,
       script:u.script, timestamp:u.timestamp, target:cdGuessTarget(key) };
   } else delete __cdSel[selId];
-  __cdSaveSel(); cdRender();
+  cdRender();
 }
-function cdSetTarget(selId,v){ if(__cdSel[selId]) __cdSel[selId].target=v; __cdSaveSel(); cdRender(); }
+/* toggling a CONNECTED reading's tick: unticking marks it for removal on Apply, re-ticking restores
+   it. The entry is already in __cdSel from the seed, so we only flip its presence. */
+function cdConnPick(cb,key){
+  if(cb.checked){
+    if(!__cdSel[key]){
+      var find=function(list){ for(var i=0;i<(list||[]).length;i++){ if(__cdConnKey(list[i])===key) return list[i]; } return null; };
+      var r=null; (__cdConnected.samples||[]).forEach(function(s){ r=r||find(s.readings); }); r=r||find(__cdConnected.orphans);
+      if(r) __cdSel[key]=__cdSelFromConn(r);
+    }
+  } else delete __cdSel[key];
+  cdUpdateCount();
+}
+function cdConnTarget(key,v){ if(__cdSel[key]) __cdSel[key].target=v; }
+function cdSetTarget(selId,v){ if(__cdSel[selId]) __cdSel[selId].target=v; cdRender(); }
 
 function cdUpdateCount(){
-  const n=Object.keys(__cdSel).length;
   const el=document.getElementById("cdCount"), btn=document.getElementById("cdImport");
-  const names=[...new Set(Object.values(__cdSel).map(x=>x.sample))];
-  if(el) el.textContent = n ? (n+" value"+(n===1?"":"s")+" selected from "+names.join(", ")) : "nothing selected";
-  if(btn) btn.disabled = !n;
+  const d=cdApplyDiff();
+  const hasConn=(__cdConnected&&((__cdConnected.samples||[]).length||(__cdConnected.orphans||[]).length));
+  if(el){
+    if(hasConn){
+      const kept=d.imports.filter(function(p){return p.__connected;}).length + d.keepConnected;
+      el.textContent = kept+" connected \u00b7 "+d.newCount+" new"+(d.removeCount?(" \u00b7 "+d.removeCount+" to remove"):"");
+    } else {
+      const n=d.newCount;
+      const names=[...new Set(d.imports.map(function(x){return x.sample;}).filter(Boolean))];
+      el.textContent = n ? (n+" value"+(n===1?"":"s")+" selected"+(names.length?(" from "+names.join(", ")):"")) : "nothing selected";
+    }
+  }
+  if(btn){
+    btn.textContent = hasConn ? "Apply changes" : "Import";
+    btn.disabled = hasConn ? (d.newCount===0 && d.removeCount===0) : (d.newCount===0);
+  }
+}
+/* The diff Apply commits: which selected readings are NEW imports, which previously-connected ones
+   were unticked (removals), and how many connected readings are being kept untouched. Identity is the
+   connected key; a seeded entry still ticked is either kept (unchanged target) or a re-target. */
+function cdApplyDiff(){
+  var connKeys={}, connByKey={};
+  (__cdConnected.samples||[]).forEach(function(s){ s.readings.forEach(function(r){ var k=__cdConnKey(r); connKeys[k]=1; connByKey[k]=r; }); });
+  (__cdConnected.orphans||[]).forEach(function(r){ var k=__cdConnKey(r); connKeys[k]=1; connByKey[k]=r; });
+  var imports=[], newCount=0, keepConnected=0;
+  Object.keys(__cdSel).forEach(function(k){
+    var sel=__cdSel[k];
+    if(connKeys[k]){ keepConnected++; if(sel.__orphan) keepConnected--; }   // orphans can only be removed, never "kept as import"
+    else { imports.push(sel); newCount++; }
+  });
+  // removals: seeded-connected keys no longer present in __cdSel
+  var removeCount=0, removals=[];
+  Object.keys(connKeys).forEach(function(k){ if(!__cdSel[k]){ removeCount++; removals.push(connByKey[k]); } });
+  // a re-targeted connected reading = still ticked but target changed -> remove old, import new
+  Object.keys(__cdSel).forEach(function(k){
+    if(connKeys[k]){ var r=connByKey[k], sel=__cdSel[k];
+      if(sel.target && r && sel.target!==(r.target||r.krId)){ imports.push(sel); newCount++; removals.push(r); removeCount++; keepConnected--; }
+    }
+  });
+  return { imports:imports, newCount:newCount, removeCount:removeCount, removals:removals, keepConnected:keepConnected };
 }
 
 function cdDoImport(){
-  document.querySelectorAll('#cdBody select[data-selid]').forEach(sel=>{
-    const id=sel.getAttribute('data-selid');
-    if(__cdSel[id] && sel.value) __cdSel[id].target=sel.value;      // what the user sees is what imports
-  });
-  const picks=Object.values(__cdSel); if(!picks.length) return;
-  if(__cdHost.type==="record"){
-    /* Group by target first. A STATISTICAL key read wants N measurements, and the portal often has
-       them — the same canonical key across several runs of one sample — so several ticked values
-       ACCUMULATE into that one key read instead of the last one overwriting the rest.
-       Values are written to the SAME stores the current-step cells write to, so an import works
-       whether or not the recorder is open, and never concludes the step. */
-    const expId=__cdHost.id;
-    const exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null;
+  var d=cdApplyDiff();
+  var h=__cdHost||{};
+  var iso=new Date().toISOString();
+  var srcOf=function(p){ return { portal:'analysis', job_id:p.job_id||'', bin_id:p.bin_id||'', sample:p.sample||'',
+                     bucket:p.analysis||'', key:p.key||'', step:p.step||'', cond:p.cond||{},
+                     run_t:p.timestamp||'', imported_t:iso }; };
+  var added=0, removed=0, skipped=0;
+
+  if(h.type==="record"){
+    var expId=h.id, exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null;
     if(!exp){ closeConnectData(); return; }
-    const iso=new Date().toISOString();
-    const srcOf=p=>({ portal:'analysis', job_id:p.job_id||'', bin_id:p.bin_id||'', sample:p.sample||'',
-                      bucket:p.analysis||'', key:p.key||'', step:p.step||'', cond:p.cond||{},
-                      run_t:p.timestamp||'', imported_t:iso });
-    const byTarget={};
-    picks.forEach(p=>{ if(!p.target) return; (byTarget[p.target]=byTarget[p.target]||[]).push(p); });
-    let filled=0, added=0, skipped=0;
-    Object.keys(byTarget).forEach(tid=>{
-      const kr=(exp.key_reads||[]).filter(k=>k.id===tid)[0]; if(!kr) return;
-      const group=byTarget[tid];
+    /* REMOVALS first: unticked connected readings. Linked -> drop the matching kpiUpdate; unlinked ->
+       drop the matching {v,src} entry. Identity is connSrcKey on the stored src. */
+    (d.removals||[]).forEach(function(r){
+      var kr=(exp.key_reads||[]).filter(function(k){return k.id===(r.target||r.krId);})[0]; if(!kr) return;
+      var wantKey=RD.connSrcKey(r.src||{});
       if(kr.source_kpi_gid){
-        const resolved=group.map(g=>Object.assign({},g,{kpiId:kr.source_kpi_gid}));
-        const res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], iso);
-        exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
-        added+=res.updates.length; skipped+=res.duplicates.length;
-        if(res.updates.length){
-          const g0=group[group.length-1];
-          if(ETB.noteKeyReadSource) ETB.noteKeyReadSource(expId, tid, Object.assign(srcOf(g0),{n:res.updates.length}));
-          if(ETB.noteMeasured) ETB.noteMeasured(expId);
-          filled++;
-        }
-      } else if(ETB.importKeyReadReads){
-        const r=ETB.importKeyReadReads(expId, tid,
-          group.map(g=>Object.assign({},g,{srcKey:RD.analysisSrcKey(srcOf(g))})));
-        added+=r.added; skipped+=r.skipped;
-        if(r.added) filled++;
+        var before=(exec.kpiUpdates||[]).length;
+        exec.kpiUpdates=(exec.kpiUpdates||[]).filter(function(u){ return !(u.kpiId===kr.source_kpi_gid && u.src && RD.connSrcKey(u.src)===wantKey); });
+        removed+=before-(exec.kpiUpdates||[]).length;
+      } else if(ETB.removeKeyReadReading){
+        removed+=ETB.removeKeyReadReading(expId, kr.id, wantKey);
       }
     });
-    __cdCommitClose();
+    /* IMPORTS: newly-ticked readings, grouped by target key read. */
+    var byTarget={};
+    (d.imports||[]).forEach(function(p){ if(!p.target) return; (byTarget[p.target]=byTarget[p.target]||[]).push(p); });
+    Object.keys(byTarget).forEach(function(tid){
+      var kr=(exp.key_reads||[]).filter(function(k){return k.id===tid;})[0]; if(!kr) return;
+      var group=byTarget[tid];
+      if(kr.source_kpi_gid){
+        var resolved=group.map(function(g){ return Object.assign({},g,{kpiId:kr.source_kpi_gid}); });
+        var res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], iso);
+        exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
+        added+=res.updates.length; skipped+=res.duplicates.length;
+        if(res.updates.length && ETB.noteMeasured) ETB.noteMeasured(expId);
+      } else if(ETB.importKeyReadReads){
+        var rr=ETB.importKeyReadReads(expId, tid, group);
+        added+=rr.added; skipped+=rr.skipped;
+      }
+    });
+    __cdConnected={samples:[],orphans:[],byKeyRead:{}};
+    closeConnectData();
     if(window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
     try{ persist(); }catch(e){}
     try{ renderAll(); }catch(e){}
-    /* if the recorder happens to be open, reopen it so its prefill picks the new reads up */
-    try{ const ov=document.getElementById('expRecOverlay');
-         if(ov && ov.classList.contains('open')) openExpRecorder(expId); }catch(e){}
-    let msg=filled+" key read"+(filled===1?"":"s")+" filled from the portal ("+added+" reading"+(added===1?"":"s")+")";
-    if(skipped) msg+=" \u00b7 "+skipped+" already imported (skipped)";
-    msg+=" \u2014 the step stays in progress.";
-    setMsg(msg, added?"ok":"warn");
+    try{ var ov=document.getElementById('expRecOverlay'); if(ov && ov.classList.contains('open')) openExpRecorder(expId); }catch(e){}
+    var m1=(added?(added+" reading"+(added===1?"":"s")+" added"):"")+(removed?((added?" \u00b7 ":"")+removed+" removed"):"");
+    if(skipped) m1+=(m1?" \u00b7 ":"")+skipped+" already connected";
+    setMsg(m1||"no changes", (added||removed)?"ok":"warn");
     return;
   }
-  /* create KPIs for any "+ create new KPI" targets, then materialise readings */
-  const resolved=picks.map(p=>{
-    let kpiId=p.target;
+
+  /* KR / gate host: readings live in exec.kpiUpdates. */
+  (d.removals||[]).forEach(function(r){
+    var kpiId=r.target||r.krId, wantKey=RD.connSrcKey(r.src||{});
+    var before=(exec.kpiUpdates||[]).length;
+    exec.kpiUpdates=(exec.kpiUpdates||[]).filter(function(u){ return !(u.kpiId===kpiId && u.src && RD.connSrcKey(u.src)===wantKey); });
+    removed+=before-(exec.kpiUpdates||[]).length;
+  });
+  var resolved=(d.imports||[]).map(function(p){
+    var kpiId=p.target;
     if(kpiId==="__new__"){
-      kpiId=RD.allocId("kpi", selectedObj, (exec.kpis||[]).map(x=>x.id));
-      exec.kpis.push({ id:kpiId, objectiveId:selectedObj, hostType:__cdHost.type, hostId:__cdHost.id,
+      kpiId=RD.allocId("kpi", selectedObj, (exec.kpis||[]).map(function(x){return x.id;}));
+      exec.kpis.push({ id:kpiId, objectiveId:selectedObj, hostType:h.type, hostId:h.id,
                        groupId:null, isDefiner:false, name:p.key, unit:p.unit||null,
                        targetType:"statistical", direction:"up", target:null });
     }
-    return Object.assign({},p,{kpiId});
+    return Object.assign({},p,{kpiId:kpiId});
   });
-  const res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], new Date().toISOString());
+  var res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], iso);
   exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
-  __cdCommitClose();
-  persist(); renderAll();
-  let msg=res.updates.length+" reading"+(res.updates.length===1?"":"s")+" imported";
-  if(res.duplicates.length) msg+=" \u00b7 "+res.duplicates.length+" already imported (skipped)";
-  if(res.unresolved.length) msg+=" \u00b7 "+res.unresolved.length+" skipped";
-  setMsg(msg, res.updates.length?"ok":"warn");
+  added+=res.updates.length; skipped+=res.duplicates.length;
+  __cdConnected={samples:[],orphans:[],byKeyRead:{}};
+  closeConnectData();
+  try{ persist(); }catch(e){} try{ renderAll(); }catch(e){}
+  var m2=(added?(added+" reading"+(added===1?"":"s")+" added"):"")+(removed?((added?" \u00b7 ":"")+removed+" removed"):"");
+  if(res.duplicates.length) m2+=(m2?" \u00b7 ":"")+res.duplicates.length+" already connected";
+  setMsg(m2||"no changes", (added||removed)?"ok":"warn");
 }
 
 /* ---- statistical key reads ------------------------------------------------------------------
@@ -3673,12 +3920,12 @@ function __erObservedRow(k, exp){
         row.appendChild(document.createTextNode('  \u2014 incomplete ('+comp.have+' of '+comp.expected+' reads)'));
       }
     }
-    var srcs = ao && ao.key_read_sources; var ksrc = srcs && srcs[k.id];
-    if(ksrc){
+    var samps = ao && ao.key_read_samples && ao.key_read_samples[k.id];
+    if(!samps){ var lsrc = ao && ao.key_read_sources && ao.key_read_sources[k.id]; if(lsrc && lsrc.sample) samps=[lsrc.sample]; }
+    if(samps && samps.length){
       var chip=document.createElement('span'); chip.className='src-chip';
-      chip.textContent='\u21a7 analysis';
-      chip.title=[ksrc.sample||'', cdCondSummary(ksrc.cond), (ksrc.run_t||'').slice(0,10)]
-        .filter(Boolean).join(' \u00b7 ');
+      chip.textContent = samps.length===1 ? ('\u21a7 '+samps[0]) : ('\u21a7 '+samps.length+' samples');
+      chip.title = samps.join(' \u00b7 ');
       row.appendChild(document.createTextNode(' ')); row.appendChild(chip);
     }
     var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
@@ -3864,12 +4111,12 @@ function recordExpOutcome(){
     var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
     __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
   });
-  /* provenance may have been written days earlier, when the reading was imported on the card, so the
-     experiment's own record is the primary source; __erImportedSrc only covers a same-session import. */
-  var __expSrcs={}; try{ var __xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; __expSrcs=(__xp&&__xp.key_read_sources)||{}; }catch(e){}
-  var __srcs={}; Object.keys(__recVals).forEach(function(id){ var s=__erImportedSrc[id]||__expSrcs[id]; if(s) __srcs[id]=s; });
+  /* provenance is derived from the readings, not a scalar: at conclude time, record which samples each
+     key read drew from, so a concluded experiment still shows where its data came from. */
+  var __ksamps={}; try{ var __xp2=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null;
+    if(__xp2){ (__xp2.key_reads||[]).forEach(function(k){ var ss=__erConnSamples(__xp2,k.id); if(ss.length) __ksamps[k.id]=ss; }); } }catch(e){}
   var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
-  if(Object.keys(__srcs).length) payload.key_read_sources=__srcs;   // absent = hand-entered (every legacy outcome)
+  if(Object.keys(__ksamps).length) payload.key_read_samples=__ksamps;   // absent = hand-entered (every legacy outcome)
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
   var wrote=writeKpiUpdatesFromReads(expId, readings);
   closeExpRecorder();
@@ -7697,44 +7944,43 @@ window.ETB = {
     try{
       var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return res;
       var kr=(exp.key_reads||[]).filter(function(k){ return k.id===krId; })[0]; if(!kr) return res;
-      var seenMap=exp.key_read_imports||(exp.key_read_imports={});
-      var seen=Array.isArray(seenMap[krId])?seenMap[krId].slice():[];
-      var vals=[], last=null;
-      (picks||[]).forEach(function(p){
-        var v=Number(p.value); if(!isFinite(v)) return;
-        if(p.srcKey && seen.indexOf(p.srcKey)>=0){ res.skipped++; return; }
-        if(p.srcKey) seen.push(p.srcKey);
-        vals.push(v); last=p;
-      });
-      seenMap[krId]=seen;
-      if(!vals.length) return res;
-      var stat=false; try{ stat=!!RD.keyReadStat(kr,null).statistical; }catch(e){}
-      if(!stat) vals=[vals[vals.length-1]];               // a single-valued key read takes one number
       var store=exp.key_read_readings||(exp.key_read_readings={});
       var prev=Array.isArray(store[krId])?store[krId].slice():[];
-      store[krId]=prev.concat(vals);
-      this.noteKeyReadSource(expId, krId, {
-        portal:'analysis', sample:last.sample||'', bucket:last.analysis||'', key:last.key||'',
-        cond:last.cond||{}, job_id:last.job_id||'', bin_id:last.bin_id||'',
-        run_t:last.timestamp||'', n:vals.length, imported_t:new Date().toISOString() });
-      res.added=vals.length;
+      // existing provenance keys, so a re-import of the same portal value is skipped (dedup lives in
+      // the readings now, per-reading, not in a separate seen-list).
+      var have={}; prev.forEach(function(e){ if(e&&typeof e==='object'&&e.src) have[RD.connSrcKey(e.src)]=1; });
+      var entries=[], last=null;
+      (picks||[]).forEach(function(p){
+        var v=Number(p.value); if(!isFinite(v)) return;
+        var src={ portal:'analysis', sample:p.sample||'', bucket:p.analysis||'', key:p.key||'',
+                  step:p.step||'', cond:p.cond||{}, job_id:p.job_id||'', bin_id:p.bin_id||'',
+                  run_t:p.timestamp||'', imported_t:new Date().toISOString() };
+        if(have[RD.connSrcKey(src)]){ res.skipped++; return; }
+        have[RD.connSrcKey(src)]=1;
+        entries.push({ v:v, src:src }); last=p;
+      });
+      if(!entries.length) return res;
+      var stat=false; try{ stat=!!RD.keyReadStat(kr,null).statistical; }catch(e){}
+      if(!stat){ prev=[]; entries=[entries[entries.length-1]]; }   // single-valued: one reading, replacing prior
+      store[krId]=prev.concat(entries);
+      res.added=entries.length;
       if(exp.status==='planned') exp.status='in_progress';
       markOverride(exp,'key_read_readings'); softRefresh();
     }catch(err){}
     return res;
   },
-  /* a linked key read's reads land in exec.kpiUpdates (which carry their own src), but the observed
-     row on the experiment reads provenance from here, so both paths record it the same way. */
-  noteKeyReadSource: function(expId, krId, src){
+  /* remove ONE unlinked reading by its provenance key — the delete half of Apply. Only imported
+     entries (those with src) can be matched; hand-entered bare numbers are never touched. */
+  removeKeyReadReading: function(expId, krId, srcKey){
     try{
-      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp||!src) return false;
-      var srcs=exp.key_read_sources||(exp.key_read_sources={});
-      srcs[krId]=src;
-      /* the sample this experiment is drawing from, so reopening the picker lands back on it rather
-         than on a blank list of the five most recent samples */
-      if(src.sample) exp.analysis_sample=src.sample;
-      markOverride(exp,'key_read_sources'); return true;
-    }catch(err){ return false; }
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return 0;
+      var store=exp.key_read_readings; if(!store||!Array.isArray(store[krId])) return 0;
+      var before=store[krId].length;
+      store[krId]=store[krId].filter(function(e){ return !(e&&typeof e==='object'&&e.src&&RD.connSrcKey(e.src)===srcKey); });
+      var removed=before-store[krId].length;
+      if(removed){ markOverride(exp,'key_read_readings'); softRefresh(); }
+      return removed;
+    }catch(err){ return 0; }
   },
   exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },
   saveActive: function(){
