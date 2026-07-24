@@ -841,6 +841,7 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
+  .erp-sent .erp-lab{color:var(--muted);font-style:italic}
   .er-concl.er-prov{border-left:3px solid var(--warn);background:#2a2410}
   .er-prov-sub{color:var(--muted);font-size:11px;margin-top:4px}
   .kr-statrow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;flex-wrap:wrap}
@@ -3466,14 +3467,42 @@ function __erStatSync(){
   }
 }
 function __erOldReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
+var __erUserPick=null;
+function expRecNoteUserPick(){
+  var c=document.querySelector('#expRecBody input[name="erp-pick"]:checked');
+  __erUserPick = c ? c.value : __erUserPick;
+}
+function expRecAutoPick(m){
+  try{
+    var body=document.getElementById('expRecBody'); if(!body) return;
+    if(body.querySelector('input[name="erp-pick"]:checked')) return;      // never override the user
+    if(__erUserPick){                                                     // survive a re-render
+      var prev=body.querySelector('input[name="erp-pick"][value="'+__erUserPick+'"]');
+      if(prev){ prev.checked=true; return; }
+    }
+    var want=null;
+    if(m && m.matched && m.matched.length===1) want=m.matched[0];
+    else {
+      var defined=[].slice.call(body.querySelectorAll('input[name="erp-pick"]'))
+        .filter(function(i){ return i.value!=='other' && i.value!=='inconclusive'; });
+      if(defined.length===1) want=defined[0].value;
+      else if(m && m.complete && (!m.matched || !m.matched.length)) want='other';
+    }
+    if(!want) return;
+    var el=body.querySelector('input[name="erp-pick"][value="'+want+'"]');
+    if(el && !el.disabled) el.checked=true;
+  }catch(e){}
+}
 function expRecSync(){ var picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked'); var b=document.getElementById('erRecord'); if(b) b.disabled=!picked; }
 function openExpRecorder(expId){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
-  window.__expRecId=expId;
+  window.__expRecId=expId; __erUserPick=null;
   document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
   var krs=exp.key_reads||[], prs=exp.possible_results||[];
   var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
-  var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('') : '<div class="exs-none">No possible results defined.</div>';
+  var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('')
+    + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="other" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Unanticipated \u2014 no defined result fits</span></label>'
+    + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="inconclusive" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Inconclusive \u2014 the data could not decide</span></label>' : '<div class="exs-none">No possible results defined.</div>';
   document.getElementById('expRecBody').innerHTML =
     '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values'+
       '<button class="cd-btn" onclick="openConnectData(\'record\',window.__expRecId)">Connect data</button></div>'+krHtml+'</div>'+
@@ -3514,6 +3543,7 @@ function expRecEval(){
     panel.innerHTML='<b>\u25cb '+m.provisional.length+' results still possible</b><div class="er-prov-sub">enter more values to narrow it down.</div>';
   }
   else { panel.className='er-concl er-pending'; panel.innerHTML='Enter measured values to auto-determine the result\u2026'; }
+  expRecAutoPick(m); expRecSync();
   expRecSync();
 }
 function closeExpRecorder(){ var ov=document.getElementById('expRecOverlay'); if(ov) ov.classList.remove('open'); }
