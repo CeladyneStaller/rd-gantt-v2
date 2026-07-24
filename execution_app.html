@@ -3251,10 +3251,17 @@ function __exsReadRow(exp,k,ctx){
        +' \u00b7 '+c.n+(want?('/'+want):'')+' '+(c.complete?'\u2713':'\u26a0')+'</span>';
   }
   var val=(c.value==null)?'<span class="m-noread">no read</span>':esc(__erFmt(c.value));
+  /* where the number came from, named rather than hidden in a tooltip: an imported reading should be
+     distinguishable from a hand-entered one at a glance, and by WHICH sample. */
+  var ksrc=(exp.key_read_sources||{})[k.id], chip='';
+  if(ksrc){
+    var tip=[ksrc.sample||'', cdCondSummary(ksrc.cond), (ksrc.run_t||'').slice(0,10)].filter(Boolean).join(' \u00b7 ');
+    chip='<span class="src-chip" title="'+esc(tip)+'">\u21a7 '+esc(ksrc.sample||'analysis')+'</span>';
+  }
   return '<tr><td class="m-name">'+esc(k.name||k.id)+'</td>'
     +'<td class="num m-crit">'+esc(etbCritText(k))+'</td>'
     +'<td class="m-unit">'+(esc(k.unit||'')||'\u2014')+'</td>'
-    +'<td class="num m-cur" data-krpost="'+esc(k.id)+'" data-krexp="'+esc(exp.id)+'" title="Click to add a reading">'+val+sub+'</td></tr>';
+    +'<td class="num m-cur" data-krpost="'+esc(k.id)+'" data-krexp="'+esc(exp.id)+'" title="Click to add a reading">'+val+chip+sub+'</td></tr>';
 }
 function __exsAwaiting(exp,dc,ctx){
   var nm={}; (exp.key_reads||[]).forEach(function(k){ nm[k.id]=k.name||k.id; });
@@ -3364,7 +3371,7 @@ function renderExpSummary(){
    v1 is an IMPORT, not a binding: pick one sample, tick values, they become ordinary kpiUpdates
    carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
    read-through /analysis route, so no JSONBin key is ever in the browser. */
-let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={};
+let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={}, __cdPreset=null;
 /* What the portal filled into each key read this session. The objective side already records origin on
    every kpiUpdate (src), but the EXPERIMENT could not answer "where did this measurement come from"
    without going via the KPI. Captured here, written onto the outcome at record time. */
@@ -3399,7 +3406,16 @@ function cdGuessTarget(key){
 }
 
 function openConnectData(type,id){
-  __cdHost={type,id}; __cdOpenSample=null; __cdSel={};
+  __cdHost={type,id}; __cdOpenSample=null; __cdSel={}; __cdPreset=null;
+  /* an experiment that has already imported is ATTACHED to a sample — reopen on it rather than on a
+     blank list, and filter by name so the sample is reachable even when it is not in the recent five */
+  if(type==="record"){
+    try{
+      var xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(id):null;
+      var s=xp&&xp.analysis_sample;
+      if(s){ __cdOpenSample=s; __cdPreset={analysis:"",name:s,nameMode:"exact",T_C:null,RH_pct:null,P_value:null,P_unit:""}; }
+    }catch(e){}
+  }
   const ov=document.getElementById("cdOverlay");
   document.getElementById("cdTitle").textContent = type==="record" ? "Connect data \u2014 fill key reads" : "Connect data";
   document.getElementById("cdCtx").textContent = cdHostLabel();
@@ -3440,7 +3456,7 @@ function cdFilterBarHtml(f){
 function cdRender(){
   const body=document.getElementById("cdBody"); if(!body) return;
   const had=!!document.getElementById("cdAn");
-  const f=had?cdFilters():null;
+  const f=had?cdFilters():(__cdPreset||null);   // first render may be seeded with the attached sample
   const active=f?RD.analysisFiltersActive(f):false;
   const list = active ? RD.analysisSearch(__cdIndex,f) : RD.analysisRecentSamples(__cdIndex,5);
   const label = active ? (list.length+" sample"+(list.length===1?"":"s")+" match") : "Last 5 samples";
@@ -7694,7 +7710,11 @@ window.ETB = {
     try{
       var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp||!src) return false;
       var srcs=exp.key_read_sources||(exp.key_read_sources={});
-      srcs[krId]=src; markOverride(exp,'key_read_sources'); return true;
+      srcs[krId]=src;
+      /* the sample this experiment is drawing from, so reopening the picker lands back on it rather
+         than on a blank list of the five most recent samples */
+      if(src.sample) exp.analysis_sample=src.sample;
+      markOverride(exp,'key_read_sources'); return true;
     }catch(err){ return false; }
   },
   exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },

@@ -244,8 +244,11 @@ function makeFetch(store){
     if(!b) return false;
     b.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
     await sleep(400);
-    const head = d.querySelector('#cdBody .cd-shead');
-    if(head){ head.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(120); }
+    // the picker may reopen with the attached sample already expanded — clicking would collapse it
+    if(!d.querySelector('#cdBody .cd-sbody')){
+      const head = d.querySelector('#cdBody .cd-shead');
+      if(head){ head.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(120); }
+    }
     const boxes = Array.from(d.querySelectorAll('#cdBody [data-cdpick]'));
     for(const cb of boxes){ cb.checked=true; cb.dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(20); }
     for(const sel of Array.from(d.querySelectorAll('#cdBody select[data-selid]'))){
@@ -278,6 +281,28 @@ function makeFetch(store){
   ok(exp3().actual_outcome===null, "importing writes NO outcome — the step is not concluded");
   w.eval("renderExpSummary()"); await sleep(60);
   ok(!!cell('kr_ocv') && !/no read/.test(cell('kr_ocv').textContent), "the imported value shows in the current-value cell");
+
+  // ---------- the reading is labelled with the sample it came from ----------
+  ok(!!(exp3().analysis_sample), "the experiment records which sample it is drawing from");
+  ok(exp3().analysis_sample==='MEA-9', "…by name ("+exp3().analysis_sample+")");
+  const chipO = cell('kr_ocv') && cell('kr_ocv').querySelector('.src-chip');
+  ok(!!chipO, "an imported reading carries a provenance chip on the current-value cell");
+  ok(chipO && /MEA-9/.test(chipO.textContent), "…naming the SAMPLE visibly, not only in a tooltip ("+(chipO&&chipO.textContent)+")");
+  ok(chipO && /MEA-9/.test(chipO.getAttribute('title')||'') && /2026-07/.test(chipO.getAttribute('title')||''),
+     "…with sample, conditions and run date on hover ("+(chipO&&chipO.getAttribute('title'))+")");
+  const chipX = cell('kr_xo') && cell('kr_xo').querySelector('.src-chip');
+  ok(!!chipX && /MEA-9/.test(chipX.textContent), "the unlinked key read is labelled from its persisted provenance too");
+
+  // ---------- reopening Connect data remembers the attached sample ----------
+  const cdBtn3 = host().querySelector('[data-cdexp]');
+  if(cdBtn3) cdBtn3.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  await sleep(450);
+  ok(w.eval("__cdOpenSample")==='MEA-9', "reopening the picker restores the attached sample");
+  const nameIn = d.getElementById('cdName');
+  ok(!!nameIn && nameIn.value==='MEA-9', "…seeding the sample filter so it is reachable outside the recent five ("+(nameIn&&nameIn.value)+")");
+  ok(!!d.querySelector('#cdBody .cd-sbody'), "…and its values are already expanded, with no hunting");
+  ok(d.querySelectorAll('#cdBody [data-cdpick]').length>0, "…so the readings are pickable immediately");
+  w.eval("closeConnectData()"); await sleep(80);
 
   // ---------- re-importing the same portal values must not inflate the sample ----------
   const beforeN = statUps().length, beforeX = ((exp3().key_read_readings||{}).kr_xo||[]).length;
