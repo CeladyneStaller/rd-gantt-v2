@@ -2,9 +2,12 @@
 The users bin holds pinHash / salt / iterations. This proves the /roster projection emits ONLY the four
 whitelisted fields, tested against the real bin shape Corey supplied.
 """
-import json, sys, re
+import json, sys, re, os as _os
 
-SRC = "/mnt/user-data/outputs/broker_patch.py"
+# Every other harness resolves its inputs through RD_OUT; this one hardcoded the sandbox path, so it
+# was the single harness that could not run from a plain checkout.
+SRC = _os.path.join(_os.environ.get("RD_OUT") or _os.path.dirname(_os.path.abspath(__file__)),
+                    "broker_patch.py")
 src = open(SRC, encoding="utf-8").read()
 
 # exec just the projection (importing the module would need fastapi + env)

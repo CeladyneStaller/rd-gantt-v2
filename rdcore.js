@@ -169,6 +169,31 @@
     return ups[0].value;
   }
   // count of numeric readings posted to a kpi id — for statistical-target completeness (N / expected)
+  // ONE reading list per key read, whatever its source. A linked key read reads through the KPI's
+  // posted readings (following readsFrom, so a borrowed sample is counted where it lives — same
+  // resolution the KPI table uses); an unlinked one reads its own store on the experiment. The cell,
+  // the completeness badge and the matcher must all consume THIS and never count for themselves,
+  // or the table and the verdict can disagree about how much data exists.
+  // Always oldest-first, so values[values.length-1] is the most recent reading for both sources.
+  function keyReadReadings(keyRead, ctx) {
+    ctx = ctx || {};
+    var kr = keyRead || {};
+    if (kr.source_kpi_gid) {
+      var kpis = ctx.kpis || [];
+      var kpi = kpiById(kr.source_kpi_gid, kpis);
+      var srcId = kpi ? readingSourceId(kpi, kpis) : kr.source_kpi_gid;
+      var ups = readingsFor(srcId, ctx.execDocs || {}), xs = [];
+      for (var i = ups.length - 1; i >= 0; i--) {          // readingsFor is newest-first
+        var v = Number(ups[i].value);
+        if (isFinite(v)) xs.push(v);
+      }
+      return { values: xs, n: xs.length, source: 'kpi', kpiId: srcId };
+    }
+    var store = (ctx.experiment && ctx.experiment.key_read_readings) || {};
+    var local = parseReads(store[kr.id]);
+    return { values: local, n: local.length, source: 'local', kpiId: null };
+  }
+
   function readingCount(kpiId, execDocs){
     var ups=readingsFor(kpiId, execDocs), n=0;
     for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
@@ -1917,6 +1942,7 @@
     keyReadValueList: keyReadValueList,
     statSummary: statSummary,
     keyReadStat: keyReadStat,
+    keyReadReadings: keyReadReadings,
     readsComplete: readsComplete,
     keyReadTestValue: keyReadTestValue,
     buildStatReadings: buildStatReadings,

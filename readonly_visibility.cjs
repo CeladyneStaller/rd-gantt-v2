@@ -46,7 +46,7 @@ function inertSelector(w){
   for(const sheet of w.document.styleSheets){
     let rules; try{ rules=sheet.cssRules; }catch(e){ continue; }
     for(const r of rules){
-      if(r.selectorText && r.style && r.style.pointerEvents==="none" && r.selectorText.indexOf("body.readonly")>=0)
+      if(r.selectorText && r.style && r.style.getPropertyValue("pointer-events")==="none" && r.selectorText.indexOf("body.readonly")>=0)
         return r.selectorText;
     }
   }
