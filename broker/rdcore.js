@@ -183,7 +183,11 @@
       var kpi = kpiById(kr.source_kpi_gid, kpis);
       var srcId = kpi ? readingSourceId(kpi, kpis) : kr.source_kpi_gid;
       var ups = readingsFor(srcId, ctx.execDocs || {}), xs = [];
-      for (var i = ups.length - 1; i >= 0; i--) {          // readingsFor is newest-first
+      // readingsFor is newest-first and stable, so ties keep document order. Reverse-iterating would
+      // flip them — and a batch import gives every row the same timestamp. Sort ascending instead:
+      // a stable sort leaves equal timestamps in the order they were posted.
+      ups = ups.slice().sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      for (var i = 0; i < ups.length; i++) {
         var v = Number(ups[i].value);
         if (isFinite(v)) xs.push(v);
       }

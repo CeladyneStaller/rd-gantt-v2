@@ -63,6 +63,9 @@ function makeFetch(store){
   // mount the fixture tree so ETB.experimentById resolves
   w.eval(`if(window.ETB && ETB.getTree){ try{ var t=ETB.getTree(); }catch(e){} } window.__testTree=${JSON.stringify(TREE)};
           window.ETB=window.ETB||{}; ETB.experimentById=function(id){ return window.__testTree.experiments[id]||null; };
+          /* the ETB's own state.tree must BE the fixture: an unlinked import mutates state.tree while
+             this stub reads __testTree, and two different objects is a trap that has cost cycles. */
+          try{ if(window.__ETBH && __ETBH.setTree) __ETBH.setTree(window.__testTree); }catch(e){}
           ETB.recordOutcomeFor=function(){}; ETB.saveActive=function(){};`);
 
   // ---------- the statistic resolves from the linked KPI ----------
@@ -227,6 +230,8 @@ function makeFetch(store){
   const fB = d.querySelector('#expRecBody .erk-input[data-kr="kr_b"]');
   if (fA && fB) {
     fA.value = ""; fB.value = "";
+    const upsA = () => w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';}).length");
+    const base0 = upsA();
     // three portal values for the SAME statistical key read, one for the single-valued read
     w.eval(`__cdHost={type:'record',id:'exp_1'};
       __cdSel={ a:{sample:'MEA-17',key:'OCV',value:0.66,target:'kr_a',analysis:'polcurve',cond:{},job_id:'j1'},
@@ -235,19 +240,25 @@ function makeFetch(store){
                 d:{sample:'MEA-17',key:'Leak',value:0.4,target:'kr_b',analysis:'eis',cond:{},job_id:'j4'} };
       cdDoImport();`);
     await sleep(120);
-    const gotA = RDparse(fA.value), gotB = fB.value;
-    ok(gotA.length === 3, "three portal values land as THREE reads in one statistical key read (" + fA.value + ")");
-    ok(gotA.join(",") === "0.66,0.68,0.7", "…in order, space-separated, none overwritten");
-    ok(String(gotB) === "0.4", "the single-valued key read still takes one number");
+    // The import now writes READINGS and re-renders the recorder, so the captured nodes are stale and
+    // the merge happens in the store rather than in the input. Same contract, different place to look.
+    const fA2 = d.querySelector('#expRecBody .erk-input[data-kr="kr_a"]');
+    const fB2 = d.querySelector('#expRecBody .erk-input[data-kr="kr_b"]');
+    const gotA = RDparse(fA2 ? fA2.value : ""), gotB = fB2 ? fB2.value : "";
+    ok(upsA() - base0 === 3, "three portal values land as THREE reads in one statistical key read (" + (upsA()-base0) + ")");
+    ok(gotA.length === upsA(), "…and the reopened recorder shows every read taken (" + gotA.length + " of " + upsA() + ")");
+    ok(gotA.slice(-3).join(",") === "0.66,0.68,0.7", "…in order, space-separated, none overwritten");
+    ok(String(Number(gotB)) === "0.4", "the single-valued key read still takes one number");
 
-    // importing must not discard what was already typed by hand
-    fA.value = "0.65";
+    // importing must not discard reads that already exist
     w.eval(`__cdHost={type:'record',id:'exp_1'};
       __cdSel={ a:{sample:'S',key:'OCV',value:0.69,target:'kr_a',analysis:'polcurve',cond:{},job_id:'j9'} };
       cdDoImport();`);
     await sleep(100);
-    const merged = RDparse(fA.value);
-    ok(merged.length === 2 && merged[0] === 0.65, "an import APPENDS to hand-typed reads rather than replacing them");
+    const fA3 = d.querySelector('#expRecBody .erk-input[data-kr="kr_a"]');
+    const merged = RDparse(fA3 ? fA3.value : "");
+    ok(upsA() - base0 === 4, "a later import APPENDS to the reads already taken rather than replacing them (" + (upsA()-base0) + ")");
+    ok(merged.length === gotA.length + 1 && merged.indexOf(0.66) >= 0, "…and the earlier reads keep their place");
   } else {
     ok(false, "recorder inputs not available for the multi-fill test");
   }
@@ -260,7 +271,10 @@ function makeFetch(store){
   // the recorder resolves experiments through ETB.experimentById, which this harness stubs against
   // __testTree — so mutate that, not the ETB's internal state.tree
   w.eval(`window.__testTree.experiments.exp_1.key_reads=[
-      {id:'kr_x', name:'Current density at 0.65V at 80C, 95RH, 100kPag', unit:'A/cm2'}];`);
+      {id:'kr_x', name:'Current density at 0.65V at 80C, 95RH, 100kPag', unit:'A/cm2'}];
+      /* kr_x is UNLINKED, so importing it writes to the ETB's own state.tree — re-point that at the
+         fixture here, after the mutation, or the import lands on a different object entirely. */
+      try{ if(window.__ETBH && __ETBH.setTree) __ETBH.setTree(window.__testTree); }catch(e){}`);
   w.eval("openExpRecorder('exp_1')"); await sleep(150);
   const inX = d.querySelector('#expRecBody .erk-input[data-kr="kr_x"]');
   ok(!!inX, "the realistically-named key read renders an input");
@@ -273,7 +287,8 @@ function makeFetch(store){
     w.eval(`__cdSel={ a:{sample:'S',key:'|j_xover|',value:1.42,target:cdGuessTarget('|j_xover|'),analysis:'crossover',cond:{},job_id:'j1'} };
             cdDoImport();`);
     await sleep(120);
-    ok(String(inX.value).indexOf("1.42") >= 0, "Import fills the key read even though its name matches no canonical key (" + JSON.stringify(inX.value) + ")");
+    const inX2 = d.querySelector('#expRecBody .erk-input[data-kr="kr_x"]');   // the import re-renders the recorder
+    ok(inX2 && String(inX2.value).indexOf("1.42") >= 0, "Import fills the key read even though its name matches no canonical key (" + JSON.stringify(inX2 && inX2.value) + ")");
     // a stale/empty remembered target must not beat what is on screen
     inX.value = "";
     w.eval("openConnectData('record','exp_1');"); await sleep(80);
@@ -451,6 +466,41 @@ function makeFetch(store){
   w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.body.lastChild.appendChild(n);})()");
   ok(pv2.querySelectorAll(".src-chip").length === 0, "a legacy outcome with no sources shows no chips (migration-safe)");
   ok(pv2.querySelectorAll(".kr-observed").length >= 2, "…while its values still render normally");
+
+  // ---------- REGRESSION: sole result must not be auto-picked without data, or against the data ----------
+  // Reported: with one possible result the recorder always selected it — even with no data, even when the
+  // data contradicted its criteria — so incomplete data could not be saved without completing the step.
+  w.eval(`(function(){var t=window.__ETBH.tree(); var e=t.experiments.exp_1;
+      e.key_reads=[{id:'s1',name:'Only read',unit:'V'}];
+      e.possible_results=[{id:'sole',label:'The one result',
+        criteria:[{key_read_id:'s1',op:'>=',value:1}],next_experiment_ids:[]}];
+      delete e.actual_outcome;})()`);
+  w.eval(`window.__testTree.experiments.exp_1.key_reads=[{id:'s1',name:'Only read',unit:'V'}];
+      window.__testTree.experiments.exp_1.possible_results=[{id:'sole',label:'The one result',
+        criteria:[{key_read_id:'s1',op:'>=',value:1}],next_experiment_ids:[]}];
+      delete window.__testTree.experiments.exp_1.actual_outcome;`);
+  w.eval("openExpRecorder('exp_1')"); await sleep(180);
+  ok(!d.querySelector('#expRecBody input[name="erp-pick"]:checked'), "a SOLE result is not pre-selected with no data entered");
+  ok(d.getElementById('erRecord').disabled === true, "…so the step cannot be completed by a stray click");
+
+  // data that CONTRADICTS the sole result must not select it
+  const s1 = d.querySelector('#expRecBody .erk-input[data-kr="s1"]');
+  s1.value = "0.2"; s1.dispatchEvent(new w.Event("input")); await sleep(140);   // needs >= 1
+  const pick1 = d.querySelector('#expRecBody input[name="erp-pick"]:checked');
+  ok(!pick1 || pick1.value !== "sole", "data that CONTRADICTS the sole result never auto-selects it");
+  ok(!!pick1 && pick1.value === "other", "…it selects Unanticipated instead, since nothing fits");
+
+  // data that satisfies it does select it
+  s1.value = "5"; s1.dispatchEvent(new w.Event("input")); await sleep(140);
+  const pick2 = d.querySelector('#expRecBody input[name="erp-pick"]:checked');
+  ok(!!pick2 && pick2.value === "sole", "data that SATISFIES the sole result auto-selects it");
+
+  // a result with NO criteria must not count as complete against an empty form
+  w.eval(`(function(){var e=window.__ETBH.tree().experiments.exp_1;
+      e.possible_results=[{id:'nocrit',label:'No criteria',criteria:[],next_experiment_ids:[]}];})()`);
+  w.eval(`window.__testTree.experiments.exp_1.possible_results=[{id:'nocrit',label:'No criteria',criteria:[],next_experiment_ids:[]}];`);
+  w.eval("openExpRecorder('exp_1')"); await sleep(180);
+  ok(!d.querySelector('#expRecBody input[name="erp-pick"]:checked'), "a criteria-less result is not auto-picked against an empty form (the reported bug)");
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));

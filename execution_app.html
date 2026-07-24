@@ -807,6 +807,8 @@ html[data-theme="dark"] #etb-view{
 /* key reads render through the same measurement table the KR/gate hosts use, so .mtbl styling
    carries over; only the section-local bits are declared here. */
 #expSummary table.mtbl{margin-top:6px}
+#expSummary .exs-krhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+#expSummary .exs-krhead .exs-lab{min-width:0}
 #expSummary table.mtbl thead th{background:transparent;padding:6px 8px}
 #expSummary table.mtbl tbody td{padding:7px 8px}
 #expSummary table.mtbl td.m-cur[data-krpost]{cursor:pointer}
@@ -1237,7 +1239,11 @@ html[data-theme="dark"] #etb-view{
       var kpi = kpiById(kr.source_kpi_gid, kpis);
       var srcId = kpi ? readingSourceId(kpi, kpis) : kr.source_kpi_gid;
       var ups = readingsFor(srcId, ctx.execDocs || {}), xs = [];
-      for (var i = ups.length - 1; i >= 0; i--) {          // readingsFor is newest-first
+      // readingsFor is newest-first and stable, so ties keep document order. Reverse-iterating would
+      // flip them — and a batch import gives every row the same timestamp. Sort ascending instead:
+      // a stable sort leaves equal timestamps in the order they were posted.
+      ups = ups.slice().sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      for (var i = 0; i < ups.length; i++) {
         var v = Number(ups[i].value);
         if (isFinite(v)) xs.push(v);
       }
@@ -3339,14 +3345,17 @@ function renderExpSummary(){
         +'<thead><tr><th>Key read</th><th class="num">Pass criterion</th><th>Unit</th><th class="num">Current value</th></tr></thead>'
         +'<tbody>'+rows+'</tbody></table>'
       : '<div class="exs-none">No key reads defined.</div>';
+    var krHead='<div class="exs-krhead"><span class="exs-lab">Key reads</span>'
+      +(ro?'':'<button class="cd-btn" data-cdexp="'+esc(exp.id)+'">Connect data</button>')+'</div>';
     return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(st)+'">'+esc(LBL[st]||st)+'</span></div>'+
       (exp.hypothesis?('<div class="exs-field"><span class="exs-lab">Hypothesis</span><span>'+esc(exp.hypothesis)+'</span></div>'):'')+
-      tbl+__exsConclusion(exp,ctx,ro)+
+      krHead+tbl+__exsConclusion(exp,ctx,ro)+
     '</div>';
   }).join('') : '<div class="exs-empty">No current experiment on the active branch \u2014 conclude the prior step, or add experiments below.</div>';
   host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",cur.length,"")+'<div class="'+listOpen("EXP")+'"><div class="exs-wrap"><div class="exs-cards">'+cards+'</div><div class="exs-graph" id="expSummaryGraph"><div class="exs-graph-empty">experiment graph</div></div></div></div></div>';
   host.querySelectorAll('[data-panel]').forEach(function(el){ el.onclick=function(){ var k=el.dataset.panel; if(panelCollapsed.has(k))panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); }; });
   host.querySelectorAll('[data-conc]').forEach(function(b){ b.onclick=function(){ openExpRecorder(b.getAttribute('data-conc')); }; });
+  if(!ro) host.querySelectorAll('[data-cdexp]').forEach(function(b){ b.onclick=function(){ openConnectData('record', b.getAttribute('data-cdexp')); }; });
   if(!ro) host.querySelectorAll('[data-krpost]').forEach(function(td){ td.onclick=function(){ etbPostKeyRead(td); }; });
   if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph'); if(gc && window.ETB && ETB.renderFocusedGraph){ ETB.renderFocusedGraph(gc, cur.map(function(e){return e.id;})); } }
 }
@@ -3522,33 +3531,51 @@ function cdDoImport(){
   if(__cdHost.type==="record"){
     /* Group by target first. A STATISTICAL key read wants N measurements, and the portal often has
        them — the same canonical key across several runs of one sample — so several ticked values
-       ACCUMULATE into that one field instead of the last one overwriting the rest. A single-valued
-       key read keeps last-one-wins, which is the only sensible reading of two numbers for one slot. */
+       ACCUMULATE into that one key read instead of the last one overwriting the rest.
+       Values are written to the SAME stores the current-step cells write to, so an import works
+       whether or not the recorder is open, and never concludes the step. */
+    const expId=__cdHost.id;
+    const exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null;
+    if(!exp){ closeConnectData(); return; }
+    const iso=new Date().toISOString();
+    const srcOf=p=>({ portal:'analysis', job_id:p.job_id||'', bin_id:p.bin_id||'', sample:p.sample||'',
+                      bucket:p.analysis||'', key:p.key||'', step:p.step||'', cond:p.cond||{},
+                      run_t:p.timestamp||'', imported_t:iso });
     const byTarget={};
     picks.forEach(p=>{ if(!p.target) return; (byTarget[p.target]=byTarget[p.target]||[]).push(p); });
-    let filled=0, multi=0;
+    let filled=0, added=0, skipped=0;
     Object.keys(byTarget).forEach(tid=>{
-      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+tid+'"]');
-      if(!inp) return;
+      const kr=(exp.key_reads||[]).filter(k=>k.id===tid)[0]; if(!kr) return;
       const group=byTarget[tid];
-      const st=__erStatOf(__erKeyRead(tid));
-      __erImportedSrc[tid]={ portal:"analysis", sample:group[0].sample, bucket:group[0].analysis,
-        key:group[0].key, cond:group[0].cond||{}, job_id:group[0].job_id, bin_id:group[0].bin_id,
-        run_t:group[0].timestamp, n:group.length, imported_t:new Date().toISOString() };
-      if(st.statistical){
-        /* keep anything already typed, then append — importing must not silently discard hand entry */
-        const existing=RD.parseReads(inp.value);
-        const merged=existing.concat(group.map(g=>Number(g.value)));
-        inp.value=merged.join(" ");
-        if(group.length>1) multi++;
-      } else {
-        inp.value=group[group.length-1].value;
+      if(kr.source_kpi_gid){
+        const resolved=group.map(g=>Object.assign({},g,{kpiId:kr.source_kpi_gid}));
+        const res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], iso);
+        exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
+        added+=res.updates.length; skipped+=res.duplicates.length;
+        if(res.updates.length){
+          const g0=group[group.length-1];
+          if(ETB.noteKeyReadSource) ETB.noteKeyReadSource(expId, tid, Object.assign(srcOf(g0),{n:res.updates.length}));
+          if(ETB.noteMeasured) ETB.noteMeasured(expId);
+          filled++;
+        }
+      } else if(ETB.importKeyReadReads){
+        const r=ETB.importKeyReadReads(expId, tid,
+          group.map(g=>Object.assign({},g,{srcKey:RD.analysisSrcKey(srcOf(g))})));
+        added+=r.added; skipped+=r.skipped;
+        if(r.added) filled++;
       }
-      filled++;
     });
     closeConnectData();
-    if(typeof expRecEval==="function"){ try{ expRecEval(); }catch(e){} }
-    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal"+(multi?(" ("+picks.length+" reads)"):"")+" \u2014 not saved until you record the outcome.","ok");
+    if(window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
+    try{ persist(); }catch(e){}
+    try{ renderAll(); }catch(e){}
+    /* if the recorder happens to be open, reopen it so its prefill picks the new reads up */
+    try{ const ov=document.getElementById('expRecOverlay');
+         if(ov && ov.classList.contains('open')) openExpRecorder(expId); }catch(e){}
+    let msg=filled+" key read"+(filled===1?"":"s")+" filled from the portal ("+added+" reading"+(added===1?"":"s")+")";
+    if(skipped) msg+=" \u00b7 "+skipped+" already imported (skipped)";
+    msg+=" \u2014 the step stays in progress.";
+    setMsg(msg, added?"ok":"warn");
     return;
   }
   /* create KPIs for any "+ create new KPI" targets, then materialise readings */
@@ -3802,7 +3829,10 @@ function recordExpOutcome(){
     var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
     __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
   });
-  var __srcs={}; Object.keys(__recVals).forEach(function(id){ if(__erImportedSrc[id]) __srcs[id]=__erImportedSrc[id]; });
+  /* provenance may have been written days earlier, when the reading was imported on the card, so the
+     experiment's own record is the primary source; __erImportedSrc only covers a same-session import. */
+  var __expSrcs={}; try{ var __xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; __expSrcs=(__xp&&__xp.key_read_sources)||{}; }catch(e){}
+  var __srcs={}; Object.keys(__recVals).forEach(function(id){ var s=__erImportedSrc[id]||__expSrcs[id]; if(s) __srcs[id]=s; });
   var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
   if(Object.keys(__srcs).length) payload.key_read_sources=__srcs;   // absent = hand-entered (every legacy outcome)
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
@@ -7621,6 +7651,51 @@ window.ETB = {
   noteMeasured: function(expId){
     try{ var e=state.tree.experiments[expId]; if(e && e.status==='planned'){ e.status='in_progress'; softRefresh(); return true; } }catch(err){}
     return false;
+  },
+  /* An analysis-portal import is a measurement like any other: it appends reads and leaves the step
+     open. Provenance is written onto the EXPERIMENT rather than held in a page variable, because the
+     import now happens on the current-step card and the conclusion may be days and a reload later.
+     Portal values already taken are skipped by src key, so re-importing a sample cannot inflate a
+     statistical sample. */
+  importKeyReadReads: function(expId, krId, picks){
+    var res={added:0, skipped:0};
+    try{
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return res;
+      var kr=(exp.key_reads||[]).filter(function(k){ return k.id===krId; })[0]; if(!kr) return res;
+      var seenMap=exp.key_read_imports||(exp.key_read_imports={});
+      var seen=Array.isArray(seenMap[krId])?seenMap[krId].slice():[];
+      var vals=[], last=null;
+      (picks||[]).forEach(function(p){
+        var v=Number(p.value); if(!isFinite(v)) return;
+        if(p.srcKey && seen.indexOf(p.srcKey)>=0){ res.skipped++; return; }
+        if(p.srcKey) seen.push(p.srcKey);
+        vals.push(v); last=p;
+      });
+      seenMap[krId]=seen;
+      if(!vals.length) return res;
+      var stat=false; try{ stat=!!RD.keyReadStat(kr,null).statistical; }catch(e){}
+      if(!stat) vals=[vals[vals.length-1]];               // a single-valued key read takes one number
+      var store=exp.key_read_readings||(exp.key_read_readings={});
+      var prev=Array.isArray(store[krId])?store[krId].slice():[];
+      store[krId]=prev.concat(vals);
+      this.noteKeyReadSource(expId, krId, {
+        portal:'analysis', sample:last.sample||'', bucket:last.analysis||'', key:last.key||'',
+        cond:last.cond||{}, job_id:last.job_id||'', bin_id:last.bin_id||'',
+        run_t:last.timestamp||'', n:vals.length, imported_t:new Date().toISOString() });
+      res.added=vals.length;
+      if(exp.status==='planned') exp.status='in_progress';
+      markOverride(exp,'key_read_readings'); softRefresh();
+    }catch(err){}
+    return res;
+  },
+  /* a linked key read's reads land in exec.kpiUpdates (which carry their own src), but the observed
+     row on the experiment reads provenance from here, so both paths record it the same way. */
+  noteKeyReadSource: function(expId, krId, src){
+    try{
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp||!src) return false;
+      var srcs=exp.key_read_sources||(exp.key_read_sources={});
+      srcs[krId]=src; markOverride(exp,'key_read_sources'); return true;
+    }catch(err){ return false; }
   },
   exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },
   saveActive: function(){

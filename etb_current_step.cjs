@@ -30,9 +30,18 @@ const TREE = { project_id:"O1", root_experiment_id:"exp_1", experiments:{ exp_1:
   possible_results:[{id:"res_1", label:"Meets spec", conclusion:"ship it",
     criteria:[{key_read_id:"kr_a",op:">=",value:0.6},{key_read_id:"kr_c",op:"<=",value:1}], next_experiment_ids:[]}] } } };
 
+const INDEX = { schema:2, runs:[
+  { job_id:"j-900", sample_name:"MEA-9", script:"Polarization Curve", timestamp:"2026-07-19T14:02:00Z", bin_id:"bin-a",
+    Data:[{ Analysis:"polcurve", step:"", Conditions:{T_C:80,RH_pct:100}, key_values:{ "OCV":0.671 } }] },
+  { job_id:"j-901", sample_name:"MEA-9", script:"Polarization Curve", timestamp:"2026-07-20T09:10:00Z", bin_id:"bin-b",
+    Data:[{ Analysis:"polcurve", step:"", Conditions:{T_C:80,RH_pct:100}, key_values:{ "OCV":0.679 } }] },
+  { job_id:"j-902", sample_name:"MEA-9", script:"H2 Crossover", timestamp:"2026-07-20T11:00:00Z", bin_id:"bin-c",
+    Data:[{ Analysis:"crossover", step:"", Conditions:{T_C:80,RH_pct:100}, key_values:{ "Crossover":1.44 } }] }
+]};
+
 function makeFetch(store){
   return function(url,opts){ opts=opts||{}; const m=/\/state\/([^/?]+)(\/version)?/.exec(String(url)); const id=m?m[1]:null; const isVer=m&&m[2];
-    if(/\/analysis$/.test(String(url))) return Promise.resolve({ok:true,status:200,json:()=>Promise.resolve({schema:2,runs:[]})});
+    if(/\/analysis$/.test(String(url))) return Promise.resolve({ok:true,status:200,json:()=>Promise.resolve(INDEX)});
     if((opts.method||"GET").toUpperCase()==="PUT"){ const nv=String((store[id]?+store[id].version:0)+1); store[id]={doc:JSON.parse(opts.body).doc,etag:nv,version:nv}; return Promise.resolve({ok:true,status:200,json:()=>Promise.resolve({etag:nv,version:nv})}); }
     if(isVer) return Promise.resolve({ok:true,status:200,json:()=>Promise.resolve({version:store[id]?store[id].version:"0"})});
     if(!store[id]) return Promise.resolve({ok:false,status:404,json:()=>Promise.resolve(null)});
@@ -213,6 +222,69 @@ function makeFetch(store){
   ok(!!sub_z && /4\/4/.test(sub_z.textContent) && sub_z.className.indexOf('ok')>=0,
      "…and the unlinked sample reads complete at its own readCount");
   ok(!!host().querySelector('[data-conc]') && host().querySelector('[data-conc]').disabled===false, "Conclude enables for an experiment whose only key read is unlinked");
+
+  // ---------- Connect data, driven from the CARD ----------
+  // This branch previously wrote into the recorder's inputs, so it only worked with the recorder
+  // mounted — and the recorder now opens from a button that is disabled until data is complete.
+  // These assertions pin the import to the same stores the cells write to.
+  const TREE3 = { project_id:"O1", root_experiment_id:"exp_3", experiments:{ exp_3:{ id:"exp_3", code:"EXP-3",
+    name:"Import", status:"planned", audit_log:[], actual_outcome:null,
+    key_reads:[ {id:"kr_ocv", name:"OCV", unit:"V", source_kpi_gid:"K-STAT", direction:">=", critical_value:"0.6"},
+                {id:"kr_xo", name:"Crossover", unit:"mA/cm2", statistic:"average", readCount:3, direction:"<=", critical_value:"2"} ],
+    possible_results:[] } } };
+  w.eval(`__ETBH.setTree(${JSON.stringify(TREE3)}); ETB.currentExperiments=function(){ return [ETB.experimentById('exp_3')]; };
+          exec.kpiUpdates=[];`);
+  w.eval("renderExpSummary()"); await sleep(80);
+  const exp3 = () => tree().experiments.exp_3;
+
+  // one drive of the portal picker: open it from the card, expand the sample, tick every value,
+  // route each to its key read, import.
+  async function driveImport(){
+    const b = host().querySelector('[data-cdexp]');
+    if(!b) return false;
+    b.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+    await sleep(400);
+    const head = d.querySelector('#cdBody .cd-shead');
+    if(head){ head.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(120); }
+    const boxes = Array.from(d.querySelectorAll('#cdBody [data-cdpick]'));
+    for(const cb of boxes){ cb.checked=true; cb.dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(20); }
+    for(const sel of Array.from(d.querySelectorAll('#cdBody select[data-selid]'))){
+      const key=(sel.getAttribute('data-selid')||'').split('|').pop();
+      sel.value = /Crossover/i.test(key) ? 'kr_xo' : 'kr_ocv';
+      sel.dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(20);
+    }
+    const imp = d.getElementById('cdImport');
+    if(imp) imp.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+    await sleep(250);
+    return boxes.length;
+  }
+
+  const cdBtn = host().querySelector('[data-cdexp]');
+  ok(!!cdBtn, "the current-step card offers Connect data where the measurements now live");
+  ok(cdBtn && cdBtn.getAttribute('data-cdexp')==='exp_3', "…bound to the experiment on the card");
+  const nPicked = await driveImport();
+  const cdOv = d.getElementById('cdOverlay');
+  ok(!!cdOv && !cdOv.classList.contains('open'), "importing closes the picker");
+  ok(nPicked>0, "the picker lists values from the analysis index ("+nPicked+")");
+
+  const statUps = () => w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';})");
+  ok(statUps().length===2, "a LINKED key read's imported values post to its KPI ("+statUps().length+")");
+  ok(statUps().every(u=>u.src && u.src.portal==='analysis'), "…each carrying portal provenance");
+  ok(((exp3().key_read_readings||{}).kr_xo||[]).length===1, "an UNLINKED key read's imported value lands on the experiment");
+  ok(w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='kr_xo';}).length")===0, "…and not in the KPI layer");
+  ok(!!(exp3().key_read_sources||{}).kr_ocv, "provenance is persisted on the experiment for the linked key read");
+  ok(((exp3().key_read_sources||{}).kr_xo||{}).sample==='MEA-9', "…and for the unlinked one, naming the sample");
+  ok(exp3().status==='in_progress', "importing advances planned -> in progress");
+  ok(exp3().actual_outcome===null, "importing writes NO outcome — the step is not concluded");
+  w.eval("renderExpSummary()"); await sleep(60);
+  ok(!!cell('kr_ocv') && !/no read/.test(cell('kr_ocv').textContent), "the imported value shows in the current-value cell");
+
+  // ---------- re-importing the same portal values must not inflate the sample ----------
+  const beforeN = statUps().length, beforeX = ((exp3().key_read_readings||{}).kr_xo||[]).length;
+  await driveImport();
+  ok(statUps().length===beforeN, "re-importing the same portal values adds no duplicate KPI readings ("+statUps().length+")");
+  ok(((exp3().key_read_readings||{}).kr_xo||[]).length===beforeX,
+     "…and none to the unlinked store, so a statistical sample cannot be inflated by a repeat import");
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fails = out.filter(x => x.startsWith('FAIL'));
