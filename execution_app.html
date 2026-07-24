@@ -848,6 +848,8 @@ html[data-theme="dark"] #etb-view{
   .kr-statlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .kr-statro{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
   .kr-statnote{font-size:10px;color:var(--muted);font-style:italic;cursor:help}
+  .kr-observed.kr-missing{border-color:var(--warn);color:var(--warn);font-style:italic}
+  .kr-observed.kr-short{border-color:var(--warn)}
   .kr-observed{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px}
   .kr-pass{color:var(--ok);font-weight:600;margin-left:4px}
   .kr-fail{color:var(--bad);font-weight:600;margin-left:4px}
@@ -3388,7 +3390,11 @@ function __erObservedRow(k, exp){
     var kv = ao && ao.key_read_values;
     if(!kv) return null;
     var xs = RD.keyReadValueList(kv[k.id]);
-    if(!xs.length) return null;
+    if(!xs.length){                                   // recorded, but this key read was never measured
+      var miss=document.createElement('div'); miss.className='kr-observed kr-missing';
+      miss.textContent='not measured \u2014 this outcome was recorded without it';
+      return miss;
+    }
     var st  = RD.keyReadStat(k, __erKpiFor(k));
     var sum = RD.statSummary(xs, st.statistic || 'average');
     var row = document.createElement('div'); row.className = 'kr-observed';
@@ -3399,6 +3405,13 @@ function __erObservedRow(k, exp){
            + (sum.sd != null ? (' \u00b7 sd ' + __erFmt(sum.sd)) : '');
     }
     row.appendChild(document.createTextNode(txt));
+    if(st.statistical){                               // short of the expected sample size?
+      var comp=RD.readsComplete(sum.n, st.readCount);
+      if(!comp.complete){
+        row.className='kr-observed kr-short';
+        row.appendChild(document.createTextNode('  \u2014 incomplete ('+comp.have+' of '+comp.expected+' reads)'));
+      }
+    }
     var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
     if(tgt != null && isFinite(tgt) && sum.value != null){
       var down = String(k.direction || '').indexOf('<') >= 0 || k.direction === 'down' || k.direction === 'decrease';
@@ -3480,13 +3493,13 @@ function expRecAutoPick(m){
       var prev=body.querySelector('input[name="erp-pick"][value="'+__erUserPick+'"]');
       if(prev){ prev.checked=true; return; }
     }
+    if(!m || !m.complete) return;          // INCOMPLETE DATA -> never pre-select, never auto-complete a step
     var want=null;
-    if(m && m.matched && m.matched.length===1) want=m.matched[0];
-    else {
+    if(m.matched && m.matched.length===1) want=m.matched[0];
+    else if(!m.matched || !m.matched.length){
       var defined=[].slice.call(body.querySelectorAll('input[name="erp-pick"]'))
         .filter(function(i){ return i.value!=='other' && i.value!=='inconclusive'; });
-      if(defined.length===1) want=defined[0].value;
-      else if(m && m.complete && (!m.matched || !m.matched.length)) want='other';
+      want = (defined.length===1) ? defined[0].value : 'other';   // one obvious result, else Unanticipated
     }
     if(!want) return;
     var el=body.querySelector('input[name="erp-pick"][value="'+want+'"]');
