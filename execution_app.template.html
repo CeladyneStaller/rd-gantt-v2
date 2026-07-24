@@ -1351,11 +1351,17 @@ function cdGuessTarget(key){
 function openConnectData(type,id){
   __cdHost={type,id}; __cdOpenSample=null; __cdPreset=null;
   __cdSel=__cdSelByHost[__cdHostKey({type,id})]||{};    // reopen with this host's selections intact
-  /* if selections were restored, open on the sample they belong to so the ticked rows are visible */
-  try{ var __first=Object.keys(__cdSel)[0]; if(__first && __cdSel[__first]) __cdOpenSample=__cdSel[__first].sample; }catch(e){}
-  /* an experiment that has already imported is ATTACHED to a sample — reopen on it rather than on a
-     blank list, and filter by name so the sample is reachable even when it is not in the recent five */
-  if(type==="record"){
+  /* If selections were restored, open ON and FILTERED TO the sample they belong to. Filtering is the
+     part that was missing: the default list is only the recent five, so a selected sample older than
+     that never rendered and its checkbox could not show as ticked. Seed the name filter so the row
+     is present regardless of recency — this applies to EVERY host, not just the record path. */
+  try{
+    var __first=Object.keys(__cdSel)[0], __s=__first&&__cdSel[__first]&&__cdSel[__first].sample;
+    if(__s){ __cdOpenSample=__s; __cdPreset={analysis:"",name:__s,nameMode:"exact",T_C:null,RH_pct:null,P_value:null,P_unit:""}; }
+  }catch(e){}
+  /* an experiment that has already imported is ATTACHED to a sample — if nothing is selected yet,
+     still reopen on that sample rather than a blank recent-five list */
+  if(type==="record" && !__cdPreset){
     try{
       var xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(id):null;
       var s=xp&&xp.analysis_sample;

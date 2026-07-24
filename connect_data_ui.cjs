@@ -146,35 +146,45 @@ function makeFetch(store){
   ok(ups2.length===2 && ups2.some(u=>u.kpiId===(made||{}).id), "the reading is written against the newly created KPI");
 
   // ---------- selections survive closing and reopening the picker ----------
-  // The reported bug: reopening the modal lost every ticked value. Selections must persist per host
-  // across a close, and clear only once imported.
+  // The reported bug: reopening the modal showed no ticked value. The subtle cause was RENDER, not
+  // storage — the reopen list is only the recent 5 samples, so a selected sample older than that was
+  // not drawn at all and its checkbox could not appear ticked. MEA-12 is deliberately OUTSIDE the
+  // recent 5 (asserted at the search test above), so this exercises exactly that gap.
   const picksFor=()=>[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')];
   const checkedKeys=()=>picksFor().filter(b=>b.checked).map(b=>b.getAttribute("data-key")).sort();
+  const sampleShown=nm=>[...d.querySelectorAll('#cdBody .cd-sname')].some(x=>x.textContent===nm);
 
   w.eval("openConnectData('keyResult','KR1')"); await sleep(150);
-  w.eval("cdToggle('MEA-15')"); await sleep(80);          // a sample not yet imported from
-  const p15=picksFor().find(b=>b.getAttribute("data-key")==="OCV");
-  ok(!!p15, "a fresh value is selectable");
-  p15.checked=true; p15.dispatchEvent(new w.Event("change")); await sleep(80);
+  ok(!sampleShown("MEA-12"), "MEA-12 is NOT in the default recent-5 list");
+  const nameIn0=d.getElementById("cdName"); nameIn0.value="MEA-12"; nameIn0.dispatchEvent(new w.Event("input")); await sleep(150);
+  ok(sampleShown("MEA-12"), "…but is reachable by filtering");
+  w.eval("cdToggle('MEA-12')"); await sleep(100);
+  const p12=picksFor().find(b=>b.getAttribute("data-key")==="OCV");
+  ok(!!p12, "a value on the out-of-window sample is selectable");
+  p12.checked=true; p12.dispatchEvent(new w.Event("change")); await sleep(80);
   ok(checkedKeys().join(",")==="OCV", "the value is ticked before closing");
-  // assert the STORE directly: a pick must be saved as it happens, not only reconstructed on reopen,
-  // or a mutation that stops saving on pick/close would be masked by open-time restore.
   ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "the pick is written to the per-host store immediately");
   w.eval("closeConnectData()"); await sleep(80);
   ok(!visible(), "the picker closes without importing");
   ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "…and the selection persists in the store after close");
 
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(250);
   ok(visible(), "the picker reopens");
-  ok(w.eval("__cdOpenSample")==="MEA-15", "…reopening on the sample the selection belongs to");
+  ok(w.eval("__cdOpenSample")==="MEA-12", "…reopening on the sample the selection belongs to");
+  // the assertion that would have caught the shipped bug: the row must actually RENDER, not just be
+  // named in a variable — even though the sample is outside the recent 5.
+  ok(sampleShown("MEA-12"), "the selected sample is RENDERED on reopen despite being outside the recent 5");
+  ok(!!d.querySelector("#cdBody .cd-sbody"), "…and its values are expanded, not collapsed");
+  ok(picksFor().length>0, "…so its checkboxes exist to be shown ticked");
   ok(checkedKeys().join(",")==="OCV", "the ticked value is STILL ticked after reopening ("+checkedKeys().join(",")+")");
   ok(d.getElementById("cdCount").textContent.indexOf("1 value")>=0, "…and the selection count reflects it");
 
   // ---------- selections are scoped per host ----------
   w.eval("openConnectData('stageGate','SG1')"); await sleep(200);
   ok(checkedKeys().length===0, "a DIFFERENT host opens with none of the first host's selections");
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(250);
   ok(checkedKeys().join(",")==="OCV", "…and switching back restores the first host's selection intact");
+  ok(sampleShown("MEA-12"), "…with its out-of-window sample rendered again");
 
   // ---------- importing clears the selection for that host ----------
   const beforeImp=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length;
