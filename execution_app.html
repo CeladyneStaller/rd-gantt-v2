@@ -3164,6 +3164,10 @@ function renderExpSummary(){
    carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
    read-through /analysis route, so no JSONBin key is ever in the browser. */
 let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={};
+/* What the portal filled into each key read this session. The objective side already records origin on
+   every kpiUpdate (src), but the EXPERIMENT could not answer "where did this measurement come from"
+   without going via the KPI. Captured here, written onto the outcome at record time. */
+let __erImportedSrc={};
 
 async function cdLoadIndex(force){
   if(__cdIndex && !force) return __cdIndex;
@@ -3336,6 +3340,9 @@ function cdDoImport(){
       if(!inp) return;
       const group=byTarget[tid];
       const st=__erStatOf(__erKeyRead(tid));
+      __erImportedSrc[tid]={ portal:"analysis", sample:group[0].sample, bucket:group[0].analysis,
+        key:group[0].key, cond:group[0].cond||{}, job_id:group[0].job_id, bin_id:group[0].bin_id,
+        run_t:group[0].timestamp, n:group.length, imported_t:new Date().toISOString() };
       if(st.statistical){
         /* keep anything already typed, then append — importing must not silently discard hand entry */
         const existing=RD.parseReads(inp.value);
@@ -3411,6 +3418,14 @@ function __erObservedRow(k, exp){
         row.className='kr-observed kr-short';
         row.appendChild(document.createTextNode('  \u2014 incomplete ('+comp.have+' of '+comp.expected+' reads)'));
       }
+    }
+    var srcs = ao && ao.key_read_sources; var ksrc = srcs && srcs[k.id];
+    if(ksrc){
+      var chip=document.createElement('span'); chip.className='src-chip';
+      chip.textContent='\u21a7 analysis';
+      chip.title=[ksrc.sample||'', cdCondSummary(ksrc.cond), (ksrc.run_t||'').slice(0,10)]
+        .filter(Boolean).join(' \u00b7 ');
+      row.appendChild(document.createTextNode(' ')); row.appendChild(chip);
     }
     var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
     if(tgt != null && isFinite(tgt) && sum.value != null){
@@ -3573,7 +3588,9 @@ function recordExpOutcome(){
     var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
     __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
   });
+  var __srcs={}; Object.keys(__recVals).forEach(function(id){ if(__erImportedSrc[id]) __srcs[id]=__erImportedSrc[id]; });
   var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
+  if(Object.keys(__srcs).length) payload.key_read_sources=__srcs;   // absent = hand-entered (every legacy outcome)
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
   var wrote=writeKpiUpdatesFromReads(expId, readings);
   closeExpRecorder();
