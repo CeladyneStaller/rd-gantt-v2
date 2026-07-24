@@ -188,6 +188,8 @@
   .spop .sp-add{display:flex;gap:6px;margin-top:8px}
   .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
+  .spop .sp-tag{font-family:var(--mono);font-size:9px;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:3px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .spop .sp-hand{font-size:9px;color:var(--muted);font-style:italic}
   .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .m-badge{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .m-badge .d{width:5px;height:5px;border-radius:50%}
@@ -1279,15 +1281,20 @@ function etbPostKeyRead(td){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
   var kr=(exp.key_reads||[]).filter(function(k){return k.id===krId;})[0]; if(!kr) return;
   var ctx=__etbCtx(exp), c=null; try{ c=RD.keyReadCurrent(kr,ctx); }catch(e){}
-  var multi=!!(c&&c.stat&&c.stat.statistical), saved=td.innerHTML;
-  td.innerHTML='<input type="text" class="krpostin" placeholder="'+(multi?'add reads, e.g. 0.68 0.67':'value')+'">';
+  var multi=!!(c&&c.stat&&c.stat.statistical);
+  /* Statistical key reads open the same value-list-with-delete popover the KR/SG statistical cells
+     use — showing every reading, tagging imported ones by sample, deletable individually — rather than
+     a single inline input. Single-valued key reads keep the inline input. */
+  if(multi){ openEtbStatPop(td, expId, krId); return; }
+  var saved=td.innerHTML;
+  td.innerHTML='<input type="text" class="krpostin" placeholder="value">';
   var inp=td.querySelector('input'); if(!inp) return;
   try{ inp.focus(); }catch(e){}
   var done=false;
   var commit=function(){
     if(done) return; done=true;
     var xs=RD.parseReads(inp.value);
-    if(!multi && xs.length) xs=[xs[xs.length-1]];          // a single-valued key read takes one number
+    if(xs.length) xs=[xs[xs.length-1]];                    // a single-valued key read takes one number
     if(!xs.length){ td.innerHTML=saved; return; }
     var n=0;
     if(kr.source_kpi_gid){
@@ -1307,6 +1314,112 @@ function etbPostKeyRead(td){
   inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); commit(); } else if(e.key==='Escape'){ e.preventDefault(); done=true; td.innerHTML=saved; } };
   inp.onblur=commit;
 }
+
+/* ---- ETB statistical value-list popover: the same list-with-delete interaction the KR/SG statistical
+   cells have, extended to route deletes across both backends (a linked key read's reads are kpiUpdates;
+   an unlinked one's are {v,src} / bare entries on the experiment) and to tag imported readings by the
+   sample they came from. Add appends hand-entered reads. Every add/remove commits immediately. ---- */
+let etbPopExp=null, etbPopKr=null, etbPopArmed=null;
+function etbStatRows(){
+  if(!etbPopExp||!etbPopKr) return [];
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(etbPopExp):null; if(!exp) return [];
+  var kr=(exp.key_reads||[]).filter(function(k){return k.id===etbPopKr;})[0]; if(!kr) return [];
+  try{ return RD.keyReadReadingRows(kr, __etbCtx(exp)); }catch(e){ return []; }
+}
+function etbStatPopHtml(){
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(etbPopExp):null;
+  var kr=exp&&(exp.key_reads||[]).filter(function(k){return k.id===etbPopKr;})[0]; if(!kr) return '';
+  var ctx=__etbCtx(exp), cur=null; try{ cur=RD.keyReadCurrent(kr,ctx); }catch(e){}
+  var st=(cur&&cur.stat)||{statistic:'average'}, statLbl=STAT_SHORT[st.statistic||'average']||st.statistic||'avg';
+  var unit=kr.unit||'';
+  var rows=etbStatRows();
+  var computed=(cur&&cur.summary)?cur.summary.value:null;
+  var n=rows.length, exp2=Number(st.readCount)>0?Number(st.readCount):0, complete=!exp2||n>=exp2;
+  var cntTxt=exp2?(n+' / '+exp2+' '+(complete?'\u2713':'\u26a0')):(n+' read'+(n===1?'':'s'));
+  var critTxt=etbCritText(kr);
+  var list=rows.length ? rows.map(function(r,i){
+      var armed=etbPopArmed===i;
+      var tag=r.imported ? ('<span class="sp-tag" title="'+esc(r.sample||'analysis')+'">'+esc(r.sample||'analysis')+'</span>') : '';
+      return '<div class="sp-row"><span class="sp-v">'+esc(__erFmt(r.value))+'</span>'
+        +'<span class="sp-ts">'+tag+(r.imported?'':'<span class="sp-hand">entered</span>')+'</span>'
+        +'<button class="sp-rm'+(armed?' armed':'')+'" data-etbrm="'+i+'" title="Remove this reading">'+(armed?'confirm':'\u2715')+'</button></div>';
+    }).join('')
+    : '<div class="sp-none">no readings yet \u2014 add the first measurement below</div>';
+  return '<div class="sp-h"><span class="sp-name">'+esc(kr.name||kr.id)+'</span><button class="sp-x" data-etbclose title="Close">\u2715</button></div>'
+    +'<div class="sp-sum"><span class="sp-stat">'+esc(statLbl)+' = <b>'+(computed==null?'\u2014':esc(__erFmt(computed)))+'</b>'+(computed!=null&&unit?' '+esc(unit):'')+'</span><span class="sp-cnt '+(complete?'ok':'warn')+'">'+esc(cntTxt)+'</span></div>'
+    +'<div class="sp-tgt">target '+esc(critTxt)+'</div>'
+    +'<div class="sp-list">'+list+'</div>'
+    +'<div class="sp-add"><input type="text" class="sp-in" placeholder="add reads, e.g. 0.68 0.67" data-etbin/><button class="act mini" data-etbadd>Add</button></div>'
+    +'<div class="sp-hint">each entry is one measurement \u2014 the '+esc(statLbl)+' above is computed from all of them. Imported readings are tagged with their sample.</div>';
+}
+function renderEtbStatPop(){
+  var pop=document.getElementById('etbStatPop'); if(!pop||!etbPopKr) return;
+  pop.innerHTML=etbStatPopHtml();
+  var xb=pop.querySelector('[data-etbclose]'); if(xb) xb.onclick=function(){ closeEtbStatPop(); };
+  var inp=pop.querySelector('[data-etbin]'), addB=pop.querySelector('[data-etbadd]');
+  var add=function(){
+    var xs=RD.parseReads(inp.value); if(!xs.length){ try{inp.focus();}catch(e){} return; }
+    var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(etbPopExp):null; if(!exp){ return; }
+    var kr=(exp.key_reads||[]).filter(function(k){return k.id===etbPopKr;})[0]; if(!kr){ return; }
+    var n=0;
+    if(kr.source_kpi_gid){
+      if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
+      var r=RD.buildStatReadings(kr.source_kpi_gid, xs, {timestamp:Date.now(), note:'exp '+(exp.code||exp.id)});
+      for(var i=0;i<r.length;i++) exec.kpiUpdates.push(r[i]); n=r.length;
+      if(window.ETB&&ETB.noteMeasured) ETB.noteMeasured(etbPopExp);
+    } else if(window.ETB&&ETB.addKeyReadReads){ n=ETB.addKeyReadReads(etbPopExp, xs, etbPopKr); }
+    if(!n){ try{inp.focus();}catch(e){} return; }
+    etbPopArmed=null;
+    if(window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
+    try{ renderAll(); }catch(e){} renderEtbStatPop();
+    var i2=document.querySelector('#etbStatPop [data-etbin]'); if(i2){ try{ i2.focus(); }catch(e){} }
+    try{ setMsg(n+' reading'+(n===1?'':'s')+' added','ok'); }catch(e){}
+  };
+  if(addB) addB.onclick=add;
+  if(inp) inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); add(); } };
+  pop.querySelectorAll('[data-etbrm]').forEach(function(b){ b.onclick=function(){
+    var i=Number(b.getAttribute('data-etbrm'));
+    if(etbPopArmed!==i){ etbPopArmed=i; renderEtbStatPop(); return; }        // arm first (house convention)
+    var rows=etbStatRows(), row=rows[i];
+    if(!row){ etbPopArmed=null; renderEtbStatPop(); return; }
+    var removed=0;
+    if(row.kind==='linked'){
+      if(Array.isArray(exec.kpiUpdates) && row.upId){
+        var before=exec.kpiUpdates.length;
+        exec.kpiUpdates=exec.kpiUpdates.filter(function(u){ return u.id!==row.upId; });
+        removed=before-exec.kpiUpdates.length;
+      }
+    } else if(row.imported && row.srcKey){
+      if(window.ETB&&ETB.removeKeyReadReading) removed=ETB.removeKeyReadReading(etbPopExp, etbPopKr, row.srcKey);
+    } else {
+      if(window.ETB&&ETB.removeKeyReadReadingAt) removed=ETB.removeKeyReadReadingAt(etbPopExp, etbPopKr, row.localIdx);
+    }
+    etbPopArmed=null;
+    if(removed && window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
+    try{ renderAll(); }catch(e){} renderEtbStatPop();
+    try{ setMsg(removed?'Reading removed':'Could not remove that reading', removed?'ok':'warn'); }catch(e){}
+  }; });
+}
+function openEtbStatPop(td, expId, krId){
+  closeEtbStatPop();
+  etbPopExp=expId; etbPopKr=krId; etbPopArmed=null;
+  var pop=document.createElement('div'); pop.className='spop'; pop.id='etbStatPop';
+  document.body.appendChild(pop);
+  renderEtbStatPop();
+  var r=td.getBoundingClientRect(), pw=pop.offsetWidth||252, ph=pop.offsetHeight||0;
+  var left=r.right-pw, top=r.bottom+6;
+  if(left<8) left=8;
+  if(ph && top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
+  pop.style.left=left+'px'; pop.style.top=top+'px';
+  var inp=pop.querySelector('[data-etbin]'); if(inp){ try{ inp.focus(); }catch(e){} }
+}
+function closeEtbStatPop(){
+  var pop=document.getElementById('etbStatPop'); if(pop) pop.remove();
+  etbPopExp=null; etbPopKr=null; etbPopArmed=null;
+}
+document.addEventListener('mousedown', function(e){ var pop=document.getElementById('etbStatPop');
+  if(pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest('[data-krpost]'))) closeEtbStatPop(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('etbStatPop')) closeEtbStatPop(); });
 function renderExpSummary(){
   var host=document.getElementById('expSummary'); if(!host) return;
   if(!selectedObj){ host.innerHTML=''; return; }
@@ -5812,6 +5925,28 @@ window.ETB = {
       if(removed){ markOverride(exp,'key_read_readings'); softRefresh(); }
       return removed;
     }catch(err){ return 0; }
+  },
+  /* remove ONE unlinked reading by its INDEX — for hand-entered bare numbers, which carry no src key.
+     The index is into the stored array as the reading rows saw it, so the caller resolves the row to
+     its localIdx first. Guards against a stale index by leaving the array untouched if out of range. */
+  removeKeyReadReadingAt: function(expId, krId, idx){
+    try{
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return 0;
+      var store=exp.key_read_readings; if(!store||!Array.isArray(store[krId])) return 0;
+      if(idx<0 || idx>=store[krId].length) return 0;
+      store[krId].splice(idx,1);
+      markOverride(exp,'key_read_readings'); softRefresh(); return 1;
+    }catch(err){ return 0; }
+  },
+  /* remove ONE linked reading (a kpiUpdate on the key read's source KPI) by its update id. Written to
+     exec.kpiUpdates, which the ETB does not own, so this is done by the app's writer; the ETB just
+     resolves the source id. Here for symmetry with the unlinked removers. */
+  linkedSourceId: function(expId, krId){
+    try{
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return null;
+      var kr=(exp.key_reads||[]).filter(function(k){ return k.id===krId; })[0];
+      return (kr&&kr.source_kpi_gid)||null;
+    }catch(err){ return null; }
   },
   exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },
   saveActive: function(){

@@ -1864,6 +1864,36 @@
     return { samples: order.map(function (n) { return byName[n]; }), orphans: orphans, byKeyRead: byKeyRead };
   }
 
+  // Every individual reading on ONE key read, newest-first, each with what's needed to render and to
+  // delete it. Powers the ETB statistical popover (same list-with-delete the KR/SG cells have), across
+  // both backends: a LINKED key read's reads are kpiUpdates (delete by upId); an UNLINKED key read's
+  // are {v,src} entries (delete imported by srcKey, hand-entered by index). Each row's `sample` is the
+  // originating sample for an imported reading, or '' for a hand-entered one.
+  //   row = { value, ts, sample, kind:'linked'|'unlinked', upId, srcKey, localIdx, imported }
+  function keyReadReadingRows(keyRead, ctx) {
+    ctx = ctx || {};
+    var kr = keyRead || {}, rows = [];
+    if (kr.source_kpi_gid) {
+      var kpi = kpiById(kr.source_kpi_gid, ctx.kpis || []);
+      var srcId = kpi ? readingSourceId(kpi, ctx.kpis || []) : kr.source_kpi_gid;
+      readingsFor(srcId, ctx.execDocs || {}).forEach(function (u) {
+        var v = _finiteNum(u.value); if (v === null) return;
+        rows.push({ value: v, ts: u.timestamp || 0, sample: (u.src && u.src.sample) || '',
+          kind: 'linked', upId: u.id || null, srcKey: (u.src ? connSrcKey(u.src) : null),
+          localIdx: null, imported: !!u.src });
+      });
+    } else {
+      var raw = (ctx.experiment && ctx.experiment.key_read_readings || {})[kr.id];
+      readingEntries(raw).forEach(function (e, i) {
+        rows.push({ value: e.v, ts: (e.src && e.src.imported_t) ? Date.parse(e.src.imported_t) : 0,
+          sample: (e.src && e.src.sample) || '', kind: 'unlinked', upId: null,
+          srcKey: (e.src ? connSrcKey(e.src) : null), localIdx: i, imported: !!e.src });
+      });
+    }
+    rows.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    return rows;
+  }
+
 
   // Materialise picks as ordinary kpiUpdates. Each pick must carry a RESOLVED kpiId — creating a new
   // KPI needs id allocation, which is the app layer's job; picks without one are reported, not dropped
@@ -2085,6 +2115,7 @@
     readingValues: readingValues,
     readingEntries: readingEntries,
     reconstructConnected: reconstructConnected,
+    keyReadReadingRows: keyReadReadingRows,
     connSrcKey: connSrcKey,
     keyReadCurrent: keyReadCurrent,
     experimentDataComplete: experimentDataComplete,

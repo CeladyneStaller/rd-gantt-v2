@@ -81,11 +81,25 @@ function makeFetch(store){
   const tree = () => w.__ETBH.tree();
   const exp1 = () => tree().experiments.exp_1;
   const strip = () => host().querySelector('.exs-concl');
+  const statPop = () => d.getElementById('etbStatPop');
   async function type(krId, text){
     const td = cell(krId);
     if(!td){ ok(false, "current-value cell for "+krId+" is click-to-post"); return null; }
+    try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){}   // don't let a prior popover intercept
+    await sleep(15);
     td.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));      // the real click, not the handler
-    await sleep(30);
+    await sleep(40);
+    // a statistical cell opens the value-list popover; add through its add field. a single-valued cell
+    // opens the inline input. this helper handles both so existing add-tests keep working.
+    const pop = statPop();
+    if(pop){
+      const pin = pop.querySelector('[data-etbin]');
+      if(!pin) return null;
+      pin.value = text;
+      pin.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+      await sleep(80);
+      return pin;
+    }
     const inp = td.querySelector('input.krpostin');
     if(!inp) return null;
     inp.value = text;
@@ -93,6 +107,8 @@ function makeFetch(store){
     await sleep(60);
     return inp;
   }
+  // close any open popover between phases so a lingering one doesn't swallow the next cell click
+  async function closePop(){ try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20); }
 
   w.eval("renderExpSummary()"); await sleep(120);
 
@@ -113,17 +129,32 @@ function makeFetch(store){
   ok(!!conc() && conc().disabled===true, "Conclude is present but disabled while data is missing");
   ok(!!strip() && /Awaiting/i.test(strip().textContent), "the strip names what is still awaited");
 
-  // ---------- clicking a real cell opens an editor IN THAT CELL ----------
+  // ---------- clicking a STATISTICAL cell opens the value-list popover ----------
   ok(!!cell('kr_a') && !!cell('kr_b') && !!cell('kr_c'), "every current-value cell carries the click-to-post hook");
   const td_a = cell('kr_a');
   if(td_a) td_a.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
-  await sleep(40);
-  const liveIn = td_a ? td_a.querySelector('input.krpostin') : null;
-  ok(!!liveIn, "clicking the current-value cell opens an input INSIDE that cell");
-  ok(d.querySelectorAll('input.krpostin').length===1, "…and only that cell, not every row at once");
-  if(liveIn) liveIn.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  await sleep(60);
+  ok(!!statPop(), "clicking a statistical cell opens the value-list popover (like the KR/SG cells)");
+  ok(!!statPop() && !!statPop().querySelector('[data-etbin]'), "…with an add field");
+  ok(!!statPop() && !!statPop().querySelector('.sp-list'), "…and a list region for the individual readings");
+  ok(statPop() && /no readings yet/.test(statPop().textContent), "…empty at first");
+  // Escape closes it and writes nothing
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   await sleep(30);
-  ok(!!cell('kr_a') && !cell('kr_a').querySelector('input'), "Escape closes the editor without writing");
+  ok(!statPop(), "Escape closes the popover");
+  ok((w.eval("exec.kpiUpdates.length"))===0, "…and posts nothing");
+
+  // ---------- clicking a SINGLE-VALUED cell opens an inline input in that cell ----------
+  const td_c = cell('kr_c');
+  if(td_c) td_c.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  await sleep(40);
+  ok(!statPop(), "a single-valued cell does NOT open the popover");
+  ok(!!td_c && !!td_c.querySelector('input.krpostin'), "…it opens an inline input in that cell instead");
+  ok(d.querySelectorAll('input.krpostin').length===1, "…and only that cell");
+  const cIn = td_c && td_c.querySelector('input.krpostin');
+  if(cIn) cIn.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  await sleep(30);
+  ok(!!cell('kr_c') && !cell('kr_c').querySelector('input'), "Escape closes the inline editor without writing");
   ok((w.eval("exec.kpiUpdates.length"))===0, "…and posts nothing");
 
   // ---------- a LINKED key read posts to the objective's KPI ----------
@@ -275,33 +306,30 @@ function makeFetch(store){
   ok(statUps().every(u=>u.src && u.src.portal==='analysis'), "…each carrying portal provenance");
   ok(((exp3().key_read_readings||{}).kr_xo||[]).length===1, "an UNLINKED key read's imported value lands on the experiment");
   ok(w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='kr_xo';}).length")===0, "…and not in the KPI layer");
-  ok(!!(exp3().key_read_sources||{}).kr_ocv, "provenance is persisted on the experiment for the linked key read");
-  ok(((exp3().key_read_sources||{}).kr_xo||{}).sample==='MEA-9', "…and for the unlinked one, naming the sample");
+  // provenance now lives PER READING, not in a scalar: the unlinked reading is a {v,src} entry
+  ok((function(){ var e=(exp3().key_read_readings||{}).kr_xo||[]; return e[0]&&typeof e[0]==='object'&&e[0].src&&e[0].src.sample==='MEA-9'; })(),
+     "the unlinked reading carries its own {v,src} provenance, naming the sample");
   ok(exp3().status==='in_progress', "importing advances planned -> in progress");
   ok(exp3().actual_outcome===null, "importing writes NO outcome — the step is not concluded");
   w.eval("renderExpSummary()"); await sleep(60);
   ok(!!cell('kr_ocv') && !/no read/.test(cell('kr_ocv').textContent), "the imported value shows in the current-value cell");
 
-  // ---------- the reading is labelled with the sample it came from ----------
-  ok(!!(exp3().analysis_sample), "the experiment records which sample it is drawing from");
-  ok(exp3().analysis_sample==='MEA-9', "…by name ("+exp3().analysis_sample+")");
+  // ---------- the cell is labelled with the sample it came from (derived from readings) ----------
   const chipO = cell('kr_ocv') && cell('kr_ocv').querySelector('.src-chip');
   ok(!!chipO, "an imported reading carries a provenance chip on the current-value cell");
-  ok(chipO && /MEA-9/.test(chipO.textContent), "…naming the SAMPLE visibly, not only in a tooltip ("+(chipO&&chipO.textContent)+")");
-  ok(chipO && /MEA-9/.test(chipO.getAttribute('title')||'') && /2026-07/.test(chipO.getAttribute('title')||''),
-     "…with sample, conditions and run date on hover ("+(chipO&&chipO.getAttribute('title'))+")");
+  ok(chipO && /MEA-9/.test(chipO.textContent), "…naming the SAMPLE visibly for a single-sample key read ("+(chipO&&chipO.textContent)+")");
   const chipX = cell('kr_xo') && cell('kr_xo').querySelector('.src-chip');
-  ok(!!chipX && /MEA-9/.test(chipX.textContent), "the unlinked key read is labelled from its persisted provenance too");
+  ok(!!chipX && /MEA-9/.test(chipX.textContent), "the unlinked key read is labelled from its per-reading provenance too");
 
-  // ---------- reopening Connect data remembers the attached sample ----------
+  // ---------- reopening Connect data shows the connected section (reconstructed) ----------
   const cdBtn3 = host().querySelector('[data-cdexp]');
   if(cdBtn3) cdBtn3.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
   await sleep(450);
-  ok(w.eval("__cdOpenSample")==='MEA-9', "reopening the picker restores the attached sample");
-  const nameIn = d.getElementById('cdName');
-  ok(!!nameIn && nameIn.value==='MEA-9', "…seeding the sample filter so it is reachable outside the recent five ("+(nameIn&&nameIn.value)+")");
-  ok(!!d.querySelector('#cdBody .cd-sbody'), "…and its values are already expanded, with no hunting");
-  ok(d.querySelectorAll('#cdBody [data-cdpick]').length>0, "…so the readings are pickable immediately");
+  ok(!!d.querySelector('#cdBody .cd-connected'), "reopening shows a Currently-connected section, not a seeded filter");
+  ok(d.querySelectorAll('#cdBody .cd-connected [data-connpick]').length>0, "…listing the connected readings, reconstructed from the data");
+  ok([...d.querySelectorAll('#cdBody .cd-connected [data-connpick]')].every(b=>b.checked), "…each pre-ticked");
+  ok(/MEA-9/.test((d.querySelector('#cdBody .cd-connected')||{}).textContent||""), "…grouped under the sample they came from");
+  ok((d.getElementById('cdName')||{}).value==='' || !d.getElementById('cdName').value, "…while the search filter starts EMPTY");
   w.eval("closeConnectData()"); await sleep(80);
 
   // ---------- re-importing the same portal values must not inflate the sample ----------
@@ -310,6 +338,65 @@ function makeFetch(store){
   ok(statUps().length===beforeN, "re-importing the same portal values adds no duplicate KPI readings ("+statUps().length+")");
   ok(((exp3().key_read_readings||{}).kr_xo||[]).length===beforeX,
      "…and none to the unlinked store, so a statistical sample cannot be inflated by a repeat import");
+
+  // ---------- the statistical popover lists connected + hand-entered readings, deletes across backends ----------
+  // exp_3 now has kr_ocv (LINKED, imported to K-STAT) and kr_xo (UNLINKED, imported {v,src}). Clicking a
+  // statistical cell opens the value-list popover; it must show each reading, tag imported ones by sample,
+  // and delete the right thing per backend.
+  const cell3 = krId => host().querySelector('td.m-cur[data-krpost="'+krId+'"]');
+  const pop = () => d.getElementById('etbStatPop');
+  const popRows = () => pop() ? [...pop().querySelectorAll('.sp-row')] : [];
+  const popArmed = () => pop() ? [...pop().querySelectorAll('[data-etbrm]')].find(b=>/confirm/.test(b.textContent)) : null;
+  async function armAndRemove(pred){        // click a matching row's remove twice (arm, then confirm)
+    const row = popRows().find(pred); const b = row && row.querySelector('[data-etbrm]');
+    if(!b) return false;
+    b.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(40);
+    const c = popArmed(); if(c){ c.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(60); }
+    return true;
+  }
+
+  // add one HAND-ENTERED reading to the linked key read, so the popover mixes imported + entered
+  await type('kr_ocv', "0.690");
+  w.eval("renderExpSummary()"); await sleep(60);
+
+  try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20);
+  const tdOcv = cell3('kr_ocv');
+  if(tdOcv) tdOcv.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  await sleep(80);
+  ok(!!pop(), "clicking the linked statistical cell opens the value-list popover");
+  const rowsOcv = () => pop() ? [...pop().querySelectorAll('.sp-row')] : [];
+  const tags = () => pop() ? [...pop().querySelectorAll('.sp-tag')] : [];
+  ok(rowsOcv().length>=3, "the popover lists every reading on the key read ("+rowsOcv().length+")");
+  ok(tags().length>=2, "imported readings are tagged with their sample ("+tags().length+")");
+  ok(tags().some(t=>/MEA-9/.test(t.textContent)), "…naming the sample (MEA-9)");
+  ok((pop()?pop().querySelectorAll('.sp-hand').length:0)>=1, "a hand-entered reading is marked as entered");
+
+  // delete an IMPORTED (linked) reading: it removes the specific kpiUpdate
+  const kOcvBefore = w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';}).length");
+  const impRow = popRows().find(r=>r.querySelector('.sp-tag'));
+  ok(!!(impRow && impRow.querySelector('[data-etbrm]')), "an imported reading row has a remove button");
+  if(impRow && impRow.querySelector('[data-etbrm]')){ impRow.querySelector('[data-etbrm]').dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(40); }
+  ok(!!popArmed(), "the remove is armed first (house convention)");
+  const _ab=popArmed(); if(_ab){ _ab.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(60); }
+  const kOcvAfter = w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';}).length");
+  ok(kOcvAfter===kOcvBefore-1, "removing an imported linked reading deletes exactly its kpiUpdate ("+kOcvBefore+"→"+kOcvAfter+")");
+
+  // delete the HAND-ENTERED (linked) reading too
+  try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20);
+  const tdOcv2 = cell3('kr_ocv'); if(tdOcv2) tdOcv2.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(80);
+  const kB = w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';}).length");
+  await armAndRemove(r=>r.querySelector('.sp-hand'));
+  ok(w.eval("exec.kpiUpdates.filter(function(u){return u.kpiId==='K-STAT';}).length")===kB-1, "a hand-entered linked reading is removable too");
+
+  // delete an IMPORTED (UNLINKED) reading via the popover: removes the {v,src} entry
+  try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20);
+  const tdXo = cell3('kr_xo'); if(tdXo) tdXo.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(80);
+  ok(!!pop(), "the unlinked statistical cell also opens the popover");
+  const xoBefore = ((exp3().key_read_readings||{}).kr_xo||[]).length;
+  await armAndRemove(r=>r.querySelector('.sp-tag'));
+  ok(((exp3().key_read_readings||{}).kr_xo||[]).length===xoBefore-1,
+     "removing an imported UNLINKED reading deletes its {v,src} entry ("+xoBefore+"→"+((exp3().key_read_readings||{}).kr_xo||[]).length+")");
+  try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20);
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fails = out.filter(x => x.startsWith('FAIL'));
