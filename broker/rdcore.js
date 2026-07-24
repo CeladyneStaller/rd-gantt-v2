@@ -194,6 +194,39 @@
     return { values: local, n: local.length, source: 'local', kpiId: null };
   }
 
+  // Everything the current-step cell and the matcher need about one key read, from ONE reading list.
+  // readsComplete already treats a null readCount as "complete once there is any read", so a
+  // single-valued key read and a statistical one answer completeness through the same call.
+  function keyReadCurrent(keyRead, ctx) {
+    ctx = ctx || {};
+    var kr = keyRead || {};
+    var kpi = kr.source_kpi_gid ? kpiById(kr.source_kpi_gid, ctx.kpis || []) : null;
+    var st = keyReadStat(kr, kpi);
+    var r = keyReadReadings(kr, ctx);
+    var summary = null, value = null;
+    if (st.statistical) { summary = statSummary(r.values, st.statistic); value = summary.value; }
+    else if (r.n) { value = r.values[r.n - 1]; }
+    var sample = readsComplete(r.n, st.readCount);
+    return {
+      value: value, n: r.n, values: r.values, source: r.source,
+      stat: st, summary: summary, sample: sample, complete: !!sample.complete
+    };
+  }
+
+  // Is there enough measured data to conclude? An experiment with no key reads has nothing to
+  // measure, so it is trivially complete — the conclusion is a pure judgement call.
+  function experimentDataComplete(exp, ctx) {
+    var krs = (exp && exp.key_reads) || [];
+    if (!krs.length) return { complete: true, missing: [], short: [], noKeyReads: true };
+    var missing = [], short = [];
+    for (var i = 0; i < krs.length; i++) {
+      var c = keyReadCurrent(krs[i], ctx);
+      if (!c.n) missing.push(krs[i].id);
+      else if (!c.complete) short.push(krs[i].id);
+    }
+    return { complete: !missing.length && !short.length, missing: missing, short: short, noKeyReads: false };
+  }
+
   function readingCount(kpiId, execDocs){
     var ups=readingsFor(kpiId, execDocs), n=0;
     for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
@@ -1943,6 +1976,8 @@
     statSummary: statSummary,
     keyReadStat: keyReadStat,
     keyReadReadings: keyReadReadings,
+    keyReadCurrent: keyReadCurrent,
+    experimentDataComplete: experimentDataComplete,
     readsComplete: readsComplete,
     keyReadTestValue: keyReadTestValue,
     buildStatReadings: buildStatReadings,

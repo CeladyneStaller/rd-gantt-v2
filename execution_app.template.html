@@ -804,6 +804,21 @@ html[data-theme="dark"] #etb-view{
 #expSummary .exs-none,#expSummary .exs-empty{color:var(--muted);font-size:12px;font-style:italic;padding:4px 0}
 #expSummary .exs-actions{margin-top:8px}
 #expSummary button.mini{padding:5px 12px;font-size:12px}
+/* key reads render through the same measurement table the KR/gate hosts use, so .mtbl styling
+   carries over; only the section-local bits are declared here. */
+#expSummary table.mtbl{margin-top:6px}
+#expSummary table.mtbl thead th{background:transparent;padding:6px 8px}
+#expSummary table.mtbl tbody td{padding:7px 8px}
+#expSummary table.mtbl td.m-cur[data-krpost]{cursor:pointer}
+#expSummary table.mtbl td.m-cur[data-krpost]:hover{text-decoration:underline dotted;text-underline-offset:3px}
+#expSummary input.krpostin{width:100%;min-width:0;box-sizing:border-box;font-family:var(--mono);font-size:12px;text-align:right;padding:2px 4px;border:1px solid var(--accent);border-radius:4px;background:var(--panel);color:var(--ink)}
+#expSummary .exs-cwrap{display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+#expSummary .exs-concl{flex:1;min-width:0;font-size:12px;border-radius:0;padding:7px 10px;border-left:3px solid var(--none);background:var(--panel);color:var(--muted)}
+#expSummary .exs-concl.match{border-left-color:var(--ok);background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+#expSummary .exs-concl.prov{border-left-color:var(--warn);background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+#expSummary .exs-concl.multi,#expSummary .exs-concl.none{border-left-color:var(--accent2);background:var(--pill-info-bg);color:var(--pill-info-fg)}
+#expSummary .exs-csub{display:block;margin-top:3px;font-size:11px;opacity:.92}
+#expSummary .exs-cwrap button[disabled]{opacity:.45;cursor:not-allowed}
   /* Connect data picker */
   #cdBody .cd-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:8px}
   #cdBody .cd-f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
@@ -1142,22 +1157,138 @@ function etbEvalCriterion(crit,keyRead,measured){ if(measured==null||measured===
 function etbMatchResults(exp,readings){ readings=readings||{}; var krById={}; (exp.key_reads||[]).forEach(function(k){krById[k.id]=k;}); var states={},matched=[],provisional=[],missingBy={},anyPending=false; (exp.possible_results||[]).forEach(function(r){ var crits=Array.isArray(r.criteria)?r.criteria:[]; if(!crits.length){states[r.id]='no-criteria';return;} var f=false,p=false,okN=0,pendKrs=[]; crits.forEach(function(c){ var meas=readings.hasOwnProperty(c.key_read_id)?readings[c.key_read_id]:null; var st=etbEvalCriterion(c,krById[c.key_read_id],meas); if(st==='fail')f=true; else if(st==='pending'){p=true; if(pendKrs.indexOf(c.key_read_id)<0)pendKrs.push(c.key_read_id);} else okN++; }); if(f)states[r.id]='fail'; else if(p){ anyPending=true; if(okN>0){ states[r.id]='provisional'; provisional.push(r.id); missingBy[r.id]=pendKrs; } else { states[r.id]='pending'; missingBy[r.id]=pendKrs; } } else {states[r.id]='pass';matched.push(r.id);} }); return {matched:matched,provisional:provisional,missingBy:missingBy,states:states,complete:!anyPending}; }
 function etbCritText(k){ if(!k)return ''; var u=k.unit?(' '+k.unit):''; var g=({'<=':'\u2264','<':'<','=':'=','>':'>','>=':'\u2265'})[k.direction||'>=']||(k.direction||''); var cv=(k.critical_value===''||k.critical_value==null)?'?':k.critical_value; return g+' '+cv+u; }
 
+/* ---- Current step: key reads render through the SAME measurement table the KR and stage-gate hosts
+   use, so entering a value here is an ordinary reading, not a conclusion. Nothing on this card writes
+   an actual_outcome; only the Conclude button does, and only once every key read has its data. ---- */
+function __etbCtx(exp){
+  var kpis=[]; try{ kpis=allKpisPool(); }catch(e){}
+  var docs={}; try{ docs=emForCore(); }catch(e){}
+  return { kpis:kpis, execDocs:docs, experiment:exp };
+}
+/* Status follows the DATA: nothing measured -> planned, anything measured -> in progress, and only a
+   recorded outcome -> complete. A status set by hand in the ETB panel is respected; derivation only
+   ever advances the default 'planned'. */
+function etbDerivedStatus(exp){
+  if(!exp) return 'planned';
+  if(exp.actual_outcome) return 'complete';
+  if((exp.status||'planned')!=='planned') return exp.status;
+  var ctx=__etbCtx(exp), any=false;
+  (exp.key_reads||[]).forEach(function(k){ try{ if(RD.keyReadCurrent(k,ctx).n) any=true; }catch(e){} });
+  return any?'in_progress':'planned';
+}
+function __exsReadRow(exp,k,ctx){
+  var c=null; try{ c=RD.keyReadCurrent(k,ctx); }catch(e){}
+  if(!c) c={n:0,value:null,complete:false,stat:{statistical:false},sample:{expected:null}};
+  var sub='';
+  if(c.stat.statistical){
+    var want=c.sample.expected;
+    sub='<span class="m-cur-sub '+(c.complete?'ok':'warn')+'">'+esc(String(c.stat.statistic||'average'))
+       +' \u00b7 '+c.n+(want?('/'+want):'')+' '+(c.complete?'\u2713':'\u26a0')+'</span>';
+  }
+  var val=(c.value==null)?'<span class="m-noread">no read</span>':esc(__erFmt(c.value));
+  return '<tr><td class="m-name">'+esc(k.name||k.id)+'</td>'
+    +'<td class="num m-crit">'+esc(etbCritText(k))+'</td>'
+    +'<td class="m-unit">'+(esc(k.unit||'')||'\u2014')+'</td>'
+    +'<td class="num m-cur" data-krpost="'+esc(k.id)+'" data-krexp="'+esc(exp.id)+'" title="Click to add a reading">'+val+sub+'</td></tr>';
+}
+function __exsAwaiting(exp,dc,ctx){
+  var nm={}; (exp.key_reads||[]).forEach(function(k){ nm[k.id]=k.name||k.id; });
+  var bits=[];
+  (dc.missing||[]).forEach(function(id){ bits.push(nm[id]||id); });
+  (dc.short||[]).forEach(function(id){
+    var k=(exp.key_reads||[]).filter(function(x){return x.id===id;})[0], c=null;
+    try{ c=k?RD.keyReadCurrent(k,ctx):null; }catch(e){}
+    bits.push((nm[id]||id)+((c&&c.sample.expected)?(' ('+c.n+' of '+c.sample.expected+' reads)'):''));
+  });
+  return bits;
+}
+function __exsConclusion(exp,ctx,ro){
+  var dc={complete:false,missing:[],short:[]}; try{ dc=RD.experimentDataComplete(exp,ctx); }catch(e){}
+  var readings={};
+  (exp.key_reads||[]).forEach(function(k){ try{ var c=RD.keyReadCurrent(k,ctx); if(c.value!=null) readings[k.id]=c.value; }catch(e){} });
+  var m={matched:[],provisional:[],missingBy:{},states:{}}; try{ m=etbMatchResults(exp,readings); }catch(e){}
+  var byId={}; (exp.possible_results||[]).forEach(function(r){ byId[r.id]=r; });
+  var cls='exs-concl', body='Enter measured values to determine the result\u2026';
+  var aw=__exsAwaiting(exp,dc,ctx);
+  if(m.matched.length===1){
+    var r=byId[m.matched[0]]||{}; cls+=' match';
+    body='<b>\u2713 Matched:</b> '+esc(r.label||m.matched[0])+(r.conclusion?('<span class="exs-csub">'+esc(r.conclusion)+'</span>'):'');
+  } else if(m.matched.length>1){
+    cls+=' multi'; body='<b>Multiple results match</b><span class="exs-csub">conclude to pick one.</span>';
+  } else if(dc.complete && (exp.key_reads||[]).length){
+    cls+=' none'; body='<b>No defined result matches</b><span class="exs-csub">conclude to record it manually.</span>';
+  } else if(m.provisional.length===1){
+    var p=byId[m.provisional[0]]||{}; cls+=' prov';
+    body='<b>\u25cb Trending toward:</b> '+esc(p.label||m.provisional[0])
+        +'<span class="exs-csub">provisional \u2014 awaiting '+esc(aw.join(', ')||'more data')+'</span>';
+  } else if(m.provisional.length>1){
+    cls+=' prov';
+    body='<b>\u25cb '+m.provisional.length+' results still possible</b><span class="exs-csub">awaiting '+esc(aw.join(', ')||'more data')+'</span>';
+  } else if(aw.length){
+    body='Awaiting '+esc(aw.join(', '));
+  }
+  var btn = ro ? '' : '<button class="act mini" data-conc="'+esc(exp.id)+'"'+(dc.complete?'':' disabled')+'>Conclude\u2026</button>';
+  return '<div class="exs-cwrap"><div class="'+cls+'">'+body+'</div>'+btn+'</div>';
+}
+/* the only save act on this card: a linked key read posts to the objective's KPI exactly as the
+   KR/gate tables do, an unlinked one accumulates on the experiment. Neither writes an outcome. */
+function etbPostKeyRead(td){
+  if(td.querySelector('input')) return;
+  var expId=td.getAttribute('data-krexp'), krId=td.getAttribute('data-krpost');
+  var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
+  var kr=(exp.key_reads||[]).filter(function(k){return k.id===krId;})[0]; if(!kr) return;
+  var ctx=__etbCtx(exp), c=null; try{ c=RD.keyReadCurrent(kr,ctx); }catch(e){}
+  var multi=!!(c&&c.stat&&c.stat.statistical), saved=td.innerHTML;
+  td.innerHTML='<input type="text" class="krpostin" placeholder="'+(multi?'add reads, e.g. 0.68 0.67':'value')+'">';
+  var inp=td.querySelector('input'); if(!inp) return;
+  try{ inp.focus(); }catch(e){}
+  var done=false;
+  var commit=function(){
+    if(done) return; done=true;
+    var xs=RD.parseReads(inp.value);
+    if(!multi && xs.length) xs=[xs[xs.length-1]];          // a single-valued key read takes one number
+    if(!xs.length){ td.innerHTML=saved; return; }
+    var n=0;
+    if(kr.source_kpi_gid){
+      if(!Array.isArray(exec.kpiUpdates)) exec.kpiUpdates=[];
+      var rows=RD.buildStatReadings(kr.source_kpi_gid, xs, {timestamp:Date.now(), note:'exp '+(exp.code||exp.id)});
+      for(var i=0;i<rows.length;i++) exec.kpiUpdates.push(rows[i]);
+      n=rows.length;
+      if(window.ETB&&ETB.noteMeasured) ETB.noteMeasured(expId);
+    } else if(window.ETB&&ETB.addKeyReadReads){
+      n=ETB.addKeyReadReads(expId, xs, krId);
+    }
+    if(!n){ td.innerHTML=saved; return; }
+    if(window.ETB&&ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} }
+    try{ renderAll(); }catch(e){ try{ renderExpSummary(); }catch(e2){} }
+    try{ setMsg(n+' reading'+(n===1?'':'s')+' recorded \u2014 the step stays in progress','ok'); }catch(e){}
+  };
+  inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); commit(); } else if(e.key==='Escape'){ e.preventDefault(); done=true; td.innerHTML=saved; } };
+  inp.onblur=commit;
+}
 function renderExpSummary(){
   var host=document.getElementById('expSummary'); if(!host) return;
   if(!selectedObj){ host.innerHTML=''; return; }
   var cur=[]; try{ cur=(window.ETB&&ETB.currentExperiments)?ETB.currentExperiments():[]; }catch(e){}
   var ro=(typeof RO!=='undefined'&&RO);
+  var LBL={planned:'planned',in_progress:'in progress',complete:'complete'};
   var cards = cur.length ? cur.map(function(exp){
-    var reads=(exp.key_reads||[]).map(function(k){ return '<div class="exs-read"><span class="exs-kn">'+esc(k.name||k.id)+'</span><span class="exs-kt">'+esc(etbCritText(k))+'</span></div>'; }).join('') || '<div class="exs-none">No key reads defined.</div>';
-    return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(exp.status||'planned')+'">'+esc(exp.status||'planned')+'</span></div>'+
+    var ctx=__etbCtx(exp), st=etbDerivedStatus(exp);
+    var rows=(exp.key_reads||[]).map(function(k){ return __exsReadRow(exp,k,ctx); }).join('');
+    var tbl = rows
+      ? '<table class="mtbl"><colgroup><col style="width:41%"><col style="width:19%"><col style="width:14%"><col style="width:26%"></colgroup>'
+        +'<thead><tr><th>Key read</th><th class="num">Pass criterion</th><th>Unit</th><th class="num">Current value</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody></table>'
+      : '<div class="exs-none">No key reads defined.</div>';
+    return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(st)+'">'+esc(LBL[st]||st)+'</span></div>'+
       (exp.hypothesis?('<div class="exs-field"><span class="exs-lab">Hypothesis</span><span>'+esc(exp.hypothesis)+'</span></div>'):'')+
-      '<div class="exs-field"><span class="exs-lab">Key reads</span><div class="exs-reads">'+reads+'</div></div>'+
-      (ro?'':'<div class="exs-actions"><button class="act mini" data-rec="'+esc(exp.id)+'">Record outcome</button></div>')+
+      tbl+__exsConclusion(exp,ctx,ro)+
     '</div>';
-  }).join('') : '<div class="exs-empty">No current experiment on the active branch \u2014 record the prior step\u2019s outcome, or add experiments below.</div>';
+  }).join('') : '<div class="exs-empty">No current experiment on the active branch \u2014 conclude the prior step, or add experiments below.</div>';
   host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",cur.length,"")+'<div class="'+listOpen("EXP")+'"><div class="exs-wrap"><div class="exs-cards">'+cards+'</div><div class="exs-graph" id="expSummaryGraph"><div class="exs-graph-empty">experiment graph</div></div></div></div></div>';
   host.querySelectorAll('[data-panel]').forEach(function(el){ el.onclick=function(){ var k=el.dataset.panel; if(panelCollapsed.has(k))panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); }; });
-  host.querySelectorAll('[data-rec]').forEach(function(b){ b.onclick=function(){ openExpRecorder(b.getAttribute('data-rec')); }; });
+  host.querySelectorAll('[data-conc]').forEach(function(b){ b.onclick=function(){ openExpRecorder(b.getAttribute('data-conc')); }; });
+  if(!ro) host.querySelectorAll('[data-krpost]').forEach(function(td){ td.onclick=function(){ etbPostKeyRead(td); }; });
   if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph'); if(gc && window.ETB && ETB.renderFocusedGraph){ ETB.renderFocusedGraph(gc, cur.map(function(e){return e.id;})); } }
 }
 
@@ -1447,6 +1578,18 @@ function __erKpiFor(kr){
   try{ return (exec.kpis||[]).find(function(x){ return x.id===kr.source_kpi_gid; }) || null; }catch(e){ return null; }
 }
 function __erStatOf(kr){ return RD.keyReadStat(kr||{}, __erKpiFor(kr)); }
+/* The recorder is no longer where measurements are entered — the current-step table is. It opens
+   showing whatever has already been measured, so concluding freezes the reads that exist rather than
+   asking for them a second time. */
+function __erPrefill(k){
+  try{
+    var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
+    if(!exp) return '';
+    var c=RD.keyReadCurrent(k, __etbCtx(exp));
+    if(!c.n) return '';
+    return c.stat.statistical ? c.values.join(' ') : String(c.values[c.n-1]);
+  }catch(e){ return ''; }
+}
 function __erKeyRead(krId){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
   if(!exp) return null;
@@ -1510,14 +1653,24 @@ function expRecAutoPick(m){
       var prev=body.querySelector('input[name="erp-pick"][value="'+__erUserPick+'"]');
       if(prev){ prev.checked=true; return; }
     }
-    if(!m || !m.complete) return;          // INCOMPLETE DATA -> never pre-select, never auto-complete a step
-    var want=null;
-    if(m.matched && m.matched.length===1) want=m.matched[0];
-    else if(!m.matched || !m.matched.length){
-      var defined=[].slice.call(body.querySelectorAll('input[name="erp-pick"]'))
-        .filter(function(i){ return i.value!=='other' && i.value!=='inconclusive'; });
-      want = (defined.length===1) ? defined[0].value : 'other';   // one obvious result, else Unanticipated
+    if(!m) return;
+    /* Completeness = every key read measured, and every statistical one up to its expected sample size.
+       m.complete cannot be used: a result with no criteria never marks anything pending, so it reports
+       complete against an empty form. */
+    var xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
+    var krs=(xp&&xp.key_reads)||[];
+    if(!krs.length) return;
+    var vals={}; try{ vals=__erReadValues(); }catch(e){ return; }
+    for(var i=0;i<krs.length;i++){
+      var got=vals[krs[i].id];
+      if(!got || !got.length) return;                       // a key read with no data -> never auto-pick
+      var st=__erStatOf(krs[i]);
+      if(st.statistical && !RD.readsComplete(got.length, st.readCount).complete) return;   // short sample
     }
+    var want=null;
+    if(m.matched && m.matched.length===1) want=m.matched[0];      // exactly one result the data MATCHES
+    else if(!m.matched || !m.matched.length) want='other';        // data complete, nothing fits -> Unanticipated
+    else return;                                                   // several match -> the user decides
     if(!want) return;
     var el=body.querySelector('input[name="erp-pick"][value="'+want+'"]');
     if(el && !el.disabled) el.checked=true;
@@ -1529,7 +1682,7 @@ function openExpRecorder(expId){
   window.__expRecId=expId; __erUserPick=null;
   document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
   var krs=exp.key_reads||[], prs=exp.possible_results||[];
-  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
+  var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" value="'+esc(__erPrefill(k))+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
   var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('')
     + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="other" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Unanticipated \u2014 no defined result fits</span></label>'
     + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="inconclusive" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Inconclusive \u2014 the data could not decide</span></label>' : '<div class="exs-none">No possible results defined.</div>';
@@ -5388,6 +5541,28 @@ window.ETB = {
   currentExperiments: function(){ try{ var reach=computeReachability(state.tree); return currentExperiments(state.tree, reach).map(function(id){ return state.tree.experiments[id]; }); }catch(e){ return []; } },
   experimentById: function(id){ return (state.tree&&state.tree.experiments&&state.tree.experiments[id])||null; },
   recordOutcomeFor: function(expId, payload){ try{ recordOutcome(state.tree, expId, payload, {user:state.editor}); if(payload && payload.key_read_values && typeof recordOutcomePatch==='function'){ try{ recordOutcomePatch(state.tree, expId, {key_read_values:payload.key_read_values}); }catch(__e){} } var e=state.tree.experiments[expId]; if(e) e.status='complete'; softRefresh(); return true; }catch(err){ return false; } },
+  /* Reads for a key read with no linked KPI live on the experiment and never leave the ETB. Appending
+     one is a measurement, not a conclusion: it advances a planned step to in progress and writes no
+     actual_outcome, so the step stays open until somebody concludes it. */
+  addKeyReadReads: function(expId, xs, krId){
+    try{
+      var exp=state.tree&&state.tree.experiments&&state.tree.experiments[expId]; if(!exp) return 0;
+      var kr=(exp.key_reads||[]).filter(function(k){ return k.id===krId; })[0]; if(!kr) return 0;
+      var vals=[]; for(var i=0;i<(xs||[]).length;i++){ var v=Number(xs[i]); if(isFinite(v)) vals.push(v); }
+      if(!vals.length) return 0;
+      var store=exp.key_read_readings||(exp.key_read_readings={});
+      var prev=Array.isArray(store[krId])?store[krId].slice():[];
+      store[krId]=prev.concat(vals);
+      if(exp.status==='planned') exp.status='in_progress';
+      markOverride(exp,'key_read_readings'); softRefresh(); return vals.length;
+    }catch(err){ return 0; }
+  },
+  /* a linked key read's reads land in exec.kpiUpdates, which the ETB does not own — but the step
+     still has to stop reading as "planned" once something has been measured. */
+  noteMeasured: function(expId){
+    try{ var e=state.tree.experiments[expId]; if(e && e.status==='planned'){ e.status='in_progress'; softRefresh(); return true; } }catch(err){}
+    return false;
+  },
   exportActive: function(){ try{ return { pid: state.activeProjectId, tree: state.tree ? JSON.parse(JSON.stringify(state.tree)) : null }; }catch(e){ return { pid:null, tree:null }; } },
   saveActive: function(){
     try{ if(!getCreds()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
