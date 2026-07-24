@@ -841,6 +841,15 @@ html[data-theme="dark"] #etb-view{
 #expRecBody .erk-main{flex:1;min-width:0}
 #expRecBody .erk-name{font-size:13px;color:var(--ink)}
 #expRecBody .erk-crit{font-size:11px;color:var(--muted)}
+  .erp-sent .erp-lab{color:var(--muted);font-style:italic}
+  .er-concl.er-prov{border-left:3px solid var(--warn);background:#2a2410}
+  .er-prov-sub{color:var(--muted);font-size:11px;margin-top:4px}
+  .kr-statrow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;flex-wrap:wrap}
+  .kr-statlab{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kr-statro{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .kr-statnote{font-size:10px;color:var(--muted);font-style:italic;cursor:help}
+  .kr-observed.kr-missing{border-color:var(--warn);color:var(--warn);font-style:italic}
+  .kr-observed.kr-short{border-color:var(--warn)}
   .kr-observed{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px}
   .kr-pass{color:var(--ok);font-weight:600;margin-left:4px}
   .kr-fail{color:var(--bad);font-weight:600;margin-left:4px}
@@ -1130,7 +1139,7 @@ if(typeof window!=="undefined"){
 /* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
 function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
 function etbEvalCriterion(crit,keyRead,measured){ if(measured==null||measured===''||isNaN(Number(measured)))return 'pending'; if(crit&&typeof crit.status==='string'){ if(!keyRead||keyRead.critical_value===''||keyRead.critical_value==null)return 'pending'; var pc=etbApplyOp(keyRead.direction||'>=',measured,keyRead.critical_value); return (pc===(crit.status==='hit'))?'pass':'fail'; } if(crit.value===''||crit.value==null)return 'pending'; return etbApplyOp(crit.op||'>',measured,crit.value)?'pass':'fail'; }
-function etbMatchResults(exp,readings){ readings=readings||{}; var krById={}; (exp.key_reads||[]).forEach(function(k){krById[k.id]=k;}); var states={},matched=[],anyPending=false; (exp.possible_results||[]).forEach(function(r){ var crits=Array.isArray(r.criteria)?r.criteria:[]; if(!crits.length){states[r.id]='no-criteria';return;} var f=false,p=false; crits.forEach(function(c){ var meas=readings.hasOwnProperty(c.key_read_id)?readings[c.key_read_id]:null; var st=etbEvalCriterion(c,krById[c.key_read_id],meas); if(st==='fail')f=true; else if(st==='pending')p=true; }); if(f)states[r.id]='fail'; else if(p){states[r.id]='pending';anyPending=true;} else {states[r.id]='pass';matched.push(r.id);} }); return {matched:matched,states:states,complete:!anyPending}; }
+function etbMatchResults(exp,readings){ readings=readings||{}; var krById={}; (exp.key_reads||[]).forEach(function(k){krById[k.id]=k;}); var states={},matched=[],provisional=[],missingBy={},anyPending=false; (exp.possible_results||[]).forEach(function(r){ var crits=Array.isArray(r.criteria)?r.criteria:[]; if(!crits.length){states[r.id]='no-criteria';return;} var f=false,p=false,okN=0,pendKrs=[]; crits.forEach(function(c){ var meas=readings.hasOwnProperty(c.key_read_id)?readings[c.key_read_id]:null; var st=etbEvalCriterion(c,krById[c.key_read_id],meas); if(st==='fail')f=true; else if(st==='pending'){p=true; if(pendKrs.indexOf(c.key_read_id)<0)pendKrs.push(c.key_read_id);} else okN++; }); if(f)states[r.id]='fail'; else if(p){ anyPending=true; if(okN>0){ states[r.id]='provisional'; provisional.push(r.id); missingBy[r.id]=pendKrs; } else { states[r.id]='pending'; missingBy[r.id]=pendKrs; } } else {states[r.id]='pass';matched.push(r.id);} }); return {matched:matched,provisional:provisional,missingBy:missingBy,states:states,complete:!anyPending}; }
 function etbCritText(k){ if(!k)return ''; var u=k.unit?(' '+k.unit):''; var g=({'<=':'\u2264','<':'<','=':'=','>':'>','>=':'\u2265'})[k.direction||'>=']||(k.direction||''); var cv=(k.critical_value===''||k.critical_value==null)?'?':k.critical_value; return g+' '+cv+u; }
 
 function renderExpSummary(){
@@ -1157,6 +1166,10 @@ function renderExpSummary(){
    carrying provenance. Nothing is stored that re-reads later. The index comes from the broker's
    read-through /analysis route, so no JSONBin key is ever in the browser. */
 let __cdIndex=null, __cdHost=null, __cdOpenSample=null, __cdSel={};
+/* What the portal filled into each key read this session. The objective side already records origin on
+   every kpiUpdate (src), but the EXPERIMENT could not answer "where did this measurement come from"
+   without going via the KPI. Captured here, written onto the outcome at record time. */
+let __erImportedSrc={};
 
 async function cdLoadIndex(force){
   if(__cdIndex && !force) return __cdIndex;
@@ -1179,9 +1192,11 @@ function cdTargets(){
                         .map(k=>({id:k.id,name:k.name||k.id,unit:k.unit||""}));
 }
 function cdGuessTarget(key){
-  const t=cdTargets().find(x=>String(x.name).toLowerCase()===String(key).toLowerCase());
+  const ts=cdTargets();
+  const t=ts.find(x=>String(x.name).toLowerCase()===String(key).toLowerCase());
   if(t) return t.id;
-  return (__cdHost&&__cdHost.type==="record") ? "" : "__new__";
+  if(__cdHost&&__cdHost.type==="record") return ts.length? ts[0].id : "";   // key-read names rarely match a canonical key
+  return "__new__";
 }
 
 function openConnectData(type,id){
@@ -1277,7 +1292,7 @@ function cdUnitHtml(sm,u){
       <td style="width:24px"><input type="checkbox" ${on?"checked":""} data-cdpick="${esc(selId)}" onchange="cdPick(this,'${esc(sm.sample)}','${esc(u.uid)}',this.getAttribute('data-key'))" data-key="${esc(k)}"></td>
       <td>${esc(k)}${matched?'<div class="cd-match">matches a target here</div>':""}</td>
       <td class="cd-v">${u.key_values[k]}</td><td class="cd-u">${esc(unit)}</td>
-      <td class="cd-t">${on?`<select onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
+      <td class="cd-t">${on?`<select data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
   }).join("");
   return `<div class="cd-unit"><div class="cd-uhead"><span class="cd-an">${esc(u.Analysis)}</span>
       <span class="cd-cond">${esc(cdCondText(u.Conditions))}</span>
@@ -1309,17 +1324,41 @@ function cdUpdateCount(){
 }
 
 function cdDoImport(){
+  document.querySelectorAll('#cdBody select[data-selid]').forEach(sel=>{
+    const id=sel.getAttribute('data-selid');
+    if(__cdSel[id] && sel.value) __cdSel[id].target=sel.value;      // what the user sees is what imports
+  });
   const picks=Object.values(__cdSel); if(!picks.length) return;
   if(__cdHost.type==="record"){
-    let filled=0;
-    picks.forEach(p=>{
-      if(!p.target) return;
-      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+p.target+'"]');
-      if(inp){ inp.value=p.value; filled++; }
+    /* Group by target first. A STATISTICAL key read wants N measurements, and the portal often has
+       them — the same canonical key across several runs of one sample — so several ticked values
+       ACCUMULATE into that one field instead of the last one overwriting the rest. A single-valued
+       key read keeps last-one-wins, which is the only sensible reading of two numbers for one slot. */
+    const byTarget={};
+    picks.forEach(p=>{ if(!p.target) return; (byTarget[p.target]=byTarget[p.target]||[]).push(p); });
+    let filled=0, multi=0;
+    Object.keys(byTarget).forEach(tid=>{
+      const inp=document.querySelector('#expRecBody .erk-input[data-kr="'+tid+'"]');
+      if(!inp) return;
+      const group=byTarget[tid];
+      const st=__erStatOf(__erKeyRead(tid));
+      __erImportedSrc[tid]={ portal:"analysis", sample:group[0].sample, bucket:group[0].analysis,
+        key:group[0].key, cond:group[0].cond||{}, job_id:group[0].job_id, bin_id:group[0].bin_id,
+        run_t:group[0].timestamp, n:group.length, imported_t:new Date().toISOString() };
+      if(st.statistical){
+        /* keep anything already typed, then append — importing must not silently discard hand entry */
+        const existing=RD.parseReads(inp.value);
+        const merged=existing.concat(group.map(g=>Number(g.value)));
+        inp.value=merged.join(" ");
+        if(group.length>1) multi++;
+      } else {
+        inp.value=group[group.length-1].value;
+      }
+      filled++;
     });
     closeConnectData();
     if(typeof expRecEval==="function"){ try{ expRecEval(); }catch(e){} }
-    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal \u2014 not saved until you record the outcome.","ok");
+    setMsg(filled+" key read"+(filled===1?"":"s")+" filled from the portal"+(multi?(" ("+picks.length+" reads)"):"")+" \u2014 not saved until you record the outcome.","ok");
     return;
   }
   /* create KPIs for any "+ create new KPI" targets, then materialise readings */
@@ -1360,7 +1399,11 @@ function __erObservedRow(k, exp){
     var kv = ao && ao.key_read_values;
     if(!kv) return null;
     var xs = RD.keyReadValueList(kv[k.id]);
-    if(!xs.length) return null;
+    if(!xs.length){                                   // recorded, but this key read was never measured
+      var miss=document.createElement('div'); miss.className='kr-observed kr-missing';
+      miss.textContent='not measured \u2014 this outcome was recorded without it';
+      return miss;
+    }
     var st  = RD.keyReadStat(k, __erKpiFor(k));
     var sum = RD.statSummary(xs, st.statistic || 'average');
     var row = document.createElement('div'); row.className = 'kr-observed';
@@ -1371,6 +1414,21 @@ function __erObservedRow(k, exp){
            + (sum.sd != null ? (' \u00b7 sd ' + __erFmt(sum.sd)) : '');
     }
     row.appendChild(document.createTextNode(txt));
+    if(st.statistical){                               // short of the expected sample size?
+      var comp=RD.readsComplete(sum.n, st.readCount);
+      if(!comp.complete){
+        row.className='kr-observed kr-short';
+        row.appendChild(document.createTextNode('  \u2014 incomplete ('+comp.have+' of '+comp.expected+' reads)'));
+      }
+    }
+    var srcs = ao && ao.key_read_sources; var ksrc = srcs && srcs[k.id];
+    if(ksrc){
+      var chip=document.createElement('span'); chip.className='src-chip';
+      chip.textContent='\u21a7 analysis';
+      chip.title=[ksrc.sample||'', cdCondSummary(ksrc.cond), (ksrc.run_t||'').slice(0,10)]
+        .filter(Boolean).join(' \u00b7 ');
+      row.appendChild(document.createTextNode(' ')); row.appendChild(chip);
+    }
     var tgt = (k.critical_value !== '' && k.critical_value != null) ? Number(k.critical_value) : null;
     if(tgt != null && isFinite(tgt) && sum.value != null){
       var down = String(k.direction || '').indexOf('<') >= 0 || k.direction === 'down' || k.direction === 'decrease';
@@ -1439,14 +1497,42 @@ function __erStatSync(){
   }
 }
 function __erOldReadings(){ var o={}, ins=document.querySelectorAll('#expRecBody .erk-input'); for(var i=0;i<ins.length;i++){ var v=ins[i].value; if(v!==''&&!isNaN(parseFloat(v))) o[ins[i].getAttribute('data-kr')]=parseFloat(v); } return o; }
+var __erUserPick=null;
+function expRecNoteUserPick(){
+  var c=document.querySelector('#expRecBody input[name="erp-pick"]:checked');
+  __erUserPick = c ? c.value : __erUserPick;
+}
+function expRecAutoPick(m){
+  try{
+    var body=document.getElementById('expRecBody'); if(!body) return;
+    if(body.querySelector('input[name="erp-pick"]:checked')) return;      // never override the user
+    if(__erUserPick){                                                     // survive a re-render
+      var prev=body.querySelector('input[name="erp-pick"][value="'+__erUserPick+'"]');
+      if(prev){ prev.checked=true; return; }
+    }
+    if(!m || !m.complete) return;          // INCOMPLETE DATA -> never pre-select, never auto-complete a step
+    var want=null;
+    if(m.matched && m.matched.length===1) want=m.matched[0];
+    else if(!m.matched || !m.matched.length){
+      var defined=[].slice.call(body.querySelectorAll('input[name="erp-pick"]'))
+        .filter(function(i){ return i.value!=='other' && i.value!=='inconclusive'; });
+      want = (defined.length===1) ? defined[0].value : 'other';   // one obvious result, else Unanticipated
+    }
+    if(!want) return;
+    var el=body.querySelector('input[name="erp-pick"][value="'+want+'"]');
+    if(el && !el.disabled) el.checked=true;
+  }catch(e){}
+}
 function expRecSync(){ var picked=document.querySelector('#expRecBody input[name="erp-pick"]:checked'); var b=document.getElementById('erRecord'); if(b) b.disabled=!picked; }
 function openExpRecorder(expId){
   var exp=(window.ETB&&ETB.experimentById)?ETB.experimentById(expId):null; if(!exp) return;
-  window.__expRecId=expId;
+  window.__expRecId=expId; __erUserPick=null;
   document.getElementById('expRecTitle').textContent=(exp.code||exp.id)+' \u2014 '+(exp.name||'');
   var krs=exp.key_reads||[], prs=exp.possible_results||[];
   var krHtml = krs.length ? krs.map(function(k){ return '<div class="erk"><div class="erk-main"><div class="erk-name">'+esc(k.name||k.id)+'</div><div class="erk-crit">target '+esc(etbCritText(k))+'</div></div><input type="'+(__erStatOf(k).statistical?'text':'number')+'" '+(__erStatOf(k).statistical?'class="erk-input multi"':'step="any" class="erk-input"')+' data-kr="'+esc(k.id)+'" oninput="expRecEval();__erStatSync()" placeholder="'+(__erStatOf(k).statistical?'e.g. 0.68 0.67 0.69':'measured')+'"><span class="erk-unit">'+esc(k.unit||'')+'</span><span class="erk-stat" data-krstat="'+esc(k.id)+'"></span></div>'; }).join('') : '<div class="exs-none">No key reads on this experiment \u2014 choose a result below.</div>';
-  var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('') : '<div class="exs-none">No possible results defined.</div>';
+  var prHtml = prs.length ? prs.map(function(r,i){ return '<label class="erp"><input type="radio" name="erp-pick" value="'+esc(r.id)+'" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot" data-rid="'+esc(r.id)+'"></span><span class="erp-lab">'+esc(r.label||('Result '+(i+1)))+'</span></label>'; }).join('')
+    + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="other" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Unanticipated \u2014 no defined result fits</span></label>'
+    + '<label class="erp erp-sent"><input type="radio" name="erp-pick" value="inconclusive" onchange="expRecNoteUserPick();expRecSync()"><span class="erp-dot"></span><span class="erp-lab">Inconclusive \u2014 the data could not decide</span></label>' : '<div class="exs-none">No possible results defined.</div>';
   document.getElementById('expRecBody').innerHTML =
     '<div class="er-sec"><div class="er-lab">Key reads \u2014 enter measured values'+
       '<button class="cd-btn" onclick="openConnectData(\'record\',window.__expRecId)">Connect data</button></div>'+krHtml+'</div>'+
@@ -1471,7 +1557,23 @@ function expRecEval(){
   if(matched.length===1){ var r=matched[0]; panel.className='er-concl er-match'; panel.innerHTML='<b>\u2713 Matched:</b> '+esc(r.label||r.id)+(r.conclusion?(' \u2014 '+esc(r.conclusion)):''); var radio=document.querySelector('#expRecBody input[name="erp-pick"][value="'+String(r.id).replace(/"/g,'')+'"]'); if(radio) radio.checked=true; }
   else if(matched.length>1){ panel.className='er-concl er-multi'; panel.innerHTML='Multiple results match \u2014 pick one below.'; }
   else if(m.complete){ panel.className='er-concl er-none'; panel.innerHTML='No defined result matches \u2014 pick one below to record manually.'; }
+  else if(m.provisional && m.provisional.length===1){
+    var pid=m.provisional[0];
+    var pr=(exp.possible_results||[]).find(function(x){return x.id===pid;})||{};
+    var miss=(m.missingBy&&m.missingBy[pid])||[];
+    var krNm={}; (exp.key_reads||[]).forEach(function(k){krNm[k.id]=k.name||k.id;});
+    var names=miss.map(function(id){return krNm[id]||id;});
+    panel.className='er-concl er-prov';
+    panel.innerHTML='<b>\u25cb Trending toward:</b> '+esc(pr.label||pid)
+      +'<div class="er-prov-sub">provisional \u2014 still awaiting '+esc(names.join(', ')||'more data')
+      +'. Record now to accept it, or finish entering values.</div>';
+  }
+  else if(m.provisional && m.provisional.length>1){
+    panel.className='er-concl er-prov';
+    panel.innerHTML='<b>\u25cb '+m.provisional.length+' results still possible</b><div class="er-prov-sub">enter more values to narrow it down.</div>';
+  }
   else { panel.className='er-concl er-pending'; panel.innerHTML='Enter measured values to auto-determine the result\u2026'; }
+  expRecAutoPick(m); expRecSync();
   expRecSync();
 }
 function closeExpRecorder(){ var ov=document.getElementById('expRecOverlay'); if(ov) ov.classList.remove('open'); }
@@ -1488,7 +1590,9 @@ function recordExpOutcome(){
     var kr=__erKeyRead(id), st=__erStatOf(kr), xs=__rawVals[id];
     __recVals[id] = (st.statistical && xs && xs.length) ? xs.slice() : readings[id];
   });
+  var __srcs={}; Object.keys(__recVals).forEach(function(id){ if(__erImportedSrc[id]) __srcs[id]=__erImportedSrc[id]; });
   var payload={ result_id:picked.value, recorded_date:(d&&d.value)||undefined, key_read_values:__recVals };
+  if(Object.keys(__srcs).length) payload.key_read_sources=__srcs;   // absent = hand-entered (every legacy outcome)
   if(window.ETB&&ETB.recordOutcomeFor){ ETB.recordOutcomeFor(expId,payload); if(ETB.saveActive){ try{ ETB.saveActive(); }catch(e){} } }
   var wrote=writeKpiUpdatesFromReads(expId, readings);
   closeExpRecorder();
@@ -4691,6 +4795,50 @@ function openKeyReadKpiPicker(t, expId){
   ov.addEventListener('click',function(e){ if(e.target===ov) closeKeyReadKpiPicker(); });
   ETB_ROOT.appendChild(ov); ov.classList.add('open');
 }
+/* Statistic + expected read count for a key read.
+   Editable ONLY when the key read has no linked KPI — when it is linked the KPI is the single source
+   of truth (fork S-A), so the pair is shown read-only with where it came from. Without this control an
+   UNLINKED key read could never be made statistical, which left the engine's local-config path
+   unreachable from the UI. */
+function __erStatControls(t, expId, k){
+  const row=document.createElement('div'); row.className='kr-statrow';
+  const kpi=__erKpiFor(k);
+  const st=RD.keyReadStat(k, kpi);
+  const lab=document.createElement('span'); lab.className='kr-statlab'; lab.textContent='statistic';
+  row.appendChild(lab);
+  /* Keyed off HAVING a link, not off the KPI being statistical: a key read linked to a
+     single-value KPI must not be made statistical locally either, or it would collect N reads for a
+     KPI that only ever reports the latest one. Editable strictly when there is no linked KPI. */
+  if(k.source_kpi_gid){
+    const v=document.createElement('span'); v.className='kr-statro';
+    v.textContent = st.statistical ? (st.statistic+(st.readCount?(' of '+st.readCount):'')) : 'single value';
+    const note=document.createElement('span'); note.className='kr-statnote';
+    note.textContent='inherited from KPI';
+    note.title='the linked KPI defines the statistic and sample size'
+      +(st.overriddenLocal?' \u2014 this key read\u2019s own setting is ignored while linked':'');
+    row.appendChild(v); row.appendChild(note);
+    return row;
+  }
+  /* fSelect takes {value,label} objects. The statistics offered are exactly the ones
+     RD.computeStat implements — offering any other would silently fall back to average. */
+  const OPTS=[{value:'',label:'\u2014 single value \u2014'},{value:'average',label:'average'},
+              {value:'median',label:'median'},{value:'stddev',label:'stddev'},{value:'cv',label:'cv'},
+              {value:'range',label:'range'},{value:'max',label:'max'},{value:'min',label:'min'}];
+  const sel=fSelect(k.statistic||'', OPTS, function(v){
+    setKeyReadField(t,expId,k.id,'statistic', v||null); softRefresh(); renderPanel(expId);
+  });
+  row.appendChild(sel);
+  if(k.statistic){
+    const n=fText(k.readCount==null?'':String(k.readCount), function(v){
+      const num=(String(v).trim()==='')?null:Number(v);
+      setKeyReadField(t,expId,k.id,'readCount',(num!=null&&isFinite(num)&&num>0)?num:null);
+      softRefresh(); renderPanel(expId);
+    }, {placeholder:'reads'});
+    const of=document.createElement('span'); of.className='kr-statlab'; of.textContent='over';
+    row.appendChild(of); row.appendChild(n);
+  }
+  return row;
+}
 function renderKeyReads(t,expId,exp){
   const wrap=el("div","keyreads");const h=el("div","p-lab","Key reads");h.style.marginTop="14px";wrap.appendChild(h);
   const repeat=!!exp.repeat_of;const ov=exp.overrides||{};
@@ -4727,6 +4875,7 @@ function renderKeyReads(t,expId,exp){
     const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
     const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
     pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    card.appendChild(__erStatControls(t, expId, k));
     { const __obs=__erObservedRow(k, exp); if(__obs) card.appendChild(__obs); }
     wrap.appendChild(card);
   });
