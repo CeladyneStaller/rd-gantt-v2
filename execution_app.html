@@ -3508,14 +3508,24 @@ function expRecAutoPick(m){
       var prev=body.querySelector('input[name="erp-pick"][value="'+__erUserPick+'"]');
       if(prev){ prev.checked=true; return; }
     }
-    if(!m || !m.complete) return;          // INCOMPLETE DATA -> never pre-select, never auto-complete a step
-    var want=null;
-    if(m.matched && m.matched.length===1) want=m.matched[0];
-    else if(!m.matched || !m.matched.length){
-      var defined=[].slice.call(body.querySelectorAll('input[name="erp-pick"]'))
-        .filter(function(i){ return i.value!=='other' && i.value!=='inconclusive'; });
-      want = (defined.length===1) ? defined[0].value : 'other';   // one obvious result, else Unanticipated
+    if(!m) return;
+    /* Completeness = every key read measured, and every statistical one up to its expected sample size.
+       m.complete cannot be used: a result with no criteria never marks anything pending, so it reports
+       complete against an empty form. */
+    var xp=(window.ETB&&ETB.experimentById)?ETB.experimentById(window.__expRecId):null;
+    var krs=(xp&&xp.key_reads)||[];
+    if(!krs.length) return;
+    var vals={}; try{ vals=__erReadValues(); }catch(e){ return; }
+    for(var i=0;i<krs.length;i++){
+      var got=vals[krs[i].id];
+      if(!got || !got.length) return;                       // a key read with no data -> never auto-pick
+      var st=__erStatOf(krs[i]);
+      if(st.statistical && !RD.readsComplete(got.length, st.readCount).complete) return;   // short sample
     }
+    var want=null;
+    if(m.matched && m.matched.length===1) want=m.matched[0];      // exactly one result the data MATCHES
+    else if(!m.matched || !m.matched.length) want='other';        // data complete, nothing fits -> Unanticipated
+    else return;                                                   // several match -> the user decides
     if(!want) return;
     var el=body.querySelector('input[name="erp-pick"][value="'+want+'"]');
     if(el && !el.disabled) el.checked=true;
