@@ -2894,7 +2894,13 @@ async function apiPut(id,doc,etag){ const r = await fetch(`${BROKER}/state/${id}
 const EPOCH = Date.UTC(2020,0,1);
 const isoToDay = iso => iso ? Math.round((Date.parse(iso+"T00:00:00Z")-EPOCH)/86400000) : null;
 const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().slice(0,10);
-const todayDay = () => Math.round((Date.now()-EPOCH)/86400000);
+/* A day number is a CALENDAR DATE (isoToDay anchors it at UTC midnight), so "today" must be the
+   local calendar date — not a rounded fractional day count. Math.round on (now-EPOCH)/86400000
+   rolls to tomorrow from 12:00 UTC onward, which west of UTC is the whole working day: every
+   default-to-today completion got stamped a day in the future, and every lateness check ran a
+   day ahead. Date.UTC(local y,m,d) gives the exact calendar day with no fraction to round. */
+const todayDay = () => { const n = new Date();
+  return Math.round((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - EPOCH) / 86400000); };
 
 /* ---------------- state ---------------- */
 let portfolio = blankPortfolio();
