@@ -252,6 +252,26 @@ function makeFetch(store){
   ok(scaled.src && Math.abs(Number(scaled.src.value_raw)-0.953)<1e-9, "…alongside the original value ("+(scaled.src&&scaled.src.value_raw)+")");
 
 
+  // ---------- the picker table's column widths are declared, not left to auto layout ----------
+  // The regression this pins: with auto table-layout a long canonical key name ate the row and the
+  // "Import into" column collapsed — and once it holds both a target dropdown and a scale selector,
+  // that made it unusable. jsdom does no layout, so assert the contract rather than the pixels.
+  const vt=d.querySelector("#cdBody table.cd-vals");
+  ok(!!vt, "the value table is rendered");
+  const cg=vt&&vt.querySelector("colgroup");
+  ok(!!cg, "…with a colgroup declaring the column widths");
+  ok(!!cg && cg.querySelectorAll("col").length===5, "…one col per column ("+(cg?cg.querySelectorAll("col").length:0)+")");
+  ok(!!cg && !!cg.querySelector("col.c-tgt"), "…including a named column for Import into");
+  const heads2=vt?[...vt.querySelectorAll("th")]:[];
+  ok(heads2.every(h=>!/width/i.test(h.getAttribute("style")||"")), "no inline width hint is left on a header (auto layout would ignore it anyway)");
+  ok(!!vt && !!vt.querySelector("td.cd-read"), "the reading cell is classed so a long key name wraps instead of pushing the row");
+  const sheet=[...d.styleSheets].flatMap(ss=>{try{return [...ss.cssRules]}catch(e){return[]}});
+  // the build scopes some selectors (".cd-vals" ships as "#cdBody table.cd-vals"), so match on substring
+  const valsRule=sheet.find(r=>r.selectorText && /(^|[\s,])[#.\w]*\.cd-vals$/.test(r.selectorText) && /table-layout/.test(r.style.cssText||""));
+  ok(!!valsRule && /fixed/.test(valsRule.style.cssText||""), "the table uses fixed layout, so declared widths are honoured");
+  const tgtRule=sheet.find(r=>r.selectorText && r.selectorText.indexOf("col.c-tgt")>=0);
+  ok(!!tgtRule && parseInt(tgtRule.style.width,10)>=240, "the Import-into column is wide enough for a target and a scale ("+(tgtRule&&tgtRule.style.width)+")");
+
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));
   console.log(fl.length ? `\n${fl.length}/${out.length} FAILED` : `\nPASS - ${out.length} connect-data (execution app) assertions green`);
