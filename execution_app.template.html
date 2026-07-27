@@ -188,9 +188,11 @@
   .spop .sp-add{display:flex;gap:6px;margin-top:8px}
   .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
-  .cd-trow{display:flex;align-items:center;gap:6px}
-  .cd-trow>select:not(.cd-scale){flex:1 1 auto;min-width:0}
-  .cd-scale{flex:0 0 auto;width:auto;min-width:68px;font-family:var(--mono);font-size:11px}
+  /* the scale belongs with the VALUE it scales, not with the import target — and sharing the target's
+     column let it hold its width while the dropdown collapsed, which made the target unreadable. */
+  .cd-vstack{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .cd-scale{width:100%;max-width:88px;font-family:var(--mono);font-size:10.5px;padding:1px 2px;height:22px}
+  .cd-tsel{width:100%;min-width:0}
   .cd-vscaled{font-weight:600}
   .cd-vwas{font-family:var(--mono);font-size:9px;color:var(--muted)}
   .spop .sp-tag{font-family:var(--mono);font-size:9px;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:3px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -873,9 +875,9 @@ html[data-theme="dark"] #etb-view{
    squeeze the target column to nothing — a width on the last th is only a hint in auto layout. Fixed
    layout with declared widths makes the import controls the priority they should be. */
 .cd-vals col.c-pick{width:30px}
-.cd-vals col.c-val{width:88px}
-.cd-vals col.c-unit{width:72px}
-.cd-vals col.c-tgt{width:280px}
+.cd-vals col.c-val{width:104px}
+.cd-vals col.c-unit{width:64px}
+.cd-vals col.c-tgt{width:248px}
 .cd-vals td.cd-read{overflow-wrap:anywhere;word-break:break-word;line-height:1.3}
 .cd-vals td.cd-v{font-family:var(--mono);text-align:right}
 .cd-vals td.cd-u{color:var(--muted);font-size:11.5px}
@@ -1682,15 +1684,15 @@ function cdUnitHtml(sm,u){
     const scale = on ? cdScaleOf(__cdSel[selId]) : 1;
     const raw = u.key_values[k];
     const shown = (scale!==1) ? cdScaled(raw,scale) : raw;
-    const valCell = (scale!==1)
-      ? `<span class="cd-vscaled">${esc(String(shown))}</span><div class="cd-vwas">was ${esc(String(raw))}</div>`
-      : `${raw}`;
+    const valCell = `<div class="cd-vstack"><span class="${scale!==1?'cd-vscaled':''}">${esc(String(shown))}</span>`
+      + (scale!==1 ? `<div class="cd-vwas">was ${esc(String(raw))}</div>` : ``)
+      + (on ? cdScaleSelHtml(selId,scale) : ``) + `</div>`;
     const warn = (chosen&&unit&&chosen.unit&&chosen.unit!==unit) ? `<div class="cd-warn">unit differs (${esc(chosen.unit)}) \u2014 scale it if needed</div>` : "";
     return `<tr>
       <td><input type="checkbox" ${on?"checked":""} data-cdpick="${esc(selId)}" onchange="cdPick(this,'${esc(sm.sample)}','${esc(u.uid)}',this.getAttribute('data-key'))" data-key="${esc(k)}"></td>
       <td class="cd-read">${esc(k)}${matched?'<div class="cd-match">matches a target here</div>':""}</td>
       <td class="cd-v">${valCell}</td><td class="cd-u">${esc(unit)}</td>
-      <td class="cd-t">${on?`<div class="cd-trow"><select data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${cdScaleSelHtml(selId,scale)}</div>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
+      <td class="cd-t">${on?`<select class="cd-tsel" data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
   }).join("");
   return `<div class="cd-unit"><div class="cd-uhead"><span class="cd-an">${esc(u.Analysis)}</span>
       <span class="cd-cond">${esc(cdCondText(u.Conditions))}</span>
