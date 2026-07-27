@@ -5,7 +5,7 @@
   "broker_sync.test.py": 16,
   "catchup_ui.cjs": 28,
   "clickoff.cjs": 12,
-  "connect_data_ui.cjs": 55,
+  "connect_data_ui.cjs": 66,
   "connected_reconstruct.cjs": 43,
   "core.test.js": 390,
   "division_move.cjs": 20,
@@ -96,5 +96,6 @@
   "struct_ms_levels.cjs": 14,
   "target_value.cjs": 16,
   "theme_toggle.test.js": 12,
+  "today_day_local.cjs": 105,
   "unicode_escape_guard.cjs": 10
 }

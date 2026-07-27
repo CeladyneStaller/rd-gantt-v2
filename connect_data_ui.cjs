@@ -145,55 +145,6 @@ function makeFetch(store){
   const ups2=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)"));
   ok(ups2.length===2 && ups2.some(u=>u.kpiId===(made||{}).id), "the reading is written against the newly created KPI");
 
-  // ---------- selections survive closing and reopening the picker ----------
-  // The reported bug: reopening the modal showed no ticked value. The subtle cause was RENDER, not
-  // storage — the reopen list is only the recent 5 samples, so a selected sample older than that was
-  // not drawn at all and its checkbox could not appear ticked. MEA-12 is deliberately OUTSIDE the
-  // recent 5 (asserted at the search test above), so this exercises exactly that gap.
-  const picksFor=()=>[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')];
-  const checkedKeys=()=>picksFor().filter(b=>b.checked).map(b=>b.getAttribute("data-key")).sort();
-  const sampleShown=nm=>[...d.querySelectorAll('#cdBody .cd-sname')].some(x=>x.textContent===nm);
-
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(150);
-  ok(!sampleShown("MEA-12"), "MEA-12 is NOT in the default recent-5 list");
-  const nameIn0=d.getElementById("cdName"); nameIn0.value="MEA-12"; nameIn0.dispatchEvent(new w.Event("input")); await sleep(150);
-  ok(sampleShown("MEA-12"), "…but is reachable by filtering");
-  w.eval("cdToggle('MEA-12')"); await sleep(100);
-  const p12=picksFor().find(b=>b.getAttribute("data-key")==="OCV");
-  ok(!!p12, "a value on the out-of-window sample is selectable");
-  p12.checked=true; p12.dispatchEvent(new w.Event("change")); await sleep(80);
-  ok(checkedKeys().join(",")==="OCV", "the value is ticked before closing");
-  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "the pick is written to the per-host store immediately");
-  w.eval("closeConnectData()"); await sleep(80);
-  ok(!visible(), "the picker closes without importing");
-  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===1, "…and the selection persists in the store after close");
-
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(250);
-  ok(visible(), "the picker reopens");
-  ok(w.eval("__cdOpenSample")==="MEA-12", "…reopening on the sample the selection belongs to");
-  // the assertion that would have caught the shipped bug: the row must actually RENDER, not just be
-  // named in a variable — even though the sample is outside the recent 5.
-  ok(sampleShown("MEA-12"), "the selected sample is RENDERED on reopen despite being outside the recent 5");
-  ok(!!d.querySelector("#cdBody .cd-sbody"), "…and its values are expanded, not collapsed");
-  ok(picksFor().length>0, "…so its checkboxes exist to be shown ticked");
-  ok(checkedKeys().join(",")==="OCV", "the ticked value is STILL ticked after reopening ("+checkedKeys().join(",")+")");
-  ok(d.getElementById("cdCount").textContent.indexOf("1 value")>=0, "…and the selection count reflects it");
-
-  // ---------- selections are scoped per host ----------
-  w.eval("openConnectData('stageGate','SG1')"); await sleep(200);
-  ok(checkedKeys().length===0, "a DIFFERENT host opens with none of the first host's selections");
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(250);
-  ok(checkedKeys().join(",")==="OCV", "…and switching back restores the first host's selection intact");
-  ok(sampleShown("MEA-12"), "…with its out-of-window sample rendered again");
-
-  // ---------- importing clears the selection for that host ----------
-  const beforeImp=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length;
-  d.getElementById("cdImport").click(); await sleep(200);
-  ok(JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length===beforeImp+1, "the persisted selection imports");
-  ok(w.eval("Object.keys((__cdSelByHost['keyResult:KR1']||{})).length")===0, "…and the host's stored selection is emptied on import");
-  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
-  ok(checkedKeys().length===0, "after importing, reopening starts clean — the consumed selection is gone");
-  w.eval("closeConnectData()"); await sleep(60);
 
   // ---------- 9) provenance is VISIBLE on the reading surface ----------
   // kpiTable is the table a KR / stage-gate actually renders (data-postcell current value).
@@ -233,6 +184,73 @@ function makeFetch(store){
   gateHost.innerHTML = w.eval('kpiTable("keyResult","KR1","O1")');
   ok(w.eval('cdLatestSrc("nope-kpi")') === null || w.eval('!cdLatestSrc("nope-kpi")'), "a KPI with no imported reading has no provenance");
   ok(w.eval('cdChipHtml("nope-kpi")') === "", "...and renders no chip");
+
+
+  // ---------- reopening shows what's connected, reconstructed from the readings ----------
+  // Source of truth is the readings, not a stored selection: section 6 imported V1 from MEA-17 into
+  // K-11, so reopening KR1 must show that reading in a "Currently connected" section with its box
+  // still ticked — reconstructed by joining kpiUpdates.src back to the index, surviving close/reopen.
+  const connRows=()=>[...d.querySelectorAll('#cdBody .cd-connected [data-connpick]')];
+  const connChecked=()=>connRows().filter(b=>b.checked).length;
+
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(250);
+  ok(visible(), "the picker reopens");
+  ok(!!d.querySelector("#cdBody .cd-connected"), "a Currently-connected section is shown, reconstructed from the readings");
+  ok(connRows().length>=1, "the earlier import appears as a connected row ("+connRows().length+")");
+  ok(connChecked()===connRows().length, "every connected reading is pre-ticked");
+  ok(/MEA-17/.test((d.querySelector("#cdBody .cd-connected")||{}).textContent||""), "the connected section names the sample it came from");
+  ok(d.getElementById("cdImport").textContent.indexOf("Apply")>=0, "the button reads Apply changes once something is connected");
+
+  // ---------- unticking a connected reading removes it on Apply (the diff) ----------
+  const cRow=connRows()[0];
+  const kBefore=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).filter(u=>u.kpiId==="K-11").length;
+  ok(kBefore>=1, "K-11 has the connected reading before removal ("+kBefore+")");
+  if(cRow){ cRow.checked=false; cRow.dispatchEvent(new w.Event("change")); await sleep(60); }
+  ok(d.getElementById("cdCount").textContent.indexOf("to remove")>=0, "unticking a connected reading shows it will be removed");
+  d.getElementById("cdImport").click(); await sleep(200);
+  const kAfter=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).filter(u=>u.kpiId==="K-11").length;
+  ok(kAfter===kBefore-1, "applying removes exactly the unticked reading ("+kBefore+"→"+kAfter+")");
+
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  const stillConn=[...d.querySelectorAll('#cdBody .cd-connected [data-connpick]')].length;
+  ok(stillConn===0 || !d.querySelector("#cdBody .cd-connected"), "after removal, that reading is no longer connected");
+  w.eval("closeConnectData()"); await sleep(60);
+
+  // ---------- the scale control ----------
+  // Portal values sometimes arrive a decade or three off the plan's unit. The row carries a ×/÷ selector
+  // whose factor is applied on import and recorded, so a scaled number stays explainable.
+  w.eval("openConnectData('keyResult','KR1')"); await sleep(200);
+  if(!d.querySelector("#cdBody .cd-sbody")){ const h0=d.querySelector('#cdBody .cd-shead'); if(h0){h0.dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await sleep(100);} }
+  const oBox=[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')].find(b=>b.getAttribute("data-key")==="OCV");
+  ok(!!oBox, "a second value is selectable for the scale test");
+  if(oBox){ oBox.checked=true; oBox.dispatchEvent(new w.Event("change")); await sleep(80); }
+  const scaleSel=d.querySelector("#cdBody select.cd-scale");
+  ok(!!scaleSel, "a ticked row offers a scale selector");
+  ok(!!scaleSel && scaleSel.value==="1", "…defaulting to ×1, so scaling is opt-in");
+  const scaleOpts=scaleSel?[...scaleSel.options].map(o=>o.value):[];
+  ok(scaleOpts.join(",")==="0.001,0.01,0.1,1,10,100,1000", "…offering ÷1000 through ×1000 ("+scaleOpts.join(",")+")");
+
+  // choose ×1000 and confirm the row previews the scaled value
+  if(scaleSel){ scaleSel.value="1000"; scaleSel.dispatchEvent(new w.Event("change")); await sleep(80); }
+  const vShown=d.querySelector("#cdBody .cd-vscaled");
+  ok(!!vShown, "choosing a scale previews the scaled value on the row");
+  ok(!!vShown && Math.abs(Number(vShown.textContent)-953)<1e-6, "…0.953 shown as 953 under ×1000 ("+(vShown&&vShown.textContent)+")");
+  ok(!!d.querySelector("#cdBody .cd-vwas"), "…while still showing what it was");
+
+  const beforeScale=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length;
+  const oSel=[...d.querySelectorAll("#cdBody td.cd-t select")].find(s=>!s.classList.contains("cd-scale"));
+  if(oSel){ oSel.value="K-11"; oSel.dispatchEvent(new w.Event("change")); await sleep(60); }
+  // re-pick the scale after the target re-render, then import
+  const scaleSel2=d.querySelector("#cdBody select.cd-scale");
+  if(scaleSel2 && scaleSel2.value!=="1000"){ scaleSel2.value="1000"; scaleSel2.dispatchEvent(new w.Event("change")); await sleep(60); }
+  d.getElementById("cdImport").click(); await sleep(200);
+  const afterUps=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)"));
+  ok(afterUps.length===beforeScale+1, "the scaled value imports as one reading");
+  const scaled=afterUps[afterUps.length-1]||{};
+  ok(Math.abs(Number(scaled.value)-953)<1e-6, "the SCALED number is what lands, not the raw one ("+scaled.value+")");
+  ok(scaled.src && scaled.src.scale===1000, "the factor is recorded on the reading's provenance");
+  ok(scaled.src && Math.abs(Number(scaled.src.value_raw)-0.953)<1e-9, "…alongside the original value ("+(scaled.src&&scaled.src.value_raw)+")");
+
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));

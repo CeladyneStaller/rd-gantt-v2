@@ -188,6 +188,10 @@
   .spop .sp-add{display:flex;gap:6px;margin-top:8px}
   .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
+  .cd-trow{display:flex;align-items:center;gap:6px}
+  .cd-scale{flex:0 0 auto;width:auto;min-width:64px;font-family:var(--mono);font-size:11px}
+  .cd-vscaled{font-weight:600}
+  .cd-vwas{font-family:var(--mono);font-size:9px;color:var(--muted)}
   .spop .sp-tag{font-family:var(--mono);font-size:9px;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:3px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .spop .sp-hand{font-size:9px;color:var(--muted);font-style:italic}
   .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
@@ -3864,12 +3868,18 @@ function cdUnitHtml(sm,u){
     const opts = tgts.map(x=>`<option value="${esc(x.id)}"${cur===x.id?" selected":""}>${esc(x.name)}</option>`).join("")
       + (__cdHost.type==="record" ? "" : `<option value="__new__"${cur==="__new__"?" selected":""}>+ create new KPI</option>`);
     const chosen=tgts.find(x=>x.id===cur);
-    const warn = (chosen&&unit&&chosen.unit&&chosen.unit!==unit) ? `<div class="cd-warn">unit differs (${esc(chosen.unit)}) \u2014 no conversion</div>` : "";
+    const scale = on ? cdScaleOf(__cdSel[selId]) : 1;
+    const raw = u.key_values[k];
+    const shown = (scale!==1) ? cdScaled(raw,scale) : raw;
+    const valCell = (scale!==1)
+      ? `<span class="cd-vscaled">${esc(String(shown))}</span><div class="cd-vwas">was ${esc(String(raw))}</div>`
+      : `${raw}`;
+    const warn = (chosen&&unit&&chosen.unit&&chosen.unit!==unit) ? `<div class="cd-warn">unit differs (${esc(chosen.unit)}) \u2014 scale it if needed</div>` : "";
     return `<tr>
       <td style="width:24px"><input type="checkbox" ${on?"checked":""} data-cdpick="${esc(selId)}" onchange="cdPick(this,'${esc(sm.sample)}','${esc(u.uid)}',this.getAttribute('data-key'))" data-key="${esc(k)}"></td>
       <td>${esc(k)}${matched?'<div class="cd-match">matches a target here</div>':""}</td>
-      <td class="cd-v">${u.key_values[k]}</td><td class="cd-u">${esc(unit)}</td>
-      <td class="cd-t">${on?`<select data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
+      <td class="cd-v">${valCell}</td><td class="cd-u">${esc(unit)}</td>
+      <td class="cd-t">${on?`<div class="cd-trow"><select data-selid="${esc(selId)}" onchange="cdSetTarget('${esc(selId)}',this.value)">${opts}</select>${cdScaleSelHtml(selId,scale)}</div>${warn}`:'<span class="cd-cond">\u2014</span>'}</td></tr>`;
   }).join("");
   return `<div class="cd-unit"><div class="cd-uhead"><span class="cd-an">${esc(u.Analysis)}</span>
       <span class="cd-cond">${esc(cdCondText(u.Conditions))}</span>
@@ -3886,9 +3896,24 @@ function cdPick(cb,sample,uid,key){
     const u=sm&&sm.units.find(x=>x.uid===uid); if(!u) return;
     __cdSel[selId]={ sample, key, value:u.key_values[key], unit:RD.analysisKeyUnit(key),
       analysis:u.Analysis, step:u.step, cond:u.Conditions, job_id:u.job_id, bin_id:u.bin_id,
-      script:u.script, timestamp:u.timestamp, target:cdGuessTarget(key) };
+      script:u.script, timestamp:u.timestamp, target:cdGuessTarget(key), scale:1 };
   } else delete __cdSel[selId];
   cdRender();
+}
+/* Portal values sometimes arrive a decade or three off what the plan expects (A/cm² vs mA/cm² and the
+   like). Rather than infer units, let the value be scaled explicitly on the way in. The factor is
+   applied at import and recorded on the reading's provenance, so the number is auditable later. */
+const CD_SCALES=[["0.001","\u00f71000"],["0.01","\u00f7100"],["0.1","\u00f710"],["1","\u00d71"],["10","\u00d710"],["100","\u00d7100"],["1000","\u00d71000"]];
+function cdScaleOf(sel){ var s=sel&&Number(sel.scale); return (isFinite(s)&&s>0)?s:1; }
+function cdScaled(v,scale){ var n=Number(v); if(!isFinite(n)) return v;
+  var out=n*scale;
+  /* floating point: 0.671*1000 = 670.9999... — round to a sane precision without lying about the value */
+  return Math.abs(out)>=1e-9 ? Number(out.toPrecision(12)) : out; }
+function cdSetScale(selId,v){ if(__cdSel[selId]) __cdSel[selId].scale=Number(v)||1; cdRender(); }
+function cdScaleSelHtml(selId,scale){
+  return '<select class="cd-scale" data-cdscale="'+esc(selId)+'" onchange="cdSetScale(\''+esc(selId)+'\',this.value)" title="Scale the value on import">'
+    +CD_SCALES.map(function(s){ return '<option value="'+s[0]+'"'+(Number(s[0])===scale?" selected":"")+'>'+s[1]+'</option>'; }).join("")
+    +'</select>';
 }
 /* toggling a CONNECTED reading's tick: unticking marks it for removal on Apply, re-ticking restores
    it. The entry is already in __cdSel from the seed, so we only flip its presence. */
@@ -3927,6 +3952,13 @@ function cdUpdateCount(){
 /* The diff Apply commits: which selected readings are NEW imports, which previously-connected ones
    were unticked (removals), and how many connected readings are being kept untouched. Identity is the
    connected key; a seeded entry still ticked is either kept (unchanged target) or a re-target. */
+/* a pick becomes an import with its scale already applied to the value; the factor rides along so
+   the reading's provenance can record what was done to it. */
+function cdImportPick(sel){
+  var sc=cdScaleOf(sel);
+  if(sc===1) return sel;
+  var c=Object.assign({},sel); c.value=cdScaled(sel.value,sc); c.scale=sc; c.value_raw=sel.value; return c;
+}
 function cdApplyDiff(){
   var connKeys={}, connByKey={};
   (__cdConnected.samples||[]).forEach(function(s){ s.readings.forEach(function(r){ var k=__cdConnKey(r); connKeys[k]=1; connByKey[k]=r; }); });
@@ -3935,7 +3967,7 @@ function cdApplyDiff(){
   Object.keys(__cdSel).forEach(function(k){
     var sel=__cdSel[k];
     if(connKeys[k]){ keepConnected++; if(sel.__orphan) keepConnected--; }   // orphans can only be removed, never "kept as import"
-    else { imports.push(sel); newCount++; }
+    else { imports.push(cdImportPick(sel)); newCount++; }
   });
   // removals: seeded-connected keys no longer present in __cdSel
   var removeCount=0, removals=[];
@@ -3943,7 +3975,7 @@ function cdApplyDiff(){
   // a re-targeted connected reading = still ticked but target changed -> remove old, import new
   Object.keys(__cdSel).forEach(function(k){
     if(connKeys[k]){ var r=connByKey[k], sel=__cdSel[k];
-      if(sel.target && r && sel.target!==(r.target||r.krId)){ imports.push(sel); newCount++; removals.push(r); removeCount++; keepConnected--; }
+      if(sel.target && r && sel.target!==(r.target||r.krId)){ imports.push(cdImportPick(sel)); newCount++; removals.push(r); removeCount++; keepConnected--; }
     }
   });
   return { imports:imports, newCount:newCount, removeCount:removeCount, removals:removals, keepConnected:keepConnected };
@@ -3953,9 +3985,11 @@ function cdDoImport(){
   var d=cdApplyDiff();
   var h=__cdHost||{};
   var iso=new Date().toISOString();
-  var srcOf=function(p){ return { portal:'analysis', job_id:p.job_id||'', bin_id:p.bin_id||'', sample:p.sample||'',
+  var srcOf=function(p){ var o={ portal:'analysis', job_id:p.job_id||'', bin_id:p.bin_id||'', sample:p.sample||'',
                      bucket:p.analysis||'', key:p.key||'', step:p.step||'', cond:p.cond||{},
-                     run_t:p.timestamp||'', imported_t:iso }; };
+                     run_t:p.timestamp||'', imported_t:iso };
+                   if(p.scale && p.scale!==1){ o.scale=p.scale; o.value_raw=p.value_raw; }
+                   return o; };
   var added=0, removed=0, skipped=0;
 
   if(h.type==="record"){
@@ -4021,6 +4055,12 @@ function cdDoImport(){
     return Object.assign({},p,{kpiId:kpiId});
   });
   var res=RD.buildImportUpdates(resolved, exec.kpiUpdates||[], iso);
+  /* buildImportUpdates builds its own src, so stamp the scale on afterwards — a scaled reading has to
+     say so, or the number is unexplainable a month later. */
+  res.updates.forEach(function(u){
+    var p=resolved.filter(function(x){ return x.job_id===(u.src&&u.src.job_id) && x.key===(u.src&&u.src.key); })[0];
+    if(p && p.scale && p.scale!==1 && u.src){ u.src.scale=p.scale; u.src.value_raw=p.value_raw; }
+  });
   exec.kpiUpdates=(exec.kpiUpdates||[]).concat(res.updates);
   added+=res.updates.length; skipped+=res.duplicates.length;
   __cdConnected={samples:[],orphans:[],byKeyRead:{}};
