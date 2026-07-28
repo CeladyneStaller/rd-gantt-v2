@@ -398,6 +398,49 @@ function makeFetch(store){
      "removing an imported UNLINKED reading deletes its {v,src} entry ("+xoBefore+"→"+((exp3().key_read_readings||{}).kr_xo||[]).length+")");
   try{ w.eval('closeEtbStatPop&&closeEtbStatPop()'); }catch(e){} await sleep(20);
 
+  // ---------- a key read can pass on a RANGE, like a stage-gate target ----------
+  // Stage-gate/KPI targets already support direction:'range' with {lo,hi}; a key read now uses the same
+  // vocabulary, keeping critical_value as the low bound so every existing reader still works and adding
+  // critical_value_hi. Bounds are inclusive, matching rdcore's progressRange.
+  const applyOp = (op,a,b,hi) => w.eval(`etbApplyOp(${JSON.stringify(op)},${JSON.stringify(a)},${JSON.stringify(b)},${JSON.stringify(hi)})`);
+  ok(applyOp('range', 0.7, 0.6, 0.8)===true,  "a value inside the range passes");
+  ok(applyOp('range', 0.5, 0.6, 0.8)===false, "below the low bound fails");
+  ok(applyOp('range', 0.9, 0.6, 0.8)===false, "above the high bound fails");
+  ok(applyOp('range', 0.6, 0.6, 0.8)===true,  "the low bound itself passes (inclusive, as stage gates are)");
+  ok(applyOp('range', 0.8, 0.6, 0.8)===true,  "the high bound itself passes (inclusive)");
+  ok(applyOp('range', 0.7, 0.8, 0.6)===true,  "bounds entered in either order still work, so a reversed pair is not a never-passing criterion");
+  ok(applyOp('range', 0.7, 0.6, '')===false,  "a range with no high bound cannot pass");
+  // Number('') is 0, so an unguarded implementation reads 0.6 – '' as the range [0, 0.6] and passes
+  // values that were never in range. This is the assertion that catches that.
+  ok(applyOp('range', 0.3, 0.6, '')===false,  "…and an empty high bound is UNSET, not zero");
+  ok(applyOp('range', 0.3, '', 0.6)===false,  "…likewise an empty low bound");
+  ok(applyOp('>=', 0.7, 0.6)===true,          "the existing operators are unaffected");
+  ok(applyOp('<=', 0.7, 0.6)===false,         "…in both directions");
+
+  // criterion text reads as a range, not as an operator
+  const critText = k => w.eval(`etbCritText(${JSON.stringify(k)})`);
+  ok(critText({direction:'range',critical_value:'0.6',critical_value_hi:'0.8',unit:'V'})==='0.6 \u2013 0.8 V',
+     "the pass criterion renders as a range ("+critText({direction:'range',critical_value:'0.6',critical_value_hi:'0.8',unit:'V'})+")");
+  ok(critText({direction:'range',critical_value:'0.6',critical_value_hi:'',unit:'V'}).indexOf('?')>=0,
+     "…with a missing high bound shown as unset, not silently dropped");
+  ok(critText({direction:'>=',critical_value:'0.6',unit:'V'})==='\u2265 0.6 V', "a non-range criterion is unchanged");
+
+  // a result criterion referencing a range key read stays PENDING until the high bound is set
+  const evalCrit = (kr,measured) => w.eval(`etbEvalCriterion({status:'hit'},${JSON.stringify(kr)},${JSON.stringify(measured)})`);
+  ok(evalCrit({direction:'range',critical_value:'0.6',critical_value_hi:''},0.7)==='pending',
+     "a half-specified range is pending, never a silent fail");
+  ok(evalCrit({direction:'range',critical_value:'0.6',critical_value_hi:'0.8'},0.7)==='pass',
+     "…and passes once both bounds are set");
+  ok(evalCrit({direction:'range',critical_value:'0.6',critical_value_hi:'0.8'},0.9)==='fail',
+     "…failing outside the range");
+
+  // the editor offers it — asserted through the built app's source, since DIRS is module-scoped.
+  // (The editor panel itself lives in the ETB modal; the DOM assertion belongs with that harness.)
+  const appSrc = require('fs').readFileSync((process.env.RD_OUT||'/home/claude/work')+'/execution_app.html','utf8');
+  ok(/DIRS=\[[^\]]*value:"range"[^\]]*\]/.test(appSrc), "the key-read direction picker offers a range option");
+  ok(/value:"range",\s*label:"between"/.test(appSrc), "…labelled 'between'");
+  ok(/critical_value_hi/.test(appSrc), "the second bound is a real field on the key read");
+
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fails = out.filter(x => x.startsWith('FAIL'));
   console.log(fails.length ? `\n${fails.length}/${out.length} FAILED` : `\nPASS - ${out.length} current-step measurement-surface assertions green`);

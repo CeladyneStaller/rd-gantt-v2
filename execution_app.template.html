@@ -190,6 +190,7 @@
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
   /* the scale belongs with the VALUE it scales, not with the import target — and sharing the target's
      column let it hold its width while the dropdown collapsed, which made the target unreadable. */
+  .crit-dash{color:var(--muted);padding:0 2px;align-self:center;font-size:12px}
   .cd-vstack{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .cd-scale{width:100%;max-width:88px;font-family:var(--mono);font-size:10.5px;padding:1px 2px;height:22px}
   .cd-tsel{width:100%;min-width:0}
@@ -1199,10 +1200,23 @@ if(typeof window!=="undefined"){
 }
 
 /* ---- Phase 2: current-step summary + outcome recorder (ports the ETB matcher) ---- */
-function etbApplyOp(op,a,b){ a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false; switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
-function etbEvalCriterion(crit,keyRead,measured){ if(measured==null||measured===''||isNaN(Number(measured)))return 'pending'; if(crit&&typeof crit.status==='string'){ if(!keyRead||keyRead.critical_value===''||keyRead.critical_value==null)return 'pending'; var pc=etbApplyOp(keyRead.direction||'>=',measured,keyRead.critical_value); return (pc===(crit.status==='hit'))?'pass':'fail'; } if(crit.value===''||crit.value==null)return 'pending'; return etbApplyOp(crit.op||'>',measured,crit.value)?'pass':'fail'; }
+function etbApplyOp(op,a,b,hi){ if(b===''||b==null)return false; a=Number(a);b=Number(b); if(isNaN(a)||isNaN(b))return false;
+  /* 'range' passes when the value sits inside [lo,hi] INCLUSIVE, matching rdcore's progressRange so a
+     key read and a stage-gate target agree on what "within range" means. Bounds are accepted in
+     either order, so entering 0.8 then 0.6 is not a silently-never-passing criterion. */
+  /* an empty bound is UNSET, not zero — Number('') is 0, which would silently turn a half-specified
+     range into [0, lo] and pass values that were never in range. */
+  if(op==='range'){ if(hi===''||hi==null) return false; var h=Number(hi); if(isNaN(h))return false;
+    var lo=Math.min(b,h), up=Math.max(b,h); return a>=lo && a<=up; }
+  switch(op){case '<':return a<b;case '<=':return a<=b;case '>':return a>b;case '>=':return a>=b;case '=':return Math.abs(a-b)<1e-9;case '!=':return Math.abs(a-b)>=1e-9;default:return false;} }
+function etbEvalCriterion(crit,keyRead,measured){ if(measured==null||measured===''||isNaN(Number(measured)))return 'pending'; if(crit&&typeof crit.status==='string'){ if(!keyRead||keyRead.critical_value===''||keyRead.critical_value==null)return 'pending';
+    if((keyRead.direction||'')==='range' && (keyRead.critical_value_hi===''||keyRead.critical_value_hi==null))return 'pending';
+    var pc=etbApplyOp(keyRead.direction||'>=',measured,keyRead.critical_value,keyRead.critical_value_hi); return (pc===(crit.status==='hit'))?'pass':'fail'; } if(crit.value===''||crit.value==null)return 'pending'; return etbApplyOp(crit.op||'>',measured,crit.value)?'pass':'fail'; }
 function etbMatchResults(exp,readings){ readings=readings||{}; var krById={}; (exp.key_reads||[]).forEach(function(k){krById[k.id]=k;}); var states={},matched=[],provisional=[],missingBy={},anyPending=false; (exp.possible_results||[]).forEach(function(r){ var crits=Array.isArray(r.criteria)?r.criteria:[]; if(!crits.length){states[r.id]='no-criteria';return;} var f=false,p=false,okN=0,pendKrs=[]; crits.forEach(function(c){ var meas=readings.hasOwnProperty(c.key_read_id)?readings[c.key_read_id]:null; var st=etbEvalCriterion(c,krById[c.key_read_id],meas); if(st==='fail')f=true; else if(st==='pending'){p=true; if(pendKrs.indexOf(c.key_read_id)<0)pendKrs.push(c.key_read_id);} else okN++; }); if(f)states[r.id]='fail'; else if(p){ anyPending=true; if(okN>0){ states[r.id]='provisional'; provisional.push(r.id); missingBy[r.id]=pendKrs; } else { states[r.id]='pending'; missingBy[r.id]=pendKrs; } } else {states[r.id]='pass';matched.push(r.id);} }); return {matched:matched,provisional:provisional,missingBy:missingBy,states:states,complete:!anyPending}; }
-function etbCritText(k){ if(!k)return ''; var u=k.unit?(' '+k.unit):''; var g=({'<=':'\u2264','<':'<','=':'=','>':'>','>=':'\u2265'})[k.direction||'>=']||(k.direction||''); var cv=(k.critical_value===''||k.critical_value==null)?'?':k.critical_value; return g+' '+cv+u; }
+function etbCritText(k){ if(!k)return ''; var u=k.unit?(' '+k.unit):'';
+  var cv=(k.critical_value===''||k.critical_value==null)?'?':k.critical_value;
+  if((k.direction||'')==='range'){ var hi=(k.critical_value_hi===''||k.critical_value_hi==null)?'?':k.critical_value_hi; return cv+' \u2013 '+hi+u; }
+  var g=({'<=':'\u2264','<':'<','=':'=','>':'>','>=':'\u2265'})[k.direction||'>=']||(k.direction||''); return g+' '+cv+u; }
 
 /* ---- Current step: key reads render through the SAME measurement table the KR and stage-gate hosts
    use, so entering a value here is an ordinary reading, not a conclusion. Nothing on this card writes
@@ -4557,7 +4571,7 @@ function normalizeTree(tree){
   for(const exp of Object.values(tree.experiments||{})){
     if(typeof exp.toggle!=="string")exp.toggle="";
     if(!Array.isArray(exp.key_reads))exp.key_reads=[];
-    for(const k of exp.key_reads){if(typeof k.unit!=="string")k.unit="";if(k.critical_value==null)k.critical_value="";if(!k.direction)k.direction=">=";}
+    for(const k of exp.key_reads){if(typeof k.unit!=="string")k.unit="";if(k.critical_value==null)k.critical_value="";if(k.critical_value_hi==null)k.critical_value_hi="";if(!k.direction)k.direction=">=";}
     if(exp.repeat_of===undefined)exp.repeat_of=null;
     if(!exp.overrides||typeof exp.overrides!=="object")exp.overrides={};
     for(const r of exp.possible_results||[]){
@@ -4576,8 +4590,11 @@ function markOverride(exp,field){if(exp&&exp.repeat_of){(exp.overrides||(exp.ove
 const OPS=[{value:"<",label:"<"},{value:"<=",label:"≤"},{value:"=",label:"="},{value:">=",label:"≥"},{value:">",label:">"}];
 function opLabel(op){const o=OPS.find(x=>x.value===op);return o?o.label:(op||"");}
 // Direction options for a key read's pass condition (Corey's order ≤ < = > ≥).
-const DIRS=[{value:"<=",label:"≤"},{value:"<",label:"<"},{value:"=",label:"="},{value:">",label:">"},{value:">=",label:"≥"}];
-function critText(k){if(!k)return"";const u=k.unit?(" "+k.unit):"";return opLabel(k.direction)+" "+((k.critical_value===""||k.critical_value==null)?"?":k.critical_value)+u;}
+const DIRS=[{value:"<=",label:"≤"},{value:"<",label:"<"},{value:"=",label:"="},{value:">",label:">"},{value:">=",label:"≥"},{value:"range",label:"between"}];
+function critText(k){if(!k)return"";const u=k.unit?(" "+k.unit):"";
+  const cv=(k.critical_value===""||k.critical_value==null)?"?":k.critical_value;
+  if((k.direction||"")==="range"){const hi=(k.critical_value_hi===""||k.critical_value_hi==null)?"?":k.critical_value_hi;return cv+" \u2013 "+hi+u;}
+  return opLabel(k.direction)+" "+cv+u;}
 function criteriaText(res,keyReads){
   const arr=Array.isArray(res.criteria)?res.criteria:[];
   const krs=keyReads||[];
@@ -4628,6 +4645,7 @@ function validateTree(tree){
         const kr=(exp.key_reads||[]).find(k=>k.id===c.key_read_id);
         if(!c.key_read_id||!kr) warn(11,`${exp.code} result "${r.label}" has a criterion with no key read selected.`,eid);
         else if(typeof c.status==="string"&&(kr.critical_value===""||kr.critical_value==null)) warn(12,`${exp.code} result "${r.label}" marks "${kr.name||kr.id}" ${c.status}, but that key read has no critical value to test against.`,eid);
+        else if(typeof c.status==="string"&&(kr.direction||"")==="range"&&(kr.critical_value_hi===""||kr.critical_value_hi==null)) warn(12,`${exp.code} result "${r.label}" tests "${kr.name||kr.id}" against a range, but only the low bound is set.`,eid);
       }
       for(const a of (Array.isArray(r.accomplishments)?r.accomplishments:[])){
         if(!a.label||!String(a.label).trim()) warn(13,`${exp.code} result "${r.label}" has a stage-gate flag with no label.`,eid);
@@ -5401,8 +5419,13 @@ function renderKeyReads(t,expId,exp){
     top.appendChild(name);top.appendChild(unit);top.appendChild(rm);card.appendChild(top);
     const pass=el("div","kr-pass");pass.appendChild(Object.assign(el("span","kr-pass-lab"),{textContent:"pass when"}));
     const dir=fSelect(k.direction||">=",DIRS,v=>{setKeyReadField(t,expId,k.id,"direction",v);softRefresh();renderPanel(expId);});dir.classList.add("op-sel");
-    const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("critical ("+k.unit+")"):"critical value"});crit.classList.add("crit-in");
-    pass.appendChild(dir);pass.appendChild(crit);card.appendChild(pass);
+    const isRange=(k.direction||"")==="range";
+    const crit=fText(k.critical_value,v=>{setKeyReadField(t,expId,k.id,"critical_value",v);softRefresh();renderPanel(expId);},{placeholder:isRange?(k.unit?("low ("+k.unit+")"):"low"):(k.unit?("critical ("+k.unit+")"):"critical value")});crit.classList.add("crit-in");
+    pass.appendChild(dir);pass.appendChild(crit);
+    if(isRange){ const dash=el("span","crit-dash","\u2013"); pass.appendChild(dash);
+      const critHi=fText(k.critical_value_hi,v=>{setKeyReadField(t,expId,k.id,"critical_value_hi",v);softRefresh();renderPanel(expId);},{placeholder:k.unit?("high ("+k.unit+")"):"high"});critHi.classList.add("crit-in");
+      pass.appendChild(critHi); }
+    card.appendChild(pass);
     card.appendChild(__erStatControls(t, expId, k));
     { const __obs=__erObservedRow(k, exp); if(__obs) card.appendChild(__obs); }
     wrap.appendChild(card);
