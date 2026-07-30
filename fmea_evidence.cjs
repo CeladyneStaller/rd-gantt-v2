@@ -195,6 +195,62 @@ setTimeout(() => {
     ok([...d.querySelectorAll('#fmeaBody .fm-mode,#fmeaBody .fm-effect,#fmeaBody .fm-cause')].every(x => !x.classList.contains('fm-collapsed')),
        "Expand all reopens them");
 
+    // ---------- an experiment must SURVIVE a save and a reload ----------
+    // The bug this pins: "Save experiment" only closed the sub-modal, leaving the work in draftRisk.
+    // Closing the FMEA modal or refreshing lost it. The engine and DOM assertions above all passed
+    // while that was true, because none of them crossed from the draft into exec.
+    let persisted = 0;
+    w.eval("persist=function(){ window.__persistCalls=(window.__persistCalls||0)+1; };");
+    w.eval(`exec.risks=[{rid:'r9',problem:'Round trip',objectiveId:'O1',gateId:null,status:'open',knowns:[],modes:[
+      {mid:'m9',mode:'M',status:'open',effects:[{eid:'e9',effect:'E',status:'open',causes:[
+        {cid:'c9',cause:'C',severity:5,occurrence:5,detection:5,mitigation:'',status:'open'}]}]}]}];
+      window.__persistCalls=0; openEditFmeaModal('r9');`);
+    const causeBtn2 = [...d.querySelectorAll('#fmeaBody button')].filter(b => /\+ Experiment/.test(b.textContent)).pop();
+    causeBtn2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    w.eval("var x=draftRisk.modes[0].effects[0].causes[0].experiments[0]; x.hypothesis='H'; x.samples=['S1']; x.key_reads=[{krid:'k1',name:'OCV',unit:'V'}]; x.values={S1:{k1:'0.67'}}; x.verdict='confirmed';");
+
+    const liveExps = () => JSON.parse(w.eval("JSON.stringify(((exec.risks[0].modes[0].effects[0].causes[0].experiments)||[]))"));
+    ok(liveExps().length === 0, "before saving, the experiment is only in the draft");
+
+    // click the modal's own Save experiment button — not the function
+    const fxSave = [...d.querySelectorAll('#fxOverlay button')].find(b => /Save experiment/.test(b.textContent));
+    ok(!!fxSave, "the experiment modal has a Save experiment button");
+    fxSave.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+
+    ok(liveExps().length === 1, "Save experiment commits it to the live problem, not just the draft");
+    const le0 = liveExps()[0] || {};
+    ok(le0.verdict === 'confirmed' && le0.hypothesis === 'H', "…with its details intact");
+    ok(((le0.values || {}).S1 || {}).k1 === '0.67', "…including recorded values");
+    ok(w.eval("window.__persistCalls") > 0, "…and asks for a save, so a refresh cannot lose it");
+
+    // closing the FMEA modal WITHOUT Save changes must not undo it
+    w.eval("closeFmeaModal()");
+    ok(liveExps().length === 1, "closing the FMEA modal without Save changes does not discard a saved experiment");
+
+    // and it survives a serialise/parse round trip, which is what a reload does
+    const ser = w.eval("JSON.stringify(exec)");
+    w.eval("exec=JSON.parse(" + JSON.stringify(ser) + ");");
+    ok(liveExps().length === 1, "the experiment survives a document round trip");
+    ok((liveExps()[0] || {}).code === 'EXP-1', "…keeping its code (" + (liveExps()[0] || {}).code + ")");
+
+    // The draft can diverge structurally from the live problem before the experiment is saved — add a
+    // mode and every later index shifts. Matching the live node by POSITION would then write the
+    // experiment onto the wrong node, or onto nothing at all.
+    w.eval(`exec.risks=[{rid:'r8',problem:'Shift',objectiveId:'O1',gateId:null,status:'open',knowns:[],modes:[
+      {mid:'mZ',mode:'Original',status:'open',effects:[{eid:'eZ',effect:'E',status:'open',causes:[
+        {cid:'cZ',cause:'C',severity:5,occurrence:5,detection:5,mitigation:'',status:'open'}]}]}]}];
+      openEditFmeaModal('r8');
+      draftRisk.modes.unshift({mid:'mNEW',mode:'Inserted first',status:'open',effects:[]});
+      renderFmeaModes();`);
+    ok(w.eval("draftRisk.modes.length") === 2 && w.eval("exec.risks[0].modes.length") === 1,
+       "the draft now has a mode the live problem does not, so indices no longer line up");
+    // attach to the ORIGINAL mode, which is now at draft index 1 but live index 0
+    w.eval("addDraftExperiment(1,0,0);");
+    const fxSave2 = [...d.querySelectorAll('#fxOverlay button')].find(b => /Save experiment/.test(b.textContent));
+    if (fxSave2) fxSave2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const shifted = JSON.parse(w.eval("JSON.stringify(((exec.risks[0].modes[0].effects[0].causes[0].experiments)||[]))"));
+    ok(shifted.length === 1, "the experiment still reaches the right node after an index shift — matched by id, not position");
+
   } catch (e) {
     ok(false, "DOM flow threw: " + (e && e.message));
   }

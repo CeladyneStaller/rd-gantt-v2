@@ -6611,7 +6611,37 @@ function openFmeaExp(mi,ei,ci,xi){
   document.getElementById('fxOverlay').classList.add('open');
 }
 function closeFmeaExp(){ document.getElementById('fxOverlay').classList.remove('open'); fxPath=null; renderFmeaModes(); }
-function saveFmeaExp(){ closeFmeaExp(); }      // the draft is edited in place; Save on the FMEA modal commits
+/* "Save experiment" has to actually save. It used to only close the sub-modal, leaving the work in
+   draftRisk — so closing the FMEA modal, or refreshing, silently lost it. A button labelled save that
+   does not save is how work disappears. This commits THAT node's experiments straight through to the
+   live problem, located by stable id, and persists. Other in-progress FMEA edits stay in the draft,
+   so saving an experiment does not quietly commit an unrelated half-typed cause.
+   A problem or node that does not exist in exec yet has nowhere to commit to; there the experiment
+   rides along with the problem and the caller is told so rather than being left to assume. */
+function __fxLiveNode(){
+  if(editingRiskId===null||!draftRisk||!fxPath) return null;
+  var live=(exec.risks||[]).filter(function(x){ return x.rid===editingRiskId; })[0]; if(!live) return null;
+  var dm=(draftRisk.modes||[])[fxPath.mi]; if(!dm) return null;
+  var lm=(live.modes||[]).filter(function(m){ return m.mid===dm.mid; })[0]; if(!lm) return null;
+  if(fxPath.ei==null) return lm;
+  var de=(dm.effects||[])[fxPath.ei]; if(!de) return null;
+  var le=(lm.effects||[]).filter(function(x){ return x.eid===de.eid; })[0]; if(!le) return null;
+  if(fxPath.ci==null) return le;
+  var dc=(de.causes||[])[fxPath.ci]; if(!dc) return null;
+  return (le.causes||[]).filter(function(x){ return x.cid===dc.cid; })[0]||null;
+}
+function saveFmeaExp(){
+  var dNode=fxPath?__fxNode(fxPath.mi,fxPath.ei,fxPath.ci):null;
+  var lNode=__fxLiveNode();
+  if(dNode&&lNode){
+    lNode.experiments=JSON.parse(JSON.stringify(dNode.experiments||[]));
+    try{ persist(); }catch(e){}
+    try{ setMsg("Experiment saved","ok"); }catch(e){}
+  } else {
+    try{ setMsg("Experiment kept \u2014 it saves when you save the problem","warn"); }catch(e){}
+  }
+  closeFmeaExp();
+}
 function fxSet(field,v){ var x=fxCur(); if(x){ x[field]=v; if(field==='verdict') renderFmeaExp(); } }
 function fxAddSample(){
   var inp=document.getElementById('fx-newsample'); if(!inp) return;
