@@ -190,6 +190,37 @@
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
   /* the scale belongs with the VALUE it scales, not with the import target — and sharing the target's
      column let it hold its width while the dropdown collapsed, which made the target unreadable. */
+  .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
+  .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
+  .fx-chip.warn{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
+  .fx-chip.bad{background:var(--pill-bad-bg);color:var(--pill-bad-fg);border-color:var(--pill-bad-bd)}
+  .fx-cellchips{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+  .fx-rows{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+  .fx-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+  .fx-sub{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fx-prog{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+  .fx-add{margin-left:6px}
+  #fxBody{padding:12px 14px;max-height:64vh;overflow:auto}
+  .fx-sec{font-family:var(--mono);font-size:11px;color:var(--muted);margin:0 0 8px;display:flex;align-items:center}
+  .fx-sec2{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+  .fx-lab{display:block;font-size:11px;color:var(--muted);margin:8px 0 3px}
+  .fx-in,.fx-ta{width:100%;font-size:12.5px}
+  .fx-ta{min-height:38px;resize:vertical}
+  .fx-samples{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px;border:1px solid var(--line);border-radius:var(--radius)}
+  .fx-schip{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px solid var(--line);padding:1px 4px 1px 7px;border-radius:4px}
+  .fx-sadd{flex:1 1 90px;min-width:0;height:24px;font-size:11.5px;border:none;background:transparent}
+  .fx-grid-wrap{overflow-x:auto}
+  .fx-grid{width:100%;border-collapse:collapse;font-size:12px}
+  .fx-grid th,.fx-grid td{border-top:1px solid var(--line);padding:4px 5px;text-align:left;vertical-align:top}
+  .fx-grid th{color:var(--muted);font-weight:500;font-size:10px}
+  .fx-th-s{width:96px}
+  .fx-td-s{font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+  .fx-krname{width:100%;height:24px;font-size:11.5px}
+  .fx-krunit{width:100%;height:20px;font-size:10px;margin-top:2px;color:var(--muted)}
+  .fx-val{width:100%;height:26px;font-size:12px;font-family:var(--mono);text-align:right}
+  .fx-empty{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0}
+  .fx-concl{display:flex;gap:8px;align-items:flex-start}
+  .fx-verdict{flex:0 0 auto;width:150px}
   .crit-dash{color:var(--muted);padding:0 2px;align-self:center;font-size:12px}
   .cd-vstack{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .cd-scale{width:100%;max-width:88px;font-family:var(--mono);font-size:10.5px;padding:1px 2px;height:22px}
@@ -1081,6 +1112,7 @@ html[data-theme="dark"] #etb-view{
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
 <div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
 <div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
+<div id="fxOverlay" class="overlay" style="z-index:190"><div class="modal" style="max-width:660px"><div class="modal-head"><span class="modal-title" id="fxTitle">Experiment</span><span class="pill" id="fxCtx" style="margin-left:8px"></span><button class="modal-x" onclick="closeFmeaExp()" title="Close">×</button></div><div id="fxBody"></div><div class="modal-foot"><span id="fxCount" class="hint" style="margin-right:auto"></span><button class="ghost mini" onclick="closeFmeaExp()">Cancel</button><button class="act mini" onclick="saveFmeaExp()">Save experiment</button></div></div></div>
 <div id="fmeaOverlay" class="overlay" style="z-index:140"><div class="modal" style="max-width:840px"><div class="modal-head"><span class="modal-title" id="fmeaTitle"></span><button class="modal-x" id="fmeaX" title="Close">×</button></div><div id="fmeaBody"></div></div></div>
 
 <div id="cdOverlay" class="overlay" style="z-index:160"><div class="modal" style="max-width:880px">
@@ -4170,6 +4202,8 @@ function renderFmeaModes(){
                 <div class="sod-f"><span class="sod-l">Detection</span><select id="c-det-${mi}-${ei}-${ci}" onchange="updateCauseRpn(${mi},${ei},${ci})">${sodOptions('detection',c.detection)}</select></div>
                 <div class="sod-rpn"><span class="sod-l">RPN</span><span id="rpn-${mi}-${ei}-${ci}" class="rpn-badge ${rpnCls(rpn)}">${rpn}</span></div>
               </div>
+              <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Evidence</span><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},${ei},${ci})">+ Experiment</button></div>
+              ${fxRowsHtml(c,mi,ei,ci)}
               <input type="text" class="fm-mit" placeholder="Mitigation / action" value="${esc(c.mitigation)}" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].mitigation=this.value">
             </div>`;
           }).join('');
@@ -4177,7 +4211,8 @@ function renderFmeaModes(){
         return `<div class="fm-effect">
           <div class="fm-effect-head"><span class="fm-num">Effect ${ei+1}</span><button class="del-x" onclick="delDraftEffect(${mi},${ei})" title="Remove">×</button></div>
           <textarea placeholder="What happens if this failure mode occurs?" oninput="draftRisk.modes[${mi}].effects[${ei}].effect=this.value">${esc(e.effect)}</textarea>
-          <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Causes</span><button class="ghost mini" onclick="addDraftCause(${mi},${ei})">+ Add cause</button></div>
+          ${fxRowsHtml(e,mi,ei,null)}
+          <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Causes</span><button class="ghost mini" onclick="addDraftCause(${mi},${ei})">+ Add cause</button><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},${ei},null)">+ Experiment</button></div>
           <div class="fm-causes">${causesHtml}</div>
         </div>`;
       }).join('');
@@ -4185,7 +4220,8 @@ function renderFmeaModes(){
     return `<div class="fm-mode">
       <div class="fm-mode-head"><span class="fm-num">Failure mode ${mi+1}</span><button class="del-x" onclick="delDraftMode(${mi})" title="Remove">×</button></div>
       <textarea placeholder="What could go wrong?" oninput="draftRisk.modes[${mi}].mode=this.value">${esc(mode.mode)}</textarea>
-      <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Effects</span><button class="ghost mini" onclick="addDraftEffect(${mi})">+ Add effect</button></div>
+      ${fxRowsHtml(mode,mi,null,null)}
+      <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Effects</span><button class="ghost mini" onclick="addDraftEffect(${mi})">+ Add effect</button><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},null,null)">+ Experiment</button></div>
       <div class="fm-effects">${effectsHtml}</div>
     </div>`;
   }).join('');
@@ -4211,6 +4247,132 @@ function addDraftEffect(mi){ draftRisk.modes[mi].effects.push({eid:RD.fmeaId('e'
 function delDraftEffect(mi,ei){ draftRisk.modes[mi].effects.splice(ei,1); renderFmeaModes(); }
 function addDraftCause(mi,ei){ draftRisk.modes[mi].effects[ei].causes.push(RD.blankCause()); renderFmeaModes(); }
 function delDraftCause(mi,ei,ci){ draftRisk.modes[mi].effects[ei].causes.splice(ci,1); renderFmeaModes(); }
+/* ---- FMEA evidence: an experiment hangs off a failure mode, an effect, or a cause. The three levels
+   share one shape and one editor; only where it is stored differs. Codes come from the whole problem
+   so EXP-4 means the same thing wherever it sits. ---- */
+function __fxNode(mi,ei,ci){
+  if(!draftRisk) return null;
+  var m=draftRisk.modes&&draftRisk.modes[mi]; if(!m) return null;
+  if(ei==null) return m;
+  var e=m.effects&&m.effects[ei]; if(!e) return null;
+  if(ci==null) return e;
+  return (e.causes&&e.causes[ci])||null;
+}
+function blankFmeaExp(problem){
+  return { xid:'fx_'+Math.random().toString(36).slice(2,9), code:RD.fmeaNextExpCode(problem),
+           hypothesis:'', toggle:'', test:'', samples:[], key_reads:[], values:{}, notes:'', verdict:'', conclusion:'' };
+}
+function addDraftExperiment(mi,ei,ci){
+  var n=__fxNode(mi,ei,ci); if(!n) return;
+  if(!Array.isArray(n.experiments)) n.experiments=[];
+  var x=blankFmeaExp(draftRisk); n.experiments.push(x);
+  openFmeaExp(mi,ei,ci,n.experiments.length-1);
+}
+function delDraftExperiment(mi,ei,ci,xi){
+  var n=__fxNode(mi,ei,ci); if(!n||!Array.isArray(n.experiments)) return;
+  n.experiments.splice(xi,1); renderFmeaModes();
+}
+let fxPath=null;
+function fxCur(){ if(!fxPath) return null; var n=__fxNode(fxPath.mi,fxPath.ei,fxPath.ci); var xs=n&&n.experiments; return (xs&&xs[fxPath.xi])||null; }
+function openFmeaExp(mi,ei,ci,xi){
+  fxPath={mi:mi,ei:(ei==null?null:ei),ci:(ci==null?null:ci),xi:xi};
+  var lvl = (fxPath.ci!=null)?('Cause '+(fxPath.ci+1)) : ((fxPath.ei!=null)?('Effect '+(fxPath.ei+1)) : ('Failure mode '+(mi+1)));
+  var n=__fxNode(fxPath.mi,fxPath.ei,fxPath.ci);
+  var txt = n ? (n.cause||n.effect||n.mode||'') : '';
+  document.getElementById('fxCtx').textContent = lvl + (txt?(' \u00b7 '+txt.slice(0,42)):'');
+  renderFmeaExp();
+  document.getElementById('fxOverlay').classList.add('open');
+}
+function closeFmeaExp(){ document.getElementById('fxOverlay').classList.remove('open'); fxPath=null; renderFmeaModes(); }
+function saveFmeaExp(){ closeFmeaExp(); }      // the draft is edited in place; Save on the FMEA modal commits
+function fxSet(field,v){ var x=fxCur(); if(x){ x[field]=v; if(field==='verdict') renderFmeaExp(); } }
+function fxAddSample(){
+  var inp=document.getElementById('fx-newsample'); if(!inp) return;
+  var v=(inp.value||'').trim(); if(!v) return;
+  var x=fxCur(); if(!x) return;
+  if(!Array.isArray(x.samples)) x.samples=[];
+  if(x.samples.indexOf(v)<0) x.samples.push(v);
+  inp.value=''; renderFmeaExp();
+  var i2=document.getElementById('fx-newsample'); if(i2) try{ i2.focus(); }catch(e){}
+}
+function fxDelSample(i){ var x=fxCur(); if(!x) return; var nm=x.samples[i]; x.samples.splice(i,1); if(x.values) delete x.values[nm]; renderFmeaExp(); }
+function fxAddKeyRead(){
+  var x=fxCur(); if(!x) return;
+  if(!Array.isArray(x.key_reads)) x.key_reads=[];
+  x.key_reads.push({krid:'k_'+Math.random().toString(36).slice(2,8), name:'', unit:''});
+  renderFmeaExp();
+}
+function fxDelKeyRead(i){
+  var x=fxCur(); if(!x) return; var k=x.key_reads[i]; x.key_reads.splice(i,1);
+  Object.keys(x.values||{}).forEach(function(s){ if(x.values[s]) delete x.values[s][k.krid]; });
+  renderFmeaExp();
+}
+function fxSetKr(i,field,v){ var x=fxCur(); if(x&&x.key_reads[i]){ x.key_reads[i][field]=v; } }
+function fxSetVal(sample,krid,v){
+  var x=fxCur(); if(!x) return;
+  if(!x.values) x.values={};
+  if(!x.values[sample]) x.values[sample]={};
+  x.values[sample][krid]=v;
+  var p=RD.fmeaExpProgress(x); var el=document.getElementById('fxCount');
+  if(el) el.textContent=p.total?(p.filled+' of '+p.total+' values recorded'):'no key reads yet';
+}
+function renderFmeaExp(){
+  var x=fxCur(), body=document.getElementById('fxBody'); if(!body) return;
+  if(!x){ body.innerHTML='<p class="hint">This experiment is no longer available.</p>'; return; }
+  var samples=Array.isArray(x.samples)?x.samples:[], krs=Array.isArray(x.key_reads)?x.key_reads:[];
+  var chips = samples.length ? samples.map(function(s,i){
+      return '<span class="fx-schip">'+esc(s)+'<button class="del-x" onclick="fxDelSample('+i+')" title="Remove">\u00d7</button></span>'; }).join('')
+    : '<span class="hint" style="font-size:11px">no samples yet</span>';
+  /* Results rows are the samples from the details above — declared once, recorded once. */
+  var head='<tr><th class="fx-th-s">Sample</th>'+krs.map(function(k,i){
+      return '<th><input type="text" class="fx-krname" value="'+esc(k.name||'')+'" placeholder="key read" oninput="fxSetKr('+i+',\'name\',this.value)">'
+        +'<input type="text" class="fx-krunit" value="'+esc(k.unit||'')+'" placeholder="unit" oninput="fxSetKr('+i+',\'unit\',this.value)">'
+        +'<button class="del-x" onclick="fxDelKeyRead('+i+')" title="Remove">\u00d7</button></th>'; }).join('')+'</tr>';
+  var rows = samples.length ? samples.map(function(sm){
+      return '<tr><td class="fx-td-s">'+esc(sm)+'</td>'+krs.map(function(k){
+        var v=((x.values||{})[sm]||{})[k.krid];
+        return '<td><input type="text" class="fx-val" value="'+esc(v==null?'':String(v))+'" placeholder="\u2014" oninput="fxSetVal(\''+esc(sm)+'\',\''+esc(k.krid)+'\',this.value)"></td>';
+      }).join('')+'</tr>'; }).join('')
+    : '<tr><td colspan="'+(krs.length+1)+'" class="fx-empty">Add a sample above to record values.</td></tr>';
+  var VERDICTS=[['','not concluded'],['confirmed','confirmed'],['refuted','refuted'],['inconclusive','inconclusive']];
+  body.innerHTML=
+     '<div class="fx-sec">Experiment details</div>'
+    +'<label class="fx-lab">Hypothesis</label><textarea class="fx-ta" oninput="fxSet(\'hypothesis\',this.value)">'+esc(x.hypothesis||'')+'</textarea>'
+    +'<label class="fx-lab">Toggle</label><input type="text" class="fx-in" value="'+esc(x.toggle||'')+'" placeholder="what is varied" oninput="fxSet(\'toggle\',this.value)">'
+    +'<label class="fx-lab">Experiment</label><textarea class="fx-ta" oninput="fxSet(\'test\',this.value)">'+esc(x.test||'')+'</textarea>'
+    +'<label class="fx-lab">Samples</label><div class="fx-samples">'+chips
+      +'<input type="text" id="fx-newsample" class="fx-sadd" placeholder="add sample" onkeydown="if(event.key===\'Enter\'){event.preventDefault();fxAddSample();}"></div>'
+    +'<div class="fx-sec fx-sec2">Results<button class="ghost mini" style="margin-left:auto" onclick="fxAddKeyRead()">+ Key read</button></div>'
+    +'<div class="fx-grid-wrap"><table class="fx-grid">'+head+rows+'</table></div>'
+    +'<label class="fx-lab">Notes</label><textarea class="fx-ta" oninput="fxSet(\'notes\',this.value)">'+esc(x.notes||'')+'</textarea>'
+    +'<label class="fx-lab">Conclusion</label>'
+    +'<div class="fx-concl"><select class="fx-verdict" onchange="fxSet(\'verdict\',this.value)">'
+      +VERDICTS.map(function(v){ return '<option value="'+esc(v[0])+'"'+((x.verdict||'')===v[0]?' selected':'')+'>'+esc(v[1])+'</option>'; }).join('')
+      +'</select><textarea class="fx-ta" oninput="fxSet(\'conclusion\',this.value)">'+esc(x.conclusion||'')+'</textarea></div>';
+  var p=RD.fmeaExpProgress(x), c=document.getElementById('fxCount');
+  if(c) c.textContent=p.total?(p.filled+' of '+p.total+' values recorded'):'no key reads yet';
+}
+function fxCellChips(xs){ if(!xs||!xs.length) return ''; return '<div class="fx-cellchips">'+xs.map(function(x){ return fxChip(x); }).join('')+'</div>'; }
+function fxVerdictCls(v){ return v==='confirmed'?'ok':(v==='refuted'?'bad':(v==='inconclusive'?'warn':'')); }
+function fxChip(x){
+  var v=x.verdict||'open';
+  return '<span class="fx-chip '+esc(fxVerdictCls(x.verdict))+'">'+esc(x.code||'EXP')+' \u00b7 '+esc(v)+'</span>';
+}
+/* the compact row shown inside the FMEA modal under each node */
+function fxRowsHtml(node,mi,ei,ci){
+  var xs=RD.fmeaNodeExperiments(node); if(!xs.length) return '';
+  return '<div class="fx-rows">'+xs.map(function(x,xi){
+    var p=RD.fmeaExpProgress(x);
+    var sub=x.toggle||x.hypothesis||'';
+    return '<div class="fx-row">'
+      +'<span class="fx-chip '+esc(fxVerdictCls(x.verdict))+'">'+esc(x.code||'EXP')+'</span>'
+      +'<span class="fx-sub">'+esc(sub||'(no details yet)')+'</span>'
+      +'<span class="fx-prog">'+p.filled+'/'+p.total+'</span>'
+      +'<button class="ghost mini" onclick="openFmeaExp('+mi+','+ei+','+ci+','+xi+')">Open</button>'
+      +'<button class="del-x" onclick="delDraftExperiment('+mi+','+ei+','+ci+','+xi+')" title="Remove">\u00d7</button>'
+      +'</div>';
+  }).join('')+'</div>';
+}
 function saveFmea(){
   const problem=document.getElementById('f-problem').value.trim(); if(!problem){ document.getElementById('f-problem').focus(); return; }
   draftRisk.problem=problem; draftRisk.gateId=document.getElementById('f-gate').value||null;
@@ -4246,20 +4408,20 @@ function renderRisks(){
       const modeResolved=mode.status==='resolved';
       let modeRs=0; if(!mode.effects||!mode.effects.length) modeRs=1; else mode.effects.forEach(e=>{ modeRs+=Math.max(1,(e.causes||[]).length); });
       let modeUsed=false;
-      if(!mode.effects||!mode.effects.length){ rows.push({mid:mode.mid,eid:null,cid:null,modeText:mode.mode,modeRs:1,effText:'',effRs:1,cause:null,newMode:true,modeResolved,effectResolved:false,modeStatus:mode.status||'open',effStatus:null}); return; }
+      if(!mode.effects||!mode.effects.length){ rows.push({mid:mode.mid,eid:null,cid:null,modeText:mode.mode,modeRs:1,effText:'',effRs:1,cause:null,newMode:true,modeResolved,effectResolved:false,modeStatus:mode.status||'open',effStatus:null,modeExps:RD.fmeaNodeExperiments(mode),effExps:[]}); return; }
       mode.effects.forEach(e=>{
         const effectResolved=e.status==='resolved', effRs=Math.max(1,(e.causes||[]).length);
-        if(!e.causes||!e.causes.length){ rows.push({mid:mode.mid,eid:e.eid,cid:null,modeText:!modeUsed?mode.mode:'',modeRs:!modeUsed?modeRs:0,effText:e.effect,effRs:1,cause:null,newMode:!modeUsed,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open'}); modeUsed=true; return; }
-        e.causes.forEach((c,ci)=>{ const showMode=!modeUsed&&ci===0; rows.push({mid:mode.mid,eid:e.eid,cid:c.cid,modeText:showMode?mode.mode:'',modeRs:showMode?modeRs:0,effText:ci===0?e.effect:'',effRs:ci===0?effRs:0,cause:c,newMode:showMode,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open'}); if(ci===0) modeUsed=true; });
+        if(!e.causes||!e.causes.length){ rows.push({mid:mode.mid,eid:e.eid,cid:null,modeText:!modeUsed?mode.mode:'',modeRs:!modeUsed?modeRs:0,effText:e.effect,effRs:1,cause:null,newMode:!modeUsed,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open',modeExps:!modeUsed?RD.fmeaNodeExperiments(mode):[],effExps:RD.fmeaNodeExperiments(e)}); modeUsed=true; return; }
+        e.causes.forEach((c,ci)=>{ const showMode=!modeUsed&&ci===0; rows.push({mid:mode.mid,eid:e.eid,cid:c.cid,modeText:showMode?mode.mode:'',modeRs:showMode?modeRs:0,effText:ci===0?e.effect:'',effRs:ci===0?effRs:0,cause:c,newMode:showMode,modeResolved,effectResolved,modeStatus:mode.status||'open',effStatus:e.status||'open',modeExps:showMode?RD.fmeaNodeExperiments(mode):[],effExps:ci===0?RD.fmeaNodeExperiments(e):[]}); if(ci===0) modeUsed=true; });
       });
     });
     const tbody=rows.map((row,idx)=>{
       const cls=[]; if(row.newMode&&idx>0) cls.push('mode-sep'); if(row.modeResolved||row.effectResolved) cls.push('row-resolved');
       let tr=`<tr${cls.length?` class="${cls.join(' ')}"`:''}>`;
-      if(row.modeRs>0) tr+=`<td class="c-mode" rowspan="${row.modeRs}"><div class="c-stack"><span>${esc(row.modeText)}</span>${seg(row.modeStatus,`setModeStatus('${rid}','${row.mid}','%V%')`,['open','mitigating','resolved'])}</div></td>`;
-      if(row.effRs>0){ const eSeg=row.eid?seg(row.effStatus,`setEffectStatus('${rid}','${row.mid}','${row.eid}','%V%')`,['open','mitigating','resolved']):''; tr+=`<td class="c-eff" rowspan="${row.effRs}"><div class="c-stack"><span>${esc(row.effText)}</span>${eSeg}</div></td>`; }
+      if(row.modeRs>0) tr+=`<td class="c-mode" rowspan="${row.modeRs}"><div class="c-stack"><span>${esc(row.modeText)}</span>${fxCellChips(row.modeExps)}${seg(row.modeStatus,`setModeStatus('${rid}','${row.mid}','%V%')`,['open','mitigating','resolved'])}</div></td>`;
+      if(row.effRs>0){ const eSeg=row.eid?seg(row.effStatus,`setEffectStatus('${rid}','${row.mid}','${row.eid}','%V%')`,['open','mitigating','resolved']):''; tr+=`<td class="c-eff" rowspan="${row.effRs}"><div class="c-stack"><span>${esc(row.effText)}</span>${fxCellChips(row.effExps)}${eSeg}</div></td>`; }
       if(row.cause){ const c=row.cause, rpn=RD.calcRpn(c.severity,c.occurrence,c.detection), hidden=row.modeResolved||row.effectResolved;
-        tr+=`<td class="c-cause">${esc(c.cause)}${c.mitigation?`<div class="c-mit">${esc(c.mitigation)}</div>`:''}</td>`;
+        tr+=`<td class="c-cause">${esc(c.cause)}${c.mitigation?`<div class="c-mit">${esc(c.mitigation)}</div>`:''}${fxCellChips(RD.fmeaNodeExperiments(c))}</td>`;
         tr+=`<td class="c-sod">${c.severity}·${c.occurrence}·${c.detection}</td>`;
         tr+=`<td class="c-rpn">${hidden?'<span class="rpn-dim">—</span>':`<span class="rpn-badge ${rpnCls(rpn)}">${rpn}</span>`}</td>`;
         tr+=`<td>${seg(c.status||'open',`setCauseStatus('${rid}','${row.mid}','${row.eid}','${c.cid}','%V%')`,['open','mitigating','resolved'])}</td>`;

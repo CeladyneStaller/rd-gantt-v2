@@ -1482,6 +1482,69 @@
     detection:  ['Almost certain','Very high','High','Moderately high','Moderate','Low','Very low','Remote','Very remote','Undetectable']
   };
   function calcRpn(s, o, d) { return (parseInt(s, 10) || 1) * (parseInt(o, 10) || 1) * (parseInt(d, 10) || 1); }
+
+  // ---- FMEA evidence -------------------------------------------------------------------------
+  // An experiment attached to a failure mode, effect or cause. It carries the same four fields an ETB
+  // experiment does (hypothesis, toggle, test, key reads) but lives ON the FMEA node rather than in the
+  // experiment tree, so recording evidence against a cause never creates a Gantt bar or a gate
+  // dependency. Values are sample -> keyReadId -> number.
+  function fmeaNodeExperiments(node) { return (node && Array.isArray(node.experiments)) ? node.experiments : []; }
+
+  // How much of the results grid is filled: samples x key reads.
+  function fmeaExpProgress(x) {
+    x = x || {};
+    var samples = Array.isArray(x.samples) ? x.samples : [];
+    var krs = Array.isArray(x.key_reads) ? x.key_reads : [];
+    var vals = x.values || {};
+    var total = samples.length * krs.length, filled = 0;
+    samples.forEach(function (s) {
+      var row = vals[s] || {};
+      krs.forEach(function (k) {
+        var v = row[k.krid];
+        if (v !== '' && v != null && isFinite(Number(v))) filled++;
+      });
+    });
+    return { filled: filled, total: total, complete: total > 0 && filled === total };
+  }
+
+  // Every experiment on a problem, tagged with the node it hangs off, so the section view can place a
+  // chip in the right cell and the rollup can count evidence without walking the tree again.
+  function fmeaAllExperiments(problem) {
+    var out = [];
+    ((problem && problem.modes) || []).forEach(function (m) {
+      fmeaNodeExperiments(m).forEach(function (x) { out.push({ x: x, level: 'mode', mid: m.mid }); });
+      (m.effects || []).forEach(function (e) {
+        fmeaNodeExperiments(e).forEach(function (x) { out.push({ x: x, level: 'effect', mid: m.mid, eid: e.eid }); });
+        (e.causes || []).forEach(function (c) {
+          fmeaNodeExperiments(c).forEach(function (x) { out.push({ x: x, level: 'cause', mid: m.mid, eid: e.eid, cid: c.cid }); });
+        });
+      });
+    });
+    return out;
+  }
+
+  // Codes are unique within a problem and stable once assigned, so deleting one never renumbers the
+  // others out from under a reader who wrote "see EXP-4" in a note.
+  function fmeaNextExpCode(problem) {
+    var used = {};
+    fmeaAllExperiments(problem).forEach(function (r) { used[String((r.x && r.x.code) || '')] = 1; });
+    var i = 1;
+    while (used['EXP-' + i]) i++;
+    return 'EXP-' + i;
+  }
+
+  function fmeaEvidenceRollup(problem) {
+    var all = fmeaAllExperiments(problem), t = { total: all.length, confirmed: 0, refuted: 0, inconclusive: 0, open: 0 };
+    all.forEach(function (r) {
+      var v = (r.x && r.x.verdict) || '';
+      if (v === 'confirmed') t.confirmed++;
+      else if (v === 'refuted') t.refuted++;
+      else if (v === 'inconclusive') t.inconclusive++;
+      else t.open++;
+    });
+    return t;
+  }
+
   function rpnBand(r) { return r >= 200 ? 'high' : r >= 100 ? 'med' : 'low'; }
   function fmeaScaleLabel(kind, v) { var a = FMEA_SCALES[kind]; if (!a) return ''; return a[(parseInt(v, 10) || 1) - 1] || ''; }
   function worstRpn(prob) {
@@ -2175,6 +2238,11 @@
     targetKpisInScope: targetKpisInScope,
     // FMEA / risk register
     calcRpn: calcRpn,
+    fmeaNodeExperiments: fmeaNodeExperiments,
+    fmeaExpProgress: fmeaExpProgress,
+    fmeaAllExperiments: fmeaAllExperiments,
+    fmeaNextExpCode: fmeaNextExpCode,
+    fmeaEvidenceRollup: fmeaEvidenceRollup,
     rpnBand: rpnBand,
     fmeaScaleLabel: fmeaScaleLabel,
     FMEA_SCALES: FMEA_SCALES,
