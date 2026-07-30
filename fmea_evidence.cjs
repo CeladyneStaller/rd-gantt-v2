@@ -145,6 +145,56 @@ setTimeout(() => {
     ok((dr3.modes[0].experiments || []).length === 1, "the mode-level button attaches to the failure mode");
     ok(dr3.modes[0].experiments[0].code === 'EXP-2', "…taking the next code, unique across the problem (" + dr3.modes[0].experiments[0].code + ")");
     ok((dr3.modes[0].effects[0].experiments || []).length === 0, "…and not to the effect below it");
+    // ---------- collapsing sections in the FMEA modal ----------
+    // The state cannot live in the DOM: renderFmeaModes re-runs on every keystroke, so a class or a
+    // <details> would be wiped by the next input event. And it must be keyed on the stable ids, or
+    // deleting one row would silently collapse a different one.
+    w.eval("fmSetAllCollapsed(false)");
+    const carets = () => [...d.querySelectorAll('#fmeaBody .fm-caret')];
+    ok(carets().length === 3, "every level offers a collapse control: mode, effect and cause (" + carets().length + ")");
+    ok(carets().every(b => b.getAttribute('aria-expanded') === 'true'), "…all expanded by default, so opening the modal is unchanged");
+
+    const modeCard = () => d.querySelector('#fmeaBody .fm-mode');
+    ok(!!modeCard().querySelector('textarea'), "an expanded failure mode shows its editor");
+    carets()[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(modeCard().classList.contains('fm-collapsed'), "clicking the caret collapses the failure mode");
+    ok(!modeCard().querySelector('textarea'), "…hiding its editor");
+    const lbl = modeCard().querySelector('.fm-ctxt');
+    ok(!!lbl && /Pt dissolution/.test(lbl.textContent), "…while still naming it (" + (lbl && lbl.textContent) + ")");
+    const meta = modeCard().querySelector('.fm-cmeta');
+    ok(!!meta && /effect/.test(meta.textContent) && /cause/.test(meta.textContent),
+       "…and summarising what is inside (" + (meta && meta.textContent) + ")");
+    ok(/evidence/.test((meta && meta.textContent) || ''), "…including its evidence count");
+
+    // the state has to survive the re-render that every keystroke triggers
+    w.eval("renderFmeaModes()");
+    ok(modeCard().classList.contains('fm-collapsed'), "the collapse survives a re-render, so typing elsewhere does not reopen it");
+
+    // expand again, then collapse a CAUSE and delete a different one: the wrong row must not collapse
+    d.querySelector('#fmeaBody .fm-caret').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(!modeCard().classList.contains('fm-collapsed'), "clicking again expands it");
+
+    w.eval(`draftRisk.modes[0].effects[0].causes.push({cid:'c2',cause:'Second cause',severity:3,occurrence:3,detection:3,mitigation:'',status:'open'}); renderFmeaModes();`);
+    const causeCarets = () => [...d.querySelectorAll('#fmeaBody .fm-cause .fm-caret')];
+    ok(causeCarets().length === 2, "two causes, two carets");
+    causeCarets()[1].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const causeCards = () => [...d.querySelectorAll('#fmeaBody .fm-cause')];
+    ok(!causeCards()[0].classList.contains('fm-collapsed') && causeCards()[1].classList.contains('fm-collapsed'),
+       "collapsing the second cause leaves the first open");
+    w.eval("delDraftCause(0,0,0)");            // delete the FIRST cause; indices shift
+    ok(causeCards().length === 1, "one cause remains after deleting the other");
+    ok(causeCards()[0].classList.contains('fm-collapsed'),
+       "the surviving cause keeps ITS own collapse state — keyed on id, not on index");
+
+    // collapse all / expand all
+    w.eval("fmSetAllCollapsed(true)");
+    ok([...d.querySelectorAll('#fmeaBody .fm-mode,#fmeaBody .fm-effect,#fmeaBody .fm-cause')].every(x => x.classList.contains('fm-collapsed')),
+       "Collapse all collapses every level at once");
+    ok(d.querySelectorAll('#fmea-modes-section textarea').length === 0, "…leaving no mode, effect or cause editor open");
+    w.eval("fmSetAllCollapsed(false)");
+    ok([...d.querySelectorAll('#fmeaBody .fm-mode,#fmeaBody .fm-effect,#fmeaBody .fm-cause')].every(x => !x.classList.contains('fm-collapsed')),
+       "Expand all reopens them");
+
   } catch (e) {
     ok(false, "DOM flow threw: " + (e && e.message));
   }

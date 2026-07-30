@@ -190,6 +190,12 @@
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
   /* the scale belongs with the VALUE it scales, not with the import target — and sharing the target's
      column let it hold its width while the dropdown collapsed, which made the target unreadable. */
+  .fm-caret{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;line-height:1;padding:0 2px 0 0;flex:0 0 auto}
+  .fm-caret:hover{color:var(--ink)}
+  .fm-mode-head,.fm-effect-head,.fm-cause-head{display:flex;align-items:center;gap:6px}
+  .fm-ctxt{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fm-cmeta{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+  .fm-mode.fm-collapsed,.fm-effect.fm-collapsed,.fm-cause.fm-collapsed{padding-bottom:6px}
   .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
   .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
   .fx-chip.warn{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
@@ -6425,7 +6431,7 @@ function fmeaModalShell(){
     <div id="fmea-knowns-section" class="fmea-modes-list" style="margin-bottom:14px"></div>
     <label class="fmea-lbl">Gate association (optional)</label>
     <select id="f-gate" class="fmea-gate-sel"></select>
-    <div class="fmea-modes-head"><span class="fmea-lbl" style="margin:0">Failure modes</span><button class="ghost mini" onclick="addDraftMode()">+ Add failure mode</button></div>
+    <div class="fmea-modes-head"><span class="fmea-lbl" style="margin:0">Failure modes</span><button class="ghost mini" onclick="fmSetAllCollapsed(true)" title="Collapse every section">Collapse all</button><button class="ghost mini" onclick="fmSetAllCollapsed(false)" title="Expand every section">Expand all</button><button class="ghost mini" onclick="addDraftMode()">+ Add failure mode</button></div>
     <div id="fmea-modes-section" class="fmea-modes-list"></div>
     <div class="fmea-modal-actions"><button class="ghost" onclick="closeFmeaModal()">Cancel</button><button class="act" id="fmea-save-btn" onclick="saveFmea()">Save problem</button></div>
   </div>`;
@@ -6450,6 +6456,53 @@ function openEditFmeaModal(rid){
   setTimeout(()=>{ const el=document.getElementById('f-problem'); if(el) el.focus(); },40);
 }
 function closeFmeaModal(){ document.getElementById('fmeaOverlay').classList.remove('open'); document.getElementById('fmeaBody').innerHTML=''; draftRisk=null; editingRiskId=null; }
+/* ---- FMEA modal collapse ----------------------------------------------------------------------
+   renderFmeaModes re-runs on every keystroke, so collapse state cannot live in the DOM — a <details>
+   or a class on the card would be wiped by the next input event. It is keyed on the STABLE ids, not
+   the array indices, so collapsing one row and then deleting another never collapses a third by
+   accident. State is page-scoped: it survives reopening the modal and resets on refresh. ---- */
+let fmCollapsed=new Set();
+function fmKey(mode,e,c,mi,ei,ci){
+  var k='m:'+((mode&&mode.mid)||('i'+mi));
+  if(e) k+='|e:'+(e.eid||('i'+ei));
+  if(c) k+='|c:'+(c.cid||('i'+ci));
+  return k;
+}
+function fmIsOpen(key){ return !fmCollapsed.has(key); }
+function toggleFmSection(key){ if(fmCollapsed.has(key)) fmCollapsed.delete(key); else fmCollapsed.add(key); renderFmeaModes(); }
+function fmSetAllCollapsed(on){
+  fmCollapsed=new Set();
+  if(on) (draftRisk&&draftRisk.modes||[]).forEach(function(m,mi){
+    fmCollapsed.add(fmKey(m,null,null,mi));
+    (m.effects||[]).forEach(function(e,ei){
+      fmCollapsed.add(fmKey(m,e,null,mi,ei));
+      (e.causes||[]).forEach(function(c,ci){ fmCollapsed.add(fmKey(m,e,c,mi,ei,ci)); });
+    });
+  });
+  renderFmeaModes();
+}
+function fmTrunc(t,n){ t=String(t||'').trim(); return t?(t.length>n?(t.slice(0,n-1)+'\u2026'):t):''; }
+/* a collapsed row still has to say what it is and whether it needs attention */
+function fmModeSummary(mode){
+  var ne=(mode.effects||[]).length, nc=0;
+  (mode.effects||[]).forEach(function(e){ nc+=(e.causes||[]).length; });
+  var nx=RD.fmeaAllExperiments({modes:[mode]}).length;
+  var bits=[ne+' effect'+(ne===1?'':'s'), nc+' cause'+(nc===1?'':'s')];
+  if(nx) bits.push(nx+' evidence');
+  return bits.join(' \u00b7 ');
+}
+function fmEffectSummary(e){
+  var nc=(e.causes||[]).length, nx=RD.fmeaNodeExperiments(e).length;
+  var bits=[nc+' cause'+(nc===1?'':'s')];
+  if(nx) bits.push(nx+' evidence');
+  return bits.join(' \u00b7 ');
+}
+function fmCaret(open,key){
+  return '<button class="fm-caret" onclick="toggleFmSection(\''+key+'\')" aria-expanded="'+(open?'true':'false')+'" title="'+(open?'Collapse':'Expand')+'">'+(open?'\u25be':'\u25b8')+'</button>';
+}
+function fmCollapsedLabel(txt,meta,fallback){
+  return '<span class="fm-ctxt">'+(esc(fmTrunc(txt,44))||fallback)+'</span><span class="fm-cmeta">'+esc(meta)+'</span>';
+}
 function renderFmeaModes(){
   const container=document.getElementById('fmea-modes-section'); if(!container) return;
   if(!draftRisk.modes.length){ container.innerHTML='<div class="fmea-empty">No failure modes yet. Click “+ Add failure mode” to begin.</div>'; return; }
@@ -6461,8 +6514,10 @@ function renderFmeaModes(){
         if(e.causes && e.causes.length){
           causesHtml=e.causes.map((c,ci)=>{
             const rpn=RD.calcRpn(c.severity,c.occurrence,c.detection);
-            return `<div class="fm-cause">
-              <div class="fm-cause-head"><span class="fm-num">Cause ${ci+1}</span><button class="del-x" onclick="delDraftCause(${mi},${ei},${ci})" title="Remove">×</button></div>
+            const cKey=fmKey(mode,e,c,mi,ei,ci), cOpen=fmIsOpen(cKey);
+            return `<div class="fm-cause${cOpen?'':' fm-collapsed'}">
+              <div class="fm-cause-head">${fmCaret(cOpen,cKey)}<span class="fm-num">Cause ${ci+1}</span>${cOpen?'':fmCollapsedLabel(c.cause,'RPN '+rpn,'(unnamed cause)')}<button class="del-x" onclick="delDraftCause(${mi},${ei},${ci})" title="Remove">×</button></div>
+              ${cOpen?`
               <textarea placeholder="Why might this failure occur?" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].cause=this.value">${esc(c.cause)}</textarea>
               <div class="sod-grid">
                 <div class="sod-f"><span class="sod-l">Severity</span><select id="c-sev-${mi}-${ei}-${ci}" onchange="updateCauseRpn(${mi},${ei},${ci})">${sodOptions('severity',c.severity)}</select></div>
@@ -6472,25 +6527,29 @@ function renderFmeaModes(){
               </div>
               <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Evidence</span><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},${ei},${ci})">+ Experiment</button></div>
               ${fxRowsHtml(c,mi,ei,ci)}
-              <input type="text" class="fm-mit" placeholder="Mitigation / action" value="${esc(c.mitigation)}" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].mitigation=this.value">
+              <input type="text" class="fm-mit" placeholder="Mitigation / action" value="${esc(c.mitigation)}" oninput="draftRisk.modes[${mi}].effects[${ei}].causes[${ci}].mitigation=this.value">`:''}
             </div>`;
           }).join('');
         } else causesHtml='<div class="fmea-empty">No causes yet.</div>';
-        return `<div class="fm-effect">
-          <div class="fm-effect-head"><span class="fm-num">Effect ${ei+1}</span><button class="del-x" onclick="delDraftEffect(${mi},${ei})" title="Remove">×</button></div>
+        const eKey=fmKey(mode,e,null,mi,ei), eOpen=fmIsOpen(eKey);
+        return `<div class="fm-effect${eOpen?'':' fm-collapsed'}">
+          <div class="fm-effect-head">${fmCaret(eOpen,eKey)}<span class="fm-num">Effect ${ei+1}</span>${eOpen?'':fmCollapsedLabel(e.effect,fmEffectSummary(e),'(unnamed effect)')}<button class="del-x" onclick="delDraftEffect(${mi},${ei})" title="Remove">×</button></div>
+          ${eOpen?`
           <textarea placeholder="What happens if this failure mode occurs?" oninput="draftRisk.modes[${mi}].effects[${ei}].effect=this.value">${esc(e.effect)}</textarea>
           ${fxRowsHtml(e,mi,ei,null)}
           <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Causes</span><button class="ghost mini" onclick="addDraftCause(${mi},${ei})">+ Add cause</button><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},${ei},null)">+ Experiment</button></div>
-          <div class="fm-causes">${causesHtml}</div>
+          <div class="fm-causes">${causesHtml}</div>`:''}
         </div>`;
       }).join('');
     } else effectsHtml='<div class="fmea-empty">No effects yet.</div>';
-    return `<div class="fm-mode">
-      <div class="fm-mode-head"><span class="fm-num">Failure mode ${mi+1}</span><button class="del-x" onclick="delDraftMode(${mi})" title="Remove">×</button></div>
+    const mKey=fmKey(mode,null,null,mi), mOpen=fmIsOpen(mKey);
+    return `<div class="fm-mode${mOpen?'':' fm-collapsed'}">
+      <div class="fm-mode-head">${fmCaret(mOpen,mKey)}<span class="fm-num">Failure mode ${mi+1}</span>${mOpen?'':fmCollapsedLabel(mode.mode,fmModeSummary(mode),'(unnamed mode)')}<button class="del-x" onclick="delDraftMode(${mi})" title="Remove">×</button></div>
+      ${mOpen?`
       <textarea placeholder="What could go wrong?" oninput="draftRisk.modes[${mi}].mode=this.value">${esc(mode.mode)}</textarea>
       ${fxRowsHtml(mode,mi,null,null)}
       <div class="fm-sub-head"><span class="fmea-lbl" style="margin:0">Effects</span><button class="ghost mini" onclick="addDraftEffect(${mi})">+ Add effect</button><button class="ghost mini fx-add" onclick="addDraftExperiment(${mi},null,null)">+ Experiment</button></div>
-      <div class="fm-effects">${effectsHtml}</div>
+      <div class="fm-effects">${effectsHtml}</div>`:''}
     </div>`;
   }).join('');
 }
