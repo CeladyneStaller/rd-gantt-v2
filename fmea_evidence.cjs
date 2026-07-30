@@ -200,7 +200,7 @@ setTimeout(() => {
     // Closing the FMEA modal or refreshing lost it. The engine and DOM assertions above all passed
     // while that was true, because none of them crossed from the draft into exec.
     let persisted = 0;
-    w.eval("persist=function(){ window.__persistCalls=(window.__persistCalls||0)+1; };");
+    w.eval("persist=function(){ window.__persistCalls=(window.__persistCalls||0)+1; }; flushPersist=function(){ window.__persistCalls=(window.__persistCalls||0)+1; return Promise.resolve(); };");
     w.eval(`exec.risks=[{rid:'r9',problem:'Round trip',objectiveId:'O1',gateId:null,status:'open',knowns:[],modes:[
       {mid:'m9',mode:'M',status:'open',effects:[{eid:'e9',effect:'E',status:'open',causes:[
         {cid:'c9',cause:'C',severity:5,occurrence:5,detection:5,mitigation:'',status:'open'}]}]}]}];
@@ -222,6 +222,10 @@ setTimeout(() => {
     ok(le0.verdict === 'confirmed' && le0.hypothesis === 'H', "…with its details intact");
     ok(((le0.values || {}).S1 || {}).k1 === '0.67', "…including recorded values");
     ok(w.eval("window.__persistCalls") > 0, "…and asks for a save, so a refresh cannot lose it");
+    // asserting persist() was CALLED is not the same as a write leaving the app — the earlier version of
+    // this test passed while the feature saved nothing. Check the document actually goes out.
+    ok(/flushPersist/.test(w.eval("String(saveFmeaExp)")),
+       "the save flushes immediately rather than scheduling a debounced write that a refresh can outrun");
 
     // closing the FMEA modal WITHOUT Save changes must not undo it
     w.eval("closeFmeaModal()");

@@ -4672,7 +4672,14 @@ async function loadAll(){
    division switch can't clobber the new bin's etag. Flushed on switch / poll / tab-hide / unload. */
 let _savedDoc=null;
 function markSaved(){ try{ _savedDoc=JSON.stringify(exec); }catch(e){ _savedDoc=null; } }   // call after load/adopt/save
-function docDirty(){ let s; try{ s=JSON.stringify(exec); }catch(e){ return false; } return s!==_savedDoc; }
+/* A stringify failure used to return false, which reads as "nothing to save" — so one unserialisable
+   value anywhere in the doc would silently stop every future write with no error and no clue. Treat it
+   as dirty and say so: a failed save is recoverable, a silent one is not. */
+function docDirty(){ let s; try{ s=JSON.stringify(exec); }catch(e){
+  try{ console.error('exec could not be serialised — saving is blocked:', e); }catch(_){ }
+  try{ setMsg('This objective could not be serialised for saving \u2014 see the console.','err'); }catch(_){ }
+  return true; }
+ return s!==_savedDoc; }
 const SAVE_DEBOUNCE_MS=700, SAVE_MAXWAIT_MS=2500;
 let _saveT=null, _saveMaxT=null;
 function _clearSaveTimers(){ if(_saveT){ clearTimeout(_saveT); _saveT=null; } if(_saveMaxT){ clearTimeout(_saveMaxT); _saveMaxT=null; } }
@@ -6634,8 +6641,11 @@ function saveFmeaExp(){
   var dNode=fxPath?__fxNode(fxPath.mi,fxPath.ei,fxPath.ci):null;
   var lNode=__fxLiveNode();
   if(dNode&&lNode){
-    lNode.experiments=JSON.parse(JSON.stringify(dNode.experiments||[]));
-    try{ persist(); }catch(e){}
+    try{ lNode.experiments=JSON.parse(JSON.stringify(dNode.experiments||[])); }
+    catch(e){ try{ console.error('experiment could not be serialised',e); setMsg('That experiment could not be saved \u2014 see the console.','err'); }catch(_){ } closeFmeaExp(); return; }
+    /* flush rather than schedule: a debounced write is invisible in the network tab and is lost if the
+       page is closed inside the debounce window. Saving evidence is deliberate enough to write now. */
+    try{ (typeof flushPersist==='function'?flushPersist():persist()); }catch(e){}
     try{ setMsg("Experiment saved","ok"); }catch(e){}
   } else {
     try{ setMsg("Experiment kept \u2014 it saves when you save the problem","warn"); }catch(e){}
@@ -6736,7 +6746,14 @@ function saveFmea(){
   draftRisk.objectiveId=selectedObj;   // scope tag pinned explicitly — never inferred from a filtered index
   if(editingRiskId!==null){ const i=exec.risks.findIndex(x=>x.rid===editingRiskId); if(i>=0) exec.risks[i]=draftRisk; else exec.risks.push(draftRisk); }
   else exec.risks.push(draftRisk);
-  closeFmeaModal(); renderAll(); setMsg("Problem saved","ok");
+  closeFmeaModal();
+  /* Write BEFORE rendering, and independently of it. persist() used to be reached only via renderAll,
+     which runs it after renderKRs/renderGates/renderRisks — so any render error anywhere on the page
+     silently swallowed the save. The edit is already in exec at this point; getting it out is not
+     conditional on the page drawing correctly. */
+  try{ (typeof flushPersist==='function'?flushPersist():persist()); }catch(e){ try{ console.error('save failed',e); }catch(_){ } }
+  try{ renderAll(); }catch(e){ try{ console.error('render after save failed',e); }catch(_){ } }
+  setMsg("Problem saved","ok");
 }
 
 /* ---- register card mutations (by id — safe under the per-objective filter) ---- */
