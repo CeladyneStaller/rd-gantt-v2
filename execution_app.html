@@ -2721,6 +2721,14 @@ html[data-theme="dark"] #etb-view{
   function blankMode() { return { mid: fmeaId('m'), mode: '', status: 'open', effects: [blankEffect()] }; }
   function blankProblem(objectiveId) { return { rid: fmeaId('r'), problem: '', objectiveId: objectiveId || null, gateId: null, status: 'open', knowns: [], modes: [blankMode()] }; }
   // shape-normalize a stored/imported problem (schema-safe; fills missing arrays/fields, preserves ids)
+  /* This rebuilds every problem from an explicit field list, which means ANY field not named here is
+     silently discarded on load — the doc saves correctly and comes back missing pieces. That cost a
+     long hunt when FMEA evidence was added: the write was fine, the read threw it away. Anything
+     added to a mode, effect or cause must be carried through here too. */
+  function keepExperiments(src, out) {
+    if (src && Array.isArray(src.experiments) && src.experiments.length) out.experiments = src.experiments;
+    return out;
+  }
   function migrateProblem(r) {
     r = r || {};
     return {
@@ -2731,15 +2739,15 @@ html[data-theme="dark"] #etb-view{
       status: r.status || 'open',
       knowns: (r.knowns || []).map(function (k) { return (typeof k === 'string') ? { kid: fmeaId('k'), text: k } : { kid: (k && k.kid) || fmeaId('k'), text: (k && k.text) || '' }; }),
       modes: (r.modes || []).map(function (m) { m = m || {};
-        return { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
+        return keepExperiments(m, { mid: m.mid || fmeaId('m'), mode: m.mode || '', status: m.status || 'open',
           effects: (m.effects || []).map(function (e) { e = e || {};
-            return { eid: e.eid || fmeaId('e'), effect: e.effect || '', status: e.status || 'open',
+            return keepExperiments(e, { eid: e.eid || fmeaId('e'), effect: e.effect || '', status: e.status || 'open',
               causes: (e.causes || []).map(function (c) { c = c || {};
-                return { cid: c.cid || fmeaId('c'), cause: c.cause || '',
+                return keepExperiments(c, { cid: c.cid || fmeaId('c'), cause: c.cause || '',
                   severity: c.severity || 1, occurrence: c.occurrence || 1, detection: c.detection || 1,
-                  mitigation: c.mitigation || '', status: c.status || 'open' };
-              }) };
-          }) };
+                  mitigation: c.mitigation || '', status: c.status || 'open' });
+              }) });
+          }) });
       })
     };
   }
