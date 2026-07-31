@@ -4370,17 +4370,25 @@ function __fxLiveNode(){
   return (le.causes||[]).filter(function(x){ return x.cid===dc.cid; })[0]||null;
 }
 function saveFmeaExp(){
-  var dNode=fxPath?__fxNode(fxPath.mi,fxPath.ei,fxPath.ci):null;
-  var lNode=__fxLiveNode();
-  if(dNode&&lNode){
-    try{ lNode.experiments=JSON.parse(JSON.stringify(dNode.experiments||[])); }
-    catch(e){ try{ console.error('experiment could not be serialised',e); setMsg('That experiment could not be saved \u2014 see the console.','err'); }catch(_){ } closeFmeaExp(); return; }
-    /* flush rather than schedule: a debounced write is invisible in the network tab and is lost if the
-       page is closed inside the debounce window. Saving evidence is deliberate enough to write now. */
-    try{ (typeof flushPersist==='function'?flushPersist():persist()); }catch(e){}
-    try{ setMsg("Experiment saved","ok"); }catch(e){}
-  } else {
-    try{ setMsg("Experiment kept \u2014 it saves when you save the problem","warn"); }catch(e){}
+  /* Always commit the WHOLE draft. The previous surgical per-node commit had a path where it wrote
+     nothing at all — a mode, effect or cause that did not yet exist in the saved document had no live
+     node to write to, so the work stayed in the draft and a refresh lost it, silently. A save that
+     writes slightly more than you expected is recoverable; one that silently writes nothing is not. */
+  if(!draftRisk){ closeFmeaExp(); return; }
+  try{
+    var copy=JSON.parse(JSON.stringify(draftRisk));
+    if(!Array.isArray(exec.risks)) exec.risks=[];
+    var i=(editingRiskId!==null)?exec.risks.findIndex(function(x){ return x.rid===editingRiskId; }):-1;
+    if(i>=0){ exec.risks[i]=copy; }
+    else {
+      /* a problem that has never been saved still gets created, so evidence entered during creation
+         cannot evaporate; editingRiskId is pinned so a later Save changes updates rather than duplicates */
+      copy.objectiveId=selectedObj; exec.risks.push(copy); editingRiskId=copy.rid;
+    }
+    (typeof flushPersist==='function'?flushPersist():persist());
+    setMsg("Experiment saved","ok");
+  }catch(e){
+    try{ console.error('experiment save failed',e); setMsg('Could not save that experiment \u2014 see the console.','err'); }catch(_){ }
   }
   closeFmeaExp();
 }
@@ -4473,7 +4481,9 @@ function fxRowsHtml(node,mi,ei,ci){
   }).join('')+'</div>';
 }
 function saveFmea(){
-  const problem=document.getElementById('f-problem').value.trim(); if(!problem){ document.getElementById('f-problem').focus(); return; }
+  const problem=document.getElementById('f-problem').value.trim();
+  /* refusing without saying so looks exactly like a broken save button */
+  if(!problem){ document.getElementById('f-problem').focus(); setMsg('Give the problem a statement before saving.','warn'); return; }
   draftRisk.problem=problem; draftRisk.gateId=document.getElementById('f-gate').value||null;
   draftRisk.objectiveId=selectedObj;   // scope tag pinned explicitly — never inferred from a filtered index
   if(editingRiskId!==null){ const i=exec.risks.findIndex(x=>x.rid===editingRiskId); if(i>=0) exec.risks[i]=draftRisk; else exec.risks.push(draftRisk); }
