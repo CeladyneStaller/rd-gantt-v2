@@ -83,16 +83,29 @@ const near = (a, b, e) => Math.abs(a - b) < (e == null ? 1e-9 : e);
   // objectiveScore rolls the milestone KR in like any other -> mean(50, 80) = 65
   ok(near(C.objectiveScore('O1', execDocs), 65), 'objectiveScore folds the milestone KR into the flat mean: mean(50,80)=65');
 
-  // an empty milestone KR drops OUT of the objective mean (null excluded)
+  // An unscored KR counts as ZERO in the objective mean, so an objective cannot read well on the
+  // strength of the few Key Results that happen to have something behind them: mean(50,80,0) = 43.3
   execDocs['DIV-FIN'].keyResults.push({ id: 'KR-empty', objectiveId: 'O1', trackingType: 'milestone', steps: [] });
-  ok(near(C.objectiveScore('O1', execDocs), 65), 'an empty milestone KR (null) is excluded from the objective mean, not counted as 0');
+  ok(C.keyResultScore('KR-empty', execDocs) == null, 'an empty milestone KR is itself unscored (null)');
+  ok(near(C.objectiveScore('O1', execDocs), (50 + 80 + 0) / 3),
+    'an unscored KR is counted as 0 in the objective mean, not dropped from it (' + C.objectiveScore('O1', execDocs) + ')');
+
+  // …but an objective where NOTHING is scorable stays unscored, so it gets no band rather than a 0
+  const allEmpty = { 'DIV-FIN': { keyResults: [
+      { id: 'E1', objectiveId: 'O9', trackingType: 'milestone', steps: [] },
+      { id: 'E2', objectiveId: 'O9', trackingType: 'milestone', steps: [] }],
+    kpis: [], kpiUpdates: [], stageGates: [] } };
+  ok(C.objectiveScore('O9', allEmpty) === null, 'an objective with no scorable KR at all is unscored, not 0');
+  ok(C.objectiveScore('O-none', allEmpty) === null, 'an objective with no Key Results is unscored');
 
   // switching creditMode to partial changes the rollup: milestone becomes 50 (50%*100 + 50%*0) -> still 50 here,
   // so make step 2 half-done to show partial differs: 50*1 + 50*0.5 = 75
   execDocs['DIV-FIN'].keyResults[0].creditMode = 'partial';
   execDocs['DIV-FIN'].keyResults[0].steps[1].completion = 50;
   ok(C.keyResultScore('KR-M', execDocs) === 75, 'partial mode re-scores the milestone KR live (50 + 50*0.5 = 75)');
-  ok(near(C.objectiveScore('O1', execDocs), 77.5), 'objective rollup follows: mean(75,80)=77.5');
+  // KR-empty is still in this objective and still unscored, so it still counts as 0: mean(75,80,0)
+  ok(near(C.objectiveScore('O1', execDocs), (75 + 80 + 0) / 3),
+    'objective rollup follows, with the unscored KR still counted as 0: mean(75,80,0) (' + C.objectiveScore('O1', execDocs) + ')');
 })();
 
 out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });

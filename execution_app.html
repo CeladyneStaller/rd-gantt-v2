@@ -1977,14 +1977,20 @@ html[data-theme="dark"] #etb-view{
 
   // objectiveScore -> mean of scorable Key Result scores; null when none are
   // scorable (an objective with no Key Result is unscored -> no band, decision #3).
+  // An unscored Key Result counts as ZERO, not as absent — the same stance meanScorable takes for an
+  // unread KPI, and for the same reason: an objective must not read well because most of its Key
+  // Results have nothing behind them yet. Only when NOTHING is scorable is the objective unscored,
+  // which keeps "an objective with no Key Result has no band" intact.
   function objectiveScore(objId, execDocs) {
     var krs = krsForObjective(objId, execDocs);
-    var scores = [];
+    var scores = [], anyScored = false;
     for (var i = 0; i < krs.length; i++) {
       var s = keyResultScore(krs[i].id, execDocs);
-      if (s != null) scores.push(s);
+      if (s != null) anyScored = true;
+      scores.push(s == null ? 0 : s);
     }
-    return mean(scores); // null if empty
+    if (!anyScored) return null;
+    return mean(scores);
   }
 
   // ---- hierarchy lookups (Phase 1) -----------------------------------------
