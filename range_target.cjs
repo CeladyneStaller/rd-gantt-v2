@@ -5,6 +5,44 @@ const C=require((process.env.RD_SRC||'/home/claude')+'/rdcore.js');
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
 const out=[]; const ok=(c,m)=>out.push((c?'ok  ':'FAIL ')+m);
 
+// ---- 'down' scoring must be monotonic through zero -------------------------------------------
+// The bug this pins: 'down' is scored by the ratio target/value, which divides by the measurement, so
+// it needed a guard at zero — and that guard returned 0, the WORST score for the BEST possible result.
+// It bit hardest on spread statistics where zero is the ideal: three identical samples give CV = 0,
+// i.e. perfect repeatability, and the KPI scored 0. Nothing tested a measured zero, so it shipped.
+(function(){
+  const dn=(v,t)=>C.kpiScore({targetType:'demonstration',direction:'down',target:t},v);
+
+  ok(dn(0,5)===100, "a measured ZERO on a lower-is-better KPI scores 100, not 0 ("+dn(0,5)+")");
+  ok(dn(0.5,5)===100, "…as does any value below target");
+  ok(dn(5,5)===100, "…and exactly at target");
+  ok(dn(10,5)===50, "…while twice the target scores 50");
+  ok(dn(20,5)===25, "…and four times scores 25");
+
+  // monotonic: score must never increase as the measurement gets worse
+  let prev=Infinity, mono=true;
+  [0,0.1,1,2,5,7,10,20,50].forEach(v=>{ const sc=dn(v,5); if(sc>prev) mono=false; prev=sc; });
+  ok(mono, "the curve never rewards a worse measurement — no discontinuity at zero");
+
+  ok(dn(0,0)===100, "a zero target met exactly scores 100");
+  ok(dn(3,0)===0, "…and missed scores 0");
+
+  // the ratio never handled signs; stating the rule directly does
+  ok(dn(-2,5)===100, "a negative measurement beats a positive target");
+  ok(dn(-10,-5)===100, "…and a negative target that is beaten scores 100");
+  ok(dn(-2,-5)===0, "…while a negative target that is missed scores 0");
+
+  // the case from the field: three identical samples -> CV 0 -> perfect
+  const cv={targetType:'statistical',statistic:'cv',direction:'down',target:5};
+  ok(C.kpiScore(cv,0)===100, "a CV of 0 (three identical samples) scores 100, not 0");
+  ok(C.kpiScore(cv,1.53)===100, "…and a small real CV still scores 100");
+  ok(C.kpiScore(cv,10)===50, "…while double the allowed CV scores 50");
+
+  // 'up' is untouched
+  ok(C.kpiScore({targetType:'demonstration',direction:'up',target:10},10)===100, "an up KPI at target still scores 100");
+  ok(C.kpiScore({targetType:'demonstration',direction:'up',target:10},5)===50, "…and half target still scores 50");
+})();
+
 // ---- core scoring (already existed; pinning the contract the UI now depends on) ----
 const k=(lo,hi)=>({id:'K',hostType:'keyResult',hostId:'KR1',name:'R',targetType:'demonstration',direction:'range',target:{lo,hi},isDefiner:true});
 const dv=(v)=>({D1:{kpis:[k(95,105)],kpiUpdates:[{id:'u',kpiId:'K',value:v,timestamp:1}]}});

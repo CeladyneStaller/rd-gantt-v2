@@ -737,7 +737,16 @@
 
   function progressLinear(value, target, direction) {
     if (direction === 'up')   return target === 0 ? 0 : 100 * value / target;
-    if (direction === 'down') return value === 0 ? (target === 0 ? 100 : 0) : 100 * target / value;
+    if (direction === 'down') {
+      // 'down' is scored by the ratio target/value, which needs a guard at zero because it divides by
+      // the measurement. That guard used to return 0 for a measured zero — the WORST score for the BEST
+      // possible result. It bit hardest on spread statistics, where zero is the ideal: three identical
+      // samples give CV = 0, i.e. perfect repeatability, and scored 0. Stating the rule directly instead
+      // of patching the singularity also fixes the sign cases the ratio never handled.
+      if (value <= target) return 100;      // met or beaten (covers zero, and negatives on both sides)
+      if (value <= 0) return 0;             // worse than target and non-positive: the ratio is meaningless
+      return 100 * target / value;          // worse than target: partial credit by ratio
+    }
     return 0;
   }
   function progressRange(value, lo, hi) {
