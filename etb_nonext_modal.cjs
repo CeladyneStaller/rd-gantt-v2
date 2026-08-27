@@ -2,7 +2,14 @@
 // (2) openExpDetailModal renders a read-only detail modal (details/result/next step/edit) for completed experiments.
 // Cytoscape is CDN-only (guarded headless), so this tests the pure graph model + the modal DOM, not the canvas.
 const {JSDOM}=require("jsdom"); const fs=require("fs");
-const html=fs.readFileSync((process.env.RD_SRC||'/home/claude')+'/qtracker.html','utf8');
+// The ETB module is shared: qtracker.html is the standalone Q-tracker, a separate deliverable that does
+// not live in this repo, while execution_app.html embeds the same ETB script. Read whichever is present
+// so this harness tests the ETB the suite actually builds instead of skipping on a missing file.
+const __cands=[ (process.env.RD_SRC||'/home/claude')+'/qtracker.html',
+                (process.env.RD_OUT||process.env.RD_SRC||'/home/claude')+'/execution_app.html' ];
+const __src=__cands.filter(function(f){ try{ fs.accessSync(f); return true; }catch(e){ return false; } })[0];
+if(!__src){ console.error('neither qtracker.html nor execution_app.html found'); process.exit(1); }
+const html=fs.readFileSync(__src,'utf8');
 const dom=new JSDOM(html,{runScripts:"outside-only", pretendToBeVisual:true, url:"https://localhost/"});
 const w=dom.window;
 w.fetch=()=>Promise.reject(new Error("no net"));

@@ -196,6 +196,38 @@
   .fm-ctxt{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .fm-cmeta{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
   .fm-mode.fm-collapsed,.fm-effect.fm-collapsed,.fm-cause.fm-collapsed{padding-bottom:6px}
+  .lt-head{display:flex;align-items:center;gap:8px;padding:8px 10px 4px}
+  .lt-title{font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .lt-new{margin-left:auto}
+  .lt-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 8px}
+  .lt-btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:128px;padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);cursor:pointer;text-align:left}
+  .lt-btn:hover{border-color:var(--pill-active-bd)}
+  .lt-btn.on{border-color:var(--pill-active-bd);background:var(--pill-active-bg)}
+  .lt-btn.on .lt-name,.lt-btn.on .lt-range{color:var(--pill-active-fg)}
+  .lt-name{font-size:12px;color:var(--ink);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lt-range{font-family:var(--mono);font-size:13px;color:var(--ink)}
+  .lt-unit{font-size:10px;color:var(--muted);font-family:var(--sans)}
+  .lt-flag{font-size:9.5px;color:var(--warn);margin-left:4px}
+  .lt-block{border-top:1px solid var(--line);padding:8px 10px 10px}
+  .lt-block:first-of-type{border-top:none}
+  .lt-bhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .lt-bname{font-size:11px;color:var(--pill-active-fg);font-family:var(--mono)}
+  .lt-brange{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .lt-hide{margin-left:8px}
+  .exs-graph-lazy{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--line);border-radius:var(--radius);background:transparent}
+  .lt-lazy-n{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .ltm-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .ltm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+  .ltm-row:first-child{border-top:none}
+  .ltm-row.on{background:var(--pill-active-bg)}
+  .ltm-ord{display:flex;flex-direction:column;gap:1px;flex:0 0 auto}
+  .ltm-ord button{padding:0 4px;line-height:1.1;font-size:10px}
+  input.ltm-name{flex:1 1 auto;min-width:0;height:28px;font-size:12.5px}
+  span.ltm-name{flex:1 1 auto;min-width:0;font-size:12.5px}
+  .ltm-meta{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+  .ltm-del{color:var(--bad);border-color:var(--pill-bad-bd)}
+  .ltm-confirm{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--pill-bad-bg);border-top:1px solid var(--line);font-size:11.5px;color:var(--pill-bad-fg)}
+  .ltm-confirm span{flex:1 1 auto}
   .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
   .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
   .fx-chip.warn{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
@@ -1118,6 +1150,7 @@ html[data-theme="dark"] #etb-view{
 <div id="modalOverlay" class="overlay"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-x" id="modalX" title="Close">×</button></div><div id="modalBody"></div></div></div>
 <div id="subkrOverlay" class="overlay" style="z-index:120"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="subkrTitle"></span><button class="modal-x" id="subkrX" title="Close">×</button></div><div id="subkrBody"></div></div></div>
 <div id="kpiTgtOverlay" class="overlay" style="z-index:130"><div class="modal" style="max-width:520px"><div class="modal-head"><span class="modal-title" id="kpiTgtTitle"></span><button class="modal-x" id="kpiTgtX" title="Close">×</button></div><div id="kpiTgtBody"></div></div></div>
+<div id="ltmOverlay" class="overlay" style="z-index:185"><div class="modal" style="max-width:620px"><div class="modal-head"><span class="modal-title">Logic trees</span><span class="pill" id="ltmCtx" style="margin-left:8px"></span><button class="modal-x" onclick="closeTreeManager()" title="Close">×</button></div><div id="ltmBody"></div><div class="modal-foot"><span id="ltmCount" class="hint" style="margin-right:auto"></span><button class="act mini" onclick="closeTreeManager()">Done</button></div></div></div>
 <div id="fxOverlay" class="overlay" style="z-index:190"><div class="modal" style="max-width:660px"><div class="modal-head"><span class="modal-title" id="fxTitle">Experiment</span><span class="pill" id="fxCtx" style="margin-left:8px"></span><button class="modal-x" onclick="closeFmeaExp()" title="Close">×</button></div><div id="fxBody"></div><div class="modal-foot"><span id="fxCount" class="hint" style="margin-right:auto"></span><button class="ghost mini" onclick="closeFmeaExp()">Cancel</button><button class="act mini" onclick="saveFmeaExp()">Save experiment</button></div></div></div>
 <div id="fmeaOverlay" class="overlay" style="z-index:140"><div class="modal" style="max-width:840px"><div class="modal-head"><span class="modal-title" id="fmeaTitle"></span><button class="modal-x" id="fmeaX" title="Close">×</button></div><div id="fmeaBody"></div></div></div>
 
@@ -1225,7 +1258,20 @@ window.__etbOnChange = function(){
   try{
     if(window.ETB && ETB.exportActive){
       var __s = ETB.exportActive();
-      if(__s && __s.pid!=null && __s.tree){ if(!exec.etbTrees) exec.etbTrees={}; exec.etbTrees[__s.pid] = __s.tree; }   // active tree → divisional exec doc (in memory, always current)
+      if(__s && __s.pid!=null && __s.tree){
+        if(!exec.etbTrees) exec.etbTrees={};
+        /* Write the active tree back INTO its slot in the bag rather than replacing the bag with it —
+           the old single-tree assignment would silently delete every other tree on the next change. */
+        var __bag=exec.etbTrees[__s.pid];
+        var __w=RD.etbTreesOf(__bag);
+        var __tid=(__s.tree.tid)||__w.activeTid||'t_main';
+        if(!__s.tree.tid) __s.tree.tid=__tid;
+        if(!__s.tree.name) __s.tree.name=(RD.etbTreeById(__bag,__tid)||{}).name||'Main';
+        var __found=false;
+        var __trees=__w.trees.map(function(t){ if(t.tid===__tid){ __found=true; return __s.tree; } return t; });
+        if(!__found) __trees.push(__s.tree);
+        exec.etbTrees[__s.pid]={ schema:2, trees:__trees, activeTid:__tid };
+      }
     }
   }catch(e){}
   try{ if(typeof persist==="function") persist(); }catch(e){}          // debounced EXEC-<div> write; host owns flush / beforeunload / serialize
@@ -1495,33 +1541,225 @@ function closeEtbStatPop(){
 document.addEventListener('mousedown', function(e){ var pop=document.getElementById('etbStatPop');
   if(pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest('[data-krpost]'))) closeEtbStatPop(); });
 document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('etbStatPop')) closeEtbStatPop(); });
+/* ---- Logic trees header ------------------------------------------------------------------------
+   An objective can hold several INDEPENDENT trees. Each button shows the tree's remaining next steps
+   as min–max: the shortest and longest number of experiments still ahead of its current step, where a
+   terminal branch (FMEA, halt, target achieved) contributes 0. A tree with nothing planned reads 0–0
+   like any other — it is unfinished, not closed, so it is never tagged "finished". */
+function __treeCurrentIds(tree){
+  try{ var reach=computeReachability(tree); return currentExperiments(tree, reach)||[]; }catch(e){ return []; }
+}
+function __treeRange(tree){
+  var ids=__treeCurrentIds(tree);
+  if(!ids.length) return { min:0, max:0, unplanned:false, capped:false };
+  var mn=null, mx=0, un=false, cap=false;
+  ids.forEach(function(id){
+    var r; try{ r=RD.nextStepRange(tree,id); }catch(e){ r={min:0,max:0}; }
+    if(mn===null || r.min<mn) mn=r.min;
+    if(r.max>mx) mx=r.max;
+    if(r.unplanned) un=true;
+    if(r.capped) cap=true;
+  });
+  return { min:mn||0, max:mx, unplanned:un, capped:cap };
+}
+function __rangeText(r){ return r.min+'\u2013'+(r.capped?(r.max+'+'):r.max); }
+function etbTreesHeaderHtml(){
+  var trees=[], active=null;
+  try{ trees=(window.ETB&&ETB.listTrees)?ETB.listTrees():[]; active=(window.ETB&&ETB.activeTreeId)?ETB.activeTreeId():null; }catch(e){}
+  if(!trees.length) return '';
+  var ro=(typeof RO!=='undefined'&&RO);
+  var btns=trees.map(function(t){
+    var r=__treeRange(t), on=(t.tid===active);
+    return '<button class="lt-btn'+(on?' on':'')+'" data-lttid="'+esc(t.tid)+'" title="'+esc(t.name||'Tree')+'">'
+      +'<span class="lt-name">'+esc(t.name||'Tree')+'</span>'
+      +'<span class="lt-range">'+esc(__rangeText(r))+'<span class="lt-unit"> next steps</span>'
+      +(r.unplanned?'<span class="lt-flag" title="a branch has neither a next step nor a terminal outcome">\u00b7 unplanned</span>':'')
+      +'</span></button>';
+  }).join('');
+  return '<div class="lt-head"><span class="lt-title">Logic trees</span>'
+    +(ro?'':'<button class="ghost mini" data-ltmanage>Manage</button>')
+    +(ro?'':'<button class="ghost mini lt-new" data-ltnew>+ New tree</button>')
+    +'</div><div class="lt-row">'+btns+'</div>';
+}
+/* Graph expansion is per-person and STICKY per tree: watching two trees at once is the point, so it is
+   deliberately independent of which tree is active in the ETB header. localStorage, not the document —
+   changing your own view must not change what a colleague sees. */
+function __ltGraphKey(){ return 'etbGraphOpen:'+(selectedObj||''); }
+function __ltGraphOpen(){ try{ var raw=localStorage.getItem(__ltGraphKey()); return raw?JSON.parse(raw):{}; }catch(e){ return {}; } }
+function __ltIsGraphOpen(tid){ return !!__ltGraphOpen()[tid]; }
+function __ltToggleGraph(tid){
+  try{ var m=__ltGraphOpen(); if(m[tid]) delete m[tid]; else m[tid]=1;
+       localStorage.setItem(__ltGraphKey(), JSON.stringify(m)); }catch(e){}
+  renderExpSummary();
+}
+function __exsCardHtml(exp, ro, LBL){
+  var ctx=__etbCtx(exp), st=etbDerivedStatus(exp);
+  var rows=(exp.key_reads||[]).map(function(k){ return __exsReadRow(exp,k,ctx); }).join('');
+  var tbl = rows
+    ? '<table class="mtbl"><colgroup><col style="width:41%"><col style="width:19%"><col style="width:14%"><col style="width:26%"></colgroup>'
+      +'<thead><tr><th>Key read</th><th class="num">Pass criterion</th><th>Unit</th><th class="num">Current value</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table>'
+    : '<div class="exs-none">No key reads defined.</div>';
+  var krHead='<div class="exs-krhead"><span class="exs-lab">Key reads</span>'
+    +(ro?'':'<button class="cd-btn" data-cdexp="'+esc(exp.id)+'">Connect data</button>')+'</div>';
+  return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(st)+'">'+esc(LBL[st]||st)+'</span></div>'+
+    (exp.hypothesis?('<div class="exs-field"><span class="exs-lab">Hypothesis</span><span>'+esc(exp.hypothesis)+'</span></div>'):'')+
+    krHead+tbl+__exsConclusion(exp,ctx,ro)+
+  '</div>';
+}
+/* ---- Chain manager: rename, reorder and delete logic trees ---------------------------------------
+   Delete is guarded and confirmed in place. Nothing outside a tree holds an experiment id — stage gates
+   do not reference experiments, the link runs the other way via source_kpi_gid — so a delete orphans
+   nothing. What it CAN do is strand readings in exec.kpiUpdates that a deleted experiment posted, so
+   the confirm names that count instead of deleting quietly. The last tree cannot be deleted. */
+let __ltmArmed=null;
+function openTreeManager(){
+  __ltmArmed=null;
+  var el=document.getElementById('ltmCtx');
+  if(el) el.textContent=(selectedObj||'');
+  renderTreeManager();
+  document.getElementById('ltmOverlay').classList.add('open');
+}
+function closeTreeManager(){ __ltmArmed=null; document.getElementById('ltmOverlay').classList.remove('open'); }
+function ltmMove(tid,delta){
+  var trees=[]; try{ trees=(window.ETB&&ETB.listTrees)?ETB.listTrees():[]; }catch(e){}
+  var ids=trees.map(function(t){ return t.tid; });
+  var i=ids.indexOf(tid), j=i+delta;
+  if(i<0||j<0||j>=ids.length) return;
+  ids.splice(j,0,ids.splice(i,1)[0]);
+  try{ if(window.ETB&&ETB.reorderTrees) ETB.reorderTrees(ids); }catch(e){}
+  renderTreeManager();
+}
+function ltmRename(tid,name){ try{ if(window.ETB&&ETB.renameTree) ETB.renameTree(tid,name); }catch(e){} }
+function ltmArm(tid){ __ltmArmed=tid; renderTreeManager(); }
+function ltmCancel(){ __ltmArmed=null; renderTreeManager(); }
+function ltmDelete(tid){
+  try{ if(window.ETB&&ETB.deleteTree) ETB.deleteTree(tid); }catch(e){}
+  __ltmArmed=null; renderTreeManager();
+}
+function renderTreeManager(){
+  var body=document.getElementById('ltmBody'); if(!body) return;
+  var trees=[], active=null;
+  try{ trees=(window.ETB&&ETB.listTrees)?ETB.listTrees():[]; active=(window.ETB&&ETB.activeTreeId)?ETB.activeTreeId():null; }catch(e){}
+  var ro=(typeof RO!=='undefined'&&RO);
+  var rows=trees.map(function(t,i){
+    var r={min:0,max:0}; try{ r=(window.ETB&&ETB.treeRangeFor)?ETB.treeRangeFor(t.tid):r; }catch(e){}
+    var nexp=Object.keys(t.experiments||{}).length;
+    var armed=(__ltmArmed===t.tid);
+    var row='<div class="ltm-row'+(t.tid===active?' on':'')+'">'
+      +'<div class="ltm-ord">'
+      +(ro?'':'<button class="ghost mini" data-ltmup="'+esc(t.tid)+'" title="Move up"'+(i===0?' disabled':'')+'>\u25b4</button>')
+      +(ro?'':'<button class="ghost mini" data-ltmdn="'+esc(t.tid)+'" title="Move down"'+(i===trees.length-1?' disabled':'')+'>\u25be</button>')
+      +'</div>'
+      +(ro?('<span class="ltm-name">'+esc(t.name||'Tree')+'</span>')
+          :('<input type="text" class="ltm-name" value="'+esc(t.name||'Tree')+'" data-ltmname="'+esc(t.tid)+'">'))
+      +'<span class="ltm-meta">'+nexp+' exp \u00b7 '+esc(__rangeText(r))+' next</span>'
+      +(ro?'':'<button class="ghost mini" data-ltmopen="'+esc(t.tid)+'">Open</button>')
+      +(ro||trees.length<=1?'':'<button class="ghost mini ltm-del" data-ltmdel="'+esc(t.tid)+'">Delete</button>')
+      +'</div>';
+    if(armed){
+      var imp={experiments:0,readings:0}; try{ imp=(window.ETB&&ETB.treeDeleteImpact)?ETB.treeDeleteImpact(t.tid):imp; }catch(e){}
+      var warn='Delete \u201c'+esc(t.name||'Tree')+'\u201d and its '+imp.experiments+' experiment'+(imp.experiments===1?'':'s')+'?'
+        +(imp.readings?(' '+imp.readings+' KPI reading'+(imp.readings===1?'':'s')+' posted from it will remain, without the experiment that explains them.'):'')
+        +' This cannot be undone.';
+      row+='<div class="ltm-confirm"><span>'+warn+'</span>'
+        +'<button class="ghost mini" data-ltmcancel>Cancel</button>'
+        +'<button class="ghost mini ltm-del" data-ltmyes="'+esc(t.tid)+'">Delete tree</button></div>';
+    }
+    return row;
+  }).join('');
+  body.innerHTML='<p class="hint" style="margin:0 0 8px">Each tree has its own root and its own logic. Nothing in one gates anything in another.</p>'
+    +'<div class="ltm-list">'+(rows||'<div class="hint">No logic trees yet.</div>')+'</div>';
+  var totalExp=0; trees.forEach(function(t){ totalExp+=Object.keys(t.experiments||{}).length; });
+  var cnt=document.getElementById('ltmCount');
+  if(cnt) cnt.textContent=trees.length+' tree'+(trees.length===1?'':'s')+' \u00b7 '+totalExp+' experiment'+(totalExp===1?'':'s');
+  body.querySelectorAll('[data-ltmup]').forEach(function(b){ b.onclick=function(){ ltmMove(b.getAttribute('data-ltmup'),-1); }; });
+  body.querySelectorAll('[data-ltmdn]').forEach(function(b){ b.onclick=function(){ ltmMove(b.getAttribute('data-ltmdn'),1); }; });
+  body.querySelectorAll('[data-ltmname]').forEach(function(inp){
+    inp.onchange=function(){ ltmRename(inp.getAttribute('data-ltmname'), inp.value); };
+  });
+  body.querySelectorAll('[data-ltmopen]').forEach(function(b){ b.onclick=function(){
+    try{ if(window.ETB&&ETB.setActiveTree) ETB.setActiveTree(b.getAttribute('data-ltmopen')); }catch(e){}
+    renderTreeManager();
+  }; });
+  body.querySelectorAll('[data-ltmdel]').forEach(function(b){ b.onclick=function(){ ltmArm(b.getAttribute('data-ltmdel')); }; });
+  body.querySelectorAll('[data-ltmcancel]').forEach(function(b){ b.onclick=function(){ ltmCancel(); }; });
+  body.querySelectorAll('[data-ltmyes]').forEach(function(b){ b.onclick=function(){ ltmDelete(b.getAttribute('data-ltmyes')); }; });
+}
 function renderExpSummary(){
   var host=document.getElementById('expSummary'); if(!host) return;
   if(!selectedObj){ host.innerHTML=''; return; }
-  var cur=[]; try{ cur=(window.ETB&&ETB.currentExperiments)?ETB.currentExperiments():[]; }catch(e){}
   var ro=(typeof RO!=='undefined'&&RO);
   var LBL={planned:'planned',in_progress:'in progress',complete:'complete'};
-  var cards = cur.length ? cur.map(function(exp){
-    var ctx=__etbCtx(exp), st=etbDerivedStatus(exp);
-    var rows=(exp.key_reads||[]).map(function(k){ return __exsReadRow(exp,k,ctx); }).join('');
-    var tbl = rows
-      ? '<table class="mtbl"><colgroup><col style="width:41%"><col style="width:19%"><col style="width:14%"><col style="width:26%"></colgroup>'
-        +'<thead><tr><th>Key read</th><th class="num">Pass criterion</th><th>Unit</th><th class="num">Current value</th></tr></thead>'
-        +'<tbody>'+rows+'</tbody></table>'
-      : '<div class="exs-none">No key reads defined.</div>';
-    var krHead='<div class="exs-krhead"><span class="exs-lab">Key reads</span>'
-      +(ro?'':'<button class="cd-btn" data-cdexp="'+esc(exp.id)+'">Connect data</button>')+'</div>';
-    return '<div class="exs-card"><div class="exs-head"><span class="exs-code">'+esc(exp.code||exp.id)+'</span><span class="exs-name">'+esc(exp.name||'')+'</span><span class="exs-badge b-'+esc(st)+'">'+esc(LBL[st]||st)+'</span></div>'+
-      (exp.hypothesis?('<div class="exs-field"><span class="exs-lab">Hypothesis</span><span>'+esc(exp.hypothesis)+'</span></div>'):'')+
-      krHead+tbl+__exsConclusion(exp,ctx,ro)+
-    '</div>';
-  }).join('') : '<div class="exs-empty">No current experiment on the active branch \u2014 conclude the prior step, or add experiments below.</div>';
-  host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",cur.length,"")+'<div class="'+listOpen("EXP")+'"><div class="exs-wrap"><div class="exs-cards">'+cards+'</div><div class="exs-graph" id="expSummaryGraph"><div class="exs-graph-empty">experiment graph</div></div></div></div></div>';
+  var trees=[]; try{ trees=(window.ETB&&ETB.listTrees)?ETB.listTrees():[]; }catch(e){}
+  /* Resolution belongs to the ETB: currentExperimentsFor normalises whichever tree it is given, which
+     the host cannot do from a raw document tree. Deriving it here is what made the first attempt at
+     per-tree cards render empty. */
+  var expsFor=function(tid){ try{ return (window.ETB&&ETB.currentExperimentsFor)?ETB.currentExperimentsFor(tid):[]; }catch(e){ return []; } };
+  var rangeFor=function(tid){ try{ return (window.ETB&&ETB.treeRangeFor)?ETB.treeRangeFor(tid):{min:0,max:0}; }catch(e){ return {min:0,max:0}; } };
+
+  if(trees.length<2){
+    /* one tree (or none): the section it always was, no per-tree chrome */
+    var cur0=expsFor(trees.length?trees[0].tid:null);
+    if(!cur0.length){ try{ cur0=(window.ETB&&ETB.currentExperiments)?ETB.currentExperiments():[]; }catch(e){} }
+    var cards0 = cur0.length ? cur0.map(function(exp){ return __exsCardHtml(exp,ro,LBL); }).join('')
+      : '<div class="exs-empty">No current experiment on the active branch \u2014 conclude the prior step, or add experiments below.</div>';
+    host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",cur0.length,"")+'<div class="'+listOpen("EXP")+'">'+etbTreesHeaderHtml()+'<div class="exs-wrap"><div class="exs-cards">'+cards0+'</div><div class="exs-graph" id="expSummaryGraph"><div class="exs-graph-empty">experiment graph</div></div></div></div></div>';
+  } else {
+    var total=0;
+    var blocks=trees.map(function(t){
+      var exps=expsFor(t.tid), r=rangeFor(t.tid);
+      total+=exps.length;
+      var open=__ltIsGraphOpen(t.tid);
+      var cards = exps.length ? exps.map(function(exp){ return __exsCardHtml(exp,ro,LBL); }).join('')
+        : '<div class="exs-empty">No current experiment on this tree \u2014 conclude the prior step, or add experiments below.</div>';
+      /* lazy: only an expanded tree mounts cytoscape, so N trees cost one instance unless asked */
+      var graph = open
+        ? '<div class="exs-graph" data-ltgraph="'+esc(t.tid)+'" id="cyg_'+esc(t.tid)+'"><div class="exs-graph-empty">experiment graph</div></div>'
+        : '<div class="exs-graph exs-graph-lazy"><span class="lt-lazy-n">'+esc(__rangeText(r))+' next steps</span>'
+          +'<button class="ghost mini" data-ltshow="'+esc(t.tid)+'">Show graph</button></div>';
+      return '<div class="lt-block'+(open?' on':'')+'">'
+        +'<div class="lt-bhead"><span class="lt-bname">'+esc(t.name||'Tree')+'</span>'
+        +'<span class="lt-brange">'+esc(__rangeText(r))+' next</span>'
+        +(open?'<button class="ghost mini lt-hide" data-lthide="'+esc(t.tid)+'">Hide graph</button>':'')
+        +'</div><div class="exs-wrap"><div class="exs-cards">'+cards+'</div>'+graph+'</div></div>';
+    }).join('');
+    host.innerHTML='<div class="panel">'+panelHead("EXP","Current step",total,"")+'<div class="'+listOpen("EXP")+'">'+etbTreesHeaderHtml()+blocks+'</div></div>';
+  }
+  host.querySelectorAll('[data-lttid]').forEach(function(b){ b.onclick=function(){
+    try{ if(window.ETB&&ETB.setActiveTree) ETB.setActiveTree(b.getAttribute('data-lttid')); }catch(e){}
+  }; });
+  var __ltm=host.querySelector('[data-ltmanage]');
+  if(__ltm) __ltm.onclick=function(){ openTreeManager(); };
+  var __ltn=host.querySelector('[data-ltnew]');
+  if(__ltn) __ltn.onclick=function(){
+    var nm=prompt('Name for the new logic tree'); if(nm===null) return;
+    try{ if(window.ETB&&ETB.addTree) ETB.addTree(nm); }catch(e){}
+  };
+  host.querySelectorAll('[data-ltshow]').forEach(function(b){ b.onclick=function(){ __ltToggleGraph(b.getAttribute('data-ltshow')); }; });
+  host.querySelectorAll('[data-lthide]').forEach(function(b){ b.onclick=function(){ __ltToggleGraph(b.getAttribute('data-lthide')); }; });
   host.querySelectorAll('[data-panel]').forEach(function(el){ el.onclick=function(){ var k=el.dataset.panel; if(panelCollapsed.has(k))panelCollapsed.delete(k); else panelCollapsed.add(k); renderAll(); }; });
   host.querySelectorAll('[data-conc]').forEach(function(b){ b.onclick=function(){ openExpRecorder(b.getAttribute('data-conc')); }; });
   if(!ro) host.querySelectorAll('[data-cdexp]').forEach(function(b){ b.onclick=function(){ openConnectData('record', b.getAttribute('data-cdexp')); }; });
   if(!ro) host.querySelectorAll('[data-krpost]').forEach(function(td){ td.onclick=function(){ etbPostKeyRead(td); }; });
-  if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph'); if(gc && window.ETB && ETB.renderFocusedGraph){ ETB.renderFocusedGraph(gc, cur.map(function(e){return e.id;})); } }
+  /* Containers from the previous render are gone, so their cytoscape instances must be destroyed or
+     they leak — this section re-renders on every keystroke elsewhere in the app. */
+  if(window.ETB && ETB.destroyGraphs) ETB.destroyGraphs(function(k){ return !document.getElementById(k); });
+  if(!panelCollapsed.has("EXP")){
+    host.querySelectorAll('[data-ltgraph]').forEach(function(gc){
+      var tid=gc.getAttribute('data-ltgraph');
+      var t=null; try{ t=(window.ETB&&ETB.listTrees?ETB.listTrees():[]).filter(function(x){ return x.tid===tid; })[0]; }catch(e){}
+      if(!t) return;
+      var ids=expsFor(tid).map(function(e){ return e.id; });
+      try{ if(window.ETB&&ETB.renderFocusedGraph) ETB.renderFocusedGraph(gc, ids, t); }catch(e){}
+    });
+  }
+  /* the single-tree layout keeps its one graph, mounted against the active tree as before */
+  if(!panelCollapsed.has("EXP")){ var gc=document.getElementById('expSummaryGraph');
+    if(gc && window.ETB && ETB.renderFocusedGraph){
+      var cur1=[]; try{ cur1=(window.ETB&&ETB.currentExperiments)?ETB.currentExperiments():[]; }catch(e){}
+      ETB.renderFocusedGraph(gc, cur1.map(function(e){ return e.id; }));
+    } }
 }
 
 /* ---------------- Connect data: one-shot import from the analysis portal ----------------
@@ -6137,7 +6375,13 @@ function migrateEtbDoc(raw){
 }
 function selectTreeForProject(doc, pid){
   if(!doc || !doc.trees || pid == null) return null;
-  return doc.trees[pid] || null;
+  /* doc.trees[pid] is the objective's BAG, which is either a bare tree (schema 1) or
+     {trees:[…], activeTid} (schema 2). The ETB works on one tree at a time, so resolve the active one
+     here — returning the bag itself would hand the ETB an object with no `experiments`, and the whole
+     objective would silently look empty after a reload. */
+  var bag = doc.trees[pid];
+  if(!bag) return null;
+  try{ return RD.etbActiveTree(bag) || null; }catch(e){ return bag; }
 }
 function __lastAuditTs(exp){ var a=(exp&&exp.audit_log)||[],m=''; for(var i=0;i<a.length;i++){ if(a[i].timestamp&&a[i].timestamp>m) m=a[i].timestamp; } return m; }
 function currentExperiments(tree, reach){
@@ -6169,21 +6413,49 @@ function buildFocusedTree(tree, expIds){
   sub.nextIds.forEach(function(id){ if(!exps[id]){ var e=tree.experiments[id]; exps[id]=Object.assign({},e,{possible_results:[],actual_outcome:null}); } });
   var out=Object.assign({},tree); out.experiments=exps; return out;
 }
-var __focusCy=null;
-function __etbRenderFocused(container, expIds){
+/* Several logic trees can be on screen at once, so a graph instance is held PER CONTAINER rather than
+   in one module-level variable. The old single `__focusCy` was destroyed at the top of every call, so
+   mounting a second graph silently tore down the first — the blocker for per-tree graphs.
+   Cytoscape leaks if a container is dropped without destroy(), so the registry is keyed by element id
+   and __etbDestroyGraphs() is called whenever the section that owns the containers re-renders. */
+var __focusCyById={};
+function __etbGraphKey(container){
+  if(!container) return null;
+  if(!container.id) container.id='cyg_'+Math.random().toString(36).slice(2,9);
+  return container.id;
+}
+function __etbDestroyGraph(key){
+  var cy=__focusCyById[key];
+  if(cy){ try{ cy.destroy(); }catch(e){} delete __focusCyById[key]; }
+}
+function __etbDestroyGraphs(pred){
+  Object.keys(__focusCyById).forEach(function(k){
+    if(!pred || pred(k)){
+      /* a container removed from the DOM can never be re-used; drop its instance either way */
+      __etbDestroyGraph(k);
+    }
+  });
+}
+/* `tree` is explicit: a per-tree graph must walk ITS OWN tree, not whichever one happens to be active
+   in state. Omitted, it falls back to the active tree so existing single-graph callers are unchanged. */
+function __etbRenderFocused(container, expIds, tree){
   if(!container) return;
-  if(typeof cytoscape==="undefined" || !window.cytoscape){ container.innerHTML='<div class="cy-msg">Graph library couldn\'t load (CDN/sandbox).</div>'; return; }
-  if(!expIds || !expIds.length){ container.innerHTML='<div class="cy-msg">No current experiment to graph.</div>'; return; }
-  var ftree=buildFocusedTree(state.tree, expIds);
-  var reach=computeReachability(state.tree);
+  var key=__etbGraphKey(container);
+  if(typeof cytoscape==="undefined" || !window.cytoscape){ __etbDestroyGraph(key); container.innerHTML='<div class="cy-msg">Graph library couldn\'t load (CDN/sandbox).</div>'; return; }
+  if(!expIds || !expIds.length){ __etbDestroyGraph(key); container.innerHTML='<div class="cy-msg">No current experiment to graph.</div>'; return; }
+  var t=tree||state.tree;
+  if(!t){ __etbDestroyGraph(key); container.innerHTML='<div class="cy-msg">No tree to graph.</div>'; return; }
+  var ftree=buildFocusedTree(t, expIds);
+  var reach=computeReachability(t);
   var sem=buildGraphElements(ftree, reach);
   var R=toRenderElements(sem.nodes, sem.edges);
   var p=resolvePalette();
-  if(__focusCy){ try{ __focusCy.destroy(); }catch(e){} __focusCy=null; }
+  __etbDestroyGraph(key);
   container.innerHTML='';
-  __focusCy=cytoscape({container:container, elements:[].concat(R.nodes, R.edges), style:cyStyle(p), layout:DAGRE_LAYOUT, minZoom:0.2, maxZoom:2.5, userZoomingEnabled:false, userPanningEnabled:false, boxSelectionEnabled:false, autoungrabify:true});
-  __focusCy.on("tap", 'node[kind="experiment"]', function(evt){ if(window.__hubOpenExp) window.__hubOpenExp(evt.target.id()); });
-  __focusCy.ready(function(){ try{ __focusCy.fit(undefined, 24); }catch(e){} });
+  var cy=cytoscape({container:container, elements:[].concat(R.nodes, R.edges), style:cyStyle(p), layout:DAGRE_LAYOUT, minZoom:0.2, maxZoom:2.5, userZoomingEnabled:false, userPanningEnabled:false, boxSelectionEnabled:false, autoungrabify:true});
+  __focusCyById[key]=cy;
+  cy.on("tap", 'node[kind="experiment"]', function(evt){ if(window.__hubOpenExp) window.__hubOpenExp(evt.target.id()); });
+  cy.ready(function(){ try{ cy.fit(undefined, 24); }catch(e){} });
 }
 
 window.ETB = {
@@ -6204,6 +6476,117 @@ window.ETB = {
     else if(state.tree && pid!=null && state.tree.project_id==null){ state.tree.project_id=pid; }
   },
   getActiveProjectId: function(){ return state.activeProjectId; },
+  /* ---- multiple logic trees -------------------------------------------------------------------
+     exec.etbTrees[pid] is either a bare tree (schema 1) or {trees:[…], activeTid}. rdcore's
+     etbTreesOf normalises both, so nothing here needs to know which it got. state.tree remains THE
+     ACTIVE TREE, so every existing render path, currentExperiments and reachability walk is
+     unchanged — only which tree they point at can now vary. */
+  listTrees: function(){
+    try{ var bag=(exec.etbTrees||{})[state.activeProjectId]; return RD.etbTreesOf(bag).trees; }catch(e){ return []; }
+  },
+  activeTreeId: function(){
+    try{ var bag=(exec.etbTrees||{})[state.activeProjectId]; return RD.etbTreesOf(bag).activeTid; }catch(e){ return null; }
+  },
+  setActiveTree: function(tid){
+    try{
+      var pid=state.activeProjectId; if(pid==null) return false;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      var t=RD.etbTreeById(bag, tid); if(!t) return false;
+      if(!exec.etbTrees) exec.etbTrees={};
+      exec.etbTrees[pid]={ schema:2, trees:w.trees, activeTid:tid };
+      state.tree=t; try{ normalizeTree(state.tree); }catch(e){}
+      try{ renderAll(); }catch(e){}
+      try{ if(window.__etbOnChange) window.__etbOnChange(); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  },
+  addTree: function(name){
+    try{
+      var pid=state.activeProjectId; if(pid==null) return null;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      var t=emptyTree(); t.project_id=pid;
+      t.tid='t_'+Math.random().toString(36).slice(2,9);
+      t.name=String(name||('Tree '+(w.trees.length+1)));
+      var trees=w.trees.concat([t]);
+      if(!exec.etbTrees) exec.etbTrees={};
+      exec.etbTrees[pid]={ schema:2, trees:trees, activeTid:t.tid };
+      state.tree=t; try{ normalizeTree(state.tree); }catch(e){}
+      try{ renderAll(); }catch(e){}
+      try{ if(window.__etbOnChange) window.__etbOnChange(); }catch(e){}
+      return t.tid;
+    }catch(e){ return null; }
+  },
+  /* What a tree delete would take with it. Stage gates hold no experiment ids — the link runs the
+     other way, from a key read to a KPI via source_kpi_gid — so nothing is orphaned. What IS at stake
+     is the readings those experiments posted into exec.kpiUpdates: they stay, but the experiment
+     explaining them is gone. Report that rather than deleting silently. */
+  treeDeleteImpact: function(tid){
+    var out={ experiments:0, linkedKpis:[], readings:0, isLast:false, isActive:false };
+    try{
+      var pid=state.activeProjectId;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      var t=RD.etbTreeById(bag,tid); if(!t) return out;
+      out.isLast=(w.trees.length<=1);
+      out.isActive=(w.activeTid===tid);
+      var exps=t.experiments||{}; var ids=Object.keys(exps);
+      out.experiments=ids.length;
+      var kpiIds={};
+      ids.forEach(function(id){ ((exps[id]||{}).key_reads||[]).forEach(function(k){ if(k.source_kpi_gid) kpiIds[k.source_kpi_gid]=1; }); });
+      out.linkedKpis=Object.keys(kpiIds);
+      var ups=(typeof exec!=='undefined'&&exec&&exec.kpiUpdates)||[];
+      out.readings=ups.filter(function(u){ return kpiIds[u.kpiId]; }).length;
+    }catch(e){}
+    return out;
+  },
+  deleteTree: function(tid){
+    try{
+      var pid=state.activeProjectId; if(pid==null) return false;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      if(w.trees.length<=1) return false;                 // never leave an objective with no tree
+      var keep=w.trees.filter(function(t){ return t.tid!==tid; });
+      if(keep.length===w.trees.length) return false;      // unknown tid
+      var active=(w.activeTid===tid)?keep[0].tid:w.activeTid;
+      if(!exec.etbTrees) exec.etbTrees={};
+      exec.etbTrees[pid]={ schema:2, trees:keep, activeTid:active };
+      var nt=RD.etbTreeById(exec.etbTrees[pid], active);
+      if(nt){ state.tree=nt; try{ normalizeTree(state.tree); }catch(e){} }
+      try{ renderAll(); }catch(e){}
+      try{ if(window.__etbOnChange) window.__etbOnChange(); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  },
+  reorderTrees: function(order){
+    try{
+      var pid=state.activeProjectId; if(pid==null) return false;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      if(!Array.isArray(order)) return false;
+      var byId={}; w.trees.forEach(function(t){ byId[t.tid]=t; });
+      var next=[];
+      order.forEach(function(id){ if(byId[id]){ next.push(byId[id]); delete byId[id]; } });
+      /* anything the caller did not mention keeps its place at the end rather than vanishing */
+      w.trees.forEach(function(t){ if(byId[t.tid]) next.push(t); });
+      if(next.length!==w.trees.length) return false;
+      if(!exec.etbTrees) exec.etbTrees={};
+      exec.etbTrees[pid]={ schema:2, trees:next, activeTid:w.activeTid };
+      try{ renderAll(); }catch(e){}
+      try{ if(window.__etbOnChange) window.__etbOnChange(); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  },
+  renameTree: function(tid,name){
+    try{
+      var pid=state.activeProjectId; if(pid==null) return false;
+      var bag=(exec.etbTrees||{})[pid]; var w=RD.etbTreesOf(bag);
+      var hit=null; w.trees.forEach(function(t){ if(t.tid===tid){ t.name=String(name||'').trim()||t.name; hit=t; } });
+      if(!hit) return false;
+      if(!exec.etbTrees) exec.etbTrees={};
+      exec.etbTrees[pid]={ schema:2, trees:w.trees, activeTid:w.activeTid };
+      if(state.tree && state.tree.tid===tid) state.tree.name=hit.name;
+      try{ renderAll(); }catch(e){}
+      try{ if(window.__etbOnChange) window.__etbOnChange(); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  },
   getDoc: function(){ return state.doc; },
   hasCreds: function(){ try{ var c=getCreds(); return !!(c&&c.binId&&c.masterKey); }catch(e){ return false; } },
   loadForHub: function(){
@@ -6215,6 +6598,58 @@ window.ETB = {
     }).catch(function(){ return false; });
   },
   currentExperiments: function(){ try{ var reach=computeReachability(state.tree); return currentExperiments(state.tree, reach).map(function(id){ return state.tree.experiments[id]; }); }catch(e){ return []; } },
+  /* The current experiments of ANY tree, not just the active one.
+     The host cannot do this itself: currentExperiments() reads state.tree, which the ETB has already
+     normalised, and reachability is only meaningful against a normalised tree. A host that walks a raw
+     tree out of the document gets nothing back and the card silently reads empty — that is exactly how
+     the first attempt at per-tree cards failed.
+     Trees other than the active one are normalised on a COPY, so resolving one never mutates the
+     document or disturbs the ETB's own state. The active tree short-circuits to the live objects, so
+     the cards for it are the same objects every other code path already holds. */
+  currentExperimentsFor: function(tid){
+    try{
+      /* For the ACTIVE tree, go through currentExperiments() rather than re-deriving. It is the one
+         published entry point for "what is the current step", so anything that overrides or wraps it
+         stays honoured — re-implementing the walk here would quietly bypass that. */
+      /* The live tree can lack a tid the bag already has (a tree installed straight into state, or one
+         loaded before the first write-back). Treat "the active tree" as: no tid asked for, ids match,
+         or the asked-for tid is the active one in the bag. Otherwise the card for the active tree
+         resolves a STALE bag copy instead of the live objects everything else is editing. */
+      var activeTid=null; try{ activeTid=this.activeTreeId(); }catch(e){}
+      if(tid==null || (state.tree && state.tree.tid===tid) || (state.tree && !state.tree.tid && tid===activeTid)){
+        return this.currentExperiments();
+      }
+      var bag=(typeof exec!=='undefined'&&exec&&exec.etbTrees)?exec.etbTrees[state.activeProjectId]:null;
+      var t=(tid==null)?state.tree:RD.etbTreeById(bag,tid);
+      if(!t) return [];
+      if(t===state.tree){
+        var reach1=computeReachability(state.tree);
+        return currentExperiments(state.tree, reach1).map(function(id){ return state.tree.experiments[id]; });
+      }
+      var copy=JSON.parse(JSON.stringify(t));
+      try{ normalizeTree(copy); }catch(e){}
+      var reach=computeReachability(copy);
+      return currentExperiments(copy, reach).map(function(id){ return copy.experiments[id]; }).filter(Boolean);
+    }catch(e){ return []; }
+  },
+  /* min-max remaining next steps for one tree, resolved from ITS OWN current step */
+  treeRangeFor: function(tid){
+    try{
+      var exps=this.currentExperimentsFor(tid);
+      if(!exps.length) return { min:0, max:0, unplanned:false, capped:false };
+      var bag=(typeof exec!=='undefined'&&exec&&exec.etbTrees)?exec.etbTrees[state.activeProjectId]:null;
+      var t=(tid!=null&&state.tree&&state.tree.tid===tid)?state.tree:(RD.etbTreeById(bag,tid)||state.tree);
+      var mn=null,mx=0,un=false,cap=false;
+      exps.forEach(function(e){
+        var r; try{ r=RD.nextStepRange(t,e.id); }catch(err){ r={min:0,max:0}; }
+        if(mn===null||r.min<mn) mn=r.min;
+        if(r.max>mx) mx=r.max;
+        if(r.unplanned) un=true;
+        if(r.capped) cap=true;
+      });
+      return { min:mn||0, max:mx, unplanned:un, capped:cap };
+    }catch(e){ return { min:0, max:0, unplanned:false, capped:false }; }
+  },
   experimentById: function(id){ return (state.tree&&state.tree.experiments&&state.tree.experiments[id])||null; },
   recordOutcomeFor: function(expId, payload){ try{ recordOutcome(state.tree, expId, payload, {user:state.editor}); if(payload && payload.key_read_values && typeof recordOutcomePatch==='function'){ try{ recordOutcomePatch(state.tree, expId, {key_read_values:payload.key_read_values}); }catch(__e){} } var e=state.tree.experiments[expId]; if(e) e.status='complete'; softRefresh(); return true; }catch(err){ return false; } },
   /* Reads for a key read with no linked KPI live on the experiment and never leave the ETB. Appending
@@ -6321,7 +6756,8 @@ window.ETB = {
       .catch(function(){ return false; });
   },
   openSettings: function(){ try{ openSettings(true); }catch(e){} },
-  renderFocusedGraph: function(container, expIds){ try{ __etbRenderFocused(container, expIds); }catch(e){ if(container) container.innerHTML='<div class="cy-msg">Graph unavailable.</div>'; } }
+  renderFocusedGraph: function(container, expIds, tree){ try{ __etbRenderFocused(container, expIds, tree); }catch(e){ if(container) container.innerHTML='<div class="cy-msg">Graph unavailable.</div>'; } },
+  destroyGraphs: function(pred){ try{ __etbDestroyGraphs(pred); }catch(e){} }
 };
 
 init();
