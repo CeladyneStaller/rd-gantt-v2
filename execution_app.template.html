@@ -1546,21 +1546,15 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape' && documen
    as min–max: the shortest and longest number of experiments still ahead of its current step, where a
    terminal branch (FMEA, halt, target achieved) contributes 0. A tree with nothing planned reads 0–0
    like any other — it is unfinished, not closed, so it is never tagged "finished". */
-function __treeCurrentIds(tree){
-  try{ var reach=computeReachability(tree); return currentExperiments(tree, reach)||[]; }catch(e){ return []; }
-}
+/* The range comes from the ETB, not from a host-side walk. Walking a raw tree here was the phase-3
+   approach and it reads 0-0 for every tree: reachability is only meaningful against a NORMALISED tree,
+   which only the ETB can produce. treeRangeFor does that per tree. */
 function __treeRange(tree){
-  var ids=__treeCurrentIds(tree);
-  if(!ids.length) return { min:0, max:0, unplanned:false, capped:false };
-  var mn=null, mx=0, un=false, cap=false;
-  ids.forEach(function(id){
-    var r; try{ r=RD.nextStepRange(tree,id); }catch(e){ r={min:0,max:0}; }
-    if(mn===null || r.min<mn) mn=r.min;
-    if(r.max>mx) mx=r.max;
-    if(r.unplanned) un=true;
-    if(r.capped) cap=true;
-  });
-  return { min:mn||0, max:mx, unplanned:un, capped:cap };
+  try{
+    var tid=(tree&&tree.tid)||null;
+    if(window.ETB&&ETB.treeRangeFor) return ETB.treeRangeFor(tid);
+  }catch(e){}
+  return { min:0, max:0, unplanned:false, capped:false };
 }
 function __rangeText(r){ return r.min+'\u2013'+(r.capped?(r.max+'+'):r.max); }
 function etbTreesHeaderHtml(){
@@ -6472,6 +6466,16 @@ window.ETB = {
   // ----- hub additions -----
   setActiveProject: function(pid){
     state.activeProjectId = pid;
+    /* state.doc is only refreshed at load, while exec.etbTrees is written on every change — so after any
+       edit the two drift apart and resolving from state.doc alone hands back a STALE (often empty) tree.
+       Prefer the live divisional doc, which is what listTrees and the header already read. */
+    try{
+      if(typeof exec!=='undefined' && exec && exec.etbTrees && pid!=null && exec.etbTrees[pid]){
+        if(!state.doc) state.doc={ schema_version:"2.0", trees:{}, meta:{} };
+        if(!state.doc.trees) state.doc.trees={};
+        state.doc.trees[pid]=exec.etbTrees[pid];
+      }
+    }catch(e){}
     if(state.doc){ var t=selectTreeForProject(state.doc, pid); if(!t){ t=emptyTree(); if(pid!=null) t.project_id=pid; } state.tree=t; try{ normalizeTree(state.tree); renderAll(); }catch(e){} }
     else if(state.tree && pid!=null && state.tree.project_id==null){ state.tree.project_id=pid; }
   },
@@ -6638,7 +6642,10 @@ window.ETB = {
       var exps=this.currentExperimentsFor(tid);
       if(!exps.length) return { min:0, max:0, unplanned:false, capped:false };
       var bag=(typeof exec!=='undefined'&&exec&&exec.etbTrees)?exec.etbTrees[state.activeProjectId]:null;
-      var t=(tid!=null&&state.tree&&state.tree.tid===tid)?state.tree:(RD.etbTreeById(bag,tid)||state.tree);
+      /* same identity rule as currentExperimentsFor: the live tree may lack a tid the bag has */
+      var activeTid=null; try{ activeTid=this.activeTreeId(); }catch(e){}
+      var isActive = state.tree && (state.tree.tid===tid || (!state.tree.tid && tid===activeTid));
+      var t=isActive?state.tree:(RD.etbTreeById(bag,tid)||state.tree);
       var mn=null,mx=0,un=false,cap=false;
       exps.forEach(function(e){
         var r; try{ r=RD.nextStepRange(t,e.id); }catch(err){ r={min:0,max:0}; }

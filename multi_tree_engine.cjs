@@ -179,6 +179,8 @@ setTimeout(async () => {
 
     const host = () => d.getElementById('expSummary');
     const btns = () => [...(host() ? host().querySelectorAll('[data-lttid]') : [])];
+
+
     ok(btns().length === 2, "the header lists every tree under the objective (" + btns().length + ")");
     const names = btns().map(b => b.querySelector('.lt-name').textContent).join(' | ');
     ok(/Catalyst durability/.test(names) && /Membrane crossover/.test(names), "…by name (" + names + ")");
@@ -339,6 +341,8 @@ setTimeout(async () => {
       ok(hasRule(c), "the section's ." + c + " has a style rule, not just markup");
     });
 
+
+
     // ---------- the chain manager ----------
     host().querySelector('[data-ltmanage]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
     await sleep(60);
@@ -444,6 +448,27 @@ setTimeout(async () => {
     ok(ord().length === 3, "…changing nothing");
 
     w.eval("closeTreeManager()");
+
+    // ---------- the header must show a REAL range for an ordinary objective ----------
+    // Every fixture above hands the app a ready-made schema-2 bag. A real objective is schema 1 and is
+    // reached through setActiveProject, which resolves from state.doc — a snapshot only refreshed at
+    // load. That drift made every tree read 0-0 in the running app while these tests passed.
+    w.eval(`exec.etbTrees={ OS: { project_id:'OS', root_experiment_id:'s1',
+      experiments:{ s1:{ id:'s1', code:'S1', name:'step', status:'in_progress', key_reads:[], audit_log:[], actual_outcome:null,
+                         possible_results:[{ id:'x1', label:'ok', next_experiment_ids:['s2'] }] },
+                    s2:{ id:'s2', code:'S2', name:'next', status:'planned', key_reads:[], audit_log:[], actual_outcome:null,
+                         possible_results:[{ id:'x2', label:'done', terminal:'halt' }] } },
+      terminal_types:{ halt:{ label:'Halt' } }, metadata:{} } };
+      selectedObj='OS'; ETB.setActiveProject('OS'); renderExpSummary();`);
+    await sleep(80);
+    const liveTid = w.eval("ETB.activeTreeId()");
+    ok(w.eval("Object.keys((ETB.getTree()||{}).experiments||{}).length") === 2,
+      "a schema-1 objective reaches the ETB with its experiments intact");
+    const liveRange = JSON.parse(w.eval("JSON.stringify(ETB.treeRangeFor(" + JSON.stringify(liveTid) + "))"));
+    ok(liveRange.max === 1, "…and its remaining next steps compute (" + liveRange.min + "-" + liveRange.max + ")");
+    const hdr = (host().querySelector('.lt-range') || {}).textContent || '';
+    ok(/1\u20131/.test(hdr), "the header label shows that range, not a pinned 0-0 (" + hdr.trim() + ")");
+    ok(!/^0\u20130/.test(hdr.trim()), "…specifically not 0-0");
 
     // A schema-1 bag is COPIED by the wrap, not shared, so a rename that only mutates the normalised
     // copy would vanish on the next read. This is the case that needs the explicit write-back.
