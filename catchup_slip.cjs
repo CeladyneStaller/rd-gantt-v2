@@ -74,6 +74,59 @@ const fcast = (gates, plans, tasks) => RD.cascade(portfolio, docs(gates, plans, 
   ok(slip([gate('G1', 2250, 2281)], other) === 31, "a plan on another objective does not clear this one's slip");
 })();
 
+// ---------- a re-committed gate is exempt from INHERITED chain push ----------
+// Chained gates take their lag from the ORIGINAL planned spacing, so one late predecessor pushes every
+// downstream gate by the same number of days — permanently. Re-committing those gates changed nothing:
+// the chain recomputed their forecast from the predecessor and the card kept reporting the original
+// overrun while demanding a plan that already existed. A re-commitment is a deliberate new commitment,
+// so it gets the same exemption `locked` already has.
+(function () {
+  const chained = [
+    { id: 'G1', objectiveId: 'O1', setId: 'S1', plannedDate: 2400, actualDate: 2431 },   // 31d late
+    { id: 'G2', objectiveId: 'O1', setId: 'S1', plannedDate: 2480, actualDate: null },
+    { id: 'G3', objectiveId: 'O1', setId: 'S1', plannedDate: 2556, actualDate: null }
+  ];
+  const sets = [{ id: 'S1', objectiveId: 'O1', chained: true }];
+  const TD = 2443;
+  const P = { units: [], divisions: [{ id: 'D', name: 'D', kind: 'rd' }], products: [], models: [],
+    initiatives: [{ id: 'I', name: 'I', divisionId: 'D' }],
+    objectives: [{ id: 'O1', statement: 'O', divisionId: 'D', initiativeId: 'I', quarter: '2026 Q1', plannedStart: 2300, plannedEnd: 2556 }],
+    kpis: [], kpiDefs: [], kpiUpdates: [], catchupPlans: [] };
+  const dd = (gates, plans) => ({ D: { objectiveState: [], keyResults: [], kpis: [], kpiUpdates: [], tasks: [],
+    boards: [], risks: [], catchupPlans: plans, stageGateSets: sets, stageGateEdges: [], chainGatesByDate: {},
+    etbTrees: {}, stageGates: gates } });
+  const recommit = (entries) => [{ id: 'catchup:O1', objectiveId: 'O1', enactedDay: 2432, gates: entries }];
+  const run = (gates, plans) => RD.cascade(P, dd(gates, plans), TD);
+
+  const before = run(chained, []);
+  ok(before.objectiveScheduleSlip['O1'] === 31, "a 31d-late gate pushes the whole chain 31d (" + before.objectiveScheduleSlip['O1'] + ")");
+  ok(before.objectiveWorkForecast['O1'] === 2587, "…moving the objective finish past its planned end (" + before.objectiveWorkForecast['O1'] + ")");
+  ok(before.gateEffective['G3'] === 2587, "…the last gate carrying the full delay (" + before.gateEffective['G3'] + ")");
+
+  const plan = recommit([{ gateId: 'G2', originalDate: 2480, newDate: 2480, version: 1 },
+                         { gateId: 'G3', originalDate: 2556, newDate: 2556, version: 1 }]);
+  const after = run(chained, plan);
+  ok(after.gateEffective['G2'] === 2480, "a re-committed gate holds its committed date (" + after.gateEffective['G2'] + ")");
+  ok(after.gateEffective['G3'] === 2556, "…all the way down the chain (" + after.gateEffective['G3'] + ")");
+  ok(after.objectiveWorkForecast['O1'] === 2556, "the finish returns to the planned end (" + after.objectiveWorkForecast['O1'] + ")");
+  ok(after.objectiveScheduleSlip['O1'] === 0, "…and the slip clears (" + after.objectiveScheduleSlip['O1'] + ")");
+  ok(before.gateEffective['G1'] === after.gateEffective['G1'], "the passed gate itself is untouched — history is not rewritten");
+
+  // a gate the plan did NOT cover still inherits the push
+  const partial = run(chained, recommit([{ gateId: 'G3', originalDate: 2556, newDate: 2556, version: 1 }]));
+  ok(partial.gateEffective['G2'] === 2511, "a gate the plan did not re-commit still inherits the delay (" + partial.gateEffective['G2'] + ")");
+  ok(partial.gateEffective['G3'] === 2556, "…while the re-committed one still holds");
+
+  // a re-commitment to a date already in the past must NOT read as on time
+  const stale = [chained[0], { id: 'G2', objectiveId: 'O1', setId: 'S1', plannedDate: 2400, actualDate: null }];
+  const past = run(stale, recommit([{ gateId: 'G2', originalDate: 2480, newDate: 2400, version: 1 }]));
+  ok(past.gateEffective['G2'] === TD, "a gate re-committed into the PAST still floors at today (" + past.gateEffective['G2'] + ")");
+  ok(past.objectiveScheduleSlip['O1'] > 0, "…and still reports slip, so an unrealistic plan is not silently green");
+
+  // no plan: nothing is exempt
+  ok(run(chained, []).gateEffective['G2'] === 2511, "with no plan every gate inherits the push as before");
+})();
+
 out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
 const fails = out.filter(x => x.startsWith('FAIL'));
 console.log(fails.length ? `\n${fails.length}/${out.length} FAILED` : `\nPASS - ${out.length} catch-up slip assertions green`);

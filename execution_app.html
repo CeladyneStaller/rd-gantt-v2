@@ -2406,12 +2406,23 @@ html[data-theme="dark"] #etb-view{
     // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
     // read as on-time: the seed still floors at today via pfGate.
     var gateEff = {}, gateStack = {};
+    /* A gate re-committed by an active catch-up plan is a deliberate new commitment: the team has said
+       "we will hit THIS date regardless of what happened upstream". Chained gates take their lag from
+       the ORIGINAL planned spacing, so without this a single late predecessor pushes every downstream
+       gate by the same number of days forever and the re-commitment changes nothing — the schedule card
+       keeps reporting the original overrun and keeps demanding a plan that already exists.
+       This is the same exemption `locked` already provides, for the same reason. The seed still floors
+       at today via pfGate, so a re-committed date in the past cannot read as on-time. */
+    function gateRecommitted(gid) {
+      var o = gateObjOf[gid]; if (!o) return false;
+      return !!catchupEntry(execFor(o.divisionId).catchupPlans, o.id, gid);
+    }
     function computeGateEff(gid) {
       if (gateEff[gid] != null) return gateEff[gid];
       var g = gateById[gid];
       if (!g) return 0;
       var seed = pfGate(g);
-      if (g.locked) { gateEff[gid] = seed; return seed; }
+      if (g.locked || gateRecommitted(gid)) { gateEff[gid] = seed; return seed; }
       if (g.actualDate != null) { gateEff[gid] = seed; return seed; }   // a finished gate anchors at its actual; a late predecessor can't inflate it, and a recovered gate re-anchors its successors
       if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
       gateStack[gid] = true;
