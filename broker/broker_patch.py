@@ -218,16 +218,22 @@ class StatePut(BaseModel):
 #
 # Read-only by design: there is no write path to the users bin in this broker.
 # ---------------------------------------------------------------------------
-ROSTER_FIELDS = ("email", "orgRole", "leadOf", "disabled")
+ROSTER_FIELDS = ("email", "orgRole", "leadOf", "leadUnits", "leadDivisions", "disabled")
 USERS_BIN = os.environ.get("USERS_BIN")
 ANALYSIS_INDEX_BIN = os.environ.get("ANALYSIS_INDEX_BIN")
-
 
 def _project_user(u: Dict[str, Any]) -> Dict[str, Any]:
     out = {
         "email": u.get("email"),
         "orgRole": u.get("orgRole"),
+        # Legacy tracker-id list. The Hub no longer reads it and it does not
+        # resolve to division ids; kept only so existing consumers do not break.
         "leadOf": list(u.get("leadOf") or []),
+        # The live leadership fields. Unit ids and division ids respectively —
+        # these are what the Hub reads, and what any consumer needs to answer
+        # "which divisions does this person lead?".
+        "leadUnits": list(u.get("leadUnits") or []),
+        "leadDivisions": list(u.get("leadDivisions") or []),
         "disabled": bool(u.get("disabled")),
     }
     assert set(out) == set(ROSTER_FIELDS)      # a field added above must be declared above
