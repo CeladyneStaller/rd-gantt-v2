@@ -1340,10 +1340,29 @@
     var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
     objs.forEach(function (o) {
       var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
+      /* A catch-up plan re-commits the objective's REMAINING work while holding the original finish
+         date. A gate that has already passed is history: its overrun cannot be recovered, and the plan
+         deliberately does not touch a passed gate's planned date. So once a plan is enacted, slip is
+         measured over OUTSTANDING work only — otherwise a past overrun is permanent and the schedule
+         card reports the same lateness forever, no matter what the team commits to.
+         This is scoped to objectives with an active plan: everywhere else slip still counts every gate. */
+      var cuActive = !!activeCatchupPlan(execFor(o.divisionId).catchupPlans, o.id);
+      var sgsForSlip = cuActive ? c.sgs.filter(function (s) { return s.actualDate == null; }) : c.sgs;
       if (hasWork) {
         c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
-        c.sgs.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
-        fEnd = intrinsic[o.id];
+        sgsForSlip.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
+        if (cuActive) {
+          /* Recomputed from outstanding work only. pfTask returns an unstarted task's PLANNED end, so
+             it must be floored at today here: intrinsic normally gets that floor from the gates beside
+             it, and dropping the passed ones would otherwise let the forecast run backwards and an
+             overdue task read as on time. */
+          var fv = [];
+          c.tasks.forEach(function (t) { fv.push(t.actualEnd != null ? pfTask(t) : Math.max(pfTask(t), today)); });
+          sgsForSlip.forEach(function (s) { fv.push(gateEff[s.id]); });
+          fEnd = fv.length ? Math.max.apply(null, fv) : o.plannedEnd;
+        } else {
+          fEnd = intrinsic[o.id];
+        }
         pEnd = pd.length ? Math.max.apply(null, pd) : o.plannedEnd;
       } else {
         fEnd = projEnd[o.id];

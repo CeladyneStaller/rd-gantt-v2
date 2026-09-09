@@ -3,6 +3,7 @@
   "backfill.test.js": 45,
   "broker_analysis.test.py": 16,
   "broker_sync.test.py": 16,
+  "catchup_slip.cjs": 15,
   "catchup_ui.cjs": 28,
   "clickoff.cjs": 12,
   "connect_data_ui.cjs": 81,

@@ -1638,10 +1638,29 @@
     var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
     objs.forEach(function (o) {
       var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
+      /* A catch-up plan re-commits the objective's REMAINING work while holding the original finish
+         date. A gate that has already passed is history: its overrun cannot be recovered, and the plan
+         deliberately does not touch a passed gate's planned date. So once a plan is enacted, slip is
+         measured over OUTSTANDING work only — otherwise a past overrun is permanent and the schedule
+         card reports the same lateness forever, no matter what the team commits to.
+         This is scoped to objectives with an active plan: everywhere else slip still counts every gate. */
+      var cuActive = !!activeCatchupPlan(execFor(o.divisionId).catchupPlans, o.id);
+      var sgsForSlip = cuActive ? c.sgs.filter(function (s) { return s.actualDate == null; }) : c.sgs;
       if (hasWork) {
         c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
-        c.sgs.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
-        fEnd = intrinsic[o.id];
+        sgsForSlip.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
+        if (cuActive) {
+          /* Recomputed from outstanding work only. pfTask returns an unstarted task's PLANNED end, so
+             it must be floored at today here: intrinsic normally gets that floor from the gates beside
+             it, and dropping the passed ones would otherwise let the forecast run backwards and an
+             overdue task read as on time. */
+          var fv = [];
+          c.tasks.forEach(function (t) { fv.push(t.actualEnd != null ? pfTask(t) : Math.max(pfTask(t), today)); });
+          sgsForSlip.forEach(function (s) { fv.push(gateEff[s.id]); });
+          fEnd = fv.length ? Math.max.apply(null, fv) : o.plannedEnd;
+        } else {
+          fEnd = intrinsic[o.id];
+        }
         pEnd = pd.length ? Math.max.apply(null, pd) : o.plannedEnd;
       } else {
         fEnd = projEnd[o.id];
@@ -1838,6 +1857,84 @@
 
   // Codes are unique within a problem and stable once assigned, so deleting one never renumbers the
   // others out from under a reader who wrote "see EXP-4" in a note.
+  // ---- Multiple logic trees ---------------------------------------------------------------------
+  // An objective used to hold exactly one experiment tree. It now holds several INDEPENDENT trees:
+  // each owns its own `experiments` map, so an id in one tree is invisible to another and
+  // reachability physically cannot cross between them. Schema 1 (a bare tree object) is wrapped as a
+  // single tree named "Main" on read, so old documents keep working and are rewritten on next save.
+  //
+  // Unknown fields are carried through untouched. migrateProblem's field whitelist silently discarded
+  // FMEA evidence on every load and cost several sessions to find; this normaliser must never repeat it.
+  function etbTreesOf(bag) {
+    if (!bag || typeof bag !== 'object') return { trees: [], activeTid: null, schema: 2 };
+    if (Array.isArray(bag.trees)) {
+      var ts = bag.trees.filter(function (t) { return t && typeof t === 'object'; });
+      var active = bag.activeTid && ts.some(function (t) { return t.tid === bag.activeTid; })
+        ? bag.activeTid : (ts.length ? ts[0].tid : null);
+      return { trees: ts, activeTid: active, schema: 2 };
+    }
+    // schema 1: the bag IS the tree. Preserve every field; only add the wrapper.
+    var one = Object.assign({}, bag);
+    if (!one.tid) one.tid = 't_main';
+    if (!one.name) one.name = 'Main';
+    return { trees: [one], activeTid: one.tid, schema: 1 };
+  }
+  function etbTreeById(bag, tid) {
+    var w = etbTreesOf(bag);
+    for (var i = 0; i < w.trees.length; i++) if (w.trees[i].tid === tid) return w.trees[i];
+    return null;
+  }
+  function etbActiveTree(bag) {
+    var w = etbTreesOf(bag);
+    return etbTreeById(bag, w.activeTid) || w.trees[0] || null;
+  }
+
+  // How many experiments still lie ahead of `expId`, shortest and longest path to termination.
+  //   - a result whose branch ends in a terminal (FMEA, halt, target achieved) contributes 0
+  //   - a result targeting experiment E contributes 1 + depth(E)
+  //   - max is the longest such path, min the shortest
+  // `unplanned` flags a result with neither a target nor a terminal: it counts as 0, but it means
+  // "not thought through yet" rather than "ends here", and the UI should say so.
+  // Cycles are possible via repeat_of, so the walk is depth-capped and reports `capped`.
+  var ETB_DEPTH_CAP = 8;
+  function nextStepRange(tree, expId) {
+    var exps = (tree && tree.experiments) || {};
+    var capped = false, sawUnplanned = false;
+    function walk(id, depth, seen) {
+      var e = exps[id];
+      if (!e) return { min: 0, max: 0 };
+      if (depth >= ETB_DEPTH_CAP || seen[id]) { capped = true; return { min: 0, max: 0 }; }
+      var next = {}; next[id] = 1;
+      for (var k in seen) if (seen.hasOwnProperty(k)) next[k] = 1;
+      var results = e.possible_results || [];
+      if (!results.length) return { min: 0, max: 0 };          // nothing planned after this one
+      var mins = [], maxs = [];
+      for (var i = 0; i < results.length; i++) {
+        var r = results[i] || {};
+        var targets = (r.next_experiment_ids || []).filter(function (t) { return !!exps[t]; });
+        if (!targets.length) {
+          // terminal, or an unplanned branch: this path ends here
+          if (!r.terminal) sawUnplanned = true;
+          mins.push(0); maxs.push(0);
+          continue;
+        }
+        var bMin = null, bMax = 0;
+        for (var j = 0; j < targets.length; j++) {
+          var sub = walk(targets[j], depth + 1, next);
+          var mv = 1 + sub.min, xv = 1 + sub.max;
+          if (bMin === null || mv < bMin) bMin = mv;
+          if (xv > bMax) bMax = xv;
+        }
+        mins.push(bMin === null ? 0 : bMin); maxs.push(bMax);
+      }
+      var mn = mins[0], mx = maxs[0];
+      for (var q = 1; q < mins.length; q++) { if (mins[q] < mn) mn = mins[q]; if (maxs[q] > mx) mx = maxs[q]; }
+      return { min: mn, max: mx };
+    }
+    var r0 = walk(expId, 0, {});
+    return { min: r0.min, max: r0.max, unplanned: sawUnplanned, capped: capped };
+  }
+
   function fmeaNextExpCode(problem) {
     var used = {};
     fmeaAllExperiments(problem).forEach(function (r) { used[String((r.x && r.x.code) || '')] = 1; });
@@ -2563,6 +2660,10 @@
     fmeaExpProgress: fmeaExpProgress,
     fmeaAllExperiments: fmeaAllExperiments,
     fmeaNextExpCode: fmeaNextExpCode,
+    etbTreesOf: etbTreesOf,
+    etbTreeById: etbTreeById,
+    etbActiveTree: etbActiveTree,
+    nextStepRange: nextStepRange,
     fmeaEvidenceRollup: fmeaEvidenceRollup,
     rpnBand: rpnBand,
     fmeaScaleLabel: fmeaScaleLabel,
@@ -2585,7 +2686,6 @@
   else root.RDCore = API;
 
 })(typeof window !== 'undefined' ? window : this);
-
 </script>
 <script>
 "use strict";
