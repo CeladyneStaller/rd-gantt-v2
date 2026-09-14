@@ -170,8 +170,10 @@
     var ups=readingsFor(kpiId, execDocs);
     if(!ups.length) return null;
     if(defn && defn.targetType==='statistical'){
-      // aggregate ALL posted readings; readCount is the expected sample size (completeness), not a window
-      var xs=[]; for(var i=0;i<ups.length;i++){ var v=Number(ups[i].value); if(!isNaN(v)) xs.push(v); }
+      // aggregate the CURRENT BATCH; readCount is the expected sample size (completeness), not a window.
+      // With no batches present this is every reading, exactly as before.
+      var cur=currentBatchReadings(ups);
+      var xs=[]; for(var i=0;i<cur.length;i++){ var v=Number(cur[i].value); if(!isNaN(v)) xs.push(v); }
       if(!xs.length) return null;
       return computeStat(defn.statistic||'average', xs);
     }
@@ -204,7 +206,15 @@
     }
     var store = (ctx.experiment && ctx.experiment.key_read_readings) || {};
     var raw = store[kr.id];
-    var vals = readingValues(raw);
+    /* Unlinked readings honour batches the same way linked ones do: the statistic is the CURRENT batch,
+       earlier ones stay stored but stop counting. An entry may be a bare number (legacy, hand-entered),
+       {v,src} (imported), or {v,batch} — all three are one implicit batch unless a batch is stamped. */
+    var entries = readingEntries(raw);
+    var cur = latestEntryBatch(entries);
+    var vals = [];
+    for (var i = 0; i < entries.length; i++) {
+      if (entryBatchOf(entries[i]) === cur) vals.push(entries[i].v);
+    }
     return { values: vals, n: vals.length, source: 'local', kpiId: null };
   }
 
@@ -229,7 +239,11 @@
       for (var i = 0; i < raw.length; i++) {
         var e = raw[i], v = readingValue(e);
         if (v === null) continue;
-        out.push({ v: v, src: (e && typeof e === 'object' && e.src) ? e.src : null });
+        var ent = { v: v, src: (e && typeof e === 'object' && e.src) ? e.src : null };
+        /* carry the batch through: dropping it here made every entry read as unbatched and the
+           scoping silently did nothing */
+        if (e && typeof e === 'object' && e.batch != null) ent.batch = e.batch;
+        out.push(ent);
       }
       return out;
     }
@@ -271,8 +285,63 @@
     return { complete: !missing.length && !short.length, missing: missing, short: short, noKeyReads: false };
   }
 
+  /* ---- Reading batches ---------------------------------------------------------------------------
+     A statistical KPI aggregates every reading posted to it — readCount is the expected sample size,
+     not a window. So re-measuring used to mean the new numbers were diluted by the old ones, and the
+     only way to refresh a statistic was to delete every prior reading.
+     A reading may now carry a `batch` id. The statistic is computed over the LATEST batch only; earlier
+     batches stay in the document as history and stay visible, they simply stop counting. Readings with
+     no batch (everything posted before this existed) are treated as one implicit original batch, so
+     nothing changes for a KPI that has never been re-batched. */
+  /* An unlinked entry carries its batch on the entry itself. There are no timestamps here — the array
+     IS the order things were recorded in — so the current batch is the one the LAST entry belongs to. */
+  function entryBatchOf(e){ return (e && e.batch != null) ? String(e.batch) : ''; }
+  function latestEntryBatch(entries){
+    if (!entries || !entries.length) return '';
+    return entryBatchOf(entries[entries.length - 1]);
+  }
+  function batchIdOf(u){ return (u && u.batch != null) ? String(u.batch) : ''; }
+  function latestBatchId(ups){
+    /* The batch of the most recent reading is current. Using a max over ids would depend on how they are
+       generated; recency matches what the user actually did last.
+       This picks the newest by TIMESTAMP rather than trusting array order: inside cascade the list comes
+       from readingsFor and is already sorted, but this is exported, and a caller handing over a raw
+       kpiUpdates slice would otherwise get a silently wrong answer. */
+    if (!ups || !ups.length) return '';
+    var best = null;
+    for (var i = 0; i < ups.length; i++) {
+      var r = ups[i];
+      if (!r || isNaN(Number(r.value))) continue;
+      if (best === null || (r.timestamp || 0) > (best.timestamp || 0)) best = r;
+    }
+    return best ? batchIdOf(best) : '';
+  }
+  function currentBatchReadings(ups){
+    if (!ups || !ups.length) return [];
+    var cur = latestBatchId(ups);
+    var out = [];
+    for (var i = 0; i < ups.length; i++) { if (batchIdOf(ups[i]) === cur) out.push(ups[i]); }
+    return out;
+  }
+  // every batch on a KPI, newest first: [{ batch, readings, n, current }]
+  function readingBatches(kpiId, execDocs){
+    var ups = readingsFor(kpiId, execDocs), order = [], by = {};
+    ups.forEach(function(u){
+      var b = batchIdOf(u);
+      if (!by[b]) { by[b] = { batch: b, readings: [], n: 0, current: false }; order.push(b); }
+      by[b].readings.push(u);
+      if (!isNaN(Number(u.value))) by[b].n++;
+    });
+    var cur = latestBatchId(ups);
+    order.forEach(function(b){ by[b].current = (b === cur); });
+    return order.map(function(b){ return by[b]; });
+  }
+  function newBatchId(){ return 'b_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
   function readingCount(kpiId, execDocs){
-    var ups=readingsFor(kpiId, execDocs), n=0;
+    /* the CURRENT batch only: n/readCount asks "is this sample complete", and a finished older batch
+       must not make a half-measured new one read as done. */
+    var ups=currentBatchReadings(readingsFor(kpiId, execDocs)), n=0;
     for(var i=0;i<ups.length;i++){ if(!isNaN(Number(ups[i].value))) n++; }
     return n;
   }
@@ -2074,14 +2143,15 @@
         var v = _finiteNum(u.value); if (v === null) return;
         rows.push({ value: v, ts: u.timestamp || 0, sample: (u.src && u.src.sample) || '',
           kind: 'linked', upId: u.id || null, srcKey: (u.src ? connSrcKey(u.src) : null),
-          localIdx: null, imported: !!u.src });
+          localIdx: null, imported: !!u.src, batch: batchIdOf(u) });
       });
     } else {
       var raw = (ctx.experiment && ctx.experiment.key_read_readings || {})[kr.id];
       readingEntries(raw).forEach(function (e, i) {
         rows.push({ value: e.v, ts: (e.src && e.src.imported_t) ? Date.parse(e.src.imported_t) : 0,
           sample: (e.src && e.src.sample) || '', kind: 'unlinked', upId: null,
-          srcKey: (e.src ? connSrcKey(e.src) : null), localIdx: i, imported: !!e.src });
+          srcKey: (e.src ? connSrcKey(e.src) : null), localIdx: i, imported: !!e.src,
+          batch: entryBatchOf(e) });
       });
     }
     rows.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
@@ -2369,6 +2439,13 @@
     targetKpisInScope: targetKpisInScope,
     // FMEA / risk register
     calcRpn: calcRpn,
+    readingsFor: readingsFor,
+    readingBatches: readingBatches,
+    entryBatchOf: entryBatchOf,
+    latestEntryBatch: latestEntryBatch,
+    currentBatchReadings: currentBatchReadings,
+    latestBatchId: latestBatchId,
+    newBatchId: newBatchId,
     fmeaNodeExperiments: fmeaNodeExperiments,
     fmeaExpProgress: fmeaExpProgress,
     fmeaAllExperiments: fmeaAllExperiments,
