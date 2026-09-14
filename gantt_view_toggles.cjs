@@ -170,11 +170,16 @@ const has=(rs,t)=>rs.some(x=>x.indexOf(t)>=0);
       var row=rows.filter(function(x){return x.textContent.indexOf('spill')>=0;})[0];
       if(!row) return null;
       var bar=row.querySelector('.gbar,[class*=gbar]'); if(!bar) return null;
-      return parseFloat(bar.style.left||'0')+parseFloat(bar.style.width||'0');
+      /* width is now max(<n>%, 2px) so parseFloat cannot read it; pull the percentage out */
+      var wRaw=bar.style.width||'0';
+      var wm=wRaw.match(/(-?[0-9.]+)%/);
+      var wv=wm?parseFloat(wm[1]):parseFloat(wRaw)||0;
+      return parseFloat(bar.style.left||'0')+wv;
     })()`);
   const edgeBuffered=rightEdge();
   ok(edgeBuffered!=null, "the spill row renders a bar");
-  ok(edgeBuffered<=720+0.5, "...whose right edge FITS the 720px track — the 7-day buffer saved it from clipping");
+  /* the track is fluid now, so positions are percentages: "fits" means <= 100%, not <= 720px */
+  ok(edgeBuffered<=100+0.5, "...whose right edge FITS the track — the 7-day buffer saved it from clipping ("+edgeBuffered+"%)");
   ok(w.eval("GANTT_QBUF")===7, "the buffer is 7 days");
   ok(w.eval("(function(){var q=ganttQuarterWindow(); var qr=RD.quarterRange(currentQuarter());"
            +"return q.lo===isoToDay(qr.start)-7 && q.hi===isoToDay(qr.end)+7;})()"),
@@ -186,7 +191,7 @@ const has=(rs,t)=>rs.some(x=>x.indexOf(t)>=0);
         +"var a=isoToDay(qr.start), b=isoToDay(qr.end);"
         +"return {name:q, qlo:a, qhi:b, lo:a, hi:b}; }; renderGantt();");
   const edgeUnbuffered=rightEdge();
-  ok(edgeUnbuffered!=null && edgeUnbuffered>720,
+  ok(edgeUnbuffered!=null && edgeUnbuffered>100,
      "...and without the buffer it overflows the track, so the fit above is the buffer's doing");
   w=await boot("https://x.test/?token=t"); w.eval(FIX);
   ok(w.eval("ganttQuarterWindow()")===null, "with the toggle off there is no window at all");

@@ -8,17 +8,37 @@ const w=dom.window;
 setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
   sc.textContent=`(function(){ var out=[]; function ok(c,m){ out.push((c?'ok  ':'FAIL ')+m); }
    // right edge of the bar on the row for a given lineage — domain-independent, so no x() arithmetic here
+   /* left + width of the first element with the given class, in PERCENT of the track.
+      left is "<n>%", width is "max(<n>%, 2px)". Parsed by string, not regex: this code is injected
+      inside a template literal, where a regex backslash is eaten before it reaches the browser and the
+      whole assertion block dies silently — reporting 0 assertions instead of failing. */
+   function __edgeOf(html, cls){
+     var i=html.indexOf('class="'+cls);
+     if(i<0) return null;
+     var st=html.indexOf('style="', i); if(st<0) return null;
+     var end=html.indexOf('"', st+7); if(end<0) return null;
+     var style=html.slice(st+7, end);
+     function pct(after){
+       var a=style.indexOf(after); if(a<0) return null;
+       var rest=style.slice(a+after.length);
+       var p=rest.indexOf('%'); if(p<0) return null;
+       var num=rest.slice(0,p).replace('max(','').trim();
+       var v=parseFloat(num); return isNaN(v)?null:v;
+     }
+     var l2=pct('left:'), wv=pct('width:');
+     if(l2==null||wv==null) return null;
+     return Math.round((l2+wv)*10)/10;
+   }
    function barRight(lineage){
      var h=document.getElementById('ganttWrap').innerHTML, i=h.indexOf('data-lineage="'+lineage+'"');
      if(i<0) return null;
-     var m=/<div class="gbar[^"]*" style="left:([0-9.]+)px;width:([0-9.]+)px/.exec(h.slice(i));
-     return m ? Math.round((parseFloat(m[1])+parseFloat(m[2]))*10)/10 : null;
+     return __edgeOf(h.slice(i), 'gbar');
    }
    try{
     var TD=todayDay();   // gates must sit in the FUTURE: an overdue gate forecasts to today, which would swamp every derived end
     var G=()=>document.getElementById('ganttWrap').innerHTML;
     function rowHtml(l){ var h=G(), i=h.indexOf('data-lineage="'+l+'"'); if(i<0) return ''; var j=h.indexOf('class="grow"', i); return j<0?h.slice(i):h.slice(i,j); }
-    function slipRight(l){ var m=/<div class="gslip" style="left:([0-9.]+)px;width:([0-9.]+)px/.exec(rowHtml(l)); return m?Math.round((parseFloat(m[1])+parseFloat(m[2]))*10)/10:null; }
+    function slipRight(l){ return __edgeOf(rowHtml(l), 'gslip'); }
     execDocs={ "EXEC-D1":{ objectiveState:[],keyResults:[],kpis:[],kpiUpdates:[],tasks:[],stageGateEdges:[],
       stageGateSets:[{id:'S1',objectiveId:'O1',name:'only one',order:0},
                      {id:'S2a',objectiveId:'O2',name:'alpha',order:0},{id:'S2b',objectiveId:'O2',name:'beta',order:1},

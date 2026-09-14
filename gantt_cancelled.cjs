@@ -31,10 +31,12 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     // legend gained the cancelled key
     ok(/>cancelled<\\/span>/.test(gw), 'the Gantt legend shows a "cancelled" key');
     // Request 1: workstream (set) bar starts at the OBJECTIVE start (left:0), not the first gate's due date
-    ok(/gsetbar[^"]*" style="left:0px/.test(gw), 'workstream bar starts at the objective start (left:0), not the first gate due date');
+    /* positions are percentages of the track now that the chart is fluid; the assertion is about WHERE
+       the bar starts, not what unit says so */
+    ok(/gsetbar[^"]*" style="left:0(px|%)/.test(gw), 'workstream bar starts at the objective start (left:0), not the first gate due date');
     // Request 2: the abandoned objective's incomplete gate sits at its PLANNED date -> left of the active gate's forecast
-    var m1=gw.match(/class="gdia gsq overdue" style="left:([0-9.]+)px/);
-    var m2=gw.match(/class="gdia gsq overdue cancelled[^"]*" style="left:([0-9.]+)px/);
+    var m1=gw.match(/class="gdia gsq overdue" style="left:([0-9.]+)(?:px|%)/);
+    var m2=gw.match(/class="gdia gsq overdue cancelled[^"]*" style="left:([0-9.]+)(?:px|%)/);
     ok(m1 && m2 && parseFloat(m2[1]) < parseFloat(m1[1]), 'ended objective: cancelled gate sits at its planned date, left of the active gate forecast');
     // Request 2.1: an abandon marker is drawn on the abandoned objective row
     ok(/class="gended abandoned"/.test(gw), 'an abandon marker (gended) is rendered on the abandoned objective row');

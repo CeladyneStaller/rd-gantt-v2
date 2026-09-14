@@ -30,6 +30,7 @@
   "exec_owner.cjs": 24,
   "fmea_evidence.cjs": 88,
   "gantt_cancelled.cjs": 14,
+  "gantt_layout.cjs": 35,
   "gantt_levels.cjs": 23,
   "gantt_obj_sort.cjs": 7,
   "gantt_patches.cjs": 31,
