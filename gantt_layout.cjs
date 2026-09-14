@@ -89,8 +89,33 @@ const css = (r) => r ? String(r.style.cssText) : '';
 
   const grip = rule(t => /\.glabelgrip$/.test(t));
   ok(!!grip && /cursor:\s*col-resize/.test(css(grip)), "there is a drag handle on the column edge");
-  ok(/data-glabelgrip/.test(src), "…rendered into the axis header");
-  ok(/mousedown/.test(src) && /col-resize/.test(src), "…wired to a drag");
+  ok(/data-glabelgrip/.test(src), "…rendered into the chart");
+
+  /* Present is not the same as grabbable. The first version was a 6x22px sliver inside the axis label
+     cell — under the tick labels, inside that cell's overflow:hidden, and impossible to hit. Assert the
+     geometry that makes it a real target. */
+  ok(/top:\s*0/.test(css(grip)) && /bottom:\s*0/.test(css(grip)),
+    "…spanning the FULL chart height, not just the 22px axis row");
+  const gw = parseFloat((css(grip).match(/width:\s*([\d.]+)px/) || [])[1]);
+  ok(isFinite(gw) && gw >= 8, "…with a grab area wide enough to hit (" + gw + "px)");
+  ok(/left:\s*var\(--glabelw\)/.test(css(grip)),
+    "…positioned on the column boundary, so it follows the column as it resizes");
+  const gz = parseFloat((css(grip).match(/z-index:\s*(\d+)/) || [])[1]);
+  ok(isFinite(gz) && gz >= 4, "…above the rows, so nothing swallows the press (z " + gz + ")");
+
+  // it must NOT live inside the label cell, which clips its own overflow
+  const labelCss = css(rule(t => /\.glabel$/.test(t)));
+  ok(/overflow:\s*hidden/.test(labelCss), "the label cell clips its overflow (names must truncate)");
+  ok(!/<div class="glabel"><span class="glabelgrip"/.test(src) && !/glabel"><span[^>]*glabelgrip/.test(src),
+    "…so the handle is NOT rendered inside it, where it would be clipped");
+
+  ok(/pointerdown/.test(src), "the drag uses pointer events, covering trackpad, pen and touch");
+  /* the prose comment also contains the word, so match the CALL, not the mention */
+  ok(/setPointerCapture\(ev\.pointerId\)/.test(src), "…with capture, so the drag survives outrunning a 9px handle");
+  ok(/pointercancel/.test(src), "…and is cleaned up if the gesture is cancelled");
+  ok(/addEventListener\("dblclick"/.test(src) && /removeItem\("rd_gantt_labelw"\)/.test(src),
+    "double-click restores the default width, so a stray drag is one gesture to undo");
+  ok(/if\(grip\) grip\.addEventListener\("dblclick"/.test(src), "…actually bound to the handle");
 
   ok(/GLABEL_MIN=140, GLABEL_MAX=640/.test(src), "the width is clamped at both ends");
   ok(/Math\.min\(GLABEL_MAX, Math\.max\(GLABEL_MIN,/.test(src),
