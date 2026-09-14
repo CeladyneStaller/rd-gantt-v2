@@ -158,7 +158,13 @@
   .spop .sp-rm:hover{color:var(--bad);background:var(--pill-bad-bg)}
   .spop .sp-rm.armed{color:var(--bad);background:var(--pill-bad-bg);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
   .spop .sp-none{padding:8px 0;color:var(--muted);font-size:11px;text-align:center}
-  .spop .sp-add{display:flex;gap:6px;margin-top:8px}
+  /* three controls cannot share one line in a 252px popover — wrap, and give the input its own line */
+  .spop .sp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+  .spop .sp-add .sp-in{flex:1 1 100%;min-width:0}
+  .spop .sp-add button{flex:0 0 auto}
+  .spop .sp-add [data-sp-newbatch]{margin-left:auto}
+  .spop .sp-stale{opacity:.55}
+  .spop .sp-old{font-size:9px;color:var(--muted);font-style:italic}
   .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .spop .sp-hint{margin-top:7px;font-size:9.5px;color:var(--muted);line-height:1.35}
   .m-postin{width:100%;max-width:74px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right}
@@ -3636,6 +3642,7 @@ const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().sl
    day ahead. Date.UTC(local y,m,d) gives the exact calendar day with no fraction to round. */
 const todayDay = () => { const n = new Date();
   return Math.round((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - EPOCH) / 86400000); };
+window.__RD_BUILD = "2026-09-14 batches+multitree";
 const CATCHUP_SLIP_THRESHOLD = 10;   // objective slip (days) that trips the schedule alarm
 
 /* ---------------- state ---------------- */
@@ -4302,6 +4309,8 @@ function openPostCell(td){
    completeness; lets a mis-keyed reading be removed. Writes only to exec.kpiUpdates (this app's only
    writable doc). Anchored position:fixed off the cell rect — .hostcard and .m-cur both clip overflow. ---- */
 let samplePopKpi = null, samplePopArmed = null;
+/* armed, then claimed by the next reading — an abandoned batch writes nothing to the document */
+let __spPendingBatch=null;
 function sampleOwnerId(kpiId){                                           // whose readings this KPI actually reads
   const AK=allKpisPool(), k=AK.find(x=>x.id===kpiId);
   return k ? RD.readingSourceId(k, AK) : kpiId;
@@ -4358,22 +4367,29 @@ function samplePopHtml(kpiId){
   const dk=RD.definerOf(k, AK), stat=dk.statistic||"average", statLbl=STAT_SHORT[stat]||stat;
   const unit=(stat==="cv")?"%":(RD.kpiUnit(k,AK)||"");
   const dir=RD.kpiDirection(k,AK), tgt=RD.effTarget(k,AK,EM);
-  const reads=samplePopReads(kpiId), xs=reads.map(u=>Number(u.value));
+  const reads=samplePopReads(kpiId);
+  /* the statistic and the n/readCount completeness are the CURRENT batch only — re-measuring should not
+     be dragged down by the previous sample. With no batches present this is every reading, as before. */
+  const curReads=RD.currentBatchReadings(reads), xs=curReads.map(u=>Number(u.value));
   const computed=xs.length?RD.computeStat(stat, xs):null;
   const exp=Number(dk.readCount)>0?Number(dk.readCount):0, n=xs.length, complete=!exp||n>=exp;
+  const allBatches=[]; reads.forEach(u=>{ const b=(u.batch!=null?String(u.batch):""); if(allBatches.indexOf(b)<0) allBatches.push(b); });
   const cntTxt=exp?`${n} / ${exp} ${complete?"\u2713":"\u26a0"}`:`${n} read${n===1?"":"s"}`;
   const critTxt=(dk.targetType==="binary")?"pass":((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"")+fmtTarget(tgt,"")+(unit?" "+unit:""));
+  const curBatch=RD.latestBatchId(reads);
   const rows=reads.length ? reads.map((u,i)=>{
       const armed=samplePopArmed===i;
-      return `<div class="sp-row"><span class="sp-v">${esc(String(u.value))}</span><span class="sp-ts">${esc(fmtReadTs(u.timestamp))}${u.note?" \u00b7 "+esc(u.note):""}</span><button class="sp-rm${armed?" armed":""}" data-sp-rm="${i}" title="Remove this reading">${armed?"confirm":"\u2715"}</button></div>`;
+      const stale=((u.batch!=null?String(u.batch):"")!==curBatch);
+      return `<div class="sp-row${stale?" sp-stale":""}"><span class="sp-v">${esc(String(u.value))}</span><span class="sp-ts">${esc(fmtReadTs(u.timestamp))}${u.note?" \u00b7 "+esc(u.note):""}${stale?' <span class="sp-old">earlier batch</span>':""}</span><button class="sp-rm${armed?" armed":""}" data-sp-rm="${i}" title="Remove this reading">${armed?"confirm":"\u2715"}</button></div>`;
     }).join("")
     : `<div class="sp-none">no readings yet \u2014 add the first measurement below</div>`;
   return `<div class="sp-h"><span class="sp-name">${esc(RD.kpiName(k,AK)||"")}</span><button class="sp-x" data-sp-close title="Close">\u2715</button></div>`+
     `<div class="sp-sum"><span class="sp-stat">${esc(statLbl)} = <b>${computed==null?"\u2014":esc(String(Math.round(computed*1000)/1000))}</b>${computed!=null&&unit?" "+esc(unit):""}</span><span class="sp-cnt ${complete?"ok":"warn"}">${cntTxt}</span></div>`+
     `<div class="sp-tgt">target ${esc(critTxt)}</div>`+
     `<div class="sp-list">${rows}</div>`+
-    `<div class="sp-add"><input type="number" step="any" class="sp-in" placeholder="new reading" data-sp-in/><button class="act mini" data-sp-add>Add</button></div>`+
-    `<div class="sp-hint">each entry is one measurement \u2014 the ${esc(statLbl)} above is computed from all of them</div>`;
+    `<div class="sp-add"><input type="number" step="any" class="sp-in" placeholder="new reading" data-sp-in/><button class="act mini" data-sp-add>Add</button>`+
+      `<button class="ghost mini" data-sp-newbatch title="Start a fresh sample \u2014 earlier readings are kept but stop counting">+ New batch</button></div>`+
+    `<div class="sp-hint">${__spPendingBatch?"new batch started \u2014 the next reading begins it. ":""}each entry is one measurement \u2014 the ${esc(statLbl)} above is computed from the current batch${allBatches.length>1?` (${allBatches.length} batches recorded)`:""}</div>`;
 }
 function renderSamplePop(){
   const pop=document.getElementById("samplePop"); if(!pop||!samplePopKpi) return;
@@ -4383,11 +4399,25 @@ function renderSamplePop(){
   const add=()=>{ const v=inp.value;
     if(v==="" || isNaN(Number(v))){ inp.focus(); return; }               // no ===cur guard: a repeat reading is a real reading
     const _src=sampleOwnerId(samplePopKpi);   // a borrowed sample is written where the data actually lives
-    exec.kpiUpdates.push({ id:"UPD-"+_src+"-"+Date.now(), kpiId:_src, value:Number(v), timestamp:Date.now(), note:"" });
+    /* a new reading joins the CURRENT batch, so adding one never silently starts a new sample */
+    const _b=__spPendingBatch || RD.latestBatchId(samplePopReads(samplePopKpi));
+    const _row={ id:"UPD-"+_src+"-"+Date.now(), kpiId:_src, value:Number(v), timestamp:Date.now(), note:"" };
+    if(_b) _row.batch=_b;
+    exec.kpiUpdates.push(_row);
+    __spPendingBatch=null;                                   // claimed
     samplePopArmed=null; renderAll(); renderSamplePop();
     const i2=document.querySelector("#samplePop [data-sp-in]"); if(i2) i2.focus();
     setMsg("Reading added","ok"); };
   addB.onclick=add;
+  const nb=pop.querySelector("[data-sp-newbatch]");
+  if(nb) nb.onclick=()=>{
+    /* Starting a batch posts nothing and deletes nothing: it stamps the NEXT reading so the statistic
+       restarts from it. Until that reading lands the KPI still shows the old sample, which is honest. */
+    __spPendingBatch=RD.newBatchId();
+    renderSamplePop();
+    const i3=document.querySelector("#samplePop [data-sp-in]"); if(i3) i3.focus();
+    setMsg("New batch started \u2014 the next reading begins a fresh sample","ok");
+  };
   inp.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } };
   pop.querySelectorAll("[data-sp-rm]").forEach(b=>b.onclick=()=>{
     const i=Number(b.dataset.spRm);
@@ -4411,7 +4441,7 @@ function openSamplePop(td, kpiId){
   pop.style.left=left+"px"; pop.style.top=top+"px";
   const inp=pop.querySelector("[data-sp-in]"); if(inp) inp.focus();
 }
-function closeSamplePop(){
+function closeSamplePop(){ __spPendingBatch=null;
   const pop=document.getElementById("samplePop"); if(pop) pop.remove();
   samplePopKpi=null; samplePopArmed=null;
 }

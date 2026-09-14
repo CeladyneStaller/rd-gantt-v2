@@ -156,6 +156,26 @@ const n = (ups) => RD.readingCount('K', docs(ups));
   const src = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/execution_app.html', 'utf8');
   ok(src.indexOf('data-sp-newbatch') > 0, "the KR/SG popover emits a + New batch control");
   ok(src.indexOf('data-etbnewbatch') > 0, "…and so does the ETB popover");
+
+  /* The sales app carries its own copy of samplePopHtml — a statistical KPI on a KR behaves the same
+     there, so the control and the rules that make it fit have to exist in that build too. Checking only
+     the execution app would leave sales silently one feature behind, which is the standing hazard of
+     the exec/sales fork. */
+  const sales = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
+  /* A bare substring is useless here: the CSS rule and the querySelector both contain the attribute, so
+     the test passes even with the button deleted. Match the BUTTON markup itself. */
+  ok(/<button[^>]*data-sp-newbatch[^>]*>\+ New batch<\/button>/.test(sales),
+    "the sales app's KR popover emits the + New batch button itself, not just a rule naming it");
+  ok(/curReads\s*=\s*RD\.currentBatchReadings\(reads\)/.test(sales),
+    "…and its statistic reads the current batch, not every reading");
+  ok(/latestBatchId/.test(sales), "…resolving which batch that is");
+  ok(/flex-wrap:wrap;gap:6px;margin-top:8px/.test(sales), "…with the add row wrapping so the control fits");
+  ok(/__spPendingBatch/.test(sales), "…and an armed batch that the next reading claims");
+
+  const sd = new JSDOM(sales, { virtualConsole: new VirtualConsole() }).window.document;
+  const sr = [...sd.styleSheets].flatMap(ss => { try { return [...ss.cssRules]; } catch (e) { return []; } });
+  const sIn = sr.find(r => r.selectorText && /\.sp-add \.sp-in$/.test(r.selectorText));
+  ok(!!sIn && /flex:\s*1 1 100%/.test(sIn.style.cssText), "…the sales input taking its own line as well");
 })();
 
 out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
