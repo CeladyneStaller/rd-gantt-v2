@@ -79,7 +79,7 @@
   "range_target.cjs": 37,
   "rdcore_check.test.py": 18,
   "rdcore_resolve.test.py": 15,
-  "reading_batches.cjs": 40,
+  "reading_batches.cjs": 47,
   "readonly_visibility.cjs": 87,
   "recover_stranded.cjs": 21,
   "rollup_abandon.cjs": 10,

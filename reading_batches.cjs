@@ -123,6 +123,41 @@ const n = (ups) => RD.readingCount('K', docs(ups));
   ok(rows.filter(r => r.batch === 'b2').length === 1, "…distinguishing the batches (" + rows.map(r => r.batch).join(',') + ")");
 })();
 
+// ---------- the control has to be REACHABLE, not merely present ----------
+// The popover is a fixed 252px and its add row was a non-wrapping flex line holding an input, Add, and
+// + New batch. The button was generated, sat outside the box, and was clipped — so every assertion that
+// checked "is it in the HTML" passed while the feature was invisible in the browser. jsdom does no
+// layout, so assert the RULES that make it fit.
+(function () {
+  const { JSDOM, VirtualConsole } = require((process.env.RD_SRC || '/home/claude/work') + '/node_modules/jsdom');
+  const fs = require('fs');
+  const d = new JSDOM(fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/execution_app.html', 'utf8'),
+    { virtualConsole: new VirtualConsole() }).window.document;
+  const rules = [...d.styleSheets].flatMap(ss => { try { return [...ss.cssRules]; } catch (e) { return []; } });
+  const find = (pred) => rules.find(r => r.selectorText && pred(r.selectorText));
+
+  const pop = find(t => /\.spop$/.test(t));
+  const addRow = find(t => /\.sp-add$/.test(t));
+  ok(!!pop && !!addRow, "the popover and its add row are styled");
+
+  const popW = pop ? (String(pop.style.cssText).match(/width:\s*(\d+)px/) || [])[1] : null;
+  ok(popW != null, "the popover has a fixed width (" + popW + "px)");
+  ok(!!addRow && /flex-wrap:\s*wrap/.test(addRow.style.cssText),
+    "…so the add row WRAPS — three controls cannot share one line in " + popW + "px");
+
+  const inRule = find(t => /\.sp-add \.sp-in$/.test(t));
+  ok(!!inRule && /flex:\s*1 1 100%/.test(inRule.style.cssText),
+    "the reading input takes a full line, leaving the buttons room below");
+
+  const btnRule = find(t => /\.sp-add button$/.test(t));
+  ok(!!btnRule && /flex:\s*0 0 auto/.test(btnRule.style.cssText), "the buttons keep their intrinsic width");
+
+  // and the markup still carries both controls
+  const src = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/execution_app.html', 'utf8');
+  ok(src.indexOf('data-sp-newbatch') > 0, "the KR/SG popover emits a + New batch control");
+  ok(src.indexOf('data-etbnewbatch') > 0, "…and so does the ETB popover");
+})();
+
 out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
 const fails = out.filter(x => x.startsWith('FAIL'));
 console.log(fails.length ? `\n${fails.length}/${out.length} FAILED` : `\nPASS - ${out.length} reading-batch assertions green`);

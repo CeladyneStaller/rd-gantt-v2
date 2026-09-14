@@ -185,7 +185,13 @@
   .spop .sp-rm:hover{color:var(--bad);background:var(--pill-bad-bg)}
   .spop .sp-rm.armed{color:var(--bad);background:var(--pill-bad-bg);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
   .spop .sp-none{padding:8px 0;color:var(--muted);font-size:11px;text-align:center}
-  .spop .sp-add{display:flex;gap:6px;margin-top:8px}
+  /* The popover is a fixed 252px. The add row holds an input, Add, and + New batch, which cannot fit
+     on one line — the button was pushed outside the box and clipped, so the feature looked absent.
+     Wrap, and let the input take the first line on its own. */
+  .spop .sp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+  .spop .sp-add .sp-in{flex:1 1 100%;min-width:0}
+  .spop .sp-add button{flex:0 0 auto}
+  .spop .sp-add [data-sp-newbatch],.spop .sp-add [data-etbnewbatch]{margin-left:auto}
   .spop .sp-in{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--accent);color:var(--ink);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px;text-align:right}
   .spop .sp-stale{opacity:.55}
   .spop .sp-old{font-size:9px;color:var(--muted);font-style:italic}
