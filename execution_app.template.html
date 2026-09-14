@@ -1237,6 +1237,9 @@ const dayToIso = d => d==null ? "" : new Date(EPOCH+d*86400000).toISOString().sl
    day ahead. Date.UTC(local y,m,d) gives the exact calendar day with no fraction to round. */
 const todayDay = () => { const n = new Date();
   return Math.round((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - EPOCH) / 86400000); };
+/* Build marker. Bumped whenever a user-visible feature lands, so "which build am I running?" is a
+   one-line console check instead of an argument: type __RD_BUILD. */
+window.__RD_BUILD = "2026-09-14 batches+multitree";
 const CATCHUP_SLIP_THRESHOLD = 10;   // objective slip (days) that trips the schedule alarm
 
 /* ---------------- state ---------------- */
