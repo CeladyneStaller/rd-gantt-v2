@@ -2132,6 +2132,8 @@ const GANTT_MIN_OVERLAP = 7;   // a bar must spend at least this many days insid
 /* Selected quarters, toggled in the year x quarter grid. Empty is not an error: it falls back to the
    CURRENT quarter, so the chart is never blank and there is always a way back from over-deselecting.
    Per person in localStorage — a colleague's chosen window should not change the plan for everyone. */
+/* Per person: whether to show paused milestones is a reading preference, not a property of the plan. */
+let ganttShowPaused = (function(){ try{ return localStorage.getItem("rd_gantt_showpaused")==="1"; }catch(e){ return false; } })();
 let ganttQuarters = (function(){
   try{ const raw=localStorage.getItem("rd_gantt_quarters"); const a=raw?JSON.parse(raw):null;
        return Array.isArray(a)?a.filter(q=>RD.quarterRange(q)):[]; }catch(e){ return []; }
@@ -2156,6 +2158,13 @@ function ganttQuarterWindow(){
 }
 /* Which years the grid offers: the years the plan actually touches, capped at 3 and anchored so the
    current year is always reachable. A grid of empty years is noise. */
+/* Paused and deprioritized milestones are preserved but must not drag anything: not the years the grid
+   offers, not an initiative's dates, not the chart. One predicate, used by every consumer, so they
+   cannot quietly disagree about whether a paused milestone counts. */
+function msPaused(m){
+  try{ return !!(m && RD.milestonePaused(portfolio.milestoneState, m.id)); }catch(e){ return false; }
+}
+function activeMilestones(list){ return (list||[]).filter(m=>!msPaused(m)); }
 function ganttGridYears(){
   /* Which years the grid offers. Two date shapes are in play and mixing them is a real trap: objective
      quarters resolve to ISO strings, while milestone and objective plannedStart/plannedEnd are DAY
@@ -2169,14 +2178,14 @@ function ganttGridYears(){
     if(o.quarter){ const p=RD.quarterRange(o.quarter); if(p){ addIso(p.start); addIso(p.end); } }
     addDay(o.plannedStart); addDay(o.plannedEnd);
   });
-  (portfolio.milestones||[]).forEach(m=>{ addDay(m.plannedStart); addDay(m.plannedEnd); });
+  activeMilestones(portfolio.milestones).forEach(m=>{ addDay(m.plannedStart); addDay(m.plannedEnd); });
   /* An initiative spans its own dates AND everything under it — a long programme with no objectives
      out at its far end still has to be reachable, which is the whole point of showing its end year. */
   (portfolio.initiatives||[]).forEach(i=>{
     addDay(i.plannedStart); addDay(i.plannedEnd);
     const kids=[];
     (portfolio.objectives||[]).forEach(o=>{ if(o.initiativeId===i.id) kids.push(o); });
-    (portfolio.milestones||[]).forEach(m=>{ if(m.initiativeId===i.id) kids.push(m); });
+    activeMilestones(portfolio.milestones).forEach(m=>{ if(m.initiativeId===i.id) kids.push(m); });
     kids.forEach(k=>{
       addDay(k.plannedStart); addDay(k.plannedEnd);
       if(k.quarter){ const p=RD.quarterRange(k.quarter); if(p){ addIso(p.start); addIso(p.end); } }
@@ -2286,6 +2295,11 @@ function ganttTimeframeGridHtml(){
 function ganttViewTogglesHtml(){
   return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
     `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
+    ((function(){
+      const n=(function(){ try{ return RD.pausedMilestoneIds(portfolio.milestoneState, portfolio.milestones).length; }catch(e){ return 0; } })();
+      /* The count shows whether or not they are displayed — that is what makes hiding them safe. */
+      return n ? `<button class="lvlb${ganttShowPaused?" on":""}" data-gview="paused" title="${ganttShowPaused?"Hide":"Show"} paused and deprioritized milestones. They are kept, and never affect dates or scores.">${n} paused</button>` : "";
+    })())+
     `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Limit the chart to the quarters selected below. Off, the axis spans all work. The axis keeps a week of slack each side of the selection.">Timeframe</button>`;
 }
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
@@ -2600,7 +2614,7 @@ function renderGantt(){
       return {kind:"bar", ds, de, pe, slip, slipFrom:r.plannedEnd, derived:(r.plannedStart==null||r.plannedEnd==null)};
     }
     if(entity==="initiative"){
-      const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=P.milestones.filter(m=>m.initiativeId===r.id);
+      const objs=P.objectives.filter(o=>o.initiativeId===r.id), mils=activeMilestones(P.milestones).filter(m=>m.initiativeId===r.id);
       const starts=[]; objs.forEach(o=>{ const g=geom("objective",o); if(g.ds!=null) starts.push(g.ds); }); mils.forEach(m=>{ if(m.plannedDate!=null) starts.push(m.plannedDate); });
       const peRaw=casc.initiativeProjectedEnd[r.id], pe=(peRaw!=null&&peRaw>0)?peRaw:null;
       // An initiative with no KPIs of its own is a pure container — its real end comes from the work
@@ -2714,6 +2728,10 @@ function renderGantt(){
     if(entity==="objective" && ganttActiveOnly && !isActiveObjective(r, em)) return null;
     const g=geom(entity,r); if(!visible(g)) return null;
     if(entity==="objective" && !objInWin(r,g)) return null;
+    /* A paused milestone is preserved, not deleted — it just stops cluttering the chart. Hidden by
+       default with a count in the toolbar and a toggle, because a row that vanishes with no trace is
+       how work gets forgotten. */
+    if(entity==="milestone" && msPaused(r) && !ganttShowPaused) return null;
     if((entity==="milestone"||entity==="stagegate") && !ptInWin(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
     sortObjKids(kids);
@@ -2924,7 +2942,13 @@ function renderGantt(){
       const slip=(g.actual!=null&&g.planned!=null)?g.actual-g.planned:null;
       const ttl=(g.actual!=null?`completed ${dayToIso(g.actual)}`:(mark!=null?`projected ${dayToIso(mark)}`:"planned"))+
                 (slip!=null&&slip!==0?` (${slip>0?"+":""}${slip}d)`:"");
-      html+=`<div class="gdia ${st}" style="left:${ex}%" title="${esc(ttl)}"></div>`;
+      /* A paused milestone keeps its planned date as a GHOST: hollow and dashed, so what was intended is
+         still legible without the marker reading as live work. The row only appears at all when paused
+         milestones are being shown. */
+      const _msp=(n.entity==="milestone" && msPaused(n.rec));
+      const _st2=_msp?"ghost":st;
+      const _ttl2=_msp?(`paused \u2014 was planned ${g.planned!=null?dayToIso(g.planned):"\u2014"}`):ttl;
+      html+=`<div class="gdia ${_st2}" style="left:${ex}%" title="${esc(_ttl2)}"></div>`;
     }
     html+=`</div></div>`;
   });
@@ -2935,7 +2959,10 @@ function renderGantt(){
   if(lb){ lb.innerHTML=levelBarHtml("gantt");
     lb.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>ganttCollapseTo(b.dataset.lvl||null));
     lb.querySelectorAll("[data-gview]").forEach(b=>b.onclick=()=>{
-      if(b.dataset.gview==="active") ganttActiveOnly=!ganttActiveOnly; else ganttQtrZoom=!ganttQtrZoom;
+      if(b.dataset.gview==="active") ganttActiveOnly=!ganttActiveOnly;
+      else if(b.dataset.gview==="paused"){ ganttShowPaused=!ganttShowPaused;
+        try{ localStorage.setItem("rd_gantt_showpaused", ganttShowPaused?"1":"0"); }catch(e){} }
+      else ganttQtrZoom=!ganttQtrZoom;
       renderGantt();                       // rebuilds the tree AND the bar, so the button reflects the new state
     });
     /* The grid renders INTO the level bar, so its cells are bound here — `host` is the chart and is not

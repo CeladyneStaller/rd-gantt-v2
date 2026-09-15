@@ -2167,6 +2167,45 @@
   }
 
   // ---- exports --------------------------------------------------------------
+  /* ---- Milestone pause / deprioritise ---------------------------------------------------------------
+     Modelled the way objectives already end: a separate state record rather than a field on the
+     milestone. The milestone itself is untouched, so everything that reads one keeps working, and the
+     history of pausing survives instead of a field being overwritten and lost.
+     'paused' means the date is suspect but the work is still intended; 'deprioritized' means it is not,
+     but the record is worth keeping. They behave identically on the chart — the difference is for the
+     person reading a review, not for the renderer.
+     The LAST matching record wins, so resuming is appending {status:'active'} rather than hunting down
+     and deleting the original: the pause stays in the history. */
+  var MS_PAUSED = { paused: 1, deprioritized: 1 };
+  function milestoneState(milestoneState_, msId){
+    var arr = milestoneState_ || [], hit = null;
+    for (var i = 0; i < arr.length; i++) {
+      var r = arr[i];
+      if (r && r.milestoneId === msId) hit = r;
+    }
+    return hit;
+  }
+  function milestonePaused(milestoneState_, msId){
+    var r = milestoneState(milestoneState_, msId);
+    return !!(r && MS_PAUSED[r.status]);
+  }
+  // every paused milestone id, for a count the UI can show without re-walking the list
+  function pausedMilestoneIds(milestoneState_, milestones){
+    var out = [];
+    (milestones || []).forEach(function (m) {
+      if (m && milestonePaused(milestoneState_, m.id)) out.push(m.id);
+    });
+    return out;
+  }
+  /* Appending rather than mutating: a resume is a new record, so the pause it supersedes is still on
+     file. Callers pass the existing array and get a new one — no in-place edit of shared state. */
+  function setMilestoneState(milestoneState_, msId, status, day, note){
+    var arr = (milestoneState_ || []).slice();
+    arr.push({ milestoneId: msId, status: status, day: (day == null ? null : day),
+               note: (note == null ? '' : String(note)) });
+    return arr;
+  }
+
   function objectiveEndState(objectiveState, objId){
     var arr = objectiveState || [];
     for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
@@ -2796,6 +2835,8 @@
     sliceScore: sliceScore,
     cascade: cascade,
     activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
+    milestoneState: milestoneState, milestonePaused: milestonePaused,
+    pausedMilestoneIds: pausedMilestoneIds, setMilestoneState: setMilestoneState,
     classifyGate: classifyGate,
     classifiedTargets: classifiedTargets,
     targetKpisInScope: targetKpisInScope,

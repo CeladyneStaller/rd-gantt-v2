@@ -1,0 +1,138 @@
+// Pausing and deprioritizing milestones.
+//
+// Modelled the way objectives already end: a separate state record rather than a field on the milestone,
+// so the milestone is untouched and the history of pausing survives instead of being overwritten. The
+// LAST record for a milestone wins, which makes resuming an append rather than a deletion.
+//
+// The property most likely to break quietly: milestone dates feed THREE consumers — the timeframe grid's
+// year scan, an initiative's bar geometry, and the chart rows. All three have to agree about whether a
+// paused milestone counts, or the grid offers a year for work that is not drawn.
+const RD = require((process.env.RD_SRC || '/home/claude') + '/rdcore.js');
+const { JSDOM, VirtualConsole } = require((process.env.RD_SRC || '/home/claude/work') + '/node_modules/jsdom');
+const fs = require('fs');
+const out = []; const ok = (c, m) => out.push((c ? 'ok  ' : 'FAIL ') + m);
+
+// ---------- the state record ----------
+(function () {
+  let st = [];
+  ok(RD.milestonePaused(st, 'M1') === false, "a milestone with no record is not paused");
+  ok(RD.milestonePaused(null, 'M1') === false, "…and neither is one with no state at all");
+
+  st = RD.setMilestoneState(st, 'M1', 'paused', 2500, 'waiting on supplier');
+  ok(RD.milestonePaused(st, 'M1') === true, "pausing marks it");
+  ok(RD.milestoneState(st, 'M1').note === 'waiting on supplier', "…keeping the reason");
+  ok(RD.milestoneState(st, 'M1').day === 2500, "…and when");
+
+  st = RD.setMilestoneState(st, 'M1', 'active', 2530, '');
+  ok(RD.milestonePaused(st, 'M1') === false, "resuming clears it");
+  ok(st.length === 2, "…by APPENDING, so the pause stays on file (" + st.length + " records)");
+  ok(st[0].status === 'paused', "…the original record intact");
+
+  st = RD.setMilestoneState(st, 'M2', 'deprioritized', 2540, '');
+  ok(RD.milestonePaused(st, 'M2') === true, "deprioritized counts as paused for the chart");
+  ok(RD.milestoneState(st, 'M2').status === 'deprioritized',
+    "…while staying DISTINCT in the data — the difference matters to a reader, not the renderer");
+
+  ok(JSON.stringify(RD.pausedMilestoneIds(st, [{ id: 'M1' }, { id: 'M2' }, { id: 'M3' }])) === '["M2"]',
+    "the paused ids are reported for a count the UI can show");
+  ok(RD.pausedMilestoneIds(st, []).length === 0, "an empty list yields none");
+
+  // setMilestoneState must not mutate what it was given
+  const before = [{ milestoneId: 'X', status: 'paused' }];
+  const after = RD.setMilestoneState(before, 'Y', 'paused', 1, '');
+  ok(before.length === 1 && after.length === 2, "the caller's array is not mutated in place");
+})();
+
+// ---------- the three consumers agree ----------
+(function () {
+  const html = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/planning_app.html', 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', virtualConsole: new VirtualConsole(),
+    url: 'https://x.test/?token=t&tab=gantt', pretendToBeVisual: true,
+    beforeParse(w) {
+      w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+      w.requestAnimationFrame = cb => setTimeout(cb, 0); w.cancelAnimationFrame = () => {};
+      w.fetch = () => Promise.reject(new Error('no net'));
+      w.cytoscape = function () { return { on() {}, ready(cb) { try { cb && cb(); } catch (e) {} }, fit() {}, resize() {},
+        destroy() {}, getElementById() { return { length: 0 }; }, zoom() { return 1; }, width() { return 800; },
+        height() { return 560; }, layout() { return { run() {} }; }, $() { return { unselect() {} }; } }; };
+    }
+  });
+
+  setTimeout(() => {
+    const w = dom.window, d = w.document;
+    try {
+      const day = (iso) => w.eval('isoToDay("' + iso + '")');
+      /* FAR is the only thing reaching 2027. Pause it and every consumer must forget 2027 together. */
+      const plan = (state) => w.eval(`portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],
+        models:[],kpis:[],kpiDefs:[],kpiUpdates:[],catchupPlans:[],objectives:[],
+        initiatives:[{id:"I",name:"I",divisionId:"D",plannedStart:${day('2026-01-01')},plannedEnd:${day('2026-12-31')}}],
+        milestones:[
+          {id:"NEAR",name:"Near",initiativeId:"I",plannedStart:${day('2026-02-01')},plannedEnd:${day('2026-03-01')},plannedDate:${day('2026-03-01')}},
+          {id:"FAR",name:"Far",initiativeId:"I",plannedStart:${day('2027-02-01')},plannedEnd:${day('2027-03-01')},plannedDate:${day('2027-03-01')}}
+        ],
+        milestoneState:${JSON.stringify(state)}};
+        ganttQtrZoom=false; ganttQuarters=[]; ganttShowPaused=false; renderGantt();`);
+
+      plan([]);
+      const yrsLive = JSON.parse(w.eval('JSON.stringify(ganttGridYears())'));
+      ok(yrsLive.indexOf(2027) >= 0, "a live milestone in 2027 puts 2027 in the year grid (" + yrsLive.join(',') + ")");
+      ok(d.querySelectorAll('[data-lineage*="FAR"]').length > 0, "…and draws its row");
+
+      plan([{ milestoneId: 'FAR', status: 'paused', day: 1, note: '' }]);
+      const yrsPaused = JSON.parse(w.eval('JSON.stringify(ganttGridYears())'));
+      ok(yrsPaused.indexOf(2027) < 0,
+        "pausing it drops 2027 from the year grid — no year offered for work that is not drawn (" + yrsPaused.join(',') + ")");
+      ok(d.querySelectorAll('[data-lineage*="FAR"]').length === 0, "…and the row is hidden by default");
+      ok(d.querySelectorAll('[data-lineage*="NEAR"]').length > 0, "…while the live milestone is untouched");
+
+      // it is HIDDEN, not lost: the count shows regardless
+      const bar = d.getElementById('ganttLevelBar');
+      ok(/1 paused/.test(bar.textContent), "the toolbar counts it, so a hidden row is not a forgotten one");
+      const btn = bar.querySelector('[data-gview="paused"]');
+      ok(!!btn, "…with a control to bring it back");
+
+      btn.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      ok(w.eval('ganttShowPaused') === true, "the toggle turns showing on");
+      ok(d.querySelectorAll('[data-lineage*="FAR"]').length > 0, "…and the paused milestone reappears");
+
+      // shown, it keeps its date as a ghost
+      const ghosts = d.querySelectorAll('.gdia.ghost');
+      ok(ghosts.length > 0, "…rendered as a ghost marker at the date that was planned");
+      const titles = [...ghosts].map(g => g.getAttribute('title') || '').join(' | ');
+      ok(/paused/.test(titles), "…saying so on hover (" + titles.slice(0, 60) + ")");
+      ok(/2027/.test(titles), "…and naming the date that was intended, so the plan is still legible");
+
+      // a paused milestone must not drag its initiative's dates even while shown
+      w.eval('ganttShowPaused=true; renderGantt();');
+      const yrsShown = JSON.parse(w.eval('JSON.stringify(ganttGridYears())'));
+      ok(yrsShown.indexOf(2027) < 0,
+        "showing paused milestones does not put their years back in the grid — they are visible, not counted");
+
+      // deprioritized behaves the same on the chart
+      plan([{ milestoneId: 'FAR', status: 'deprioritized', day: 1, note: '' }]);
+      ok(d.querySelectorAll('[data-lineage*="FAR"]').length === 0, "a DEPRIORITIZED milestone is hidden the same way");
+      ok(/1 paused/.test(d.getElementById('ganttLevelBar').textContent), "…and counted the same way");
+
+      /* Not asserted here: whether a paused milestone drags an initiative's derived START. An initiative
+         with no dates of its own does not render a bar from milestones alone, and one WITH dates ignores
+         its children entirely — so there is no configuration in this app where the exclusion is
+         observable. The exclusion is still applied (activeMilestones in the geometry branch), but it is
+         defence, and claiming a test for it would be claiming coverage that does not exist. */
+
+      // resuming restores everything
+      plan([{ milestoneId: 'FAR', status: 'paused', day: 1, note: '' },
+            { milestoneId: 'FAR', status: 'active', day: 2, note: '' }]);
+      ok(d.querySelectorAll('[data-lineage*="FAR"]').length > 0, "resuming brings the row back");
+      ok(JSON.parse(w.eval('JSON.stringify(ganttGridYears())')).indexOf(2027) >= 0, "…and its year with it");
+      ok(!/paused/.test(d.getElementById('ganttLevelBar').textContent), "…with nothing left to count");
+    } catch (e) {
+      ok(false, 'milestone pause flow threw: ' + (e && e.message));
+    }
+
+    out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
+    const fails = out.filter(x => x.startsWith('FAIL'));
+    console.log(fails.length ? `\n${fails.length}/${out.length} FAILED` : `\nPASS - ${out.length} milestone-pause assertions green`);
+    process.exit(fails.length ? 1 : 0);
+  }, 1200);
+})();
