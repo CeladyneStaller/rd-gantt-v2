@@ -532,6 +532,11 @@
   .ovwrap .csub .ov-slip{color:var(--bad)}
   .ovwrap .csub .ov-accel{color:var(--ok)}
   .ms-tbl .ms-slip{color:var(--bad);font-weight:600}
+  /* Distinct from every performance band: this is a state, not a score. Matches the muted, dashed
+     vocabulary the Gantt uses for a paused milestone's ghost marker. */
+  .ms-tbl .band.ms-paused{background:transparent;border:1px dashed var(--muted);color:var(--muted)}
+  .ms-tbl tr.ms-rowpaused td{opacity:.62}
+  .ms-tbl tr.ms-rowpaused td:first-child,.ms-tbl tr.ms-rowpaused td:nth-child(2){opacity:.82}
   .ovwrap .cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
   .ovwrap .kpit{display:grid;grid-template-columns:12px 1fr auto auto;gap:2px 8px;font-size:10.8px;align-items:center;margin-bottom:8px}
   .ovwrap .kh{color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);padding-bottom:3px;border-bottom:1px solid var(--line)}
@@ -2411,8 +2416,16 @@ function renderMilestones(){
       const effTxt = ms.completedDate!=null ? `${dayToIso(ms.completedDate)} ✓` : (eff!=null?dayToIso(eff):(ms.plannedDate!=null?dayToIso(ms.plannedDate):"—"));
       const msRepSlip=(!done && eff!=null && ms.plannedDate!=null)?eff-ms.plannedDate:null;
       const effCell = effTxt + ((msRepSlip!=null&&msRepSlip>0)?` <span class="ms-slip">+${msRepSlip}d</span>`:"");
-      const stCell = done ? `<span class="band on-track dia">achieved</span>` : `<span class="band ${bnd} dia">${bnd.replace("-"," ")}</span>`;
-      h+=`<tr class="ms-row" data-msedit="${ms.id}">`+
+      /* A paused milestone is not off track — it was deliberately stopped. Showing it a performance band
+         states something false about work nobody is doing, so the state takes precedence over the band.
+         Achieved still wins: something completed before being shelved is completed. */
+      const _msSt=(function(){ try{ return RD.milestoneState(portfolio.milestoneState, ms.id); }catch(e){ return null; } })();
+      const _msP=!done && !!(_msSt && (_msSt.status==="paused"||_msSt.status==="deprioritized"));
+      const _msWhen=(_msP && _msSt.day!=null)?dayToIso(_msSt.day):null;
+      const stCell = done ? `<span class="band on-track dia">achieved</span>`
+        : (_msP ? `<span class="band ms-paused dia" title="${esc((_msSt.status==="paused"?"Paused":"Deprioritized")+(_msWhen?" on "+_msWhen:"")+(_msSt.note?" \u00b7 "+_msSt.note:"")+" \u2014 kept, and excluded from dates and scores.")}">${_msSt.status==="paused"?"paused":"deprioritized"}</span>`
+               : `<span class="band ${bnd} dia">${bnd.replace("-"," ")}</span>`);
+      h+=`<tr class="ms-row${_msP?" ms-rowpaused":""}" data-msedit="${ms.id}">`+
         `<td class="mono">${esc(milestoneNumber(ms))}</td>`+
         `<td><b>${esc(ms.name||ms.id)}</b></td>`+
         `<td>${init?esc(init.name||init.id):"—"}</td>`+

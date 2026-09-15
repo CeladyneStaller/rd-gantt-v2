@@ -149,6 +149,47 @@ const out = []; const ok = (c, m) => out.push((c ? 'ok  ' : 'FAIL ') + m);
       ok(w.eval('RD.milestonePaused(portfolio.milestoneState,"M1")') === false, "clicking Resume un-pauses it");
       ok(w.eval('portfolio.milestoneState.length') === 2, "…keeping the pause in the history rather than deleting it");
 
+      /* ---- the milestones TABLE ----
+         A paused milestone was still being given a performance band there — "off track" for work nobody
+         is doing, which states something false. The state takes precedence. */
+      w.eval(`portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],models:[],kpis:[],
+        kpiDefs:[],kpiUpdates:[],catchupPlans:[],objectives:[],
+        initiatives:[{id:"I",name:"I",divisionId:"D",plannedStart:${day('2026-01-01')},plannedEnd:${day('2026-12-31')}}],
+        milestones:[{id:"LIVE",name:"Live one",initiativeId:"I",plannedDate:${day('2026-06-30')}},
+                    {id:"SHELF",name:"Shelved",initiativeId:"I",plannedDate:${day('2026-08-31')}}],
+        milestoneState:[{milestoneId:"SHELF",status:"paused",day:${day('2026-05-01')},note:"vendor slipped"}]};
+        renderMilestones();`);
+      /* Match by the row's edit id, not its rendered name: the name cell is wrapped in <b> and the
+         lookup should not depend on markup that can change. */
+      const msRow = (id) => d.querySelector('.ms-row[data-msedit="' + id + '"]');
+
+      ok(!!msRow('LIVE') && !!msRow('SHELF'), "both milestones appear in the table — pausing hides nothing here");
+      const shelfBand = msRow('SHELF').querySelector('.band');
+      ok(/paused/.test(shelfBand.textContent), "the paused one reads 'paused' in the Status column (" + shelfBand.textContent + ")");
+      ok(shelfBand.classList.contains('ms-paused'),
+        "…styled as a STATE, not as one of the performance bands");
+      ok(!/off track|at risk|on track|no band/.test(shelfBand.textContent),
+        "…and is not given a score band, which would claim something false about work nobody is doing");
+      const ttl = shelfBand.getAttribute('title') || '';
+      ok(/2026-05-01/.test(ttl), "…with when it was paused on hover");
+      ok(/vendor slipped/.test(ttl), "…and why (" + ttl.slice(0, 48) + ")");
+      ok(msRow('SHELF').classList.contains('ms-rowpaused'), "…and the row reads as inactive");
+
+      // a live milestone is untouched
+      ok(!msRow('LIVE').classList.contains('ms-rowpaused'), "a live milestone's row is not dimmed");
+      ok(!msRow('LIVE').querySelector('.band.ms-paused'), "…and keeps its ordinary band");
+
+      // deprioritized says so, rather than being flattened into 'paused'
+      w.eval(`portfolio.milestoneState=[{milestoneId:"SHELF",status:"deprioritized",day:${day('2026-05-01')},note:""}]; renderMilestones();`);
+      ok(/deprioritized/.test(msRow('SHELF').querySelector('.band').textContent),
+        "a deprioritized milestone says DEPRIORITIZED, not paused — the distinction is why both words exist");
+
+      // achieved outranks the state: something finished before being shelved is finished
+      w.eval(`portfolio.milestones[1].completedDate=${day('2026-04-01')};
+        portfolio.milestoneState=[{milestoneId:"SHELF",status:"paused",day:${day('2026-05-01')},note:""}]; renderMilestones();`);
+      ok(/achieved/.test(((msRow('SHELF') || {}).querySelector ? msRow('SHELF').querySelector('.band').textContent : '')),
+        "a milestone completed before being paused still reads as achieved");
+
       // resuming restores everything
       plan([{ milestoneId: 'FAR', status: 'paused', day: 1, note: '' },
             { milestoneId: 'FAR', status: 'active', day: 2, note: '' }]);
