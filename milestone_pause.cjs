@@ -120,6 +120,35 @@ const out = []; const ok = (c, m) => out.push((c ? 'ok  ' : 'FAIL ') + m);
          observable. The exclusion is still applied (activeMilestones in the geometry branch), but it is
          defence, and claiming a test for it would be claiming coverage that does not exist. */
 
+      /* ---- the CONTROL ----
+         The engine, the rollup exclusions, the toggle and the ghost were all built before anything could
+         actually pause a milestone: the feature was unreachable from the UI. Assert the control exists
+         and works, not just that the model does. */
+      w.eval(`persistPortfolio=function(){};
+        portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],models:[],kpis:[],
+        kpiDefs:[],kpiUpdates:[],catchupPlans:[],objectives:[],
+        initiatives:[{id:"I",name:"I",divisionId:"D",plannedStart:${day('2026-01-01')},plannedEnd:${day('2026-12-31')}}],
+        milestones:[{id:"M1",name:"Pilot build",initiativeId:"I",plannedDate:${day('2026-06-30')}}],
+        milestoneState:[]}; renderAll(); openEditor("M1","milestone");`);
+      const ed = () => d.getElementById('pfModalBody');
+      ok(!!ed(), "the milestone editor opens");
+      ok(!!ed().querySelector('[data-mspause="paused"]'), "…offering a Pause control");
+      ok(!!ed().querySelector('[data-mspause="deprioritized"]'), "…and a Deprioritize control");
+      ok(!!ed().querySelector('[data-mspnote]'), "…with somewhere to say why");
+
+      const why = ed().querySelector('[data-mspnote]'); why.value = 'vendor slipped';
+      ed().querySelector('[data-mspause="paused"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      ok(w.eval('RD.milestonePaused(portfolio.milestoneState,"M1")') === true, "clicking Pause actually pauses it");
+      ok(w.eval('JSON.parse(JSON.stringify(RD.milestoneState(portfolio.milestoneState,"M1"))).note') === 'vendor slipped',
+        "…recording the reason given");
+      ok(w.eval('RD.milestoneState(portfolio.milestoneState,"M1").day') != null, "…and when");
+
+      ok(!!ed().querySelector('[data-msresume]'), "the editor then offers Resume instead");
+      ok(!ed().querySelector('[data-mspause="paused"]'), "…and no longer offers Pause");
+      ed().querySelector('[data-msresume]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      ok(w.eval('RD.milestonePaused(portfolio.milestoneState,"M1")') === false, "clicking Resume un-pauses it");
+      ok(w.eval('portfolio.milestoneState.length') === 2, "…keeping the pause in the history rather than deleting it");
+
       // resuming restores everything
       plan([{ milestoneId: 'FAR', status: 'paused', day: 1, note: '' },
             { milestoneId: 'FAR', status: 'active', day: 2, note: '' }]);

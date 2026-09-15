@@ -428,6 +428,14 @@
   /* Groups FLOW: as many per row as fit, wrapping on their own. No measurement and no JS, so it is
      correct on resize and inside a narrow embed. The gap BETWEEN groups is wider than the gap
      within one — that spacing is what makes them read as units without drawing boxes. */
+  .ed-sec{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .ed-seclab{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .mspause{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .mspause.on{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+  .msp-state{font-family:var(--mono);font-size:11px;color:var(--warn)}
+  .msp-note{font-size:11px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msp-why{flex:1 1 140px;min-width:0;height:26px;font-size:12px}
+  .msp-hint{font-size:10.5px;color:var(--muted);margin-top:6px}
   .tfgrid{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 6px}
   .tfgrp{display:flex;gap:3px;align-items:center;flex:0 0 auto}
   .tfy{width:56px}
@@ -1106,7 +1114,12 @@ function openEditor(id, entityOverride, prefill){
   if(activeEntity==='initiative' && editingId){ pfTgtArmed=null; pfMsArmed=null; html += initTargetsHtml(editingId); html += milestonesHtml(editingId); }
   if(activeEntity==='milestone' && editingId){ pfTgtArmed=null; html += msStatusHtml(editingId); html += initTargetsHtml(editingId, "milestone"); }
   if((activeEntity==='initiative'||activeEntity==='objective') && editingId){ const rec=SEL[activeEntity]().find(x=>x.id===editingId); if(rec) html += classificationKpisHtml(rec); }
+  /* Pause / resume lives OUTSIDE the schema because the state is a separate record, not a field on the
+     milestone — the same shape objectives use for ending. It acts immediately rather than on Save, so it
+     cannot be half-applied by cancelling out of the editor. */
+  if(activeEntity==="milestone" && editingId) html += milestonePauseHtml(editingId);
   document.getElementById("pfModalBody").innerHTML = html;
+  if(activeEntity==="milestone" && editingId) wireMilestonePause(editingId);
   document.getElementById("saveRec").onclick = saveRecord;
   document.getElementById("cancelEdit").onclick = ()=>{ const ret=(activeEntity==="milestone"&&msReturn)?msReturn:null; closeEditor(); if(ret) openEditor(ret,"initiative"); };
   if(activeEntity==='initiative' && editingId){ wireInitTargets(editingId); wireMilestones(editingId); }
@@ -1921,6 +1934,47 @@ function saveRecord(){
   closeEditor(); renderAll();
   if(ret) openEditor(ret, "initiative");
   persistPortfolio(reapply, cleared ? cap(ent)+" saved — its product/model was cleared to match the new initiative." : cap(ent)+" saved.");
+}
+/* ---- Milestone pause / deprioritise -------------------------------------------------------------
+   Preserved, not deleted: a paused milestone keeps its dates and its record, stops counting toward any
+   rollup, and drops off the Gantt unless you ask to see it. */
+function milestonePauseHtml(msId){
+  const cur=(function(){ try{ return RD.milestoneState(portfolio.milestoneState, msId); }catch(e){ return null; } })();
+  const st=(cur&&cur.status)||"active";
+  const paused=(st==="paused"||st==="deprioritized");
+  const when=(cur&&cur.day!=null)?dayToIso(cur.day):null;
+  if(paused){
+    return `<div class="ed-sec"><div class="ed-seclab">Status</div>`+
+      `<div class="mspause on"><span class="msp-state">${st==="paused"?"Paused":"Deprioritized"}`+
+      (when?` \u00b7 ${esc(when)}`:"")+`</span>`+
+      (cur&&cur.note?`<span class="msp-note">${esc(cur.note)}</span>`:"")+
+      `<button type="button" class="ghost mini" data-msresume>Resume</button></div>`+
+      `<div class="msp-hint">Kept and excluded from dates and scores. Shown on the Gantt only when paused milestones are displayed.</div></div>`;
+  }
+  return `<div class="ed-sec"><div class="ed-seclab">Status</div>`+
+    `<div class="mspause"><button type="button" class="ghost mini" data-mspause="paused">Pause</button>`+
+    `<button type="button" class="ghost mini" data-mspause="deprioritized">Deprioritize</button>`+
+    `<input type="text" class="msp-why" data-mspnote placeholder="why (optional)"></div>`+
+    `<div class="msp-hint">Keeps the milestone and its dates, but stops it counting toward any rollup and takes it off the Gantt.</div></div>`;
+}
+function wireMilestonePause(msId){
+  const body=document.getElementById("pfModalBody"); if(!body) return;
+  const apply=(status)=>{
+    const noteEl=body.querySelector("[data-mspnote]");
+    const note=noteEl?noteEl.value:"";
+    try{
+      portfolio.milestoneState=RD.setMilestoneState(portfolio.milestoneState, msId, status, todayDay(), note);
+    }catch(e){ return; }
+    /* Applied and persisted straight away — a status that only lands on Save can be lost by cancelling,
+       and "I paused that" is exactly the kind of thing someone will believe they did. */
+    renderAll();
+    const b=document.getElementById("pfModalBody");
+    if(b && editingId===msId){ openEditor(msId, "milestone"); }
+    persistPortfolio(null, status==="active"?"Milestone resumed.":("Milestone "+(status==="paused"?"paused":"deprioritized")+"."));
+  };
+  body.querySelectorAll("[data-mspause]").forEach(b=>b.onclick=()=>apply(b.getAttribute("data-mspause")));
+  const r=body.querySelector("[data-msresume]");
+  if(r) r.onclick=()=>apply("active");
 }
 function validateAndWarn(entity, rec){
   if(entity==="objective" || entity==="initiative"){
