@@ -425,7 +425,22 @@
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
   .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
-  .tfgrid{display:grid;grid-template-columns:56px repeat(4, 64px);gap:3px;align-items:center;margin:0 0 6px}
+  /* Groups FLOW: as many per row as fit, wrapping on their own. No measurement and no JS, so it is
+     correct on resize and inside a narrow embed. The gap BETWEEN groups is wider than the gap
+     within one — that spacing is what makes them read as units without drawing boxes. */
+  .tfgrid{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 6px}
+  .tfgrp{display:flex;gap:3px;align-items:center;flex:0 0 auto}
+  .tfy{width:56px}
+  .tfq{width:56px}
+  /* tighter tiles when the bar is narrow, so two groups still fit rather than dropping to one */
+  /* The level bar is a SIBLING of the chart, so a gchart container query would never match here.
+     The bar is its own container instead — and it measures the bar, not the window, so this is
+     still correct inside a narrow embed where the window is wide. */
+  #ganttLevelBar{container-type:inline-size;container-name:gbar}
+  @container gbar (max-width: 900px){ .tfgrid{gap:8px 12px} .tfy,.tfq{width:44px} }
+  @supports not (container-type: inline-size){
+    @media (max-width: 1100px){ .tfgrid{gap:8px 12px} .tfy,.tfq{width:44px} }
+  }
   .tfy{height:26px;font-size:10.5px;font-family:var(--mono);padding:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;cursor:pointer}
   .tfy:hover{border-color:var(--accent)}
   .tfy.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
@@ -1678,7 +1693,31 @@ function wireFilterBar(host){
   });
   host.querySelectorAll("[data-fclr]").forEach(x=>x.onclick=()=>{ const k=x.dataset.fclr; if(k==="__all"){ pfFilters.unit=pfFilters.division=pfFilters.product=pfFilters.quarter=pfFilters.status=""; } else pfFilters[k]=""; renderPortfolio(); renderGantt(); renderMilestones(); });
 }
-function initHasMatch(i){ return portfolio.objectives.some(o=>o.initiativeId===i.id && objMatches(o)); }
+/* An initiative with objectives is judged by them. One WITHOUT any used to match nothing at all, so it
+   vanished the moment any filter was set — a long programme that has not been broken into objectives yet
+   simply disappeared. Fall back to the initiative's own designation: unit and division come from where it
+   sits, product and model from its own classification.
+   Work filters (quarter, status) are properties of objectives, not of an initiative, so an objectiveless
+   initiative cannot satisfy them and is correctly hidden when one is set. */
+function initOwnMatches(i){
+  const f=pfFilters;
+  if(f.quarter||f.status) return false;
+  if(f.unit && (RD.unitIdOfDivision(i.divisionId,portfolio)||"")!==f.unit) return false;
+  if(f.division && i.divisionId!==f.division) return false;
+  if(f.product){
+    const c=RD.effClass(i,portfolio);
+    let pid=null;
+    if(c.kind==="product") pid=c.productId;
+    else if(c.kind==="model"){ const m=byId("model",c.modelId); pid=m?m.productId:null; }
+    if(pid!==f.product) return false;
+  }
+  return true;
+}
+function initHasMatch(i){
+  const objs=portfolio.objectives.filter(o=>o.initiativeId===i.id);
+  if(objs.length) return objs.some(objMatches);
+  return initOwnMatches(i);
+}
 function productShows(p){ if(pfWorkFilter()) return false; const f=pfFilters; return (!f.division||p.divisionId===f.division) && (!f.product||p.id===f.product); }
 function divShows(d){ return portfolio.initiatives.some(i=>i.divisionId===d.id && initHasMatch(i)) || portfolio.products.some(p=>p.divisionId===d.id && productShows(p)); }
 function groupedTreeHtml(){
@@ -2231,7 +2270,9 @@ function ganttTimeframeGridHtml(){
                     :(on?"click to remove":"click to add");
       return `<button class="${cls}" data-tfq="${esc(q)}" title="${esc(title)}">Q${q.slice(-1)}</button>`;
     }).join("");
-    return `<button class="tfy${full?" on":""}" data-tfy="${y}" title="${full?"Clear this year":"Select the whole year"}">${y}</button>${cells}`;
+    /* One group per year, wrapped as a single flex item: the quarters can never land on a different row
+       from the year they belong to, whatever the width. */
+    return `<div class="tfgrp"><button class="tfy${full?" on":""}" data-tfy="${y}" title="${full?"Clear this year":"Select the whole year"}">${y}</button>${cells}</div>`;
   }).join("");
   const r=RD.quarterSpanRange(sel);
   const lbl=r?(r.from===r.to?r.from:(r.from+" \u2192 "+r.to)):"";

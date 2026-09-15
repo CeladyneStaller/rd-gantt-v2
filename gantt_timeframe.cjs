@@ -132,9 +132,26 @@ const j = a => (a || []).join(',');
   ok(!!cell && lw.eval('ganttQuarters.length') > 0, "…and records the choice");
   ok(ld.querySelectorAll('.tfgrid.off').length === 0, "…and the grid stops being dimmed");
 
+  /* Years are no longer fixed rows: each [year][Q1..Q4] is one unbreakable group and the groups FLOW,
+     as many per row as fit. A quarter must never be able to wrap away from its own year. */
   const grid = rule(t => /\.tfgrid$/.test(t));
-  ok(!!grid && /grid-template-columns:\s*56px repeat\(4, ?64px\)/.test(css(grid)),
-    "…laid out as a year label plus four quarters per row");
+  const grp = rule(t => /\.tfgrp$/.test(t));
+  ok(!!grid && /flex-wrap:\s*wrap/.test(css(grid)), "the tiles flow and wrap rather than sitting in fixed columns");
+  ok(!!grp && /flex:\s*0 0 auto/.test(css(grp)),
+    "…each year group is one unbreakable item, so its quarters cannot wrap away from it");
+  ok(/<div class="tfgrp">/.test(src), "…and the markup groups them");
+
+  // the gap BETWEEN groups must exceed the gap WITHIN one, or the groups stop reading as units
+  const gGap = css(grid).match(/gap:\s*([\d.]+)px\s+([\d.]+)px/);
+  const iGap = css(grp).match(/gap:\s*([\d.]+)px/);
+  ok(!!gGap && !!iGap && parseFloat(gGap[2]) > parseFloat(iGap[1]),
+    "…separated more than their own quarters are (" + (gGap && gGap[2]) + " vs " + (iGap && iGap[1]) + ")");
+
+  // the responsive step has to measure the BAR: the level bar is a sibling of the chart, so a gchart
+  // container query would silently never match
+  ok(/#ganttLevelBar\{container-type:inline-size/.test(src), "the level bar is its own query container");
+  ok(/@container gbar \(max-width/.test(src), "…so the tighter layout keys off the bar, not the window");
+  ok(/@supports not \(container-type/.test(src), "…with a viewport fallback where container queries are unsupported");
 
   // the implied middle must be visibly weaker than an explicit pick, or the grid overstates the choice
   const on = rule(t => /\.tfq\.on$/.test(t));
