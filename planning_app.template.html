@@ -425,6 +425,20 @@
   .gconn.committed{background:var(--bad);opacity:.7}
   .pfgrp-head .gtri,.grouphead .gtri{cursor:pointer;user-select:none;font-size:9px;color:var(--muted);margin-right:3px}
   .pfgrp-head .gtri:hover,.grouphead .gtri:hover{color:var(--accent)}
+  .tfgrid{display:grid;grid-template-columns:56px repeat(4, 64px);gap:3px;align-items:center;margin:0 0 6px}
+  .tfy{height:26px;font-size:10.5px;font-family:var(--mono);padding:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;cursor:pointer}
+  .tfy:hover{border-color:var(--accent)}
+  .tfy.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+  .tfq{height:26px;font-family:var(--mono);font-size:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;cursor:pointer;position:relative}
+  .tfq:hover{border-color:var(--accent);color:var(--ink)}
+  /* explicitly chosen */
+  .tfq.on{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+  /* spanned but not chosen: shown as included, visibly weaker, so the grid never claims a gap it cannot honour */
+  .tfq.on.imp{background:color-mix(in srgb, var(--accent) 22%, transparent);color:var(--accent);font-weight:400;border-style:dashed}
+  .tfq.now::after{content:"";position:absolute;bottom:3px;left:50%;margin-left:-2.5px;width:5px;height:2px;border-radius:1px;background:currentColor;opacity:.85}
+  .tfnote{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+  .tfrange{font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+  .tfhint{font-size:10.5px;color:var(--muted)}
   .lvlsep{display:inline-block;width:1px;height:14px;background:var(--line);margin:0 8px;vertical-align:middle}
   .lvlbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
   .lvll{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
@@ -2075,12 +2089,47 @@ const GANTT_MIN_OVERLAP = 7;   // a bar must spend at least this many days insid
 //   lo/hi   — the quarter plus a week each side. The AXIS spans this, because a quarter boundary is an
 //             accounting line and work planned "for 26Q3" routinely ends a few days into Q4; clipping exactly
 //             at the boundary amputates those bars for no reason.
+/* Selected quarters, toggled in the year x quarter grid. Empty is not an error: it falls back to the
+   CURRENT quarter, so the chart is never blank and there is always a way back from over-deselecting.
+   Per person in localStorage — a colleague's chosen window should not change the plan for everyone. */
+let ganttQuarters = (function(){
+  try{ const raw=localStorage.getItem("rd_gantt_quarters"); const a=raw?JSON.parse(raw):null;
+       return Array.isArray(a)?a.filter(q=>RD.quarterRange(q)):[]; }catch(e){ return []; }
+})();
+function ganttSaveQuarters(){
+  try{ localStorage.setItem("rd_gantt_quarters", JSON.stringify(ganttQuarters)); }catch(e){}
+}
+/* The effective selection: what the user chose, or the current quarter when they chose nothing. */
+function ganttEffectiveQuarters(){
+  if(ganttQuarters.length) return ganttQuarters;
+  const q=currentQuarter();
+  return RD.quarterRange(q) ? [q] : [];
+}
 function ganttQuarterWindow(){
   if(!ganttQtrZoom) return null;
-  const q=currentQuarter(), qr=RD.quarterRange(q); if(!qr) return null;
-  const a=isoToDay(qr.start), b=isoToDay(qr.end);
+  /* One continuous window from the earliest selected quarter to the latest — the axis cannot show a
+     gap, so a non-contiguous selection is spanned and the middle is marked implied in the grid. */
+  const r=RD.quarterSpanRange(ganttEffectiveQuarters()); if(!r) return null;
+  const a=isoToDay(r.start), b=isoToDay(r.end);
   if(a==null || b==null || b<=a) return null;
-  return { name:q, qlo:a, qhi:b, lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
+  return { name:(r.from===r.to?r.from:(r.from+" \u2192 "+r.to)), qlo:a, qhi:b, lo:a-GANTT_QBUF, hi:b+GANTT_QBUF };
+}
+/* Which years the grid offers: the years the plan actually touches, capped at 3 and anchored so the
+   current year is always reachable. A grid of empty years is noise. */
+function ganttGridYears(){
+  const ys={};
+  const add=iso=>{ const d=String(iso||"").slice(0,4); if(/^\d{4}$/.test(d)) ys[+d]=1; };
+  (portfolio.objectives||[]).forEach(o=>{ if(o.quarter){ const p=RD.quarterRange(o.quarter); if(p){ add(p.start); add(p.end); } } });
+  (portfolio.milestones||[]).forEach(m=>{ add(m.plannedStart); add(m.plannedEnd); });
+  ganttEffectiveQuarters().forEach(q=>{ const p=RD.quarterRange(q); if(p) add(p.start); });
+  const nowY=new Date().getUTCFullYear(); ys[nowY]=1;
+  let list=Object.keys(ys).map(Number).sort((a,b)=>a-b);
+  if(list.length>3){
+    /* keep the three that matter: the current year and what surrounds it */
+    const i=Math.max(0, Math.min(list.indexOf(nowY)-1, list.length-3));
+    list=list.slice(i, i+3);
+  }
+  return list;
 }
 let ganttRoots = [];                               // last-built tree, so the collapse buttons can walk it
 // The ordered levels of whatever grouping is active. In "dims" mode the levels ARE the chosen dimensions
@@ -2125,10 +2174,42 @@ function levelBarHtml(tab){
   return `<div class="lvlbar"><span class="lvll">Collapse to</span>`+
     lv.map(l=>`<button class="lvlb" data-lvl="${esc(l.id)}" data-lvltab="${tab}">${esc(l.label)}</button>`).join("")+
     `<button class="lvlb ghosty" data-lvl="" data-lvltab="${tab}">Expand all</button>`+
-    (tab==="gantt"?ganttViewTogglesHtml():"")+`</div>`;
+    (tab==="gantt"?ganttViewTogglesHtml():"")+`</div>`+
+    (tab==="gantt"?ganttTimeframeGridHtml():"");
 }
 // Two independent view toggles. Separate from "Collapse to" (which only folds the tree) because these change
 // WHAT is shown and WHAT the axis spans.
+/* The timeframe grid: one row per year the plan touches (max 3), four toggling quarter cells each.
+   Clicking a cell adds or removes it; clicking a year fills or clears all four. Quarters merely SPANNED
+   by the selection are marked implied — the axis cannot show a gap, so the grid says so rather than
+   pretending a non-contiguous choice will be honoured. */
+function ganttTimeframeGridHtml(){
+  if(!ganttQtrZoom) return "";
+  const sel=ganttEffectiveQuarters();
+  const selSet={}; sel.forEach(q=>selSet[q]=1);
+  const impSet={}; RD.quarterSpanImplied(sel).forEach(q=>impSet[q]=1);
+  const chosen={}; ganttQuarters.forEach(q=>chosen[q]=1);
+  const nowQ=currentQuarter();
+  const rows=ganttGridYears().map(y=>{
+    const qs=RD.yearQuarters(y);
+    const full=qs.every(q=>chosen[q]);
+    const cells=qs.map(q=>{
+      const on=!!selSet[q], imp=!!impSet[q];
+      const cls="tfq"+(on?" on":"")+(imp?" imp":"")+(q===nowQ?" now":"");
+      const title=imp?"spanned by your selection \u2014 click to select it explicitly"
+                    :(on?"click to remove":"click to add");
+      return `<button class="${cls}" data-tfq="${esc(q)}" title="${esc(title)}">Q${q.slice(-1)}</button>`;
+    }).join("");
+    return `<button class="tfy${full?" on":""}" data-tfy="${y}" title="${full?"Clear this year":"Select the whole year"}">${y}</button>${cells}`;
+  }).join("");
+  const r=RD.quarterSpanRange(sel);
+  const lbl=r?(r.from===r.to?r.from:(r.from+" \u2192 "+r.to)):"";
+  const none=!ganttQuarters.length;
+  return `<div class="tfgrid">${rows}</div>`+
+    `<div class="tfnote"><span class="tfrange">${esc(lbl)}</span>`+
+    (none?`<span class="tfhint">nothing selected \u2014 showing the current quarter</span>`:
+          `<button class="lvlb ghosty" data-tfclear>Clear</button>`)+`</div>`;
+}
 function ganttViewTogglesHtml(){
   return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
     `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
@@ -2763,7 +2844,21 @@ function renderGantt(){
     lb.querySelectorAll("[data-gview]").forEach(b=>b.onclick=()=>{
       if(b.dataset.gview==="active") ganttActiveOnly=!ganttActiveOnly; else ganttQtrZoom=!ganttQtrZoom;
       renderGantt();                       // rebuilds the tree AND the bar, so the button reflects the new state
-    }); }
+    });
+    /* The grid renders INTO the level bar, so its cells are bound here — `host` is the chart and is not
+       declared until later in this function. Toggling rewrites the selection and re-renders; the grid is
+       rebuilt from the same state, so the cells, the span label and the axis can never disagree. */
+    lb.querySelectorAll("[data-tfq]").forEach(b=>b.onclick=()=>{
+      ganttQuarters=RD.toggleQuarter(ganttEffectiveQuarters(), b.dataset.tfq);
+      ganttSaveQuarters(); renderGantt();
+    });
+    lb.querySelectorAll("[data-tfy]").forEach(b=>b.onclick=()=>{
+      ganttQuarters=RD.toggleYear(ganttEffectiveQuarters(), +b.dataset.tfy);
+      ganttSaveQuarters(); renderGantt();
+    });
+    const tfc=lb.querySelector("[data-tfclear]");
+    if(tfc) tfc.onclick=()=>{ ganttQuarters=[]; ganttSaveQuarters(); renderGantt(); };
+  }
   const host=document.getElementById("ganttWrap"); host.innerHTML=html;
   /* The name column width is a per-person preference, not document data — a colleague's reading habits
      should not change this objective for everyone. localStorage, applied to the CSS variable so one

@@ -2107,6 +2107,64 @@ html[data-theme="dark"] #etb-view{
   }
 
   // ---- quarter helpers (calendar quarters, matching YYYY"Q"N) ----
+  /* ---- Gantt timeframe: a set of selected quarters -------------------------------------------------
+     The selector is a grid of years x quarters and clicking TOGGLES a cell, so the selection can end up
+     non-contiguous: 2026Q1 and 2026Q4 with nothing between. A Gantt axis has to be one continuous span,
+     so the window is earliest-selected to latest-selected and the quarters in between are IMPLIED — the
+     UI shades them differently so the grid never claims a gap it cannot honour.
+     An empty selection is not an error state: it falls back to the current quarter. */
+  function qKey(y, n){ return String(y) + 'Q' + String(n); }
+  function qParse(q){
+    var m = /^(\d{4})Q([1-4])$/.exec(String(q == null ? '' : q).trim());
+    return m ? { y: +m[1], n: +m[2] } : null;
+  }
+  function qIndex(q){ var p = qParse(q); return p ? (p.y * 4 + (p.n - 1)) : null; }
+  function qFromIndex(i){ return qKey(Math.floor(i / 4), (i % 4) + 1); }
+
+  // the full inclusive run between the earliest and latest selected quarter
+  function quarterSpan(sel){
+    var idx = (sel || []).map(qIndex).filter(function (i) { return i != null; });
+    if (!idx.length) return [];
+    var lo = Math.min.apply(null, idx), hi = Math.max.apply(null, idx), out = [];
+    for (var i = lo; i <= hi; i++) out.push(qFromIndex(i));
+    return out;
+  }
+  // which of those the user did NOT click — the implied middle
+  function quarterSpanImplied(sel){
+    var have = {}; (sel || []).forEach(function (q) { if (qIndex(q) != null) have[q] = 1; });
+    return quarterSpan(sel).filter(function (q) { return !have[q]; });
+  }
+  // the day window the axis should show, or null when nothing is selected
+  function quarterSpanRange(sel){
+    var span = quarterSpan(sel);
+    if (!span.length) return null;
+    var a = quarterRange(span[0]), b = quarterRange(span[span.length - 1]);
+    if (!a || !b) return null;
+    return { from: span[0], to: span[span.length - 1], start: a.start, end: b.end };
+  }
+  /* Toggle: clicking a selected quarter removes it, clicking an unselected one adds it. An IMPLIED
+     quarter is not in the set, so clicking it adds it — the window does not move, which is the point. */
+  function toggleQuarter(sel, q){
+    if (qIndex(q) == null) return (sel || []).slice();
+    var out = [], hit = false;
+    (sel || []).forEach(function (x) { if (x === q) hit = true; else out.push(x); });
+    if (!hit) out.push(q);
+    return out.sort(function (a, b) { return qIndex(a) - qIndex(b); });
+  }
+  // every quarter of a year, for the year button
+  function yearQuarters(y){ return [1, 2, 3, 4].map(function (n) { return qKey(y, n); }); }
+  /* A year click is the same toggle applied to four cells at once: if the year is ALREADY fully
+     selected it clears, otherwise it fills. Anything else would make the year button's effect depend on
+     which quarters happened to be on, which is unpredictable to use. */
+  function toggleYear(sel, y){
+    var qs = yearQuarters(y), have = {};
+    (sel || []).forEach(function (x) { have[x] = 1; });
+    var full = qs.every(function (q) { return have[q]; });
+    var out = (sel || []).filter(function (x) { return qs.indexOf(x) < 0; });
+    if (!full) out = out.concat(qs);
+    return out.sort(function (a, b) { return qIndex(a) - qIndex(b); });
+  }
+
   function quarterRange(q) {                          // 'YYYYQN' -> { start:'YYYY-MM-DD', end:'YYYY-MM-DD' } | null
     var m = /^(\d{4})Q([1-4])$/.exec(String(q == null ? '' : q).trim());
     if (!m) return null;
@@ -3464,6 +3522,12 @@ html[data-theme="dark"] #etb-view{
     effProduct: effProduct,
     effModel: effModel,
     quarterRange: quarterRange,
+    quarterSpan: quarterSpan,
+    quarterSpanImplied: quarterSpanImplied,
+    quarterSpanRange: quarterSpanRange,
+    toggleQuarter: toggleQuarter,
+    toggleYear: toggleYear,
+    yearQuarters: yearQuarters,
     quarterList: quarterList,
     groupObjectives: groupObjectives,
     groupMilestones: groupMilestones,
