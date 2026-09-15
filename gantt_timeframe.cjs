@@ -150,6 +150,43 @@ const j = a => (a || []).join(',');
   ok(/if\(list\.length>3\)/.test(src), "…capped at three");
   ok(/ys\[nowY\]=1/.test(src), "…always including the current year, so there is a way back");
 
+  /* Two date shapes are in play: objective quarters resolve to ISO strings, while plannedStart/
+     plannedEnd are DAY NUMBERS. The first version ran day numbers through an ISO slice, producing
+     nonsense like "2500" — so milestones contributed nothing and a long initiative was invisible. */
+  const years = (plan) => { lw.eval('portfolio=' + JSON.stringify(plan) + ';'); return JSON.parse(lw.eval('JSON.stringify(ganttGridYears())')); };
+  const day = (iso) => lw.eval('isoToDay("' + iso + '")');
+  const base = { units: [], divisions: [{ id: 'D', name: 'D', kind: 'rd' }], products: [], models: [],
+    kpis: [], kpiDefs: [], kpiUpdates: [], catchupPlans: [], milestones: [], objectives: [], initiatives: [] };
+
+  // an initiative running past its objectives must still be reachable — the reported case
+  const longInit = Object.assign({}, base, {
+    initiatives: [{ id: 'I', name: 'Long', divisionId: 'D', plannedStart: day('2026-01-01'), plannedEnd: day('2028-12-31') }],
+    objectives: [{ id: 'O1', statement: 'O', divisionId: 'D', initiativeId: 'I', quarter: '2026Q2' }] });
+  const ly = years(longInit);
+  ok(ly.indexOf(2028) >= 0, "an initiative ending in 2028 puts 2028 in the grid, even with no objective out there (" + ly.join(',') + ")");
+  ok(ly.indexOf(2027) >= 0, "…and the year BETWEEN is offered too, so the range has no holes");
+  ok(ly.indexOf(2026) >= 0, "…along with the year the work starts");
+
+  // milestones count as well, and their dates are day numbers
+  /* The milestone is the ONLY thing reaching 2027 here — no initiative dates, no objective — so this
+     fails if milestones stop being scanned, rather than being covered by something else. */
+  const msPlan = Object.assign({}, base, {
+    initiatives: [],
+    milestones: [{ id: 'M', name: 'M', plannedStart: day('2026-02-01'), plannedEnd: day('2027-09-30') }] });
+  const my = years(msPlan);
+  ok(my.indexOf(2027) >= 0, "a MILESTONE reaching 2027 is counted (" + my.join(',') + ")");
+  ok(my.every(y => y > 2000 && y < 2100), "…and no day number leaks through as a bogus year");
+
+  // an objective's own planned dates, not just its quarter
+  const objPlan = Object.assign({}, base, {
+    initiatives: [{ id: 'I', name: 'I', divisionId: 'D' }],
+    objectives: [{ id: 'O', statement: 'O', divisionId: 'D', initiativeId: 'I', plannedStart: day('2026-03-01'), plannedEnd: day('2027-06-30') }] });
+  ok(years(objPlan).indexOf(2027) >= 0, "an objective's planned end counts even without a quarter tag");
+
+  const capped = years(Object.assign({}, base, {
+    initiatives: [{ id: 'I', name: 'I', divisionId: 'D', plannedStart: day('2026-01-01'), plannedEnd: day('2032-12-31') }] }));
+  ok(capped.length === 3, "a very long plan is still capped at three years (" + capped.join(',') + ")");
+
   // empty falls back to the current quarter, never a blank chart
   ok(/function ganttEffectiveQuarters\(/.test(src), "an effective selection is resolved separately from the stored one");
   ok(/if\(ganttQuarters\.length\) return ganttQuarters;/.test(src) && /return RD\.quarterRange\(q\) \? \[q\] : \[\];/.test(src),

@@ -2118,16 +2118,47 @@ function ganttQuarterWindow(){
 /* Which years the grid offers: the years the plan actually touches, capped at 3 and anchored so the
    current year is always reachable. A grid of empty years is noise. */
 function ganttGridYears(){
+  /* Which years the grid offers. Two date shapes are in play and mixing them is a real trap: objective
+     quarters resolve to ISO strings, while milestone and objective plannedStart/plannedEnd are DAY
+     NUMBERS. Feeding a day number through an ISO slice yields nonsense like "2500" — the first version
+     did exactly that, so milestones never contributed and an initiative reaching 2028 was invisible. */
   const ys={};
-  const add=iso=>{ const d=String(iso||"").slice(0,4); if(/^\d{4}$/.test(d)) ys[+d]=1; };
-  (portfolio.objectives||[]).forEach(o=>{ if(o.quarter){ const p=RD.quarterRange(o.quarter); if(p){ add(p.start); add(p.end); } } });
-  (portfolio.milestones||[]).forEach(m=>{ add(m.plannedStart); add(m.plannedEnd); });
-  ganttEffectiveQuarters().forEach(q=>{ const p=RD.quarterRange(q); if(p) add(p.start); });
+  const addIso=iso=>{ const d=String(iso||"").slice(0,4); if(/^\d{4}$/.test(d)) ys[+d]=1; };
+  const addDay=v=>{ if(v==null||!isFinite(v)) return; const iso=dayToIso(v); if(iso) addIso(iso); };
+
+  (portfolio.objectives||[]).forEach(o=>{
+    if(o.quarter){ const p=RD.quarterRange(o.quarter); if(p){ addIso(p.start); addIso(p.end); } }
+    addDay(o.plannedStart); addDay(o.plannedEnd);
+  });
+  (portfolio.milestones||[]).forEach(m=>{ addDay(m.plannedStart); addDay(m.plannedEnd); });
+  /* An initiative spans its own dates AND everything under it — a long programme with no objectives
+     out at its far end still has to be reachable, which is the whole point of showing its end year. */
+  (portfolio.initiatives||[]).forEach(i=>{
+    addDay(i.plannedStart); addDay(i.plannedEnd);
+    const kids=[];
+    (portfolio.objectives||[]).forEach(o=>{ if(o.initiativeId===i.id) kids.push(o); });
+    (portfolio.milestones||[]).forEach(m=>{ if(m.initiativeId===i.id) kids.push(m); });
+    kids.forEach(k=>{
+      addDay(k.plannedStart); addDay(k.plannedEnd);
+      if(k.quarter){ const p=RD.quarterRange(k.quarter); if(p){ addIso(p.start); addIso(p.end); } }
+    });
+  });
+
+  ganttEffectiveQuarters().forEach(q=>{ const p=RD.quarterRange(q); if(p) addIso(p.start); });
   const nowY=new Date().getUTCFullYear(); ys[nowY]=1;
   let list=Object.keys(ys).map(Number).sort((a,b)=>a-b);
+  /* Endpoints only would leave holes: work running 2026 to 2028 collected those two and skipped 2027,
+     so the grid offered a year you could not select between two you could. Fill the range. */
+  if(list.length){
+    const filled=[];
+    for(let y=list[0]; y<=list[list.length-1]; y++) filled.push(y);
+    list=filled;
+  }
   if(list.length>3){
-    /* keep the three that matter: the current year and what surrounds it */
-    const i=Math.max(0, Math.min(list.indexOf(nowY)-1, list.length-3));
+    /* Keep three, anchored so the current year is always reachable — but keep the LAST year too when
+       the plan runs past the window, so a long initiative's far end stays selectable. */
+    const iNow=list.indexOf(nowY);
+    let i=Math.max(0, Math.min(iNow-1, list.length-3));
     list=list.slice(i, i+3);
   }
   return list;
