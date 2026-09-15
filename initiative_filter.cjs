@@ -93,8 +93,50 @@ setTimeout(() => {
     ok(shows('BARE') === true, "every designation filter agreeing shows it");
     setF({ unit: 'U1', division: 'D1', product: 'P2' });
     ok(shows('BARE') === false, "…and one disagreeing is enough to hide it");
+    // ---------- the TIMEFRAME is a separate path from the designation filters ----------
+    // "drop emptied ancestors" discarded any initiative with no objective children once a window was set.
+    // An objectiveless initiative was never a container: it has its own dates and IS the work, so it must
+    // stand or fall on its own overlap with the window.
+    const day = (iso) => w.eval('isoToDay("' + iso + '")');
+    w.eval(`portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],models:[],milestones:[],
+      kpis:[],kpiDefs:[],kpiUpdates:[],catchupPlans:[],
+      initiatives:[
+        {id:"BARE",name:"Bare",divisionId:"D",plannedStart:${day('2026-01-01')},plannedEnd:${day('2028-12-31')}},
+        {id:"AWAY",name:"Away",divisionId:"D",plannedStart:${day('2030-01-01')},plannedEnd:${day('2030-12-31')}},
+        {id:"WITHOBJ",name:"Has work",divisionId:"D",plannedStart:${day('2026-01-01')},plannedEnd:${day('2028-12-31')}}
+      ],
+      objectives:[{id:"O1",statement:"O",divisionId:"D",initiativeId:"WITHOBJ",quarter:"2026Q2",
+                   plannedStart:${day('2026-04-01')},plannedEnd:${day('2026-06-30')}}]};
+      pfFilters.unit="";pfFilters.division="";pfFilters.product="";pfFilters.quarter="";pfFilters.status="";`);
+
+    const rows = (id) => w.document.querySelectorAll('[data-lineage*="' + id + '"]').length;
+    const setWin = (qs) => w.eval(`ganttQtrZoom=true; ganttQuarters=${JSON.stringify(qs)}; renderGantt();`);
+
+    w.eval('ganttQtrZoom=false; ganttQuarters=[]; renderGantt();');
+    ok(rows('BARE') > 0, "with no timeframe an objectiveless initiative shows");
+
+    setWin(['2026Q2']);
+    ok(rows('BARE') > 0, "…and STILL shows when a timeframe it runs through is set");
+    ok(rows('AWAY') === 0, "…while one whose dates fall outside that window does not");
+
+    setWin(['2030Q1']);
+    ok(rows('AWAY') > 0, "…and it appears once the window reaches ITS dates");
+    ok(rows('BARE') === 0, "…with the other one dropping out, so each shows over its own timeframe");
+
+    // the constraint: nothing about initiatives WITH objectives may change
+    setWin(['2026Q2']);
+    ok(rows('WITHOBJ') > 0, "an initiative WITH objectives shows when one of them is in the window");
+    /* This is the constraint, and it needs a window where the initiative's OWN dates overlap but none of
+       its objectives do. Without that, dropping the has-no-objectives guard would change nothing here and
+       the test would pass while the behaviour regressed. WITHOBJ runs 2026-2028; its only objective sits
+       in 2026Q2; so 2027Q1 is inside its span and outside its work. */
+    setWin(['2027Q1']);
+    ok(rows('WITHOBJ') === 0,
+      "…and is still dropped when none of its objectives are in the window, even though its OWN dates span it");
+    ok(rows('BARE') > 0, "…while the standalone one, whose dates span it, DOES show — judged on its own bar");
+
   } catch (e) {
-    ok(false, 'initiative filter flow threw: ' + (e && e.message));
+    ok(false, 'timeframe flow threw: ' + (e && e.message));
   }
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });

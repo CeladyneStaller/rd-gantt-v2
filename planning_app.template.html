@@ -2679,6 +2679,15 @@ function renderGantt(){
   };
   // Points (gates, milestones) have no duration to overlap, so they use the buffered window: a gate three days
   // past the boundary is quarter-boundary slop, not next quarter's work.
+  /* Overlap test for a dated bar with no quarter tag of its own — an objectiveless initiative. Same rule
+     objInWin uses for objectives: it must spend real time inside the window, not merely graze the edge. */
+  const barInWin=g=>{
+    if(!qWin) return true;
+    if(!g || g.kind!=="bar") return true;
+    if(g.ds==null || g.de==null) return false;
+    const ov=Math.min(g.de,qWin.qhi)-Math.max(g.ds,qWin.qlo)+1;
+    return ov>=GANTT_MIN_OVERLAP;
+  };
   const ptInWin=g=>{ if(!qWin) return true;
     const pts=[g.planned, g.eff, g.actual].filter(v=>v!=null);
     return pts.some(v=>v>=qWin.lo && v<=qWin.hi); };
@@ -2708,7 +2717,18 @@ function renderGantt(){
     if((entity==="milestone"||entity==="stagegate") && !ptInWin(g)) return null;
     const kids=[]; childRefs(entity,r).forEach(c=>{ const n=build(c.entity,c.rec,depth+1); if(n) kids.push(n); });
     sortObjKids(kids);
-    if((pfAnyFilter()||ganttActiveOnly||qWin) && (entity==="division"||entity==="initiative") && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")) return null;   // drop emptied ancestors
+    /* Drop ancestors that have been emptied by filtering — but an initiative with NO objectives at all was
+       never a container in the first place. It has its own dates and is the work, so judging it by absent
+       children made it vanish the moment any timeframe was set. Such an initiative is kept on its own bar,
+       subject to the same window test the objectives get; an initiative that HAS objectives is unchanged,
+       still standing or falling by whether any of them survived. */
+    if((pfAnyFilter()||ganttActiveOnly||qWin) && (entity==="division"||entity==="initiative")
+       && !kids.some(k=>k.entity==="objective"||k.entity==="initiative")){
+      const standalone = entity==="initiative"
+        && !P.objectives.some(o=>o.initiativeId===r.id)
+        && barInWin(g);
+      if(!standalone) return null;
+    }
     return {entity, rec:r, depth, g, kids, key:entity+":"+r.id};
   }
   // ---- grouping: nested synthetic roots over an ordered list of dimensions (objectives at the leaves) ----
