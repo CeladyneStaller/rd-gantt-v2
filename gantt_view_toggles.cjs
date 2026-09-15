@@ -115,7 +115,12 @@ const has=(rs,t)=>rs.some(x=>x.indexOf(t)>=0);
   w=await boot("https://x.test/?token=t"); w.eval(FIX); w.eval("renderGantt();");
   const btn=(k)=>w.document.querySelector(`#ganttLevelBar [data-gview=${k}]`);
   ok(!!btn('active') && !!btn('quarter'), "both toggles render in the gantt bar");
-  ok(btn('quarter').textContent.indexOf(w.eval("currentQuarter()"))>=0, "the quarter toggle names the actual quarter");
+  /* The button no longer names a single quarter: the timeframe is a SPAN chosen in the grid below, so a
+     label like "2026Q3 only" would be wrong the moment a second quarter is picked. It names the control
+     instead, and the grid states the actual range. */
+  ok(/timeframe/i.test(btn('quarter').textContent), "the toggle names the timeframe control ("+btn('quarter').textContent.trim()+")");
+  ok(w.document.querySelectorAll('#ganttLevelBar .tfgrid').length===1, "…and the quarter grid sits with it");
+  ok(w.document.querySelectorAll('#ganttLevelBar [data-tfq]').length>=4, "…offering a cell per quarter");
   ok(!btn('active').classList.contains('on'), "a toggle is unstyled when off");
   btn('active').click();
   ok(w.eval("ganttActiveOnly")===true, "clicking the toggle flips the state");

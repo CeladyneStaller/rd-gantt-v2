@@ -436,6 +436,7 @@
   /* spanned but not chosen: shown as included, visibly weaker, so the grid never claims a gap it cannot honour */
   .tfq.on.imp{background:color-mix(in srgb, var(--accent) 22%, transparent);color:var(--accent);font-weight:400;border-style:dashed}
   .tfq.now::after{content:"";position:absolute;bottom:3px;left:50%;margin-left:-2.5px;width:5px;height:2px;border-radius:1px;background:currentColor;opacity:.85}
+  .tfgrid.off{opacity:.55}
   .tfnote{display:flex;align-items:center;gap:8px;margin:0 0 10px}
   .tfrange{font-family:var(--mono);font-size:10.5px;color:var(--accent)}
   .tfhint{font-size:10.5px;color:var(--muted)}
@@ -4727,7 +4728,6 @@ function levelBarHtml(tab){
    by the selection are marked implied — the axis cannot show a gap, so the grid says so rather than
    pretending a non-contiguous choice will be honoured. */
 function ganttTimeframeGridHtml(){
-  if(!ganttQtrZoom) return "";
   const sel=ganttEffectiveQuarters();
   const selSet={}; sel.forEach(q=>selSet[q]=1);
   const impSet={}; RD.quarterSpanImplied(sel).forEach(q=>impSet[q]=1);
@@ -4748,15 +4748,16 @@ function ganttTimeframeGridHtml(){
   const r=RD.quarterSpanRange(sel);
   const lbl=r?(r.from===r.to?r.from:(r.from+" \u2192 "+r.to)):"";
   const none=!ganttQuarters.length;
-  return `<div class="tfgrid">${rows}</div>`+
+  return `<div class="tfgrid${ganttQtrZoom?"":" off"}">${rows}</div>`+
     `<div class="tfnote"><span class="tfrange">${esc(lbl)}</span>`+
-    (none?`<span class="tfhint">nothing selected \u2014 showing the current quarter</span>`:
+    (!ganttQtrZoom?`<span class="tfhint">turn on <b>Timeframe</b> to limit the chart to these quarters</span>`:
+     none?`<span class="tfhint">nothing selected \u2014 showing the current quarter</span>`:
           `<button class="lvlb ghosty" data-tfclear>Clear</button>`)+`</div>`;
 }
 function ganttViewTogglesHtml(){
   return `<span class="lvlsep"></span><span class="lvll">Show</span>`+
     `<button class="lvlb${ganttActiveOnly?" on":""}" data-gview="active" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active.">Active only</button>`+
-    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Show work in ${esc(currentQuarter())}: anything tagged ${esc(currentQuarter())}, plus anything spending 7+ days inside it. The axis spans the quarter with a week of slack each side.">${esc(currentQuarter())} only</button>`;
+    `<button class="lvlb${ganttQtrZoom?" on":""}" data-gview="quarter" title="Limit the chart to the quarters selected below. Off, the axis spans all work. The axis keeps a week of slack each side of the selection.">Timeframe</button>`;
 }
 /* ---------------- Milestones tab (summary table — phase 2) ---------------- */
 // product abbreviation for milestone numbering (ports index(13) _prodAbbrev): product.code else derived from name
@@ -5391,13 +5392,15 @@ function renderGantt(){
     /* The grid renders INTO the level bar, so its cells are bound here — `host` is the chart and is not
        declared until later in this function. Toggling rewrites the selection and re-renders; the grid is
        rebuilt from the same state, so the cells, the span label and the axis can never disagree. */
+    /* Choosing a quarter while the limit is off turns it on. Otherwise the first click appears to do
+       nothing at all, which is the surest way to make a control look broken. */
     lb.querySelectorAll("[data-tfq]").forEach(b=>b.onclick=()=>{
       ganttQuarters=RD.toggleQuarter(ganttEffectiveQuarters(), b.dataset.tfq);
-      ganttSaveQuarters(); renderGantt();
+      ganttQtrZoom=true; ganttSaveQuarters(); renderGantt();
     });
     lb.querySelectorAll("[data-tfy]").forEach(b=>b.onclick=()=>{
       ganttQuarters=RD.toggleYear(ganttEffectiveQuarters(), +b.dataset.tfy);
-      ganttSaveQuarters(); renderGantt();
+      ganttQtrZoom=true; ganttSaveQuarters(); renderGantt();
     });
     const tfc=lb.querySelector("[data-tfclear]");
     if(tfc) tfc.onclick=()=>{ ganttQuarters=[]; ganttSaveQuarters(); renderGantt(); };

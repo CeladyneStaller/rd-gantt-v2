@@ -97,6 +97,41 @@ const j = a => (a || []).join(',');
   ok(/function ganttTimeframeGridHtml\(/.test(src), "the app builds a timeframe grid");
   ok(/data-tfq=/.test(src) && /data-tfy=/.test(src), "…with quarter cells and a year button per row");
 
+  /* A builder that exists is not a control the user can see. The first version returned "" unless the
+     quarter view was already on — so the grid was hidden behind the very toggle it replaces, and to
+     anyone who had never turned that on it simply did not exist. Render it and look. */
+  const { JSDOM: J2, VirtualConsole: V2 } = require((process.env.RD_SRC || '/home/claude/work') + '/node_modules/jsdom');
+  const live = new J2(src, { runScripts: 'dangerously', virtualConsole: new V2(),
+    url: 'https://x.test/?token=t&tab=gantt', pretendToBeVisual: true,
+    beforeParse(w) {
+      w.matchMedia = () => ({ matches: false, addEventListener(){}, removeEventListener(){}, addListener(){}, removeListener(){} });
+      w.requestAnimationFrame = cb => setTimeout(cb, 0); w.cancelAnimationFrame = () => {};
+      w.fetch = () => Promise.reject(new Error('no net'));
+      w.cytoscape = function () { return { on(){}, ready(cb){ try{ cb && cb(); }catch(e){} }, fit(){}, resize(){},
+        destroy(){}, getElementById(){ return { length: 0 }; }, zoom(){ return 1; }, width(){ return 800; },
+        height(){ return 560; }, layout(){ return { run(){} }; }, $(){ return { unselect(){} }; } }; };
+    } });
+  const lw = live.window, ld = lw.document;
+  lw.eval('portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],models:[],' +
+    'initiatives:[{id:"I",name:"I",divisionId:"D"}],objectives:[{id:"O1",statement:"O",divisionId:"D",' +
+    'initiativeId:"I",quarter:"2026Q2",plannedStart:2300,plannedEnd:2500}],milestones:[],kpis:[],' +
+    'kpiDefs:[],kpiUpdates:[],catchupPlans:[]}; ganttQtrZoom=false; ganttQuarters=[]; renderGantt();');
+
+  ok(ld.querySelectorAll('.tfgrid').length === 1,
+    "the grid RENDERS on the gantt even with the quarter limit off — it is the control, not a detail of it");
+  ok(ld.querySelectorAll('[data-tfq]').length === 4, "…with a cell per quarter (" + ld.querySelectorAll('[data-tfq]').length + ")");
+  ok(ld.querySelectorAll('[data-tfy]').length >= 1, "…and a year button per row");
+  ok(ld.querySelectorAll('.tfgrid.off').length === 1, "…dimmed while the limit is off, so it reads as available rather than active");
+
+  // clicking must not appear to do nothing. Guarded: with the grid unmounted this is null, and an
+  // unguarded deref would CRASH the harness — which reads as an error, not a named failure, and makes
+  // a mutation that deletes the grid look like it survived.
+  const cell = ld.querySelector('[data-tfq]');
+  if (cell) cell.dispatchEvent(new lw.MouseEvent('click', { bubbles: true }));
+  ok(!!cell && lw.eval('ganttQtrZoom') === true, "choosing a quarter turns the limit ON, so the first click is never a no-op");
+  ok(!!cell && lw.eval('ganttQuarters.length') > 0, "…and records the choice");
+  ok(ld.querySelectorAll('.tfgrid.off').length === 0, "…and the grid stops being dimmed");
+
   const grid = rule(t => /\.tfgrid$/.test(t));
   ok(!!grid && /grid-template-columns:\s*56px repeat\(4, ?64px\)/.test(css(grid)),
     "…laid out as a year label plus four quarters per row");
