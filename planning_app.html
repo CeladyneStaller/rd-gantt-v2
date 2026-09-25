@@ -4958,7 +4958,17 @@ function prodAbbrev(prodId){ const p=byId("product",prodId); if(!p) return "MS";
   if(trailingNum && base.indexOf(trailingNum[1])<0) base+=trailingNum[1];
   return base; }
 // per-product number: <PRODABBR>-NN, ranked by planned date across every initiative of that product
-function milestoneNumber(ms){ const init=byId("initiative",ms.initiativeId); const prodId=init?init.productId:null;
+/* A milestone has no product of its own — it inherits from its initiative. Three places used to derive
+   that independently with `init.productId`, which missed a MODEL-pinned initiative entirely: the schema
+   allows productId OR modelId, so a model-pinned initiative left its milestones unclassified, blank in
+   the Product column and invisible to a product filter. RD.effProduct resolves a model up to its parent
+   product, the same way objectives already classify. One helper, so the three sites cannot drift. */
+function msProductId(ms){
+  const init = ms ? byId("initiative", ms.initiativeId) : null;
+  if(!init) return null;
+  try{ return RD.effProduct(init, portfolio) || null; }catch(e){ return init.productId || null; }
+}
+function milestoneNumber(ms){ const init=byId("initiative",ms.initiativeId); const prodId=msProductId(ms);
   const sibs=portfolio.milestones.filter(m=>{ const mi=byId("initiative",m.initiativeId); return mi && (mi.productId||null)===(prodId||null); })
     .sort((a,b)=>((a.plannedDate==null?1e15:a.plannedDate)-(b.plannedDate==null?1e15:b.plannedDate))||String(a.id).localeCompare(String(b.id)));
   const idx=sibs.findIndex(m=>m.id===ms.id);
@@ -4966,7 +4976,7 @@ function milestoneNumber(ms){ const init=byId("initiative",ms.initiativeId); con
 // a milestone's calendar quarter, derived from its planned date (milestones carry no quarter field)
 function msQuarter(ms){ if(ms.plannedDate==null) return ""; const iso=dayToIso(ms.plannedDate); const p=String(iso).split("-"); if(p.length<2) return ""; return p[0]+"Q"+(Math.floor((Number(p[1])-1)/3)+1); }
 function msMatches(ms){ const f=pfFilters; const init=byId("initiative",ms.initiativeId);
-  const div=init?init.divisionId:null, prod=init?(init.productId||null):null;
+  const div=init?init.divisionId:null, prod=msProductId(ms);
   if(f.division && div!==f.division) return false;
   if(f.product && prod!==f.product) return false;
   if(f.quarter && msQuarter(ms)!==f.quarter) return false;
@@ -4993,7 +5003,7 @@ function renderMilestones(){
     if(col) return;                                   // collapsed: header only, nothing beneath it
     if(n.children){ msGroups(n.children, bare?depth:depth+1, np); return; }
     msSort(n.objs).forEach(ms=>{
-      const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+      const init=byId("initiative",ms.initiativeId), prodId=msProductId(ms);
       const eff=casc.milestoneEffective?casc.milestoneEffective[ms.id]:null, done=RD.milestoneAchieved(ms,em);
       const s=RD.milestoneScore(ms.id,em), bnd=nodeBand("milestone",ms.id);
       const nk=(portfolio.kpis||[]).filter(k=>k.hostType==="milestone"&&k.hostId===ms.id).length;
@@ -5059,7 +5069,7 @@ function msrPlaceholder(txt){ return `<span class="msr-ph">${esc(txt)}</span>`; 
 function renderMsReport(){
   const ms=byId("milestone",msrCurrent); if(!ms) return;
   const em=pfMap(), pool=poolOf(em), locked=msrDraft.locked, ce=locked?"":'contenteditable="true"';
-  const init=byId("initiative",ms.initiativeId), prodId=init?init.productId:null;
+  const init=byId("initiative",ms.initiativeId), prodId=msProductId(ms);
   const planned=ms.plannedDate, actual=ms.completedDate, done=RD.milestoneAchieved(ms,em);
   const variance=(planned!=null&&actual!=null)?(actual-planned):null;
   const varTxt=variance==null?"—":(variance>0?`+${variance} days`:variance<0?`${variance} days`:"on time");
