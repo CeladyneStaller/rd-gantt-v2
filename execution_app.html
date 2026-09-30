@@ -6866,6 +6866,11 @@ function addBoard(){
 function boardById(id){ return (exec.boards||[]).find(b=>b.id===id); }
 function todayIso(){ return dayToIso ? dayToIso(todayDay()) : new Date().toISOString().slice(0,10); }
 
+/* Module state for the board view. These sit BETWEEN the render functions in the sales app, so an
+   extraction that pulls functions by name skips them — and the omission only shows once a board
+   exists, because renderKanban throws on the config check and takes the whole section with it. */
+let kanbanCfgOpen=null;   // which board's column/tile config panel is open
+let _kbDrag=null;         // tile being dragged, for the drag-and-drop reorder
 function renderKanban(host){
   const boards=boardsFor(selectedObj);
   const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "kanban", "gatemode")}</span><button class="ghost mini" data-kbaddboard="1">+ board</button>`;

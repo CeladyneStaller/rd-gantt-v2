@@ -66,8 +66,42 @@ setTimeout(() => {
 
     host().querySelector('[data-kbaddboard]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
     ok(w.eval('(exec.boards||[]).length') === 1, "a board can be created");
+
+    /* Creating a record is not the same as rendering it. The first port stored the board correctly and
+       then threw on render — kanbanCfgOpen and _kbDrag sit BETWEEN the render functions in the sales
+       app, so extracting functions by name skipped them. The throw took the whole section with it, and
+       because the board was already stored it threw again on every reload. Assert the TABLE. */
+    ok(host().querySelectorAll('.kb-colh').length > 0,
+      "…and its column headers actually render (" + host().querySelectorAll('.kb-colh').length + ")");
+    ok(host().querySelectorAll('.kb-lanename').length > 0, "…with at least one tile row");
+    ok(host().innerHTML.length > 900, "…so the section has real content, not an empty shell");
+
+    // the failure only showed on a SECOND render, once a board existed in the doc
+    const lenBefore = host().innerHTML.length;
+    w.eval('renderAll();');
+    ok(host().querySelectorAll('.kb-colh').length > 0,
+      "the board survives a re-render — the case a refresh hits");
+    ok(host().innerHTML.length === lenBefore, "…rendering identically, not degrading");
     ok(gateEff() === before, "…and creating one still does not move the score");
     ok(w.eval('exec.stageGates.length') === 1, "…nor touch the gates");
+
+    /* Drag-and-drop uses its own module variable. Without exercising a drag, an undeclared _kbDrag is
+       invisible — the board renders fine and only moving a tile throws. */
+    /* A fresh board has lanes and columns but no tiles, so one has to exist before a drag is possible. */
+    w.eval(`(function(){ var b=exec.boards[0];
+      b.tiles=(b.tiles||[]).concat([{id:"T1",name:"Tile one",
+        lane:(b.swimlanes&&b.swimlanes[0]?b.swimlanes[0].id:null),
+        col:(b.columns&&b.columns[0]?b.columns[0].id:null), enteredCol:null}]);
+      renderAll(); })();`);
+    const tile = host().querySelector('[data-kbtile]');
+    ok(!!tile, "a tile is draggable");
+    if (tile) {
+      const dt = { effectAllowed: '', setData() {}, getData() { return ''; } };
+      tile.dispatchEvent(Object.assign(new w.Event('dragstart', { bubbles: true }), { dataTransfer: dt }));
+      ok(tile.classList.contains('dragging'), "…dragstart marks it, so the drag state was set without throwing");
+      tile.dispatchEvent(Object.assign(new w.Event('dragend', { bubbles: true }), { dataTransfer: dt }));
+      ok(!tile.classList.contains('dragging'), "…and dragend clears it");
+    }
 
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,
