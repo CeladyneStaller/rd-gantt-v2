@@ -103,6 +103,31 @@ setTimeout(() => {
       ok(!tile.classList.contains('dragging'), "…and dragend clears it");
     }
 
+    /* ---- styling parity with the sales app ----
+       The Kanban is a straight port, so its CSS must be too. The first port used a line-anchored pattern
+       that only caught single-line rules starting with .kb — 32 of 58 rules were left behind, so column
+       counts ran into their headers, the legend rendered as bare text instead of chips, and tile health
+       had no colour. Compare the PARSED stylesheets rather than the source, so formatting cannot hide a
+       missing rule. */
+    const kbSelectors = (file) => {
+      const doc = new JSDOM(fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/' + file, 'utf8'),
+        { virtualConsole: new VirtualConsole() }).window.document;
+      const rules = [...doc.styleSheets].flatMap(ss => { try { return [...ss.cssRules]; } catch (e) { return []; } });
+      return new Set(rules.filter(r => r.selectorText && r.selectorText.includes('.kb')).map(r => r.selectorText));
+    };
+    const salesSel = kbSelectors('sales_app.html'), execSel = kbSelectors('execution_app.html');
+    const absent = [...salesSel].filter(x => !execSel.has(x));
+    ok(salesSel.size > 40, "the sales app defines the Kanban styling (" + salesSel.size + " selectors)");
+    ok(absent.length === 0,
+      "the execution app defines every one of them — no rule left behind (" + absent.slice(0, 3).join(', ') + ")");
+
+    // the pieces that were visibly broken in the reported screenshots
+    ok(!!host().querySelector('.kb-colcnt'), "a column header has its own count element, not text run together");
+    ok(host().querySelectorAll('.kb-chip').length >= 4,
+      "the legend renders as chips (" + host().querySelectorAll('.kb-chip').length + ")");
+    ok(!!host().querySelector('.kb-summary'), "…inside a summary row");
+    ok(!!host().querySelector('.kb-lanename'), "the swimlane name is its own element");
+
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,
       "a board's columns do not become stage gates");
