@@ -236,6 +236,24 @@
   .ltm-del{color:var(--bad);border-color:var(--pill-bad-bd)}
   .ltm-confirm{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--pill-bad-bg);border-top:1px solid var(--line);font-size:11.5px;color:var(--pill-bad-fg)}
   .ltm-confirm span{flex:1 1 auto}
+  .kb-root{padding:6px 12px 12px}
+  .kb-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .kb-tab.on{background:var(--pill-active-bg);border-color:var(--pill-active-bd);color:var(--pill-active-fg)}
+  .kb-baracts{display:flex;gap:5px}
+  .kb-wrap{border:1px solid var(--line);border-radius:9px;overflow:auto;background:var(--bg)}
+  .kb-table{border-collapse:collapse;min-width:100%}
+  .kb-table th{position:sticky;top:0;background:var(--panel2);text-align:left;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap}
+  .kb-laneh{position:sticky;left:0;background:var(--panel2);border-right:1px solid var(--line);border-bottom:1px solid var(--line);vertical-align:top;padding:9px 10px;min-width:140px;z-index:1}
+  .kb-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);vertical-align:top;padding:7px;min-width:170px;background:var(--bg)}
+  .kb-cell.kb-over{background:#132030;outline:1.5px dashed var(--accent);outline-offset:-4px}
+  .kb-tile{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--none);border-radius:8px;padding:7px 8px;margin-bottom:7px;cursor:grab}
+  .kb-tdays{padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .kb-tile.closed{border-left-color:var(--accent);opacity:.75}
+  .kb-legend{color:var(--muted);font-size:11px;margin:10px 0 0}
+  .kb-cfg{display:flex;gap:18px;flex-wrap:wrap;border:1px dashed var(--line);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--panel)}
+  .kb-cfg h4{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+  .kb-cfgclose{width:100%;text-align:right}
+  .gate-mode-seg{margin-right:8px}
   .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
   .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
   .fx-chip.warn{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
@@ -2501,7 +2519,9 @@ let selectedProduct = URLP.product;   // seeded from ?product= (seed-on-load); "
 let pendingObjective = URLP.objective;   // ?objective=<id> deep-link (robust-resolve); consumed once by fillObjSelect
 let pollTimer = null;
 
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
+/* boards + gateMode join the doc shape: a Kanban is an alternative VIEW of an objective's execution,
+   stored beside its stage gates rather than replacing them. Nothing is lost by switching modes. */
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],boards:[],gateMode:{},kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -4235,8 +4255,121 @@ function openWorkstreamModal(setId){
     closeModal(); persist(); renderAll(); setMsg("Workstream deleted"+(gts.length?" \u2014 gates moved to "+esc(others[0].name||'another'):""),"ok");
   }; }
 }
+/* ---- Kanban stage-gating (ported from the sales app, same engine) --------------------------------
+   A board is ONE gate sequence: columns are the gates, tiles are parallel workstreams running that
+   same sequence. In the execution app the Kanban is for managing work only — the SCORE comes from
+   stage gates alone, so nothing here feeds objectiveGateReadiness or stageGateScore. */
+function gateModeOf(objId){ return (exec.gateMode&&exec.gateMode[objId]==='kanban')?'kanban':'classic'; }
+function setGateMode(objId, mode){ (exec.gateMode=exec.gateMode||{})[objId]=mode; renderAll(); }
+function boardsFor(objId){ return (exec.boards||[]).filter(b=>b.objectiveId===objId); }
+function activeBoardId(){ const bs=boardsFor(selectedObj); if(!bs.length) return null;
+  if(kanbanBoardSel && bs.some(b=>b.id===kanbanBoardSel)) return kanbanBoardSel; return bs[0].id; }
+let kanbanBoardSel=null;
+function newId(pre){ return pre+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36); }
+function mintGateId(boardId, colId){ return boardId+"/"+colId; }   // stable identity the Gantt/Tracker gate_id resolves to
+function addBoard(){
+  const id=newId("BRD");
+  const c1=newId("col"), c2=newId("col"), c3=newId("col");
+  const lane=newId("lane");
+  const b={ id, objectiveId:selectedObj, name:"Board "+(boardsFor(selectedObj).length+1),
+    columns:[ {id:c1,name:"Prospect",gate_id:mintGateId(id,c1)},
+              {id:c2,name:"Working",gate_id:mintGateId(id,c2)},
+              {id:c3,name:"Closed",gate_id:mintGateId(id,c3)} ],
+    swimlanes:[ {id:lane,name:"Standard",maxDaysPerCol:14,deadline:""} ],
+    tiles:[] };
+  (exec.boards=exec.boards||[]).push(b); kanbanBoardSel=id; renderAll();
+}
+function boardById(id){ return (exec.boards||[]).find(b=>b.id===id); }
+function todayIso(){ return dayToIso ? dayToIso(todayDay()) : new Date().toISOString().slice(0,10); }
+
+function renderKanban(host){
+  const boards=boardsFor(selectedObj);
+  const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "kanban", "gatemode")}</span><button class="ghost mini" data-kbaddboard="1">+ board</button>`;
+  if(!boards.length){
+    host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",0,acts)}<div class="item-list${listOpen("SG")}"><p class="hint" style="padding:4px 12px 12px">No boards yet. A Kanban board is a stage-gate sequence (columns) that parallel workstreams (tiles) move through. <button class="ghost mini" data-kbaddboard="1">+ board</button></p></div></div>`;
+    wireKanban(host); return;
+  }
+  const bid=activeBoardId(); const board=boardById(bid); const today=todayIso();
+  const tabs=boards.map(b=>`<button class="kb-tab${b.id===bid?" on":""}" data-kbtab="${b.id}">${esc(b.name)}</button>`).join("");
+  const lastColId=board.columns.length?board.columns[board.columns.length-1].id:null;
+  const laneById={}; (board.swimlanes||[]).forEach(l=>laneById[l.id]=l);
+  const sum=RD.boardSummary(board, today);
+
+  const head=`<tr><th class="kb-corner">Swimlane \\ Stage</th>`+board.columns.map(c=>
+    `<th class="kb-colh"><span class="kb-colname">${esc(c.name)}</span><span class="kb-colcnt">${sum.perColumn[c.id]||0}</span></th>`).join("")+`</tr>`;
+  const body=(board.swimlanes||[]).map(lane=>{
+    const rule=`<div class="kb-rule">${lane.maxDaysPerCol?`max <b>${lane.maxDaysPerCol}d</b>/col`:"no col limit"}${lane.deadline?` \u00b7 due <b>${esc(lane.deadline)}</b>`:""}</div>`;
+    const cells=board.columns.map(c=>{
+      const tiles=(board.tiles||[]).filter(t=>t.lane===lane.id && t.col===c.id);
+      const tileHtml=tiles.map(t=>{
+        const closed=(t.col===lastColId);
+        const h=closed?{status:"closed",daysInCol:0,note:"done"}:RD.tileHealth(t, laneById[t.lane], today);
+        const cls=closed?"closed":h.status;
+        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}"><div class="kb-tname">${esc(t.name||"(tile)")}</div><div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
+      }).join("");
+      return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
+    }).join("");
+    return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}</td>${cells}</tr>`;
+  }).join("");
+
+  const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span></div>`;
+  const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
+  const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
+  const grid=`<div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",sum.total,acts)}<div class="item-list${listOpen("SG")}"><div class="kb-root">${bar}${cfg}${grid}${summary}<p class="kb-legend">drag a tile between columns to advance its stage, or between swimlanes to change its rules.</p></div></div></div>`;
+  wireKanban(host);
+}
+
+function kanbanConfigHtml(board){
+  const cols=board.columns.map(c=>`<div class="kb-cfgrow"><input type="text" data-kbcolname="${c.id}" value="${esc(c.name)}">${board.columns.length>1?`<button class="ghost mini danger" data-kbcoldel="${c.id}">\u2715</button>`:""}</div>`).join("");
+  const lanes=board.swimlanes.map(l=>`<tr><td><input type="text" data-kblanename="${l.id}" value="${esc(l.name)}"></td><td><input type="number" min="0" data-kblanemax="${l.id}" value="${l.maxDaysPerCol||""}"></td><td><input type="date" data-kblanedue="${l.id}" value="${l.deadline||""}"></td><td>${board.swimlanes.length>1?`<button class="ghost mini danger" data-kblanedel="${l.id}">\u2715</button>`:""}</td></tr>`).join("");
+  return `<div class="kb-cfg"><div class="kb-cfgcol"><h4>Board name</h4><input type="text" data-kbboardname="${board.id}" value="${esc(board.name)}" style="width:100%"><h4>Columns (stage-gates)</h4>${cols}<button class="ghost mini" data-kbaddcol="${board.id}">+ column</button></div><div class="kb-cfgcol"><h4>Swimlanes &amp; rules</h4><table class="kb-lanecfg"><thead><tr><th>Name</th><th>Max d/col</th><th>Deadline</th><th></th></tr></thead><tbody>${lanes}</tbody></table><button class="ghost mini" data-kbaddlane="${board.id}">+ swimlane</button></div><div class="kb-cfgclose"><button class="ghost mini" data-kbcfgclose="1">done</button></div></div>`;
+}
+
+function wireKanban(host){
+  host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
+  host.querySelectorAll("[data-kbaddboard]").forEach(b=>b.onclick=()=>addBoard());
+  host.querySelectorAll("[data-kbtab]").forEach(b=>b.onclick=()=>{ kanbanBoardSel=b.dataset.kbtab; kanbanCfgOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbdelboard]").forEach(b=>b.onclick=()=>{ if(confirm("Delete this board?")){ exec.boards=(exec.boards||[]).filter(x=>x.id!==b.dataset.kbdelboard); kanbanBoardSel=null; renderAll(); } });
+  host.querySelectorAll("[data-kbcfg]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=(kanbanCfgOpen===b.dataset.kbcfg)?null:b.dataset.kbcfg; renderAll(); });
+  host.querySelectorAll("[data-kbcfgclose]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbaddtile]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddtile); const nm=prompt("Tile (workstream driver) name:"); if(!nm)return; (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,lane:board.swimlanes[0].id,col:board.columns[0].id,startDate:todayIso(),enteredCol:todayIso()}); renderAll(); });
+  host.querySelectorAll("[data-kbboardname]").forEach(el=>el.onchange=()=>{ boardById(el.dataset.kbboardname).name=el.value; renderAll(); });
+  host.querySelectorAll("[data-kbcolname]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const c=board.columns.find(x=>x.id===el.dataset.kbcolname); if(c){ c.name=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kbcoldel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.columns.length<=1)return; board.columns=board.columns.filter(x=>x.id!==b.dataset.kbcoldel); board.tiles=(board.tiles||[]).filter(t=>t.col!==b.dataset.kbcoldel); renderAll(); });
+  host.querySelectorAll("[data-kbaddcol]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddcol); const cid=newId("col"); board.columns.push({id:cid,name:"Stage "+(board.columns.length+1),gate_id:mintGateId(board.id,cid)}); renderAll(); });
+  host.querySelectorAll("[data-kblanename]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanename); if(l){ l.name=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kblanemax]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanemax); if(l){ l.maxDaysPerCol=el.value?Number(el.value):0; renderAll(); } });
+  host.querySelectorAll("[data-kblanedue]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const l=board.swimlanes.find(x=>x.id===el.dataset.kblanedue); if(l){ l.deadline=el.value; renderAll(); } });
+  host.querySelectorAll("[data-kblanedel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.swimlanes.length<=1)return; board.swimlanes=board.swimlanes.filter(x=>x.id!==b.dataset.kblanedel); board.tiles=(board.tiles||[]).filter(t=>t.lane!==b.dataset.kblanedel); renderAll(); });
+  host.querySelectorAll("[data-kbaddlane]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddlane); board.swimlanes.push({id:newId("lane"),name:"Swimlane "+(board.swimlanes.length+1),maxDaysPerCol:14,deadline:""}); renderAll(); });
+  wireKanbanDnd(host);
+}
+
+function wireKanbanDnd(host){
+  host.querySelectorAll(".kb-tile").forEach(el=>{
+    el.addEventListener("dragstart",e=>{ _kbDrag=el.dataset.kbtile; el.classList.add("dragging"); if(e.dataTransfer){e.dataTransfer.effectAllowed="move";} });
+    el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); _kbDrag=null; });
+  });
+  host.querySelectorAll(".kb-cell").forEach(cell=>{
+    cell.addEventListener("dragover",e=>{ e.preventDefault(); cell.classList.add("kb-over"); });
+    cell.addEventListener("dragleave",()=>cell.classList.remove("kb-over"));
+    cell.addEventListener("drop",e=>{ e.preventDefault(); cell.classList.remove("kb-over");
+      const id=_kbDrag; if(!id)return; const parts=cell.dataset.kbcell.split(":"); const laneId=parts[0], colId=parts[1];
+      const board=boardById(activeBoardId()); if(!board)return;
+      const nb=RD.dropTile(board, id, colId, laneId, todayIso());
+      const idx=exec.boards.findIndex(b=>b.id===board.id); if(idx>=0) exec.boards[idx]=nb;
+      renderAll();
+    });
+  });
+}
+
 function renderGates(){
   const host=document.getElementById("subSG");
+  /* The Kanban is an alternative VIEW of the same objective, not a second set of gates. Switching
+     changes nothing stored: the stage gates stay exactly as they were, and they alone feed the score. */
+  if(gateModeOf(selectedObj)==='kanban'){ renderKanban(host); return; }
   const sets=objSetsOrdered();
   const allGates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
   const objEnded=!!objEndState(selectedObj);
@@ -4285,7 +4418,7 @@ function renderGates(){
     inner+=`</div>`;
   });
   if(!sets.length) inner+=`<p class="hint">no workstreams yet \u2014 add a gate to start one, or add a workstream for a parallel track</p>`;
-  const acts=`<button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
+  const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "classic", "gatemode")}</span><button class="ghost mini" data-addsg="1">+ add gate</button><button class="ghost mini" data-addset="1">+ workstream</button>`;
   const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
   let cuBanner="";
   if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
@@ -4399,6 +4532,9 @@ function wireExec(host){
   host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
   host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>confirmClearCatchup(b.dataset.catchupClear));
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
+  /* The mode toggle appears in BOTH views, so it has to be wired in both: wireKanban covers the board
+     side, and without this the switch is one-way — you could reach the Kanban and not get back. */
+  host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else if(ht==="keyResult") openKpiTgtModal("keyResult", hid, null); else subOpenAdd("kpi",ht,hid); });

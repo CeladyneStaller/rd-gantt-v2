@@ -27,6 +27,7 @@
   "etb_phase3_kpi.test.js": 12,
   "etb_phase4_cleanup.test.js": 4,
   "etb_refresh_hook.test.js": 4,
+  "exec_kanban.cjs": 20,
   "exec_owner.cjs": 24,
   "fmea_evidence.cjs": 88,
   "gantt_cancelled.cjs": 14,

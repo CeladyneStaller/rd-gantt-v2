@@ -27,8 +27,15 @@ const FIX=`(function(){
       {id:'INI-DEAD', divisionId:'DIV-FC', name:'Dead init',  plannedStart:QLO-400,plannedEnd:QLO-300},
       {id:'INI-LONG', divisionId:'DIV-FC', name:'Long init',  plannedStart:QLO-400,plannedEnd:QHI+400}],
     objectives:[
+      /* Anchored to the QUARTER, not to today. A TD-5..TD+5 window overlaps the quarter by fewer than
+         GANTT_MIN_OVERLAP days whenever today is within 5 days of a quarter boundary, so the test
+         failed on the last day of Q3 and would again every quarter-end. */
       // active: inside its planned window today
-      {id:'OBJ-LIVE', divisionId:'DIV-FC', initiativeId:'INI-LIVE', statement:'live', plannedStart:TD-5, plannedEnd:TD+5},
+      /* Must satisfy BOTH filters: contain today (active-only) and overlap the quarter by at least
+         GANTT_MIN_OVERLAP days (quarter zoom). Clamping the ends into the quarter does both, and stays
+         correct whatever day of the quarter the suite runs on. */
+      {id:'OBJ-LIVE', divisionId:'DIV-FC', initiativeId:'INI-LIVE', statement:'live',
+       plannedStart:Math.max(QLO, TD-20), plannedEnd:Math.min(QHI, TD+20)},
       // inactive: window long past, and not this quarter
       {id:'OBJ-OLD',  divisionId:'DIV-FC', initiativeId:'INI-DEAD', statement:'old',  quarter:'2000Q1', plannedStart:QLO-400, plannedEnd:QLO-300},
       // active, but its bar runs far outside the quarter on BOTH sides
