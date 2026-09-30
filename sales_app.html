@@ -2403,7 +2403,7 @@ html[data-theme="dark"] #etb-view{
     // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
     // read as on-time: the seed still floors at today via pfGate.
     var gateEff = {}, gateStack = {};
-    /* A gate re-committed by an active catch-up plan is a deliberate new commitment: the team has said
+    /* A gate re-committed by an active revised plan is a deliberate new commitment: the team has said
        "we will hit THIS date regardless of what happened upstream". Chained gates take their lag from
        the ORIGINAL planned spacing, so without this a single late predecessor pushes every downstream
        gate by the same number of days forever and the re-commitment changes nothing — the schedule card
@@ -2515,7 +2515,7 @@ html[data-theme="dark"] #etb-view{
     var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
     objs.forEach(function (o) {
       var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
-      /* A catch-up plan re-commits the objective's REMAINING work while holding the original finish
+      /* A revised plan re-commits the objective's REMAINING work while holding the original finish
          date. A gate that has already passed is history: its overrun cannot be recovered, and the plan
          deliberately does not touch a passed gate's planned date. So once a plan is enacted, slip is
          measured over OUTSTANDING work only — otherwise a past overrun is permanent and the schedule
@@ -4608,7 +4608,7 @@ function objMetricStrip(o){
   const objES = objEndState(selectedObj);
   const cuActiveObj = !objES && !!RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
   const schedAlarm = !objES && (slip!=null && slip > CATCHUP_SLIP_THRESHOLD);
-  const cuBtn = objES ? "" : (schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build catch-up plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb catch-up plan active \u00b7 revise</button>` : ""));
+  const cuBtn = objES ? "" : (schedAlarm ? `<button class="catchup-btn" data-catchup="${selectedObj}">\u21bb Build revised plan</button>` : (cuActiveObj ? `<button class="catchup-btn calm" data-catchup="${selectedObj}">\u21bb revised plan active \u00b7 revise</button>` : ""));
   const _eoOver = (objES && objES.endedDay!=null && o.plannedEnd!=null) ? objES.endedDay-o.plannedEnd : null;
   const eoVal = objES ? (objES.status==='abandoned'?'Abandoned':'Achieved') : schedVal;
   const eoCol = objES ? (objES.status==='abandoned'?'var(--none)':'var(--ok)') : schedColor;
@@ -5704,7 +5704,7 @@ function renderGates(){
       const fc=cancelled?{est:'<span class="fc-est cnl">cancelled</span>', delta:''}:gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
       const cuEntry=RD.catchupEntry(exec.catchupPlans, selectedObj, g.id);
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
-      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">catch-up v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
+      const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">revision v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
@@ -5721,7 +5721,7 @@ function renderGates(){
   const cuPlan=RD.activeCatchupPlan(exec.catchupPlans, selectedObj);
   let cuBanner="";
   if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
-    cuBanner=`<div class="cu-banner"><span class="ic">\u21bb</span><span class="txt"><b>Catch-up plan active</b> \u2014 ${cuPlan.gates.length} gate${cuPlan.gates.length===1?"":"s"} re-committed <span class="meta">\u00b7 enacted ${dayToIso(cuPlan.enactedDay)}${slipNow!=null?" \u00b7 now "+(slipNow>0?"+"+slipNow+"d behind":"on schedule"):""}</span></span><span class="sp"></span><button data-catchup="${selectedObj}">Revise</button><button data-catchup-clear="${selectedObj}">Clear plan</button></div>`; }
+    cuBanner=`<div class="cu-banner"><span class="ic">\u21bb</span><span class="txt"><b>Revised plan active</b> \u2014 ${cuPlan.gates.length} gate${cuPlan.gates.length===1?"":"s"} re-committed <span class="meta">\u00b7 enacted ${dayToIso(cuPlan.enactedDay)}${slipNow!=null?" \u00b7 now "+(slipNow>0?"+"+slipNow+"d behind":"on schedule"):""}</span></span><span class="sp"></span><button data-catchup="${selectedObj}">Revise</button><button data-catchup-clear="${selectedObj}">Clear plan</button></div>`; }
   host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
   wireExec(host);
 }
@@ -5841,15 +5841,15 @@ function enactCatchup(objId, dateMap){
   gates.forEach(g=>{ const nd=dateMap[g.id]; if(nd==null) return; const orig=(g.id in prevOrig)?prevOrig[g.id]:g.plannedDate; const ver=(prevVer[g.id]||0)+1; entries.push({gateId:g.id, originalDate:orig, newDate:nd, version:ver}); g.plannedDate=nd; });
   exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
   exec.catchupPlans.push({ id:"catchup:"+objId, objectiveId:objId, enactedDay:todayDay(), gates:entries });
-  closeModal(); renderAll(); setMsg("Catch-up plan enacted \u2014 "+entries.length+" gate"+(entries.length===1?"":"s")+" re-committed","ok");
+  closeModal(); renderAll(); setMsg("Plan revision enacted \u2014 "+entries.length+" gate"+(entries.length===1?"":"s")+" re-committed","ok");
 }
 function clearCatchup(objId){
   exec.catchupPlans=(exec.catchupPlans||[]).filter(p=>p.objectiveId!==objId);
-  renderAll(); setMsg("Catch-up plan cleared","ok");
+  renderAll(); setMsg("Revised plan cleared","ok");
 }
 function confirmClearCatchup(objId){
-  openModal("Clear catch-up plan",
-    `<p class="cu-intro">This discards the active catch-up plan and its version history for this objective. The re-committed dates stay on the gates, but the original\u2192new tracking is removed. This can\u2019t be undone.</p>`+
+  openModal("Clear revised plan",
+    `<p class="cu-intro">This discards the active revised plan and its version history for this objective. The re-committed dates stay on the gates, but the original\u2192new tracking is removed. This can\u2019t be undone.</p>`+
     `<p class="cu-intro" style="margin:0 0 6px">Type <b>CLEAR</b> to confirm.</p>`+
     `<input type="text" class="cu-clear-in" data-cu-clearword placeholder="CLEAR" autocomplete="off" spellcheck="false">`+
     `<div class="cu-foot"><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act danger" data-cu-clearok disabled>Clear plan</button></div>`);
@@ -5872,11 +5872,11 @@ function openCatchupModal(objId){
     const preset = fc || cur;   // committed + delay (the forecast) — makes the user actively pull dates in
     return `<div class="cu-row"><div class="cu-g"><span class="g-chip">${esc(gateLabel(g.id))}</span><span class="nm">${esc(g.name||g.id)}</span></div><div class="cu-cur">${cur||'\u2014'}</div><div class="cu-fc">${fc||'\u2014'}</div><div><input type="date" class="cu-in${preset?' filled':''}" data-cu-date="${g.id}" value="${preset}"></div></div>`;
   }).join("");
-  openModal("Build catch-up plan",
+  openModal("Build revised plan",
     `<p class="cu-intro">This objective is <b>${slip!=null&&slip>0?"+"+slip+" days behind":"off schedule"}</b>. Re-commit every <b>unfinished</b> stage-gate to a new date. Passed gates aren't listed \u2014 new dates may match the current date.</p>`+
     `<div class="cu-req" data-cu-reqnote>All ${gates.length} dates required to enact</div>`+
     `<div class="cu-tbl"><div class="cu-hrow"><div>Gate</div><div>Committed</div><div>Forecast</div><div>New commitment</div></div>${rows}</div>`+
-    `<div class="cu-foot"><span class="note" data-cu-count></span><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act" data-cu-enact>Enact catch-up plan</button></div>`);
+    `<div class="cu-foot"><span class="note" data-cu-count></span><span class="sp"></span><button class="ghost" data-cu-cancel>Cancel</button><button class="act" data-cu-enact>Enact plan revision</button></div>`);
   const mb=document.getElementById("modalBody");
   const inputs=Array.from(mb.querySelectorAll("[data-cu-date]"));
   const enactBtn=mb.querySelector("[data-cu-enact]"), reqNote=mb.querySelector("[data-cu-reqnote]"), cnt=mb.querySelector("[data-cu-count]");

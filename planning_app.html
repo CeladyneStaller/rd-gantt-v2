@@ -2075,7 +2075,7 @@
     // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
     // read as on-time: the seed still floors at today via pfGate.
     var gateEff = {}, gateStack = {};
-    /* A gate re-committed by an active catch-up plan is a deliberate new commitment: the team has said
+    /* A gate re-committed by an active revised plan is a deliberate new commitment: the team has said
        "we will hit THIS date regardless of what happened upstream". Chained gates take their lag from
        the ORIGINAL planned spacing, so without this a single late predecessor pushes every downstream
        gate by the same number of days forever and the re-commitment changes nothing — the schedule card
@@ -2187,7 +2187,7 @@
     var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
     objs.forEach(function (o) {
       var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
-      /* A catch-up plan re-commits the objective's REMAINING work while holding the original finish
+      /* A revised plan re-commits the objective's REMAINING work while holding the original finish
          date. A gate that has already passed is history: its overrun cannot be recovered, and the plan
          deliberately does not touch a passed gate's planned date. So once a plan is enacted, slip is
          measured over OUTSTANDING work only — otherwise a past overrun is permanent and the schedule

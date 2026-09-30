@@ -22,7 +22,7 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
 
     // (1) alarm + button appear when slip > threshold
     var strip=objMetricStrip(portfolio.objectives[0]);
-    ok(/sched-alarm/.test(strip) && /data-catchup="O"/.test(strip), 'slip>10 -> Schedule card gets alarm glow + Build catch-up button');
+    ok(/sched-alarm/.test(strip) && /data-catchup="O"/.test(strip), 'slip>10 -> Schedule card gets alarm glow + Build revised plan button');
 
     // (2) enact re-dates gates + snapshots original->new (finished gate untouched)
     enactCatchup('O', {S2:50, S3:60});
@@ -37,13 +37,18 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
 
     // (3) calm marker once a plan is active (simulate slip back under threshold via an earlier plannedEnd)
     var strip2=objMetricStrip(portfolio.objectives[0]);
-    ok(/data-catchup="O"/.test(strip2), 'Schedule card keeps a catch-up affordance while a plan is active');
+    ok(/data-catchup="O"/.test(strip2), 'Schedule card keeps a plan-revision affordance while a revised plan is active');
 
     // (4) SG section: banner + per-gate recommit + tag
     renderGates(); var sg=D.getElementById('subSG').innerHTML;
-    ok(/cu-banner/.test(sg), 'SG section shows the catch-up banner');
+    ok(/cu-banner/.test(sg), 'SG section shows the revised-plan banner');
+    /* The feature is named "revised plan" in every user-visible string. The STORED shape keeps its
+       original names (catchupPlans, data-catchup, catchup: ids) — renaming those would break every
+       document already saved, so the rename is presentation only. */
+    ok(!/[Cc]atch-up/.test(sg), 'no user-visible "catch-up" wording survives in the banner');
+    ok(/Revised plan active/.test(sg), '...it reads "Revised plan active"');
     ok((sg.match(/gs-recommit/g)||[]).length===2, 'both re-committed gates show a recommit line');
-    ok(/catch-up v1/.test(sg), 'recommit line carries the version label (catch-up v1)');
+    ok(/revision v1/.test(sg), 'recommit line carries the version label (revision v1)');
     ok((sg.match(/cu-tag/g)||[]).length===2, 'both re-committed gates show a re-committed tag');
     ok(/data-catchup-clear="O"/.test(sg) && /data-catchup="O"/.test(sg), 'banner has Revise + Clear controls');
 
@@ -53,7 +58,7 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
     ok(e2b.originalDate===200 && e2b.newDate===55, 'revise preserves the true original (200) and updates new (55)');
     ok(RD.activeCatchupPlan(exec.catchupPlans,'O').gates.length===2 && exec.catchupPlans.filter(p=>p.objectiveId==='O').length===1, 'revise replaces (still one plan per objective)');
     ok(e2b.version===2, 'revise bumps the gate version to v2');
-    renderGates(); ok(/catch-up v2/.test(D.getElementById('subSG').innerHTML), 'recommit line shows catch-up v2 after revise');
+    renderGates(); ok(/revision v2/.test(D.getElementById('subSG').innerHTML), 'recommit line shows revision v2 after revise');
 
     // (6) clear
     clearCatchup('O');
@@ -86,5 +91,5 @@ setTimeout(()=>{ const d=w.document, sc=d.createElement('script');
   })();`;
   d.body.appendChild(sc);
   setTimeout(()=>{ const out=JSON.parse(d.body.getAttribute('data-out')||'[]'); out.forEach(l=>console.log(l));
-    const fl=out.filter(x=>x.startsWith('FAIL')); console.log(fl.length?`\n${fl.length}/${out.length} FAILED`:`\nPASS — ${out.length} catch-up plan assertions green`); process.exit(fl.length?1:0); },500);
+    const fl=out.filter(x=>x.startsWith('FAIL')); console.log(fl.length?`\n${fl.length}/${out.length} FAILED`:`\nPASS — ${out.length} revised-plan assertions green`); process.exit(fl.length?1:0); },500);
 },500);
