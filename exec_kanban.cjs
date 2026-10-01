@@ -128,6 +128,48 @@ setTimeout(() => {
     ok(!!host().querySelector('.kb-summary'), "…inside a summary row");
     ok(!!host().querySelector('.kb-lanename'), "the swimlane name is its own element");
 
+    /* ---- editing a tile ----
+       A tile carries more than a name: its swimlane and its column both change what the board computes,
+       so the editor has to offer them. */
+    const tileEl = host().querySelector('[data-kbtile]');
+    ok(!!tileEl, "a tile is on the board");
+    const editBtn = host().querySelector('[data-kbtiledit]');
+    ok(!!editBtn, "…carrying an edit button");
+    /* The button sits inside a draggable tile. Without draggable="false" a press on it starts a drag and
+       the click never lands — the button would look present and do nothing. */
+    ok(editBtn.getAttribute('draggable') === 'false', "…which does not start a tile drag when pressed");
+    ok(!!editBtn.getAttribute('aria-label'), "…and names itself for a screen reader");
+
+    editBtn.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const mb = () => d.getElementById('modalBody');
+    ok(!!mb(), "clicking it opens the editor");
+    ok(!!mb().querySelector('[data-kbte-name]'), "…offering the name");
+    ok(!!mb().querySelector('[data-kbte-lane]'), "…the swimlane");
+    ok(!!mb().querySelector('[data-kbte-col]'), "…the stage");
+    ok(!!mb().querySelector('[data-kbte-start]') && !!mb().querySelector('[data-kbte-entered]'),
+      "…and both dates the health calculation reads");
+
+    const stampBefore = w.eval('exec.boards[0].tiles[0].enteredCol');
+    mb().querySelector('[data-kbte-name]').value = 'Acme Corp';
+    mb().querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval('exec.boards[0].tiles[0].name') === 'Acme Corp', "saving renames the tile");
+    /* Leaving the stage alone must NOT re-stamp the clock, or every edit silently resets the age that
+       drives the at-risk and breached colours. */
+    ok(w.eval('exec.boards[0].tiles[0].enteredCol') === stampBefore,
+      "…and an edit that does not change stage leaves the days-in-stage clock alone");
+
+    host().querySelector('[data-kbtiledit]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const colSel = mb().querySelector('[data-kbte-col]');
+    colSel.value = colSel.options[1].value;
+    mb().querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval('exec.boards[0].tiles[0].col') === w.eval('exec.boards[0].columns[1].id'), "changing the stage moves the tile");
+    ok(w.eval('exec.boards[0].tiles[0].enteredCol') !== stampBefore,
+      "…and DOES restart the clock, the same as dragging it there");
+
+    host().querySelector('[data-kbtiledit]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    mb().querySelector('[data-kbte-del]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval('(exec.boards[0].tiles||[]).length') === 0, "a tile can be deleted from its editor");
+
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,
       "a board's columns do not become stage gates");

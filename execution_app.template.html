@@ -333,6 +333,13 @@
   .ph-chip.add{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
   .ph-chip.rem{background:var(--pill-bad-bg);color:var(--pill-bad-fg);border-color:var(--pill-bad-bd)}
   .ph-chip.mov{background:var(--pill-active-bg);color:var(--pill-active-fg);border-color:var(--pill-active-bd)}
+  .kb-tile{position:relative}
+  .kb-tedit{position:absolute;top:3px;right:3px;width:18px;height:18px;padding:0;line-height:1;
+    font-size:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+    border-radius:4px;cursor:pointer;opacity:0;transition:opacity .12s}
+  .kb-tile:hover .kb-tedit,.kb-tedit:focus{opacity:1}
+  .kb-tedit:hover{border-color:var(--accent);color:var(--accent)}
+  .kb-tname{padding-right:20px}
   .gate-mode-seg{margin-right:8px}
   .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
   .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
@@ -4367,6 +4374,51 @@ function todayIso(){ return dayToIso ? dayToIso(todayDay()) : new Date().toISOSt
    exists, because renderKanban throws on the config check and takes the whole section with it. */
 let kanbanCfgOpen=null;   // which board's column/tile config panel is open
 let _kbDrag=null;         // tile being dragged, for the drag-and-drop reorder
+/* Tile editor. A tile carries more than a name — which swimlane it runs under and which column it has
+   reached both change what the board computes, so editing has to offer them rather than only the name.
+   Moving a column here is the same action as dragging the tile, and re-stamps enteredCol so the
+   days-in-column clock restarts; leaving it alone must NOT re-stamp, or every edit would silently reset
+   the age that drives the at-risk and breached colours. */
+function kbTileEdit(tid){
+  const board=(exec.boards||[]).find(b=>(b.tiles||[]).some(t=>t.id===tid));
+  if(!board) return;
+  const t=(board.tiles||[]).find(x=>x.id===tid); if(!t) return;
+  const lanes=(board.swimlanes||[]).map(l=>`<option value="${esc(l.id)}"${l.id===t.lane?" selected":""}>${esc(l.name||l.id)}</option>`).join("");
+  const cols=(board.columns||[]).map(c=>`<option value="${esc(c.id)}"${c.id===t.col?" selected":""}>${esc(c.name||c.id)}</option>`).join("");
+  openModal("Edit tile",
+    `<div class="ed">`+
+      `<label>Name<input type="text" data-kbte-name value="${esc(t.name||"")}"></label>`+
+      `<label>Swimlane<select data-kbte-lane>${lanes}</select></label>`+
+      `<label>Stage<select data-kbte-col>${cols}</select></label>`+
+      `<label>Started<input type="date" data-kbte-start value="${esc(t.startDate||"")}"></label>`+
+      `<label>Entered this stage<input type="date" data-kbte-entered value="${esc(t.enteredCol||"")}"></label>`+
+    `</div>`+
+    `<p class="hint">Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</p>`+
+    `<div class="rp-foot"><button class="ghost danger" data-kbte-del>Delete tile</button>`+
+      `<span style="flex:1"></span>`+
+      `<button class="ghost" data-kbte-cancel>Cancel</button>`+
+      `<button class="act" data-kbte-save>Save</button></div>`);
+  const host=document.getElementById("modalBody"); if(!host) return;
+  const val=sel=>{ const el=host.querySelector(sel); return el?el.value:""; };
+  host.querySelector("[data-kbte-save]").onclick=()=>{
+    const nm=val("[data-kbte-name]").trim();
+    if(!nm){ setMsg("A tile needs a name.","err"); return; }
+    const newCol=val("[data-kbte-col]");
+    const moved=(newCol!==t.col);
+    t.name=nm; t.lane=val("[data-kbte-lane]"); t.col=newCol;
+    t.startDate=val("[data-kbte-start]")||t.startDate;
+    // an explicit entered date wins; otherwise only a stage CHANGE re-stamps it
+    const ent=val("[data-kbte-entered]");
+    if(ent && ent!==t.enteredCol) t.enteredCol=ent;
+    else if(moved) t.enteredCol=todayIso();
+    closeModal(); renderAll(); persist();
+  };
+  host.querySelector("[data-kbte-cancel]").onclick=()=>closeModal();
+  host.querySelector("[data-kbte-del]").onclick=()=>{
+    board.tiles=(board.tiles||[]).filter(x=>x.id!==tid);
+    closeModal(); renderAll(); persist();
+  };
+}
 function renderKanban(host){
   const boards=boardsFor(selectedObj);
   const acts=`<span class="gate-mode-seg">${segHtml([["classic","Gates"],["kanban","Kanban"]], "kanban", "gatemode")}</span><button class="ghost mini" data-kbaddboard="1">+ board</button>`;
@@ -4390,7 +4442,12 @@ function renderKanban(host){
         const closed=(t.col===lastColId);
         const h=closed?{status:"closed",daysInCol:0,note:"done"}:RD.tileHealth(t, laneById[t.lane], today);
         const cls=closed?"closed":h.status;
-        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}"><div class="kb-tname">${esc(t.name||"(tile)")}</div><div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
+        /* The edit button is NOT draggable: a pointerdown on it would otherwise start a tile drag and the
+           click would never land. Its own draggable="false" stops the drag from claiming the press. */
+        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}">`+
+          `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
+          `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
+          `<div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
       }).join("");
       return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
     }).join("");
@@ -4419,6 +4476,7 @@ function wireKanban(host){
   host.querySelectorAll("[data-kbdelboard]").forEach(b=>b.onclick=()=>{ if(confirm("Delete this board?")){ exec.boards=(exec.boards||[]).filter(x=>x.id!==b.dataset.kbdelboard); kanbanBoardSel=null; renderAll(); } });
   host.querySelectorAll("[data-kbcfg]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=(kanbanCfgOpen===b.dataset.kbcfg)?null:b.dataset.kbcfg; renderAll(); });
   host.querySelectorAll("[data-kbcfgclose]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbtiledit]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); kbTileEdit(b.dataset.kbtiledit); });
   host.querySelectorAll("[data-kbaddtile]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddtile); const nm=prompt("Tile (workstream driver) name:"); if(!nm)return; (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,lane:board.swimlanes[0].id,col:board.columns[0].id,startDate:todayIso(),enteredCol:todayIso()}); renderAll(); });
   host.querySelectorAll("[data-kbboardname]").forEach(el=>el.onchange=()=>{ boardById(el.dataset.kbboardname).name=el.value; renderAll(); });
   host.querySelectorAll("[data-kbcolname]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const c=board.columns.find(x=>x.id===el.dataset.kbcolname); if(c){ c.name=el.value; renderAll(); } });
@@ -4434,7 +4492,10 @@ function wireKanban(host){
 
 function wireKanbanDnd(host){
   host.querySelectorAll(".kb-tile").forEach(el=>{
-    el.addEventListener("dragstart",e=>{ _kbDrag=el.dataset.kbtile; el.classList.add("dragging"); if(e.dataTransfer){e.dataTransfer.effectAllowed="move";} });
+    el.addEventListener("dragstart",e=>{
+      /* A drag that starts on the edit button is not a tile move: let the click through instead. */
+      if(e.target&&e.target.closest&&e.target.closest("[data-kbtiledit]")){ e.preventDefault(); return; }
+      _kbDrag=el.dataset.kbtile; el.classList.add("dragging"); if(e.dataTransfer){e.dataTransfer.effectAllowed="move";} });
     el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); _kbDrag=null; });
   });
   host.querySelectorAll(".kb-cell").forEach(cell=>{
