@@ -5,6 +5,15 @@
 //   - expanding the board reveals per-tile workstream rows
 const { JSDOM, VirtualConsole } = require("jsdom"); const fs = require("fs");
 const OUT = (process.env.RD_OUT || '/mnt/user-data/outputs');
+/* The board's tiles must still be INSIDE their 30-day column allowance for gate c2 to read pending.
+   Their start was hardcoded to 2026-08-01, so the allowance silently expired and the assertion began
+   failing for a reason unrelated to the code. Anchor the start to today. */
+const TILE_START = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
+const TILE_PASS  = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+/* The second tile must have crossed c1 LATE — past its 30-day allowance from start — so gate c1 reads
+   passed-late (worst status wins) while both tiles are still inside c2. */
+const TILE2_START = new Date(Date.now() - 50 * 86400000).toISOString().slice(0, 10);
+const TILE2_PASS  = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
 const out = []; const ok = (c, m) => out.push((c ? 'ok  ' : 'FAIL ') + m);
 const D = iso => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.UTC(2020, 0, 1)) / 86400000);
 
@@ -33,8 +42,8 @@ function seed(w) {
     kpis:[],stageGates:[],boards:[{id:'B1',objectiveId:'O1',name:'Pipe',
       columns:[{id:'c1',name:'A',gate_id:'B1/c1'},{id:'c2',name:'B',gate_id:'B1/c2'}],
       swimlanes:[{id:'L',name:'S',maxDaysPerCol:30,deadline:''}],
-      tiles:[{id:'t1',name:'Acme',lane:'L',col:'c2',startDate:'2026-08-01',gatePassed:{c1:'2026-08-15'}},
-             {id:'t2',name:'Globex',lane:'L',col:'c2',startDate:'2026-08-01',gatePassed:{c1:'2026-09-15'}}]}]}};`);
+      tiles:[{id:'t1',name:'Acme',lane:'L',col:'c2',startDate:'${TILE_START}',gatePassed:{c1:'${TILE_PASS}'}},
+             {id:'t2',name:'Globex',lane:'L',col:'c2',startDate:'${TILE2_START}',gatePassed:{c1:'${TILE2_PASS}'}}]}]}};`);
   w.eval('renderGantt();');
 }
 

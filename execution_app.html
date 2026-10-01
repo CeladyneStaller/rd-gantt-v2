@@ -289,6 +289,50 @@
   .kb-lanecfg td{padding:3px 5px}
   .kb-lanecfg input[type=number]{width:60px}
   .kb-lanecfg input[type=text]{width:100%}
+  .rp-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .rp-wshead{display:flex;align-items:center;gap:8px;margin:12px 0 5px}
+  .rp-wslab{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em}
+  .rp-wshead button{margin-left:auto}
+  .rp-grp{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .rp-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-top:1px solid var(--line)}
+  .rp-grp .rp-row:first-child{border-top:0}
+  .rp-row.dragging{opacity:.45}
+  .rp-row.new{background:var(--pill-ok-bg)}
+  .rp-row.del{background:var(--pill-bad-bg)}
+  .rp-row.del .rp-nm{text-decoration:line-through;color:var(--pill-bad-fg)}
+  .rp-grip{color:var(--muted);font-size:11px;cursor:grab;letter-spacing:-2px;flex:none}
+  .rp-id{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:30px;text-align:center;flex:none}
+  .rp-nm{flex:1;min-width:0;height:25px;font-size:12px}
+  .rp-dt{width:118px;height:25px;font-size:11px;font-family:var(--mono);flex:none}
+  .rp-note{font-size:9.5px;font-family:var(--mono);white-space:nowrap}
+  .rp-note.ok{color:var(--ok)} .rp-note.bad{color:var(--bad)}
+  .rp-empty{padding:9px;font-size:11px;color:var(--muted)}
+  button.mini.danger{border-color:var(--pill-bad-bd);color:var(--pill-bad-fg)}
+  .rp-fin{display:flex;align-items:center;gap:10px;margin:12px 0;padding:9px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;background:var(--panel2);font-size:11.5px}
+  .rp-fin.over{border-left-color:var(--bad)}
+  .rp-fin button{margin-left:auto;white-space:nowrap}
+  .rp-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .rp-why{flex:1;min-width:0;height:27px;font-size:11.5px}
+  /* per-gate revision mark in the table */
+  .gv-mark{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:4px;white-space:nowrap;
+    background:var(--pill-active-bg);color:var(--pill-active-fg);border:1px solid var(--pill-active-bd)}
+  .gv-mark.added{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
+  /* plan history */
+  .ph-wrap{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+  .ph-head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .ph-lab{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em}
+  .ph-row{display:flex;gap:11px;padding:9px 0;border-top:1px solid var(--line)}
+  .ph-row:first-of-type{border-top:0}
+  .ph-v{flex:none;width:92px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .ph-v .live{color:var(--pill-active-fg);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);padding:1px 7px;border-radius:4px}
+  .ph-body{flex:1;min-width:0}
+  .ph-t{font-size:12px}
+  .ph-meta{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .ph-chips{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .ph-chip{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+  .ph-chip.add{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
+  .ph-chip.rem{background:var(--pill-bad-bg);color:var(--pill-bad-fg);border-color:var(--pill-bad-bd)}
+  .ph-chip.mov{background:var(--pill-active-bg);color:var(--pill-active-fg);border-color:var(--pill-active-bd)}
   .gate-mode-seg{margin-right:8px}
   .fx-chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd)}
   .fx-chip.ok{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
@@ -3137,6 +3181,111 @@ html[data-theme="dark"] #etb-view{
     return arr;
   }
 
+  /* ---- Plan versions -------------------------------------------------------------------------------
+     A revision snapshots the WHOLE objective plan: its workstreams, its gates with dates, ordering and
+     targets, and the KPIs hosted on those gates. Per objective, so a version can honestly claim what the
+     committed finish was at the time.
+     Versions are READ-ONLY history. There is deliberately no restore: a plan that has moved on cannot be
+     rewound without deciding what happens to gates passed since, and guessing that is worse than keeping
+     the record and letting someone rebuild deliberately. */
+  function planVersionsOf(exec, objId){
+    return ((exec && exec.planVersions) || [])
+      .filter(function (r) { return r && r.objectiveId === objId; })
+      .slice().sort(function (a, b) { return (a.v || 0) - (b.v || 0); });
+  }
+  function latestPlanVersion(exec, objId){
+    var vs = planVersionsOf(exec, objId);
+    return vs.length ? vs[vs.length - 1] : null;
+  }
+  function nextPlanVersionNumber(exec, objId){
+    var last = latestPlanVersion(exec, objId);
+    return last ? (last.v || 0) + 1 : 1;
+  }
+  /* The snapshot. Everything the diff needs and nothing derived: a stored forecast would be wrong the
+     moment anything else moved. */
+  function capturePlanSnapshot(exec, portfolio, objId){
+    var sets = ((exec && exec.stageGateSets) || [])
+      .filter(function (s) { return s && s.objectiveId === objId; })
+      .map(function (s) { return { id: s.id, name: s.name || '', order: s.order || 0 }; })
+      .sort(function (a, b) { return a.order - b.order; });
+    var kpis = ((exec && exec.kpis) || []).filter(function (k) { return k && k.hostType === 'stageGate'; });
+    var gates = ((exec && exec.stageGates) || [])
+      .filter(function (g) { return g && g.objectiveId === objId; })
+      .map(function (g, i) {
+        var links = kpis.filter(function (k) { return k.hostId === g.id; })
+          .map(function (k) {
+            return { kpiId: k.id, name: k.name || '', direction: k.direction || '',
+                     target: (k.target == null ? null : k.target), unit: k.unit || '' };
+          });
+        return { id: g.id, setId: g.setId || null, name: g.name || '',
+                 plannedDate: (g.plannedDate == null ? null : g.plannedDate),
+                 actualDate: (g.actualDate == null ? null : g.actualDate),
+                 order: (g.order == null ? i : g.order), kpis: links };
+      })
+      .sort(function (a, b) { return a.order - b.order; });
+    var obj = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o && o.id === objId; })[0];
+    return { sets: sets, gates: gates, finishDay: (obj && obj.plannedEnd != null) ? obj.plannedEnd : null };
+  }
+  function gatesById(snap){
+    var m = {}; ((snap && snap.gates) || []).forEach(function (g) { m[g.id] = g; }); return m;
+  }
+  function kpiKeyOf(g){
+    return (g.kpis || []).map(function (k) {
+      return k.kpiId + '@' + (k.target == null ? '' : k.target) + (k.direction || '');
+    }).sort().join(',');
+  }
+  /* What changed between two snapshots. A gate counts once, under the most significant thing that
+     happened to it: removed > added > moved > retargeted > renamed. */
+  function diffPlanSnapshots(from, to){
+    var a = gatesById(from), b = gatesById(to);
+    var out = { added: [], removed: [], moved: [], retargeted: [], renamed: [], reordered: false,
+                finishChanged: false, fromFinish: (from && from.finishDay), toFinish: (to && to.finishDay) };
+    Object.keys(a).forEach(function (id) { if (!b[id]) out.removed.push(a[id]); });
+    Object.keys(b).forEach(function (id) {
+      var g = b[id], o = a[id];
+      if (!o) { out.added.push(g); return; }
+      if ((o.plannedDate || null) !== (g.plannedDate || null)) {
+        out.moved.push({ id: id, name: g.name, from: o.plannedDate, to: g.plannedDate,
+                         deltaDays: (o.plannedDate != null && g.plannedDate != null) ? (g.plannedDate - o.plannedDate) : null });
+        return;
+      }
+      if (kpiKeyOf(o) !== kpiKeyOf(g)) { out.retargeted.push({ id: id, name: g.name }); return; }
+      if ((o.name || '') !== (g.name || '')) out.renamed.push({ id: id, from: o.name, to: g.name });
+    });
+    var ao = ((from && from.gates) || []).map(function (g) { return g.id; }).filter(function (id) { return !!b[id]; });
+    var bo = ((to && to.gates) || []).map(function (g) { return g.id; }).filter(function (id) { return !!a[id]; });
+    out.reordered = ao.join(',') !== bo.join(',');
+    out.finishChanged = (from && to) ? ((from.finishDay || null) !== (to.finishDay || null)) : false;
+    return out;
+  }
+  /* Per-gate mark for the table: which version last touched this gate, and how. Walks forward so the
+     LAST change wins — a gate moved in v2 and again in v3 reads v3. */
+  function gateVersionMarks(exec, objId){
+    var vs = planVersionsOf(exec, objId), marks = {};
+    for (var i = 1; i < vs.length; i++) {
+      var d = diffPlanSnapshots(vs[i - 1].snapshot, vs[i].snapshot), v = vs[i].v;
+      d.added.forEach(function (g) { marks[g.id] = { v: v, kind: 'added' }; });
+      d.moved.forEach(function (m) { marks[m.id] = { v: v, kind: 'moved', deltaDays: m.deltaDays }; });
+      d.retargeted.forEach(function (m) { marks[m.id] = { v: v, kind: 'retargeted' }; });
+      d.renamed.forEach(function (m) { marks[m.id] = { v: v, kind: 'renamed' }; });
+    }
+    return marks;
+  }
+  // a one-line summary per version, for the history list
+  function planVersionSummary(exec, objId, v){
+    var vs = planVersionsOf(exec, objId);
+    for (var i = 0; i < vs.length; i++) {
+      if (vs[i].v !== v) continue;
+      if (i === 0) return { v: v, first: true, counts: {} };
+      var d = diffPlanSnapshots(vs[i - 1].snapshot, vs[i].snapshot);
+      return { v: v, first: false, counts: {
+        added: d.added.length, removed: d.removed.length, moved: d.moved.length,
+        retargeted: d.retargeted.length, renamed: d.renamed.length },
+        reordered: d.reordered, finishChanged: d.finishChanged };
+    }
+    return null;
+  }
+
   function objectiveEndState(objectiveState, objId){
     var arr = objectiveState || [];
     for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
@@ -3766,6 +3915,10 @@ html[data-theme="dark"] #etb-view{
     sliceScore: sliceScore,
     cascade: cascade,
     activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
+    planVersionsOf: planVersionsOf, latestPlanVersion: latestPlanVersion,
+    nextPlanVersionNumber: nextPlanVersionNumber, capturePlanSnapshot: capturePlanSnapshot,
+    diffPlanSnapshots: diffPlanSnapshots, gateVersionMarks: gateVersionMarks,
+    planVersionSummary: planVersionSummary,
     milestoneState: milestoneState, milestonePaused: milestonePaused,
     pausedMilestoneIds: pausedMilestoneIds, setMilestoneState: setMilestoneState,
     classifyGate: classifyGate,
@@ -5141,7 +5294,7 @@ let pollTimer = null;
 
 /* boards + gateMode join the doc shape: a Kanban is an alternative VIEW of an objective's execution,
    stored beside its stage gates rather than replacing them. Nothing is lost by switching modes. */
-function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],boards:[],gateMode:{},kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
+function blankExec(){ return { objectiveState:[],keyResults:[],kpis:[],stageGates:[],tasks:[],boards:[],gateMode:{},planVersions:[],kpiUpdates:[],stageGateEdges:[],chainGatesByDate:{},risks:[],stageGateSets:[],catchupPlans:[],etbTrees:{} }; }
 function execId(){ return "EXEC-"+divisionId; }
 // docs map for core calls — includes the portfolio so KR/gate/task KPIs linked
 // to a portfolio initiative KPI resolve cross-document (cascade ignores the key)
@@ -5863,7 +6016,7 @@ function renderAll(){
     ["KR","SG","TASK","RISK"].forEach(s=>document.getElementById("sub"+s).innerHTML=""); return; }
   const o = objs.find(x=>x.id===selectedObj);
   document.getElementById("objHeadWrap").innerHTML = quarterHeader(o) + objMetricStrip(o) + signalBars();
-  document.getElementById("objHeadWrap").querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  document.getElementById("objHeadWrap").querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>rpOpen(b.dataset.catchup));
   document.getElementById("objHeadWrap").querySelectorAll("[data-endobj]").forEach(b=>b.onclick=()=>openEndObjectiveModal(b.dataset.endobj));
   document.getElementById("objHeadWrap").querySelectorAll("[data-reopenobj]").forEach(b=>b.onclick=()=>reopenObjective(b.dataset.reopenobj));
   renderKRs(); renderGates(); renderRisks(); renderModal(); renderExpSummary();
@@ -6990,6 +7143,79 @@ function wireKanbanDnd(host){
   });
 }
 
+/* Plan history under the gate table: each version, what it changed, and a compare. Read-only — there is
+   no restore, so nothing here can rewind a plan whose later gates have already been passed. */
+/* Which revision last touched this gate. Built once per render rather than per row: walking every
+   version for every gate would re-diff the whole history on each line. */
+let __gvMarks=null, __gvMarksFor=null;
+function gvMarksFor(objId){
+  if(__gvMarksFor===objId && __gvMarks) return __gvMarks;
+  try{ __gvMarks=RD.gateVersionMarks(exec,objId); }catch(e){ __gvMarks={}; }
+  __gvMarksFor=objId; return __gvMarks;
+}
+function gvMarkHtml(gid){
+  const m=gvMarksFor(selectedObj)[gid]; if(!m) return "";
+  if(m.kind==="added") return `<span class="gv-mark added" title="added in v${m.v}">added v${m.v}</span>`;
+  if(m.kind==="moved"){
+    const d=m.deltaDays;
+    return `<span class="gv-mark" title="moved in v${m.v}">v${m.v}${d!=null?` \u00b7 ${d>0?"+":""}${d}d`:""}</span>`;
+  }
+  if(m.kind==="retargeted") return `<span class="gv-mark" title="target changed in v${m.v}">retargeted v${m.v}</span>`;
+  return `<span class="gv-mark" title="changed in v${m.v}">v${m.v}</span>`;
+}
+function planHistoryHtml(objId){
+  const vs=RD.planVersionsOf(exec,objId);
+  if(!vs.length) return "";
+  const finishes=vs.map(r=>r.snapshot&&r.snapshot.finishDay).filter(v=>v!=null);
+  const held=finishes.length>1 && finishes.every(f=>f===finishes[0]);
+  const rows=vs.slice().reverse().map((r,i)=>{
+    const live=(i===0);
+    const sm=RD.planVersionSummary(exec,objId,r.v)||{counts:{}};
+    const c=sm.counts||{};
+    const chips=[];
+    if(c.added)      chips.push(`<span class="ph-chip add">+${c.added} gate</span>`);
+    if(c.removed)    chips.push(`<span class="ph-chip rem">\u2212${c.removed} gate</span>`);
+    if(c.moved)      chips.push(`<span class="ph-chip mov">${c.moved} moved</span>`);
+    if(c.retargeted) chips.push(`<span class="ph-chip">${c.retargeted} retargeted</span>`);
+    if(c.renamed)    chips.push(`<span class="ph-chip">${c.renamed} renamed</span>`);
+    if(sm.reordered) chips.push(`<span class="ph-chip">reordered</span>`);
+    if(sm.finishChanged) chips.push(`<span class="ph-chip rem">finish moved</span>`);
+    return `<div class="ph-row"><div class="ph-v">${live?`<span class="live">v${r.v} \u00b7 live</span>`:`v${r.v}${sm.first?" \u00b7 original":""}`}</div>`+
+      `<div class="ph-body"><div class="ph-t">${esc(r.reason||(sm.first?"plan as first committed":"revision"))}</div>`+
+      `<div class="ph-meta">${r.committedDay!=null?esc(dayToIso(r.committedDay)):""}</div>`+
+      (chips.length?`<div class="ph-chips">${chips.join("")}</div>`:"")+`</div>`+
+      `<button class="ghost mini" data-ph-cmp="${r.v}">${sm.first?"View":"Compare to v"+(r.v-1)}</button></div>`;
+  }).join("");
+  return `<div class="ph-wrap"><div class="ph-head"><span class="ph-lab">PLAN HISTORY</span>`+
+    `<span class="note">${vs.length} version${vs.length===1?"":"s"}</span>`+
+    (held?`<span class="note" style="margin-left:auto">finish held at ${esc(dayToIso(finishes[0]))} throughout</span>`:"")+
+    `</div>${rows}</div>`;
+}
+function openPlanCompare(objId, v){
+  const vs=RD.planVersionsOf(exec,objId);
+  const to=vs.find(r=>r.v===v), from=vs.find(r=>r.v===v-1);
+  if(!to) return;
+  if(!from){
+    const gs=(to.snapshot&&to.snapshot.gates)||[];
+    openModal(`Plan v${v} \u00b7 as first committed`,
+      `<div class="ph-cmp">${gs.map(g=>`<div class="rp-row"><span class="rp-id">${esc(g.name||g.id)}</span>`+
+        `<span class="rp-note">${g.plannedDate!=null?esc(dayToIso(g.plannedDate)):"\u2014"}</span></div>`).join("")||"<div class=\"rp-empty\">no gates</div>"}</div>`);
+    return;
+  }
+  const d=RD.diffPlanSnapshots(from.snapshot,to.snapshot);
+  const line=(cls,txt)=>`<div class="rp-row ${cls}"><span class="rp-note">${txt}</span></div>`;
+  let body="";
+  d.added.forEach(g=>{ body+=line("new",`<b>added</b> ${esc(g.name||g.id)} \u00b7 ${g.plannedDate!=null?esc(dayToIso(g.plannedDate)):"\u2014"}`); });
+  d.removed.forEach(g=>{ body+=line("del",`<b>removed</b> ${esc(g.name||g.id)}`); });
+  d.moved.forEach(m=>{ body+=line("",`<b>moved</b> ${esc(m.name||m.id)} \u00b7 ${m.from!=null?esc(dayToIso(m.from)):"\u2014"} \u2192 ${m.to!=null?esc(dayToIso(m.to)):"\u2014"}${m.deltaDays!=null?` (${m.deltaDays>0?"+":""}${m.deltaDays}d)`:""}`); });
+  d.retargeted.forEach(m=>{ body+=line("",`<b>retargeted</b> ${esc(m.name||m.id)}`); });
+  d.renamed.forEach(m=>{ body+=line("",`<b>renamed</b> ${esc(m.from||"")} \u2192 ${esc(m.to||"")}`); });
+  if(d.finishChanged) body+=line("",`<b>finish</b> ${d.fromFinish!=null?esc(dayToIso(d.fromFinish)):"\u2014"} \u2192 ${d.toFinish!=null?esc(dayToIso(d.toFinish)):"\u2014"}`);
+  if(d.reordered) body+=line("",`<b>reordered</b>`);
+  openModal(`Compare v${v-1} \u2192 v${v}`,
+    (to.reason?`<p class="note">\u201c${esc(to.reason)}\u201d</p>`:"")+
+    `<div class="rp-grp">${body||`<div class="rp-empty">nothing changed</div>`}</div>`);
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   /* The Kanban is an alternative VIEW of the same objective, not a second set of gates. Switching
@@ -7032,7 +7258,7 @@ function renderGates(){
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">revision v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
-        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span><button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${gvMarkHtml(g.id)}<button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
@@ -7048,7 +7274,7 @@ function renderGates(){
   let cuBanner="";
   if(cuPlan){ let slipNow=null; try{ slipNow=RD.cascade(portfolio, emForCore(), todayDay()).objectiveScheduleSlip[selectedObj]; }catch(e){}
     cuBanner=`<div class="cu-banner"><span class="ic">\u21bb</span><span class="txt"><b>Revised plan active</b> \u2014 ${cuPlan.gates.length} gate${cuPlan.gates.length===1?"":"s"} re-committed <span class="meta">\u00b7 enacted ${dayToIso(cuPlan.enactedDay)}${slipNow!=null?" \u00b7 now "+(slipNow>0?"+"+slipNow+"d behind":"on schedule"):""}</span></span><span class="sp"></span><button data-catchup="${selectedObj}">Revise</button><button data-catchup-clear="${selectedObj}">Clear plan</button></div>`; }
-  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}</div></div>`;
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",allGates.length,acts)}${cuBanner}<div class="item-list${listOpen("SG")}">${inner}${planHistoryHtml(selectedObj)}</div></div>`;
   wireExec(host);
 }
 function renderTasks(){
@@ -7099,6 +7325,155 @@ function confirmClearCatchup(objId){
   mb.querySelector("[data-cu-cancel]").onclick=closeModal;
   okb.onclick=()=>{ if(inp.value.trim()!=="CLEAR") return; closeModal(); clearCatchup(objId); };
   try{ inp.focus(); }catch(e){}
+}
+/* ---- Revised plan: the full plan editor ------------------------------------------------------------
+   A revision rewrites the whole objective plan, not just its dates. The draft is held in memory until
+   Commit so cancelling leaves nothing behind; committing writes a snapshot version and applies the draft
+   to the live gates in one go. */
+let rpDraft=null;
+function rpOpen(objId){
+  const sets=objSetsOrdered().map(x=>({id:x.id,name:x.name||"",order:x.order||0}));
+  const gates=exec.stageGates.filter(g=>g.objectiveId===objId)
+    .slice().sort((a,b)=>((a.order||0)-(b.order||0)))
+    .map((g,i)=>({id:g.id,setId:g.setId||null,name:g.name||"",
+      plannedDate:(g.plannedDate==null?null:g.plannedDate),
+      actualDate:(g.actualDate==null?null:g.actualDate),
+      order:(g.order==null?i:g.order), del:false, isNew:false}));
+  const obj=(portfolio.objectives||[]).find(o=>o.id===objId)||null;
+  rpDraft={ objId, sets, gates, finishDay:(obj&&obj.plannedEnd!=null)?obj.plannedEnd:null, reason:"",
+            v:RD.nextPlanVersionNumber(exec,objId)+( RD.planVersionsOf(exec,objId).length?0:1 ) };
+  /* With no history yet the first commit writes BOTH the original (v1) and the revision (v2), so the
+     record never starts mid-story with no baseline to diff against. */
+  rpRender();
+}
+function rpGateRow(g){
+  const passed=(g.actualDate!=null);
+  const kpis=(exec.kpis||[]).filter(k=>k.hostType==="stageGate"&&k.hostId===g.id);
+  const tgt=kpis.length?`${esc(kpis[0].name||"target")}`:"";
+  const cls="rp-row"+(g.del?" del":"")+(g.isNew?" new":"");
+  return `<div class="${cls}" data-rp-row="${esc(g.id)}" draggable="${passed||g.del?"false":"true"}">`+
+    `<span class="rp-grip" aria-hidden="true">\u22ee\u22ee</span>`+
+    `<span class="rp-id">${passed?"\u2713":(g.isNew?"new":esc(gateLabel(g.id)||""))}</span>`+
+    `<input type="text" class="rp-nm" data-rp-name="${esc(g.id)}" value="${esc(g.name)}"${passed||g.del?" readonly":""} aria-label="Gate name">`+
+    `<input type="date" class="rp-dt" data-rp-date="${esc(g.id)}" value="${g.plannedDate!=null?dayToIso(g.plannedDate):""}"${passed||g.del?" disabled":""} aria-label="Gate date">`+
+    (g.del?`<span class="rp-note bad">will be removed</span><button class="ghost mini" data-rp-undel="${esc(g.id)}">undo</button>`
+          :(passed?`<span class="rp-note ok">passed \u00b7 locked</span>`
+                  :`<button class="ghost mini${tgt?" on":""}" data-rp-target="${esc(g.id)}">${tgt?tgt:"+ target"}</button>`+
+                   `<button class="ghost mini danger" data-rp-del="${esc(g.id)}" aria-label="Delete gate">\u00d7</button>`))+
+    `</div>`;
+}
+function rpRender(){
+  if(!rpDraft) return;
+  const d=rpDraft;
+  const bySet={}; d.gates.forEach(g=>{ (bySet[g.setId||"_"]=bySet[g.setId||"_"]||[]).push(g); });
+  const blocks=d.sets.map(st=>{
+    const rows=(bySet[st.id]||[]).map(rpGateRow).join("")||`<div class="rp-empty">no gates</div>`;
+    return `<div class="rp-wshead"><span class="rp-wslab">WORKSTREAM \u00b7 ${esc(st.name.toUpperCase())}</span>`+
+      `<button class="ghost mini" data-rp-add="${esc(st.id)}">+ gate</button></div>`+
+      `<div class="rp-grp">${rows}</div>`;
+  }).join("");
+  const loose=(bySet["_"]||[]).map(rpGateRow).join("");
+  const live=d.gates.filter(g=>!g.del&&g.plannedDate!=null).map(g=>g.plannedDate);
+  const planEnd=live.length?Math.max.apply(null,live):null;
+  const over=(d.finishDay!=null&&planEnd!=null&&planEnd>d.finishDay);
+  const nAdd=d.gates.filter(g=>g.isNew&&!g.del).length, nDel=d.gates.filter(g=>g.del&&!g.isNew).length;
+  openModal("Revise plan",
+    `<div class="rp-head"><span class="pill active">drafting v${d.v}</span>`+
+      `<span class="note">rewrite the plan however it needs to be \u2014 add, delete, reorder and retarget gates</span></div>`+
+    blocks+(loose?`<div class="rp-grp">${loose}</div>`:"")+
+    `<div class="rp-fin${over?" over":""}">`+
+      (d.finishDay!=null
+        ? `Committed finish <b>${esc(dayToIso(d.finishDay))}</b> \u2014 this plan ends <b>${planEnd!=null?esc(dayToIso(planEnd)):"\u2014"}</b>${over?", <b>past it</b>":", inside it"}.`
+        : `This objective has no committed finish date.`)+
+      `<button class="ghost mini" data-rp-finish>change finish</button></div>`+
+    `<div class="rp-foot"><span class="note" data-rp-counts>${nAdd?`+${nAdd} gate `:""}${nDel?`\u2212${nDel} gate `:""}</span>`+
+      `<input type="text" class="rp-why" data-rp-reason placeholder="why this revision (recorded with v${d.v})" value="${esc(d.reason)}" aria-label="Reason for this revision">`+
+      `<button class="ghost" data-rp-cancel>Cancel</button>`+
+      `<button class="act" data-rp-commit>Commit v${d.v}</button></div>`);
+  rpWire();
+}
+function rpWire(){
+  const host=document.getElementById("modalBody"); if(!host) return;
+  const d=rpDraft; if(!d) return;
+  const find=id=>d.gates.find(g=>g.id===id);
+  host.querySelectorAll("[data-rp-name]").forEach(el=>el.oninput=()=>{ const g=find(el.dataset.rpName); if(g) g.name=el.value; });
+  host.querySelectorAll("[data-rp-date]").forEach(el=>el.onchange=()=>{ const g=find(el.dataset.rpDate); if(g) g.plannedDate=isoToDay(el.value); rpRender(); });
+  host.querySelectorAll("[data-rp-del]").forEach(b=>b.onclick=()=>{ const g=find(b.dataset.rpDel); if(!g) return;
+    /* A new gate is dropped outright; an existing one is struck through with an undo, so you see what
+       you are removing before it is gone. */
+    if(g.isNew) d.gates=d.gates.filter(x=>x.id!==g.id); else g.del=true; rpRender(); });
+  host.querySelectorAll("[data-rp-undel]").forEach(b=>b.onclick=()=>{ const g=find(b.dataset.rpUndel); if(g) g.del=false; rpRender(); });
+  host.querySelectorAll("[data-rp-add]").forEach(b=>b.onclick=()=>{
+    const id="SGNEW-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const mx=d.gates.length?Math.max.apply(null,d.gates.map(g=>g.order||0)):0;
+    d.gates.push({id,setId:b.dataset.rpAdd,name:"",plannedDate:null,actualDate:null,order:mx+1,del:false,isNew:true});
+    rpRender(); });
+  const re=host.querySelector("[data-rp-reason]"); if(re) re.oninput=()=>{ d.reason=re.value; };
+  const fin=host.querySelector("[data-rp-finish]"); if(fin) fin.onclick=()=>{
+    const cur=d.finishDay!=null?dayToIso(d.finishDay):"";
+    const v=prompt("New committed finish date (YYYY-MM-DD), or blank to leave it:", cur);
+    if(v==null) return; const day=isoToDay(v); if(day!=null){ d.finishDay=day; rpRender(); } };
+  const cx=host.querySelector("[data-rp-cancel]"); if(cx) cx.onclick=()=>{ rpDraft=null; closeModal(); };
+  const cm=host.querySelector("[data-rp-commit]"); if(cm) cm.onclick=rpCommit;
+  rpWireDrag(host);
+}
+function rpWireDrag(host){
+  let drag=null;
+  host.querySelectorAll("[data-rp-row]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{ drag=el.dataset.rpRow; el.classList.add("dragging"); if(e.dataTransfer) e.dataTransfer.effectAllowed="move"; });
+    el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); drag=null; });
+    el.addEventListener("dragover",e=>e.preventDefault());
+    el.addEventListener("drop",e=>{ e.preventDefault();
+      if(!drag||!rpDraft) return; const tgt=el.dataset.rpRow; if(tgt===drag) return;
+      const gs=rpDraft.gates, from=gs.findIndex(g=>g.id===drag), to=gs.findIndex(g=>g.id===tgt);
+      if(from<0||to<0) return;
+      const moved=gs.splice(from,1)[0];
+      moved.setId=gs[to>from?to-1:to].setId;                 // dropping into another workstream moves it there
+      gs.splice(to,0,moved);
+      gs.forEach((g,i)=>g.order=i);
+      rpRender(); });
+  });
+}
+/* Commit: snapshot the plan as it stands, apply the draft, snapshot again. Two writes, because with no
+   history yet there is no baseline to diff the revision against — the first commit records the original
+   as v1 and the revision as v2, so the history never starts mid-story. */
+function rpCommit(){
+  const d=rpDraft; if(!d) return;
+  const objId=d.objId;
+  const bad=d.gates.filter(g=>!g.del && (!g.name.trim() || g.plannedDate==null));
+  if(bad.length){ setMsg("Every gate needs a name and a date before committing.","err"); return; }
+
+  if(!RD.planVersionsOf(exec,objId).length){
+    exec.planVersions=(exec.planVersions||[]).concat([{
+      id:"PV-"+objId+"-1", objectiveId:objId, v:1, committedDay:todayDay(),
+      reason:"plan as first committed", snapshot:RD.capturePlanSnapshot(exec,portfolio,objId) }]);
+  }
+
+  // apply the draft to the live plan
+  const keep={}; d.gates.forEach(g=>{ if(!g.del) keep[g.id]=g; });
+  exec.stageGates=exec.stageGates.filter(g=>g.objectiveId!==objId || keep[g.id]);
+  d.gates.forEach(g=>{
+    if(g.del) return;
+    let rec=exec.stageGates.find(x=>x.id===g.id);
+    if(!rec){ rec={id:g.id,objectiveId:objId}; exec.stageGates.push(rec); }
+    rec.setId=g.setId; rec.name=g.name.trim(); rec.plannedDate=g.plannedDate; rec.order=g.order;
+  });
+  /* A gate that is gone takes its hosted KPIs with it, or they linger pointing at nothing and every
+     score that reads them is measuring a gate the plan no longer has. */
+  const goneIds=d.gates.filter(g=>g.del).map(g=>g.id);
+  if(goneIds.length) exec.kpis=(exec.kpis||[]).filter(k=>!(k.hostType==="stageGate" && goneIds.indexOf(k.hostId)>=0));
+
+  const obj=(portfolio.objectives||[]).find(o=>o.id===objId);
+  if(obj && d.finishDay!=null) obj.plannedEnd=d.finishDay;
+
+  const v=RD.nextPlanVersionNumber(exec,objId);
+  exec.planVersions=(exec.planVersions||[]).concat([{
+    id:"PV-"+objId+"-"+v, objectiveId:objId, v, committedDay:todayDay(),
+    reason:(d.reason||"").trim(), snapshot:RD.capturePlanSnapshot(exec,portfolio,objId) }]);
+
+  rpDraft=null; __gvMarks=null; __gvMarksFor=null;   // the cache is stale the moment a version lands
+  closeModal(); renderAll();
+  persist(); persistPortfolio(null, "Revised plan committed as v"+v+".");
 }
 function openCatchupModal(objId){
   const o=objById(objId); if(!o) return;
@@ -7154,12 +7529,13 @@ function reopenObjective(objId){
 }
 
 function wireExec(host){
-  host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>openCatchupModal(b.dataset.catchup));
+  host.querySelectorAll("[data-catchup]").forEach(b=>b.onclick=()=>rpOpen(b.dataset.catchup));
   host.querySelectorAll("[data-catchup-clear]").forEach(b=>b.onclick=()=>confirmClearCatchup(b.dataset.catchupClear));
   host.querySelectorAll("[data-addkr]").forEach(b=>b.onclick=()=>subOpenAdd("keyResult"));
   /* The mode toggle appears in BOTH views, so it has to be wired in both: wireKanban covers the board
      side, and without this the switch is one-way — you could reach the Kanban and not get back. */
   host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
+  host.querySelectorAll("[data-ph-cmp]").forEach(b=>b.onclick=()=>openPlanCompare(selectedObj, +b.dataset.phCmp));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));
   host.querySelectorAll("[data-addkpi]").forEach(b=>b.onclick=()=>{ const [ht,hid]=b.dataset.addkpi.split(":"); if(ht==="stageGate") openTgtModal(hid, null); else if(ht==="keyResult") openKpiTgtModal("keyResult", hid, null); else subOpenAdd("kpi",ht,hid); });

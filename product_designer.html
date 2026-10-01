@@ -2206,6 +2206,111 @@
     return arr;
   }
 
+  /* ---- Plan versions -------------------------------------------------------------------------------
+     A revision snapshots the WHOLE objective plan: its workstreams, its gates with dates, ordering and
+     targets, and the KPIs hosted on those gates. Per objective, so a version can honestly claim what the
+     committed finish was at the time.
+     Versions are READ-ONLY history. There is deliberately no restore: a plan that has moved on cannot be
+     rewound without deciding what happens to gates passed since, and guessing that is worse than keeping
+     the record and letting someone rebuild deliberately. */
+  function planVersionsOf(exec, objId){
+    return ((exec && exec.planVersions) || [])
+      .filter(function (r) { return r && r.objectiveId === objId; })
+      .slice().sort(function (a, b) { return (a.v || 0) - (b.v || 0); });
+  }
+  function latestPlanVersion(exec, objId){
+    var vs = planVersionsOf(exec, objId);
+    return vs.length ? vs[vs.length - 1] : null;
+  }
+  function nextPlanVersionNumber(exec, objId){
+    var last = latestPlanVersion(exec, objId);
+    return last ? (last.v || 0) + 1 : 1;
+  }
+  /* The snapshot. Everything the diff needs and nothing derived: a stored forecast would be wrong the
+     moment anything else moved. */
+  function capturePlanSnapshot(exec, portfolio, objId){
+    var sets = ((exec && exec.stageGateSets) || [])
+      .filter(function (s) { return s && s.objectiveId === objId; })
+      .map(function (s) { return { id: s.id, name: s.name || '', order: s.order || 0 }; })
+      .sort(function (a, b) { return a.order - b.order; });
+    var kpis = ((exec && exec.kpis) || []).filter(function (k) { return k && k.hostType === 'stageGate'; });
+    var gates = ((exec && exec.stageGates) || [])
+      .filter(function (g) { return g && g.objectiveId === objId; })
+      .map(function (g, i) {
+        var links = kpis.filter(function (k) { return k.hostId === g.id; })
+          .map(function (k) {
+            return { kpiId: k.id, name: k.name || '', direction: k.direction || '',
+                     target: (k.target == null ? null : k.target), unit: k.unit || '' };
+          });
+        return { id: g.id, setId: g.setId || null, name: g.name || '',
+                 plannedDate: (g.plannedDate == null ? null : g.plannedDate),
+                 actualDate: (g.actualDate == null ? null : g.actualDate),
+                 order: (g.order == null ? i : g.order), kpis: links };
+      })
+      .sort(function (a, b) { return a.order - b.order; });
+    var obj = ((portfolio && portfolio.objectives) || []).filter(function (o) { return o && o.id === objId; })[0];
+    return { sets: sets, gates: gates, finishDay: (obj && obj.plannedEnd != null) ? obj.plannedEnd : null };
+  }
+  function gatesById(snap){
+    var m = {}; ((snap && snap.gates) || []).forEach(function (g) { m[g.id] = g; }); return m;
+  }
+  function kpiKeyOf(g){
+    return (g.kpis || []).map(function (k) {
+      return k.kpiId + '@' + (k.target == null ? '' : k.target) + (k.direction || '');
+    }).sort().join(',');
+  }
+  /* What changed between two snapshots. A gate counts once, under the most significant thing that
+     happened to it: removed > added > moved > retargeted > renamed. */
+  function diffPlanSnapshots(from, to){
+    var a = gatesById(from), b = gatesById(to);
+    var out = { added: [], removed: [], moved: [], retargeted: [], renamed: [], reordered: false,
+                finishChanged: false, fromFinish: (from && from.finishDay), toFinish: (to && to.finishDay) };
+    Object.keys(a).forEach(function (id) { if (!b[id]) out.removed.push(a[id]); });
+    Object.keys(b).forEach(function (id) {
+      var g = b[id], o = a[id];
+      if (!o) { out.added.push(g); return; }
+      if ((o.plannedDate || null) !== (g.plannedDate || null)) {
+        out.moved.push({ id: id, name: g.name, from: o.plannedDate, to: g.plannedDate,
+                         deltaDays: (o.plannedDate != null && g.plannedDate != null) ? (g.plannedDate - o.plannedDate) : null });
+        return;
+      }
+      if (kpiKeyOf(o) !== kpiKeyOf(g)) { out.retargeted.push({ id: id, name: g.name }); return; }
+      if ((o.name || '') !== (g.name || '')) out.renamed.push({ id: id, from: o.name, to: g.name });
+    });
+    var ao = ((from && from.gates) || []).map(function (g) { return g.id; }).filter(function (id) { return !!b[id]; });
+    var bo = ((to && to.gates) || []).map(function (g) { return g.id; }).filter(function (id) { return !!a[id]; });
+    out.reordered = ao.join(',') !== bo.join(',');
+    out.finishChanged = (from && to) ? ((from.finishDay || null) !== (to.finishDay || null)) : false;
+    return out;
+  }
+  /* Per-gate mark for the table: which version last touched this gate, and how. Walks forward so the
+     LAST change wins — a gate moved in v2 and again in v3 reads v3. */
+  function gateVersionMarks(exec, objId){
+    var vs = planVersionsOf(exec, objId), marks = {};
+    for (var i = 1; i < vs.length; i++) {
+      var d = diffPlanSnapshots(vs[i - 1].snapshot, vs[i].snapshot), v = vs[i].v;
+      d.added.forEach(function (g) { marks[g.id] = { v: v, kind: 'added' }; });
+      d.moved.forEach(function (m) { marks[m.id] = { v: v, kind: 'moved', deltaDays: m.deltaDays }; });
+      d.retargeted.forEach(function (m) { marks[m.id] = { v: v, kind: 'retargeted' }; });
+      d.renamed.forEach(function (m) { marks[m.id] = { v: v, kind: 'renamed' }; });
+    }
+    return marks;
+  }
+  // a one-line summary per version, for the history list
+  function planVersionSummary(exec, objId, v){
+    var vs = planVersionsOf(exec, objId);
+    for (var i = 0; i < vs.length; i++) {
+      if (vs[i].v !== v) continue;
+      if (i === 0) return { v: v, first: true, counts: {} };
+      var d = diffPlanSnapshots(vs[i - 1].snapshot, vs[i].snapshot);
+      return { v: v, first: false, counts: {
+        added: d.added.length, removed: d.removed.length, moved: d.moved.length,
+        retargeted: d.retargeted.length, renamed: d.renamed.length },
+        reordered: d.reordered, finishChanged: d.finishChanged };
+    }
+    return null;
+  }
+
   function objectiveEndState(objectiveState, objId){
     var arr = objectiveState || [];
     for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
@@ -2835,6 +2940,10 @@
     sliceScore: sliceScore,
     cascade: cascade,
     activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
+    planVersionsOf: planVersionsOf, latestPlanVersion: latestPlanVersion,
+    nextPlanVersionNumber: nextPlanVersionNumber, capturePlanSnapshot: capturePlanSnapshot,
+    diffPlanSnapshots: diffPlanSnapshots, gateVersionMarks: gateVersionMarks,
+    planVersionSummary: planVersionSummary,
     milestoneState: milestoneState, milestonePaused: milestonePaused,
     pausedMilestoneIds: pausedMilestoneIds, setMilestoneState: setMilestoneState,
     classifyGate: classifyGate,
