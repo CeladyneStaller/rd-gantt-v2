@@ -54,6 +54,7 @@
   "kind_gating_divisions.cjs": 16,
   "kpi_readsfrom.cjs": 40,
   "kpi_table.cjs": 23,
+  "kr_multi_kpi.cjs": 28,
   "kr_pace.cjs": 11,
   "kr_row_ui.cjs": 13,
   "layer_filter.cjs": 7,

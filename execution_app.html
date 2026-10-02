@@ -743,6 +743,21 @@
   input[type=range]{accent-color:var(--accent);height:4px}
   .pct-row{display:flex;align-items:center;gap:10px}
   .pct-val{font-family:var(--mono);font-size:12px;font-weight:600;min-width:34px;text-align:right;color:var(--ink)}
+  .krk-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .krk-cnt{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+  .krk-head button{margin-left:auto}
+  .krk-list{border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .krk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel2)}
+  .krk-list .krk-row:first-child{border-top:0}
+  .krk-row.open{background:var(--pill-active-bg)}
+  .krk-nm{flex:1;min-width:0;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .krk-sum{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+  .krk-sum.editing{color:var(--pill-active-fg)}
+  .krk-body{padding:0 10px 10px;background:var(--pill-active-bg);display:flex;flex-direction:column;gap:8px}
+  .krk-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .krk-three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .krk-body label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--muted)}
+  .krk-body label input,.krk-body label select{height:25px;font-size:11.5px;color:var(--ink)}
   .skr-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
   .skr-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--panel2)}
   .skr-row .skr-name{flex:1;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -6331,24 +6346,51 @@ function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v))
 function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
 function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
 function krPrimaryKpi(krId){ return exec.kpis.find(k=>k.hostType==="keyResult" && k.hostId===krId) || null; }
+/* A KR may host several KPIs — the store has always allowed it (exec.kpis with hostType "keyResult")
+   and keyResultScore already means over all of them. Only this modal assumed one, so the draft now holds
+   a LIST. The old single-KPI fields are gone; everything reads krKpi(i). */
+function krDraftKpiFrom(k){
+  return {
+    id:(k&&k.id)||null,
+    name:(k&&k.name)||"",
+    kpiType:(k&&k.targetType)||"demonstration",
+    kpiDir:(k&&k.direction==="down")?"decrease":"increase",
+    kpiTarget:(k&&k.target!=null)?k.target:"",
+    kpiUnit:(k&&k.unit)||"",
+    kpiStatistic:(k&&k.statistic)||"average",
+    kpiReadsFrom:(k&&k.readsFrom)||"",
+    kpiReadCount:(k&&k.readCount!=null)?k.readCount:""
+  };
+}
 function initDraftKr(kr){
-  const isNew=!kr, pk=isNew?null:krPrimaryKpi(kr.id);
+  const isNew=!kr;
+  const existing=isNew?[]:exec.kpis.filter(k=>k.hostType==="keyResult" && k.hostId===kr.id);
   return {
     id:isNew?null:kr.id,
     statement:isNew?"":(kr.statement||""),
     trackingType:(kr&&kr.trackingType)||(isNew?"percentage":"kpi"),
     progress:(kr&&kr.progress!=null)?kr.progress:0,
-    kpiType:pk?(pk.targetType||"demonstration"):"demonstration",
-    kpiDir:(pk&&pk.direction==="down")?"decrease":"increase",
-    kpiTarget:(pk&&pk.target!=null)?pk.target:"",
-    kpiUnit:(pk&&pk.unit)?pk.unit:"",
-    kpiStatistic:(pk&&pk.statistic)?pk.statistic:"average",
-    kpiReadsFrom:(pk&&pk.readsFrom)?pk.readsFrom:"",
-    kpiId:(pk&&pk.id)?pk.id:"",           // for the sample picker: exclude self, and only in krModalBody scope
-    kpiReadCount:(pk&&pk.readCount!=null)?pk.readCount:"",
+    kpis:existing.length?existing.map(krDraftKpiFrom):[krDraftKpiFrom(null)],
+    openKpi:0,                                    // which row is expanded for editing
+    creditMode:(kr&&kr.creditMode)||"binary",
+    steps:(kr&&kr.steps?kr.steps:[]).map(s=>JSON.parse(JSON.stringify(s))),
     subKrs:(kr&&kr.subKrs?kr.subKrs:[]).map(s=>JSON.parse(JSON.stringify(s)))
   };
 }
+function draftMsWeights(){ return RD.milestoneEffectiveWeights(draftKr.steps||[]); }
+
+function draftMsStepsHtml(){
+  const steps=draftKr.steps||[]; if(!steps.length) return `<div class="skr-empty">no steps yet — add the accomplishments that complete this KR</div>`;
+  const eff=draftMsWeights(); const byId={}; eff.forEach(e=>byId[e.id]=e);
+  return `<table class="ms-edit"><thead><tr><th>Step / accomplishment</th><th>Weight</th><th>Due</th><th></th></tr></thead><tbody>`+
+    steps.map((s,i)=>{ const e=byId[s.id]||{w:0,auto:true};
+      return `<tr><td><input type="text" data-msname="${i}" value="${esc(s.name||"")}" placeholder="step ${i+1}"></td>`+
+        `<td class="ms-wt"><input type="number" min="0" max="100" data-mswt="${i}" value="${(s.weight==null||s.weight==="")?"":s.weight}" placeholder="auto">${e.auto?`<span class="auto">${e.w.toFixed(1)}%</span>`:""}</td>`+
+        `<td><input type="date" data-msdue="${i}" value="${s.due||""}"></td>`+
+        `<td>${steps.length>1?`<button type="button" class="ghost mini danger" data-msdel="${i}">\u2715</button>`:""}</td></tr>`;
+    }).join("")+`</tbody></table>`;
+}
+
 function draftSubKrListHtml(){
   const subs=draftKr.subKrs;
   if(!subs.length) return `<div class="skr-empty">none yet — add a weighted sub-result</div>`;
@@ -6363,36 +6405,78 @@ function draftSubKrListHtml(){
     return `<div class="skr-row"><span class="skr-name" data-editsubkr="${i}" title="edit">${esc(s.name||("Sub-KR "+(i+1)))}</span><span class="skr-meta">w ${s.weight||1} · ${meta}${measured}</span><button class="ghost mini danger" type="button" data-delsubkr="${i}">del</button></div>`;
   }).join("");
 }
+/* The KPI section is a list: one summary row per KPI, the row being edited expanded in place. Follows
+   the sub-KR idiom already in this modal rather than inventing a second list pattern. */
+function krKpiRowHtml(k, idx, openIdx){
+  const open=(idx===openIdx);
+  const isStat=k.kpiType==="statistical", isBin=k.kpiType==="binary";
+  const summary = isBin ? "binary"
+    : ((k.kpiTarget!==""&&k.kpiTarget!=null)
+        ? `${k.kpiDir==="decrease"?"\u2264":"\u2265"} ${esc(String(k.kpiTarget))}${k.kpiUnit?" "+esc(k.kpiUnit):""}`
+        : "no target yet");
+  if(!open){
+    return `<div class="krk-row"><span class="krk-nm">${esc(k.name||"(unnamed KPI)")}</span>`+
+      `<span class="krk-sum">${summary}</span>`+
+      `<button class="ghost mini" type="button" data-krkopen="${idx}">edit</button>`+
+      `<button class="ghost mini danger" type="button" data-krkdel="${idx}" aria-label="Remove KPI ${esc(k.name||"")}">\u00d7</button></div>`;
+  }
+  return `<div class="krk-row open"><span class="krk-nm">${esc(k.name||"(unnamed KPI)")}</span>`+
+      `<span class="krk-sum editing">editing</span>`+
+      `<button class="ghost mini" type="button" data-krkclose="${idx}">done</button>`+
+      `<button class="ghost mini danger" type="button" data-krkdel="${idx}" aria-label="Remove KPI ${esc(k.name||"")}">\u00d7</button></div>`+
+    `<div class="krk-body">`+
+      `<div class="krk-two">`+
+        `<label>Name<input type="text" data-kf="name" data-ki="${idx}" value="${esc(k.name)}" placeholder="e.g. ECSA retention"></label>`+
+        `<label>Unit<input type="text" data-kf="kpiUnit" data-ki="${idx}" value="${esc(k.kpiUnit)}" placeholder="e.g. %"></label>`+
+      `</div>`+
+      `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","\u2713 Binary"]],k.kpiType,"krktype-"+idx)}</div>`+
+      `<div class="krk-three" style="display:${isStat?"grid":"none"}">`+
+        `<label>Read count<input type="number" min="1" step="1" data-kf="kpiReadCount" data-ki="${idx}" value="${esc(k.kpiReadCount)}"></label>`+
+        `<label>Statistic<select data-kf="kpiStatistic" data-ki="${idx}">${STAT_OPTS.map(o=>`<option value="${o[0]}"${k.kpiStatistic===o[0]?" selected":""}>${o[1]}</option>`).join("")}</select></label>`+
+        `<label>Sample<select data-kf="kpiReadsFrom" data-ki="${idx}">${readsFromOptions(k.kpiReadsFrom, k.id)}</select></label>`+
+      `</div>`+
+      `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","\u2191 Increase"],["decrease","\u2193 Decrease"]],k.kpiDir,"krkdir-"+idx)}</div>`+
+      `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-kf="kpiTarget" data-ki="${idx}" value="${esc(k.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
+    `</div>`;
+}
+function krKpiListHtml(){
+  const d=draftKr;
+  const rows=d.kpis.map((k,i)=>krKpiRowHtml(k,i,d.openKpi)).join("");
+  return `<div class="modal-field">`+
+    `<div class="krk-head"><span class="lbl" style="margin:0">KPIs</span>`+
+      `<span class="krk-cnt">${d.kpis.length}</span>`+
+      `<button class="ghost mini" type="button" data-krkadd>+ Add KPI</button></div>`+
+    `<div class="krk-list" id="krKpiList">${rows}</div>`+
+    `<p class="hint">The key result scores as the mean of all its KPIs \u2014 an unmeasured one counts as nothing achieved.</p>`+
+  `</div>`;
+}
 function krModalBody(){
   const d=draftKr, tt=d.trackingType;
-  const isStat=d.kpiType==="statistical", isBin=d.kpiType==="binary";
-  const kpiSection=
-    `<div class="modal-field"><span class="lbl">Target type</span>${segHtml([["demonstration","Demonstration"],["statistical","Statistical"],["binary","✓ Binary"]],d.kpiType,"krktype")}</div>`+
-    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Read count</span><input type="number" min="1" step="1" data-f="kpiReadCount" value="${esc(d.kpiReadCount)}" placeholder="e.g. 10"></div>`+
-    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Statistic</span><select data-f="kpiStatistic">${STAT_OPTS.map(s=>`<option value="${s[0]}"${d.kpiStatistic===s[0]?" selected":""}>${s[1]}</option>`).join("")}</select></div>`+
-    // STOPGAP for a first-class sample entity: borrow another statistical KPI's readings so one sample can
-    // feed several statistics (average + CoV over the same 10 points, entered once).
-    `<div class="modal-field" style="display:${isStat?"block":"none"}"><span class="lbl">Sample</span><select data-f="kpiReadsFrom">`+readsFromOptions(d.kpiReadsFrom, d.kpiId)+`</select></div>`+
-    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Direction</span>${segHtml([["increase","↑ Increase"],["decrease","↓ Decrease"]],d.kpiDir,"krkdir")}</div>`+
-    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Target</span><input type="text" data-f="kpiTarget" value="${esc(d.kpiTarget)}" placeholder="e.g. 1.0"></div>`+
-    `<div class="modal-field" style="display:${isBin?"none":"block"}"><span class="lbl">Unit</span><input type="text" data-f="kpiUnit" value="${esc(d.kpiUnit)}" placeholder="e.g. W/cm²"></div>`;
   return `
-    <div class="modal-field"><span class="lbl">Key result</span><input type="text" data-f="statement" value="${esc(d.statement)}" placeholder="e.g. Achieve mass activity ≥ 50 A/g at 1.5V"></div>
+    <div class="modal-field"><span class="lbl">Key result</span><input type="text" data-f="statement" value="${esc(d.statement)}" placeholder="e.g. Achieve mass activity \u2265 50 A/g at 1.5V"></div>
     <div class="modal-field"><span class="lbl">Tracking type</span>
       <select data-krtype>
         <option value="percentage"${tt==="percentage"?" selected":""}>% completion</option>
         <option value="kpi"${tt==="kpi"?" selected":""}>KPI-based</option>
+        <option value="milestone"${tt==="milestone"?" selected":""}>Milestone steps</option>
         <option value="subkr"${tt==="subkr"?" selected":""}>Sub-key results</option>
       </select></div>
     <div style="display:${tt==="percentage"?"block":"none"}">
       <div class="modal-field"><span class="lbl">Progress</span><div class="pct-row"><input type="range" min="0" max="100" data-f="progress" value="${esc(d.progress)}" style="flex:1" data-pctslider><span class="pct-val" data-pctval>${Number(d.progress)||0}%</span></div></div>
     </div>
-    <div style="display:${tt==="kpi"?"block":"none"}">${kpiSection}</div>
+    <div style="display:${tt==="kpi"?"block":"none"}">${krKpiListHtml()}</div>
+    <div style="display:${tt==="milestone"?"block":"none"}">
+      <div class="modal-field"><span class="lbl">Credit mode</span>${segHtml([["binary","Binary"],["partial","Partial"]], d.creditMode, "msmode")}
+        <span class="hint" style="margin-left:8px">${d.creditMode==="partial"?"weight scales by % complete":"full weight only when a step is done — strictly at 100%"}</span></div>
+      <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Steps</span>${(function(){const eff=draftMsWeights();const tot=eff.reduce((a,e)=>a+e.w,0);const exp=(draftKr.steps||[]).filter(x=>x.weight!=null&&x.weight!=="").reduce((a,x)=>a+Number(x.weight),0);const ok=Math.abs(tot-100)<0.05&&exp<=100;return `<span class="ms-sum ${ok?"ms-ok":"ms-bad"}">${tot.toFixed(1)}% / 100%</span>`;})()}</div>
+        <div id="krMsList">${draftMsStepsHtml()}</div>
+        <button class="ghost mini" type="button" data-msadd style="margin-top:8px">+ step</button></div>
+    </div>
     <div style="display:${tt==="subkr"?"block":"none"}">
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
-    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link…</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link\u2026</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
 function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
@@ -6403,8 +6487,34 @@ function wireKrModal(){
   if(sl&&pv) sl.oninput=()=>{ draftKr.progress=sl.value; pv.textContent=sl.value+"%"; };
   const tsel=body.querySelector("[data-krtype]");
   if(tsel) tsel.onchange=()=>{ draftKr.trackingType=tsel.value; krRerenderBody(); };
-  body.querySelectorAll("[data-krktype]").forEach(b=>b.onclick=()=>{ draftKr.kpiType=b.dataset.krktype; krRerenderBody(); });
-  body.querySelectorAll("[data-krkdir]").forEach(b=>b.onclick=()=>{ draftKr.kpiDir=b.dataset.krkdir; body.querySelectorAll("[data-krkdir]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+  /* Per-KPI fields carry their row index, so one handler serves every row. */
+  body.querySelectorAll("[data-kf]").forEach(el=>el.oninput=()=>{
+    const k=draftKr.kpis[+el.dataset.ki]; if(k) k[el.dataset.kf]=el.value;
+    if(el.dataset.kf==="name"){ const nm=el.closest(".krk-body").previousElementSibling.querySelector(".krk-nm"); if(nm) nm.textContent=el.value||"(unnamed KPI)"; }
+  });
+  body.querySelectorAll("[data-kf]").forEach(el=>{ if(el.tagName==="SELECT") el.onchange=()=>{ const k=draftKr.kpis[+el.dataset.ki]; if(k) k[el.dataset.kf]=el.value; }; });
+  /* The segmented controls are per row: their data attribute is krktype-<i>, so read the index off it. */
+  Array.prototype.forEach.call(body.querySelectorAll("button[class*='seg']"), b=>{
+    const at=Array.prototype.slice.call(b.attributes).map(a=>a.name).filter(n=>/^data-krktype-|^data-krkdir-/.test(n))[0];
+    if(!at) return;
+    const idx=+at.split("-").pop(), val=b.getAttribute(at);
+    b.onclick=()=>{ const k=draftKr.kpis[idx]; if(!k) return;
+      if(/krktype/.test(at)) k.kpiType=val; else k.kpiDir=val;
+      krRerenderBody(); };
+  });
+  body.querySelectorAll("[data-msmode]").forEach(b=>b.onclick=()=>{ draftKr.creditMode=b.dataset.msmode; krRerenderBody(); });
+  body.querySelectorAll("[data-krkadd]").forEach(b=>b.onclick=()=>{
+    draftKr.kpis.push(krDraftKpiFrom(null)); draftKr.openKpi=draftKr.kpis.length-1; krRerenderBody(); });
+  body.querySelectorAll("[data-krkopen]").forEach(b=>b.onclick=()=>{ draftKr.openKpi=+b.dataset.krkopen; krRerenderBody(); });
+  body.querySelectorAll("[data-krkclose]").forEach(b=>b.onclick=()=>{ draftKr.openKpi=-1; krRerenderBody(); });
+  body.querySelectorAll("[data-krkdel]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.krkdel;
+    /* A KPI-tracked KR with no KPIs would score null forever, so the last one cannot be removed —
+       switch the tracking type instead. */
+    if(draftKr.kpis.length<=1){ setMsg("A KPI-tracked key result needs at least one KPI.","err"); return; }
+    draftKr.kpis.splice(i,1);
+    if(draftKr.openKpi>=draftKr.kpis.length) draftKr.openKpi=draftKr.kpis.length-1;
+    krRerenderBody(); });
   const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
   body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
   body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
@@ -6425,18 +6535,34 @@ function saveKrModal(thenLink){
   else if(d.trackingType==="subkr"){ kr.subKrs=d.subKrs; delete kr.progress; }
   else { delete kr.progress; delete kr.subKrs; }
   if(d.trackingType==="kpi"){
-    let pk=krPrimaryKpi(kr.id);
-    if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id)); pk={ id, objectiveId:selectedObj, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true }; exec.kpis.push(pk); }
-    pk.name=kr.statement;
-    pk.targetType=d.kpiType;
-    if(d.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; }
-    else {
-      pk.direction=(d.kpiDir==="decrease")?"down":"up";
-      pk.target=parseTargetNum(d.kpiTarget);
-      pk.unit=d.kpiUnit||null;
-      if(d.kpiType==="statistical"){ pk.statistic=d.kpiStatistic||"average"; pk.readCount=(d.kpiReadCount===""||d.kpiReadCount==null)?"":Number(d.kpiReadCount);
-        if(d.kpiReadsFrom) pk.readsFrom=d.kpiReadsFrom; else delete pk.readsFrom; }
-      else { delete pk.statistic; delete pk.readCount; delete pk.readsFrom; }
+    /* Write every drafted KPI, and remove the ones the user deleted. Existing rows are updated in place
+       so their readings survive: re-creating a KPI would orphan every value already recorded against it. */
+    const keep={};
+    (d.kpis||[]).forEach((row,i)=>{
+      let pk=row.id?exec.kpis.find(x=>x.id===row.id):null;
+      if(!pk){ const id=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id));
+        pk={ id, objectiveId:selectedObj, hostType:"keyResult", hostId:kr.id, groupId:null, isDefiner:true };
+        exec.kpis.push(pk); row.id=id; }
+      keep[pk.id]=1;
+      /* An unnamed KPI falls back to the KR statement, which is what the single-KPI modal always did —
+         a KR with one KPI keeps reading exactly as before. */
+      pk.name=String(row.name||"").trim()||kr.statement;
+      pk.targetType=row.kpiType;
+      if(row.kpiType==="binary"){ pk.direction=null; pk.target=null; pk.unit=null; delete pk.statistic; delete pk.readCount; delete pk.readsFrom; }
+      else {
+        pk.direction=(row.kpiDir==="decrease")?"down":"up";
+        pk.target=parseTargetNum(row.kpiTarget);
+        pk.unit=row.kpiUnit||null;
+        if(row.kpiType==="statistical"){ pk.statistic=row.kpiStatistic||"average"; pk.readCount=(row.kpiReadCount===""||row.kpiReadCount==null)?"":Number(row.kpiReadCount);
+          if(row.kpiReadsFrom) pk.readsFrom=row.kpiReadsFrom; else delete pk.readsFrom; }
+        else { delete pk.statistic; delete pk.readCount; delete pk.readsFrom; }
+      }
+    });
+    const dropped=exec.kpis.filter(k=>k.hostType==="keyResult" && k.hostId===kr.id && !keep[k.id]).map(k=>k.id);
+    if(dropped.length){
+      exec.kpis=exec.kpis.filter(k=>dropped.indexOf(k.id)<0);
+      // readings belong to the KPI, so they go with it rather than lingering unreachable
+      exec.kpiUpdates=(exec.kpiUpdates||[]).filter(u=>dropped.indexOf(u.kpiId)<0);
     }
   }
   draftKr=null; draftKrFor=null; addingFor=null; editingSub=null;
