@@ -1031,15 +1031,32 @@
 
   // Roll-up a board into the metrics a KPI/KR can read. A tile in the last column counts as "closed"
   // (not on/at-risk/breached). Also returns per-column tile counts.
+  /* A backlog tile is parked: it has reached no column, so no stage clock applies to it. That is the
+     whole definition — there is no "ignore the clock" flag, because a tile cannot then be both in a
+     column and exempt from it. Anything without a column is in the backlog. */
+  function tileInBacklog(tile) {
+    return !tile || tile.col == null || tile.col === '';
+  }
+  function backlogTiles(board) {
+    return ((board && board.tiles) || []).filter(tileInBacklog);
+  }
+  function activeTiles(board) {
+    return ((board && board.tiles) || []).filter(function (t) { return !tileInBacklog(t); });
+  }
+
   function boardSummary(board, todayIso) {
     board = board || {};
     var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
     var lastColId = cols.length ? cols[cols.length - 1].id : null;
     var laneById = {}; for (var i = 0; i < lanes.length; i++) laneById[lanes[i].id] = lanes[i];
     var perColumn = {}; for (var c = 0; c < cols.length; c++) perColumn[cols[c].id] = 0;
-    var sum = { onTrack: 0, atRisk: 0, breached: 0, closed: 0, total: tiles.length };
+    var sum = { onTrack: 0, atRisk: 0, breached: 0, closed: 0, backlog: 0, total: tiles.length };
     for (var t = 0; t < tiles.length; t++) {
       var tile = tiles[t];
+      /* Parked tiles are counted separately and never health-checked. Without this they fall through to
+         tileHealth, which reads a column deadline they do not have, and every one of them reports
+         on-track — a board could show "5 on track" with nothing actually started. */
+      if (tileInBacklog(tile)) { sum.backlog++; continue; }
       if (perColumn.hasOwnProperty(tile.col)) perColumn[tile.col]++;
       if (tile.col === lastColId) { sum.closed++; continue; }
       var h = tileHealth(tile, laneById[tile.lane], todayIso);
@@ -1047,7 +1064,7 @@
       else if (h.status === 'at-risk') sum.atRisk++;
       else sum.onTrack++;
     }
-    return { perColumn: perColumn, onTrack: sum.onTrack, atRisk: sum.atRisk, breached: sum.breached, closed: sum.closed, total: sum.total };
+    return { perColumn: perColumn, onTrack: sum.onTrack, atRisk: sum.atRisk, breached: sum.breached, closed: sum.closed, backlog: sum.backlog, total: sum.total };
   }
 
   // Pure transition: move a tile. Advancing to a new column resets days-in-column (enteredCol = today);
@@ -2868,7 +2885,8 @@
     milestoneStepContribution: milestoneStepContribution,
     milestoneKrScore: milestoneKrScore,
     tileHealth: tileHealth,
-    boardSummary: boardSummary,
+    boardSummary: boardSummary, tileInBacklog: tileInBacklog,
+    backlogTiles: backlogTiles, activeTiles: activeTiles,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
     parseReads: parseReads,

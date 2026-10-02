@@ -170,6 +170,63 @@ setTimeout(() => {
     mb().querySelector('[data-kbte-del]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
     ok(w.eval('(exec.boards[0].tiles||[]).length') === 0, "a tile can be deleted from its editor");
 
+    /* ---- the backlog ----
+       A parked tile has no column, so no stage clock applies to it. That IS the definition — there is no
+       "exempt from the clock" flag, which would allow a tile to be both in a column and not timed. */
+    const RDeng = require((process.env.RD_SRC || '/home/claude/work') + '/rdcore.js');
+    const bd = { columns: [{ id: 'c1' }, { id: 'c2' }], swimlanes: [{ id: 'L', maxDaysPerCol: 14 }],
+      tiles: [{ id: 'A', lane: 'L', col: 'c1', enteredCol: '2026-09-28' },
+              { id: 'B', lane: 'L', col: null }, { id: 'C', lane: 'L' }] };
+    ok(RDeng.tileInBacklog({ col: null }) && RDeng.tileInBacklog({}), "a tile with no column is in the backlog");
+    ok(!RDeng.tileInBacklog({ col: 'c1' }), "…and one in a column is not");
+    ok(RDeng.backlogTiles(bd).map(t => t.id).join(',') === 'B,C', "the backlog is every parked tile");
+    ok(RDeng.activeTiles(bd).map(t => t.id).join(',') === 'A', "…and the rest are active");
+
+    const sumBl = RDeng.boardSummary(bd, '2026-10-01');
+    ok(sumBl.backlog === 2, "the summary counts them separately (" + sumBl.backlog + ")");
+    /* Without the exclusion a parked tile falls through to tileHealth, which reads a deadline it does not
+       have, and reports on-track — a board could read "5 on track" with nothing started. */
+    ok(sumBl.onTrack === 1, "…and does NOT count them as on track (" + sumBl.onTrack + ")");
+    ok(sumBl.total === 3, "…while the total still counts every tile");
+
+    // in the app
+    w.eval(`(function(){var b=exec.boards[0];
+      b.tiles=[{id:"A",name:"Acme",lane:b.swimlanes[0].id,col:b.columns[0].id,enteredCol:"2026-09-25"},
+               {id:"P",name:"Parked",lane:b.swimlanes[0].id,col:null,enteredCol:null}];
+      renderAll();})();`);
+    ok(host().querySelectorAll('.kb-backlog').length === 1, "the board shows a backlog band");
+    ok(host().querySelectorAll('.kb-tile.parked').length === 1, "…holding the parked tile");
+    ok(host().querySelectorAll('.kb-cell .kb-tile').length === 1, "…and not the live one, which stays in the grid");
+    const parkedMeta = host().querySelector('.kb-tile.parked .kb-tdays').textContent;
+    ok(/\u2014/.test(parkedMeta), "a parked tile shows no day count (" + parkedMeta + ")");
+    ok(/awaiting start/.test(host().querySelector('.kb-tile.parked').textContent), "…saying it is awaiting start");
+    ok([...host().querySelectorAll('.kb-chip')].some(c => /backlog/.test(c.textContent)),
+      "the summary carries a backlog chip");
+    ok(!!host().querySelector('[data-kbaddbacklog]'), "a tile can be added straight to the backlog");
+
+    // parking a live tile clears BOTH fields
+    const zone = host().querySelector('[data-kbbacklogdrop]');
+    ok(!!zone, "the backlog is a drop target");
+    const liveTile = host().querySelector('.kb-cell .kb-tile');
+    liveTile.dispatchEvent(Object.assign(new w.Event('dragstart', { bubbles: true }),
+      { dataTransfer: { effectAllowed: '', setData() {}, getData() { return ''; } } }));
+    zone.dispatchEvent(Object.assign(new w.Event('drop', { bubbles: true }),
+      { dataTransfer: { getData() { return ''; } } }));
+    ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="A").col') === null, "dropping a tile there parks it");
+    /* Cleared, not paused: a tile parked for two months must not come back already breached. */
+    ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="A").enteredCol') === null,
+      "…clearing its time in stage, so it restarts when someone starts it again");
+
+    // the sales app has the same thing
+    const salesBl = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
+    /* The class alone proves nothing — it is in the stylesheet whether or not the band is mounted.
+       Check that the band is actually PUT in the board's markup. */
+    ok(/\$\{summary\}\$\{backlog\}/.test(salesBl), "the sales app mounts the backlog band into its board");
+    ok(/const backlog=\(function\(\)\{/.test(salesBl), "…and builds it");
+    ok(/data-kbbacklogdrop/.test(salesBl), "…as a drop target");
+    ok(/t\.col=null; t\.enteredCol=null;/.test(salesBl), "…clearing both fields on park, exactly as the execution app does");
+    ok(/data-kbaddbacklog/.test(salesBl), "…and can add a tile straight to it");
+
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,
       "a board's columns do not become stage gates");
@@ -189,6 +246,48 @@ setTimeout(() => {
       "one objective on Kanban does not put another there — the mode is per objective");
   } catch (e) {
     ok(false, 'kanban view flow threw: ' + (e && e.message));
+  }
+
+  /* ---- the sales app carries the same editor ----
+     The two apps have diverged a long way and every port between them this session has lost something:
+     a shadowed function, module state, 32 CSS rules. Compare the built files directly rather than
+     trusting that the port was complete. */
+  try {
+    const salesSrc = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
+    const execSrc = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/execution_app.html', 'utf8');
+
+    ok(/<button class="kb-tedit" draggable="false" data-kbtiledit=/.test(salesSrc),
+      "the sales app's tiles carry the edit button too");
+    ok(/function kbTileEdit\(/.test(salesSrc), "…and the editor behind it");
+    ok(/data-kbtiledit\]"\)\.forEach/.test(salesSrc), "…wired to a click");
+    ok(/closest\("\[data-kbtiledit\]"\)/.test(salesSrc), "…with the drag guard, so the click is not swallowed");
+
+    // the behaviour that is easy to get subtly wrong on a copy
+    ok(/else if\(moved\) t\.enteredCol=todayIso\(\);/.test(salesSrc),
+      "…and re-stamps the stage clock only when the stage actually changed");
+
+    // the editor function itself must be the SAME code in both, comments aside
+    const body = (src) => {
+      const i = src.indexOf('function kbTileEdit(');
+      if (i < 0) return null;
+      const j = src.indexOf('\nfunction ', i + 10);
+      return src.slice(i, j).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').split(/\s+/).join(' ');
+    };
+    ok(body(salesSrc) !== null && body(salesSrc) === body(execSrc),
+      "the two apps run the SAME editor code — a copy that drifts is how they diverge");
+
+    // and the styling has to come across, not just the markup
+    const kbteSelectors = (src) => {
+      const doc = new JSDOM(src, { virtualConsole: new VirtualConsole() }).window.document;
+      const rules = [...doc.styleSheets].flatMap(ss => { try { return [...ss.cssRules]; } catch (e) { return []; } });
+      return new Set(rules.filter(r => r.selectorText && /kb-tedit|kbte-foot/.test(r.selectorText)).map(r => r.selectorText));
+    };
+    const sSel = kbteSelectors(salesSrc), eSel = kbteSelectors(execSrc);
+    ok(eSel.size >= 4, "the execution app styles the edit button (" + eSel.size + " rules)");
+    ok([...eSel].every(x => sSel.has(x)),
+      "…and the sales app has every one of those rules, so the button is not invisible there");
+  } catch (e) {
+    ok(false, 'sales parity check threw: ' + (e && e.message));
   }
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });

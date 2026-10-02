@@ -312,6 +312,8 @@
   .rp-fin.over{border-left-color:var(--bad)}
   .rp-fin button{margin-left:auto;white-space:nowrap}
   .rp-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .kbte-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  button.ghost.danger{border-color:var(--pill-bad-bd);color:var(--pill-bad-fg)}
   .rp-why{flex:1;min-width:0;height:27px;font-size:11.5px}
   /* per-gate revision mark in the table */
   .gv-mark{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:4px;white-space:nowrap;
@@ -333,6 +335,19 @@
   .ph-chip.add{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
   .ph-chip.rem{background:var(--pill-bad-bg);color:var(--pill-bad-fg);border-color:var(--pill-bad-bd)}
   .ph-chip.mov{background:var(--pill-active-bg);color:var(--pill-active-fg);border-color:var(--pill-active-bd)}
+  .kb-backlog{margin-top:14px;border:1px dashed var(--line);border-radius:8px;background:var(--panel2)}
+  .kb-blhead{display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px dashed var(--line)}
+  .kb-bllab{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.06em}
+  .kb-blcnt{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+  .kb-blnote{font-size:10.5px;color:var(--muted)}
+  .kb-blhead button{margin-left:auto}
+  .kb-bldrop{display:flex;gap:8px;padding:10px;flex-wrap:wrap;min-height:54px;align-items:flex-start}
+  .kb-bldrop.kb-over{background:var(--pill-active-bg)}
+  .kb-blempty{font-size:11px;color:var(--muted);align-self:center}
+  /* A parked tile is deliberately colourless: nothing on it should imply a clock. */
+  .kb-tile.parked{width:168px;border-color:var(--line);background:var(--panel)}
+  .kb-tile.parked .kb-tdays{color:var(--muted);font-weight:400}
+  .kb-chip.backlog{border-style:dashed;background:var(--panel2);color:var(--muted)}
   .kb-tile{position:relative}
   .kb-tedit{position:absolute;top:3px;right:3px;width:18px;height:18px;padding:0;line-height:1;
     font-size:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
@@ -4394,7 +4409,7 @@ function kbTileEdit(tid){
       `<label>Entered this stage<input type="date" data-kbte-entered value="${esc(t.enteredCol||"")}"></label>`+
     `</div>`+
     `<p class="hint">Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</p>`+
-    `<div class="rp-foot"><button class="ghost danger" data-kbte-del>Delete tile</button>`+
+    `<div class="kbte-foot"><button class="ghost danger" data-kbte-del>Delete tile</button>`+
       `<span style="flex:1"></span>`+
       `<button class="ghost" data-kbte-cancel>Cancel</button>`+
       `<button class="act" data-kbte-save>Save</button></div>`);
@@ -4454,12 +4469,29 @@ function renderKanban(host){
     return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}</td>${cells}</tr>`;
   }).join("");
 
-  const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span></div>`;
+  const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span>`+
+    (sum.backlog?`<span class="kb-chip backlog">${sum.backlog} backlog</span>`:"")+`</div>`;
+  /* The backlog: a board-level parking area, deliberately outside the grid. A tile here has no column,
+     so no lane rule applies to it yet — which is why it is not a row in the table: asking which swimlane
+     an unstarted tile sits in is a question with no answer. Dragging it into a stage decides both. */
+  const backlog=(function(){
+    const parked=RD.backlogTiles(board);
+    const tiles=parked.map(t=>
+      `<div class="kb-tile parked" draggable="true" data-kbtile="${t.id}">`+
+        `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
+        `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
+        `<div class="kb-tmeta"><span class="kb-tdays">\u2014</span><span>awaiting start</span></div></div>`).join("");
+    return `<div class="kb-backlog"><div class="kb-blhead">`+
+      `<span class="kb-bllab">BACKLOG</span><span class="kb-blcnt">${parked.length}</span>`+
+      `<span class="kb-blnote">not started \u2014 no clock running</span>`+
+      `<button class="ghost mini" data-kbaddbacklog="${board.id}">+ tile</button></div>`+
+      `<div class="kb-bldrop" data-kbbacklogdrop="1">${tiles||`<span class="kb-blempty">drag a tile here to park it</span>`}</div></div>`;
+  })();
   const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
   const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
   const grid=`<div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 
-  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",sum.total,acts)}<div class="item-list${listOpen("SG")}"><div class="kb-root">${bar}${cfg}${grid}${summary}<p class="kb-legend">drag a tile between columns to advance its stage, or between swimlanes to change its rules.</p></div></div></div>`;
+  host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",sum.total,acts)}<div class="item-list${listOpen("SG")}"><div class="kb-root">${bar}${cfg}${grid}${summary}${backlog}<p class="kb-legend">drag a tile between columns to advance its stage, or between swimlanes to change its rules.</p></div></div></div>`;
   wireKanban(host);
 }
 
@@ -4506,8 +4538,30 @@ function wireKanbanDnd(host){
       const board=boardById(activeBoardId()); if(!board)return;
       const nb=RD.dropTile(board, id, colId, laneId, todayIso());
       const idx=exec.boards.findIndex(b=>b.id===board.id); if(idx>=0) exec.boards[idx]=nb;
-      renderAll();
+      renderAll(); persist();
     });
+  });
+  /* Dropping back into the backlog parks the tile: column and entered-stage date are both cleared, so
+     the clock is not merely paused but gone. A tile parked for two months should not come back already
+     breached — it restarts when someone actually starts it again. */
+  host.querySelectorAll("[data-kbbacklogdrop]").forEach(zone=>{
+    zone.addEventListener("dragover",e=>{ e.preventDefault(); zone.classList.add("kb-over"); });
+    zone.addEventListener("dragleave",()=>zone.classList.remove("kb-over"));
+    zone.addEventListener("drop",e=>{ e.preventDefault(); zone.classList.remove("kb-over");
+      const id=_kbDrag; if(!id) return;
+      const board=boardById(activeBoardId()); if(!board) return;
+      const t=(board.tiles||[]).find(x=>x.id===id); if(!t) return;
+      t.col=null; t.enteredCol=null;
+      renderAll(); persist();
+    });
+  });
+  host.querySelectorAll("[data-kbaddbacklog]").forEach(b=>b.onclick=()=>{
+    const board=boardById(b.dataset.kbaddbacklog); if(!board) return;
+    const nm=prompt("Tile (workstream driver) name:"); if(!nm) return;
+    (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,
+      lane:(board.swimlanes&&board.swimlanes[0]?board.swimlanes[0].id:null),
+      col:null, startDate:null, enteredCol:null});
+    renderAll(); persist();
   });
 }
 
