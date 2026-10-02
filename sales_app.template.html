@@ -247,6 +247,12 @@
   .kb-blcnt{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
   .kb-blnote{font-size:10.5px;color:var(--muted)}
   .kb-blhead button{margin-left:auto}
+  .kb-bltog{background:none;border:0;color:var(--muted);font-size:9px;cursor:pointer;padding:2px 3px;line-height:1}
+  .kb-bltog:hover{color:var(--ink)}
+  .kb-backlog.closed{padding-bottom:0}
+  .kb-backlog.closed .kb-blhead{border-bottom:0}
+  .kb-lanadd{margin-top:6px;opacity:0;transition:opacity .12s}
+  .kb-laneh:hover .kb-lanadd,.kb-bllane:hover .kb-lanadd,.kb-lanadd:focus{opacity:1}
   .kb-blrow{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-top:1px dashed var(--line)}
   .kb-blrow:first-of-type{border-top:0}
   /* Unassigned is not a lane, so it is divided off rather than listed as one more of them. */
@@ -3177,19 +3183,28 @@ function renderGates(){
   wireExec(host);
 }
 // ---- Kanban render (K2): board tabs + columns x swimlanes grid + tiles + config ----
+/* Whether the backlog is open is a reading preference, not board data: a colleague collapsing it
+   should not change the board for everyone. */
+let kbBacklogOpen=(function(){ try{ return localStorage.getItem("rd_kb_backlog")!=="0"; }catch(e){ return true; } })();
+function kbToggleBacklog(){ kbBacklogOpen=!kbBacklogOpen;
+  try{ localStorage.setItem("rd_kb_backlog", kbBacklogOpen?"1":"0"); }catch(e){}
+  renderAll(); }
 let kanbanCfgOpen=null;
 let _kbDrag=null;
-/* Tile editor. A tile carries more than a name — its swimlane and its column both change what the board
-   computes, so editing has to offer them. Moving the stage here is the same action as dragging the tile
-   and re-stamps enteredCol so the days-in-stage clock restarts; leaving the stage alone must NOT
-   re-stamp, or every edit would silently reset the age that drives the at-risk and breached colours. */
-function kbTileEdit(tid){
-  const board=(exec.boards||[]).find(b=>(b.tiles||[]).some(t=>t.id===tid));
-  if(!board) return;
-  const t=(board.tiles||[]).find(x=>x.id===tid); if(!t) return;
-  const lanes=(board.swimlanes||[]).map(l=>`<option value="${esc(l.id)}"${l.id===t.lane?" selected":""}>${esc(l.name||l.id)}</option>`).join("");
-  const cols=(board.columns||[]).map(c=>`<option value="${esc(c.id)}"${c.id===t.col?" selected":""}>${esc(c.name||c.id)}</option>`).join("");
-  openModal("Edit tile",
+/* Tile editor, shared by editing and adding. A tile carries more than a name — its swimlane and its
+   column both change what the board computes, so both paths offer them rather than prompting for a name
+   alone. Adding is the same form with an empty draft: one place to change when a tile gains a field.
+   Moving the stage re-stamps enteredCol so the days-in-stage clock restarts, the same as dragging; NOT
+   moving it must leave the stamp alone, or every edit silently resets the age that drives the colours. */
+function kbTileForm(opts){
+  const board=opts.board; if(!board) return;
+  const isNew=!!opts.isNew;
+  const t=opts.tile;
+  const lanes=`<option value=""${(t.lane==null||t.lane==="")?" selected":""}>\u2014 unassigned \u2014</option>`+
+    (board.swimlanes||[]).map(l=>`<option value="${esc(l.id)}"${l.id===t.lane?" selected":""}>${esc(l.name||l.id)}</option>`).join("");
+  const cols=`<option value=""${(t.col==null||t.col==="")?" selected":""}>\u2014 backlog (not started) \u2014</option>`+
+    (board.columns||[]).map(c=>`<option value="${esc(c.id)}"${c.id===t.col?" selected":""}>${esc(c.name||c.id)}</option>`).join("");
+  openModal(isNew?"Add tile":"Edit tile",
     `<div class="ed">`+
       `<label>Name<input type="text" data-kbte-name value="${esc(t.name||"")}"></label>`+
       `<label>Swimlane<select data-kbte-lane>${lanes}</select></label>`+
@@ -3197,30 +3212,55 @@ function kbTileEdit(tid){
       `<label>Started<input type="date" data-kbte-start value="${esc(t.startDate||"")}"></label>`+
       `<label>Entered this stage<input type="date" data-kbte-entered value="${esc(t.enteredCol||"")}"></label>`+
     `</div>`+
-    `<p class="hint">Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</p>`+
-    `<div class="kbte-foot"><button class="ghost danger" data-kbte-del>Delete tile</button>`+
+    `<p class="hint">A tile left in the backlog runs no clock. Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</p>`+
+    `<div class="kbte-foot">`+
+      (isNew?"":`<button class="ghost danger" data-kbte-del>Delete tile</button>`)+
       `<span style="flex:1"></span>`+
       `<button class="ghost" data-kbte-cancel>Cancel</button>`+
-      `<button class="act" data-kbte-save>Save</button></div>`);
+      `<button class="act" data-kbte-save>${isNew?"Add":"Save"}</button></div>`);
   const host=document.getElementById("modalBody"); if(!host) return;
   const val=sel=>{ const el=host.querySelector(sel); return el?el.value:""; };
   host.querySelector("[data-kbte-save]").onclick=()=>{
     const nm=val("[data-kbte-name]").trim();
     if(!nm){ setMsg("A tile needs a name.","err"); return; }
-    const newCol=val("[data-kbte-col]");
-    const moved=(newCol!==t.col);
-    t.name=nm; t.lane=val("[data-kbte-lane]"); t.col=newCol;
-    t.startDate=val("[data-kbte-start]")||t.startDate;
+    const newCol=val("[data-kbte-col]")||null;
+    const moved=(newCol!==(t.col||null));
+    t.name=nm;
+    t.lane=val("[data-kbte-lane]")||null;
+    t.col=newCol;
+    t.startDate=val("[data-kbte-start]")||t.startDate||null;
     const ent=val("[data-kbte-entered]");
     if(ent && ent!==t.enteredCol) t.enteredCol=ent;
-    else if(moved) t.enteredCol=todayIso();
+    else if(moved) t.enteredCol=newCol?todayIso():null;   // back to the backlog clears the clock entirely
+    /* A NEW tile created straight into a stage has no previous column to have "moved" from, so the
+       branch above never fires and its clock would never start — it would sit at 0 days forever. */
+    if(isNew && newCol && t.enteredCol==null) t.enteredCol=todayIso();
+    if(isNew) (board.tiles=board.tiles||[]).push(t);
     closeModal(); renderAll(); persist();
   };
   host.querySelector("[data-kbte-cancel]").onclick=()=>closeModal();
-  host.querySelector("[data-kbte-del]").onclick=()=>{
-    board.tiles=(board.tiles||[]).filter(x=>x.id!==tid);
+  const del=host.querySelector("[data-kbte-del]");
+  if(del) del.onclick=()=>{
+    board.tiles=(board.tiles||[]).filter(x=>x.id!==t.id);
     closeModal(); renderAll(); persist();
   };
+}
+function kbTileEdit(tid){
+  const board=(exec.boards||[]).find(b=>(b.tiles||[]).some(t=>t.id===tid));
+  if(!board) return;
+  const t=(board.tiles||[]).find(x=>x.id===tid); if(!t) return;
+  kbTileForm({board, tile:t, isNew:false});
+}
+/* Adding from a lane's own button pre-fills that lane, so the common case needs no choosing. A grid row
+   also pre-fills the first stage, since a tile added there is being started; a backlog group leaves the
+   stage empty, since one added there is not. */
+function kbTileAdd(boardId, laneId, colId){
+  const board=boardById(boardId); if(!board) return;
+  kbTileForm({board, isNew:true, tile:{
+    id:newId("tile"), name:"",
+    lane:(laneId==null||laneId==="")?null:laneId,
+    col:(colId==null||colId==="")?null:colId,
+    startDate:null, enteredCol:null }});
 }
 function renderKanban(host){
   const boards=boardsFor(selectedObj);
@@ -3254,7 +3294,9 @@ function renderKanban(host){
       }).join("");
       return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
     }).join("");
-    return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}</td>${cells}</tr>`;
+    return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}`+
+      `<button class="ghost mini kb-lanadd" data-kbaddtile="${board.id}" data-kblane="${esc(lane.id)}" data-kbcol="${esc(board.columns[0]?board.columns[0].id:"")}">+ tile</button>`+
+      `</td>${cells}</tr>`;
   }).join("");
 
   const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span>`+
@@ -3276,16 +3318,20 @@ function renderKanban(host){
         ? `will use max ${g.lane.maxDaysPerCol}d/col` : (g.unassigned?"lane chosen at start":"");
       return `<div class="kb-blrow${g.unassigned?" nolane":""}">`+
         `<div class="kb-bllane"><div class="kb-bllanenm">${esc(g.name)}</div>`+
-        (lim?`<div class="kb-bllanelim">${esc(lim)}</div>`:"")+`</div>`+
+        (lim?`<div class="kb-bllanelim">${esc(lim)}</div>`:"")+
+        `<button class="ghost mini kb-lanadd" data-kbaddtile="${board.id}" data-kblane="${g.unassigned?"":esc(g.laneId)}" data-kbcol="">+ tile</button></div>`+
         `<div class="kb-bldrop" data-kbbacklogdrop="${g.unassigned?"":esc(g.laneId)}">`+
           (g.tiles.map(tileHtml).join("")||`<span class="kb-blempty">${g.unassigned?"drag a tile here to leave its lane open":"drag a tile here to put it in this lane"}</span>`)+
         `</div></div>`;
     }).join("");
-    return `<div class="kb-backlog"><div class="kb-blhead">`+
+    /* Collapsed, the count stays visible: a backlog you cannot see is still work you have committed to,
+       and hiding the number would make it genuinely forgettable. */
+    return `<div class="kb-backlog${kbBacklogOpen?"":" closed"}"><div class="kb-blhead">`+
+      `<button class="kb-bltog" data-kbbltoggle="1" aria-expanded="${kbBacklogOpen?"true":"false"}" title="${kbBacklogOpen?"Collapse":"Expand"} the backlog">${kbBacklogOpen?"\u25bc":"\u25b6"}</button>`+
       `<span class="kb-bllab">BACKLOG</span><span class="kb-blcnt">${parkedCount}</span>`+
-      `<span class="kb-blnote">not started \u2014 no clock running</span>`+
-      `<button class="ghost mini" data-kbaddbacklog="${board.id}">+ tile</button></div>`+
-      `${rows}</div>`;
+      `<span class="kb-blnote">${kbBacklogOpen?"not started \u2014 no clock running":(parkedCount?`${parkedCount} parked, no clock running`:"empty")}</span>`+
+      `<button class="ghost mini" data-kbaddtile="${board.id}" data-kblane="" data-kbcol="">+ tile</button></div>`+
+      (kbBacklogOpen?`${rows}`:"")+`</div>`;
   })();
   const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
   const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
@@ -3309,7 +3355,12 @@ function wireKanban(host){
   host.querySelectorAll("[data-kbcfg]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=(kanbanCfgOpen===b.dataset.kbcfg)?null:b.dataset.kbcfg; renderAll(); });
   host.querySelectorAll("[data-kbcfgclose]").forEach(b=>b.onclick=()=>{ kanbanCfgOpen=null; renderAll(); });
   host.querySelectorAll("[data-kbtiledit]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); kbTileEdit(b.dataset.kbtiledit); });
-  host.querySelectorAll("[data-kbaddtile]").forEach(b=>b.onclick=()=>{ const board=boardById(b.dataset.kbaddtile); const nm=prompt("Tile (workstream driver) name:"); if(!nm)return; (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,lane:board.swimlanes[0].id,col:board.columns[0].id,startDate:todayIso(),enteredCol:todayIso()}); renderAll(); });
+  /* Every + tile opens the same form rather than a bare name prompt, so a tile can be given its lane and
+     stage at the moment it is created. A lane's own button pre-fills that lane via data-kblane. */
+  host.querySelectorAll("[data-kbaddtile]").forEach(b=>b.onclick=()=>
+    kbTileAdd(b.dataset.kbaddtile, b.dataset.kblane, b.dataset.kbcol));
+  const blt=host.querySelector("[data-kbbltoggle]");
+  if(blt) blt.onclick=kbToggleBacklog;
   host.querySelectorAll("[data-kbboardname]").forEach(el=>el.onchange=()=>{ boardById(el.dataset.kbboardname).name=el.value; renderAll(); });
   host.querySelectorAll("[data-kbcolname]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const c=board.columns.find(x=>x.id===el.dataset.kbcolname); if(c){ c.name=el.value; renderAll(); } });
   host.querySelectorAll("[data-kbcoldel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.columns.length<=1)return; board.columns=board.columns.filter(x=>x.id!==b.dataset.kbcoldel); board.tiles=(board.tiles||[]).filter(t=>t.col!==b.dataset.kbcoldel); renderAll(); });
@@ -3360,13 +3411,7 @@ function wireKanbanDnd(host){
       renderAll(); persist();
     });
   });
-  host.querySelectorAll("[data-kbaddbacklog]").forEach(b=>b.onclick=()=>{
-    const board=boardById(b.dataset.kbaddbacklog); if(!board) return;
-    const nm=prompt("Tile (workstream driver) name:"); if(!nm) return;
-    (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,
-      lane:null, col:null, startDate:null, enteredCol:null});
-    renderAll(); persist();
-  });
+
 }
 
 function renderTasks(){

@@ -25,7 +25,7 @@ const dom = new JSDOM(html, {
   }
 });
 
-setTimeout(() => {
+setTimeout(async () => {
   const w = dom.window, d = w.document;
   try {
     w.eval(`persist=function(){};
@@ -160,9 +160,13 @@ setTimeout(() => {
 
     host().querySelector('[data-kbtiledit]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
     const colSel = mb().querySelector('[data-kbte-col]');
-    colSel.value = colSel.options[1].value;
+    /* options[0] is now the "backlog (not started)" choice, so the first real stage is options[1]. */
+    /* Pick the LAST stage, so it is a real change whatever the tile started in. */
+    colSel.value = colSel.options[colSel.options.length - 1].value;
+    const wantCol = colSel.value;
+    ok(wantCol !== '', "the stage select offers real columns after the backlog option");
     mb().querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
-    ok(w.eval('exec.boards[0].tiles[0].col') === w.eval('exec.boards[0].columns[1].id'), "changing the stage moves the tile");
+    ok(w.eval('exec.boards[0].tiles[0].col') === wantCol, "changing the stage moves the tile");
     ok(w.eval('exec.boards[0].tiles[0].enteredCol') !== stampBefore,
       "…and DOES restart the clock, the same as dragging it there");
 
@@ -202,7 +206,7 @@ setTimeout(() => {
     ok(/awaiting start/.test(host().querySelector('.kb-tile.parked').textContent), "…saying it is awaiting start");
     ok([...host().querySelectorAll('.kb-chip')].some(c => /backlog/.test(c.textContent)),
       "the summary carries a backlog chip");
-    ok(!!host().querySelector('[data-kbaddbacklog]'), "a tile can be added straight to the backlog");
+    ok(!!host().querySelector('.kb-blhead [data-kbaddtile]'), "a tile can be added straight to the backlog");
 
     // parking a live tile clears BOTH fields
     const zone = host().querySelector('[data-kbbacklogdrop]');
@@ -269,8 +273,60 @@ setTimeout(() => {
       "…and dropping into unassigned clears it rather than storing a placeholder lane");
 
     // a new backlog tile must not be forced into a lane — that is what unassigned exists to avoid
-    ok(/lane:null, col:null, startDate:null, enteredCol:null/.test(html),
-      "a tile added to the backlog starts with NO lane");
+    ok(/lane:\(laneId==null\|\|laneId===""\)\?null:laneId/.test(html),
+      "a tile added with no lane given starts with NO lane");
+
+    /* ---- collapsible backlog ---- */
+    ok(!!host().querySelector('[data-kbbltoggle]'), "the backlog has a collapse toggle");
+    ok(w.eval('kbBacklogOpen') === true, "…open by default");
+    const rowsOpen = host().querySelectorAll('.kb-blrow').length;
+    host().querySelector('[data-kbbltoggle]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval('kbBacklogOpen') === false, "clicking it collapses the backlog");
+    ok(host().querySelectorAll('.kb-blrow').length === 0, "…hiding the groups");
+    /* A backlog you cannot see is still work you have committed to: hiding the number would make it
+       genuinely forgettable, which is the opposite of why the backlog exists. */
+    ok(!!host().querySelector('.kb-blcnt'), "…but the COUNT stays visible while collapsed");
+    ok(!!host().querySelector('[data-kbaddtile]'), "…and a tile can still be added");
+    host().querySelector('[data-kbbltoggle]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(host().querySelectorAll('.kb-blrow').length === rowsOpen, "clicking again reopens it");
+    ok(/localStorage\.setItem\("rd_kb_backlog"/.test(html), "the choice is remembered per person, not per board");
+
+    /* ---- + tile opens the form, not a prompt ---- */
+    host().querySelector('.kb-blhead [data-kbaddtile]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const addMb = () => d.getElementById('modalBody');
+    ok(!!addMb() && !!addMb().querySelector('[data-kbte-name]'), "+ tile opens the tile form");
+    ok(!!addMb().querySelector('[data-kbte-lane]') && !!addMb().querySelector('[data-kbte-col]'),
+      "…offering lane and stage at creation, not just a name");
+    ok(!addMb().querySelector('[data-kbte-del]'), "…with no Delete on a tile that does not exist yet");
+    addMb().querySelector('[data-kbte-name]').value = 'Made in the form';
+    addMb().querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval('exec.boards[0].tiles.some(t=>t.name==="Made in the form")'), "saving creates the tile");
+    ok(!/prompt\("Tile \(workstream driver\) name:"\)/.test(html), "no name-only prompt remains");
+
+    /* ---- a + tile per swimlane ---- */
+    const gridAdds = [...host().querySelectorAll('.kb-laneh [data-kbaddtile]')];
+    const blAdds = [...host().querySelectorAll('.kb-bllane [data-kbaddtile]')];
+    ok(gridAdds.length >= 1, "each grid swimlane has its own + tile (" + gridAdds.length + ")");
+    ok(blAdds.length >= 1, "…and so does each backlog group (" + blAdds.length + ")");
+
+    gridAdds[gridAdds.length - 1].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const wantLane = gridAdds[gridAdds.length - 1].dataset.kblane;
+    ok(addMb().querySelector('[data-kbte-lane]').value === wantLane,
+      "a swimlane's button pre-fills THAT swimlane");
+    /* A tile added from a grid row is being started, so it also gets that board's first stage. */
+    ok(addMb().querySelector('[data-kbte-col]').value !== '', "…and the first stage, since it is being started");
+    addMb().querySelector('[data-kbte-name]').value = 'Into that lane';
+    addMb().querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const made = JSON.parse(w.eval('JSON.stringify(exec.boards[0].tiles.find(t=>t.name==="Into that lane"))'));
+    ok(made.lane === wantLane, "…and the tile lands in that swimlane");
+    /* Without this the new tile sits at 0 days forever: there is no previous column for it to have
+       "moved" from, so the re-stamp branch never fires. */
+    ok(made.enteredCol != null, "…with its clock started, since it was created straight into a stage");
+
+    blAdds[blAdds.length - 1].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(addMb().querySelector('[data-kbte-col]').value === '',
+      "a BACKLOG group's button leaves the stage empty — a tile added there is not being started");
+    addMb().querySelector('[data-kbte-cancel]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 
     // the sales app has the same thing
     const salesBl = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
@@ -280,13 +336,52 @@ setTimeout(() => {
     ok(/const backlog=\(function\(\)\{/.test(salesBl), "…and builds it");
     ok(/data-kbbacklogdrop/.test(salesBl), "…as a drop target");
     ok(/t\.col=null; t\.enteredCol=null;/.test(salesBl), "…clearing both fields on park, exactly as the execution app does");
-    ok(/data-kbaddbacklog/.test(salesBl), "…and can add a tile straight to it");
+    ok(/kb-blhead/.test(salesBl) && /data-kbaddtile/.test(salesBl), "…and can add a tile straight to it");
     ok(/RD\.backlogByLane\(board\)/.test(salesBl), "…grouped by lane as well");
     ok(/class="kb-blrow\$\{g\.unassigned\?" nolane":""\}/.test(salesBl), "…with its own unassigned group");
     ok(/t\.lane=\(lane===""\|\|lane==null\)\?null:lane;/.test(salesBl),
       "…assigning or clearing the lane on drop, exactly as the execution app does");
-    ok(/lane:null, col:null, startDate:null, enteredCol:null/.test(salesBl),
-      "…and adding new backlog tiles with no lane");
+    /* Matching the attribute only proves the button is in the markup. Boot the sales app and click it:
+       a toggle that renders and does nothing passes a source check and fails a user. */
+    const sdom = new JSDOM(salesBl, { runScripts: 'dangerously', virtualConsole: new VirtualConsole(),
+      url: 'https://x.test/?division=D&token=t', pretendToBeVisual: true,
+      beforeParse(sw) {
+        sw.matchMedia = () => ({ matches: false, addEventListener(){}, removeEventListener(){}, addListener(){}, removeListener(){} });
+        sw.requestAnimationFrame = cb => setTimeout(cb, 0); sw.cancelAnimationFrame = () => {};
+        sw.fetch = () => Promise.reject(new Error('no net'));
+        sw.cytoscape = function () { return { on(){}, ready(cb){ try{ cb && cb(); }catch(e){} }, fit(){}, resize(){},
+          destroy(){}, getElementById(){ return { length: 0, select(){} }; }, zoom(){ return 1; }, width(){ return 800; },
+          height(){ return 560; }, layout(){ return { run(){} }; }, elements(){ return { length: 0 }; },
+          $(){ return { unselect(){} }; } }; };
+      } });
+    await new Promise(r => setTimeout(r, 1200));
+    const sw = sdom.window, sd = sw.document;
+    sw.eval(`persist=function(){};
+      portfolio={units:[],divisions:[{id:"D",name:"D",kind:"sales"}],products:[],models:[],
+        initiatives:[{id:"I",name:"I",divisionId:"D"}],
+        objectives:[{id:"O1",statement:"O",divisionId:"D",initiativeId:"I",quarter:"2026Q2",plannedStart:2200,plannedEnd:2600}],
+        kpis:[],kpiDefs:[],kpiUpdates:[],catchupPlans:[]};
+      divisionId="D"; selectedObj="O1"; setGateMode("O1","kanban");`);
+    const sh = () => sd.getElementById('subSG');
+    sh().querySelector('[data-kbaddboard]').dispatchEvent(new sw.MouseEvent('click', { bubbles: true }));
+    const sTog = sh().querySelector('[data-kbbltoggle]');
+    ok(!!sTog, "…collapsible there too");
+    const sOpenRows = sh().querySelectorAll('.kb-blrow').length;
+    ok(sOpenRows > 0, "…with its groups showing");
+    sTog.dispatchEvent(new sw.MouseEvent('click', { bubbles: true }));
+    ok(sh().querySelectorAll('.kb-blrow').length === 0, "…and the toggle actually collapses it");
+    ok(!!sh().querySelector('.kb-blcnt'), "…keeping the count visible");
+    sh().querySelector('[data-kbbltoggle]').dispatchEvent(new sw.MouseEvent('click', { bubbles: true }));
+    ok(sh().querySelectorAll('.kb-blrow').length === sOpenRows, "…and reopens it");
+    ok(sh().querySelectorAll('.kb-laneh [data-kbaddtile]').length >= 1, "…with a + tile on each grid swimlane");
+    ok(sh().querySelectorAll('.kb-bllane [data-kbaddtile]').length >= 1, "…and on each backlog group");
+    ok(/localStorage\.setItem\("rd_kb_backlog"/.test(salesBl), "…remembering the choice per person");
+    ok(/function kbTileForm\(/.test(salesBl), "…using the same add/edit form");
+    ok(/kbTileAdd\(b\.dataset\.kbaddtile, b\.dataset\.kblane, b\.dataset\.kbcol\)/.test(salesBl),
+      "…with every + tile routed through it, lane and stage carried");
+    ok(/if\(isNew && newCol && t\.enteredCol==null\) t\.enteredCol=todayIso\(\);/.test(salesBl),
+      "…and a new tile created into a stage starting its clock");
+    ok(!/prompt\("Tile \(workstream driver\) name:"\)/.test(salesBl), "…and no name-only prompt left");
 
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,
@@ -324,8 +419,10 @@ setTimeout(() => {
     ok(/closest\("\[data-kbtiledit\]"\)/.test(salesSrc), "…with the drag guard, so the click is not swallowed");
 
     // the behaviour that is easy to get subtly wrong on a copy
-    ok(/else if\(moved\) t\.enteredCol=todayIso\(\);/.test(salesSrc),
-      "…and re-stamps the stage clock only when the stage actually changed");
+    /* The stamp is set on a move INTO a stage and cleared on a move back to the backlog — both in one
+       expression now, so match that rather than the older one-line form. */
+    ok(/else if\(moved\) t\.enteredCol=newCol\?todayIso\(\):null;/.test(salesSrc),
+      "…and re-stamps the stage clock only when the stage actually changed, clearing it on a park");
 
     // the editor function itself must be the SAME code in both, comments aside
     const body = (src) => {
