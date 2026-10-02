@@ -217,6 +217,61 @@ setTimeout(() => {
     ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="A").enteredCol') === null,
       "…clearing its time in stage, so it restarts when someone starts it again");
 
+    /* ---- grouped by lane, with an unassigned group ----
+       A parked tile may carry a lane (so its future rules are visible) or none. "Unassigned" is the
+       ABSENCE of a lane, not a placeholder id: a placeholder would need removing later and would show up
+       anywhere lanes are enumerated. */
+    const bd2 = { columns: [{ id: 'c1' }],
+      swimlanes: [{ id: 'L1', name: 'Standard', maxDaysPerCol: 14 }, { id: 'L2', name: 'Fast track', maxDaysPerCol: 7 }],
+      tiles: [{ id: 'A', lane: 'L1', col: 'c1' }, { id: 'P1', lane: 'L1', col: null },
+              { id: 'P2', lane: null, col: null }, { id: 'P3', col: null }] };
+    const gs = RDeng.backlogByLane(bd2);
+    ok(gs.length === 3, "every lane gets a group plus an unassigned one (" + gs.length + ")");
+    ok(gs[gs.length - 1].unassigned === true, "…with unassigned LAST");
+    ok(gs[0].tiles.map(t => t.id).join(',') === 'P1', "a parked tile sits under its lane");
+    ok(gs[1].tiles.length === 0, "…and an empty lane still gets a group, because the group is the drop target");
+    ok(gs[2].tiles.map(t => t.id).join(',') === 'P2,P3',
+      "a tile with no lane, or none stored at all, lands in unassigned");
+    ok(!gs.some(g => g.tiles.some(t => t.id === 'A')), "a started tile is in no backlog group");
+
+    // in the app
+    w.eval(`(function(){var b=exec.boards[0];
+      if(!b.swimlanes.some(function(l){return l.id==="L2";})) b.swimlanes.push({id:"L2",name:"Fast track",maxDaysPerCol:7});
+      b.tiles=[{id:"P1",name:"Parked",lane:b.swimlanes[0].id,col:null},{id:"P2",name:"No lane",lane:null,col:null}];
+      renderAll();})();`);
+    const blRows = [...host().querySelectorAll('.kb-blrow')];
+    ok(blRows.length === 3, "the backlog renders a row per lane plus unassigned (" + blRows.length + ")");
+    ok(blRows[blRows.length - 1].classList.contains('nolane'), "…unassigned last and marked as not a lane");
+    const lims = [...host().querySelectorAll('.kb-bllanelim')].map(e => e.textContent);
+    /* The limit is stated as FUTURE: nothing is ticking yet, so "max 14d/col" would read as a live rule. */
+    ok(lims.some(t => /will use max 14d\/col/.test(t)), "a lane group names the rule it WILL use (" + lims[0] + ")");
+    ok(lims.some(t => /lane chosen at start/.test(t)), "…and unassigned says the lane is still open");
+    ok(host().querySelectorAll('.kb-tile.parked.nolane').length === 1, "a lane-less tile is drawn differently");
+
+    // dragging between groups assigns and clears the lane
+    const zones = [...host().querySelectorAll('[data-kbbacklogdrop]')];
+    ok(zones.length === 3, "each group is a drop target");
+    ok(zones[zones.length - 1].dataset.kbbacklogdrop === '',
+      "…the unassigned one carrying no lane id, so dropping there stores nothing");
+    const noLane = host().querySelector('.kb-tile.parked.nolane');
+    noLane.dispatchEvent(Object.assign(new w.Event('dragstart', { bubbles: true }),
+      { dataTransfer: { effectAllowed: '', setData() {}, getData() { return ''; } } }));
+    zones[1].dispatchEvent(Object.assign(new w.Event('drop', { bubbles: true }), { dataTransfer: { getData() { return ''; } } }));
+    ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="P2").lane') === 'L2', "dropping into a lane group assigns that lane");
+    ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="P2").col') === null, "…without starting it");
+
+    const back = host().querySelector('[data-kbtile="P2"]');
+    back.dispatchEvent(Object.assign(new w.Event('dragstart', { bubbles: true }),
+      { dataTransfer: { effectAllowed: '', setData() {}, getData() { return ''; } } }));
+    [...host().querySelectorAll('[data-kbbacklogdrop]')].slice(-1)[0]
+      .dispatchEvent(Object.assign(new w.Event('drop', { bubbles: true }), { dataTransfer: { getData() { return ''; } } }));
+    ok(w.eval('exec.boards[0].tiles.find(t=>t.id==="P2").lane') === null,
+      "…and dropping into unassigned clears it rather than storing a placeholder lane");
+
+    // a new backlog tile must not be forced into a lane — that is what unassigned exists to avoid
+    ok(/lane:null, col:null, startDate:null, enteredCol:null/.test(html),
+      "a tile added to the backlog starts with NO lane");
+
     // the sales app has the same thing
     const salesBl = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
     /* The class alone proves nothing — it is in the stylesheet whether or not the band is mounted.
@@ -226,6 +281,12 @@ setTimeout(() => {
     ok(/data-kbbacklogdrop/.test(salesBl), "…as a drop target");
     ok(/t\.col=null; t\.enteredCol=null;/.test(salesBl), "…clearing both fields on park, exactly as the execution app does");
     ok(/data-kbaddbacklog/.test(salesBl), "…and can add a tile straight to it");
+    ok(/RD\.backlogByLane\(board\)/.test(salesBl), "…grouped by lane as well");
+    ok(/class="kb-blrow\$\{g\.unassigned\?" nolane":""\}/.test(salesBl), "…with its own unassigned group");
+    ok(/t\.lane=\(lane===""\|\|lane==null\)\?null:lane;/.test(salesBl),
+      "…assigning or clearing the lane on drop, exactly as the execution app does");
+    ok(/lane:null, col:null, startDate:null, enteredCol:null/.test(salesBl),
+      "…and adding new backlog tiles with no lane");
 
     // a board's own columns must not appear as gates anywhere
     ok(w.eval('exec.stageGates.filter(function(g){return g.objectiveId==="O1";}).length') === 1,

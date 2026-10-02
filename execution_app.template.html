@@ -341,7 +341,16 @@
   .kb-blcnt{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
   .kb-blnote{font-size:10.5px;color:var(--muted)}
   .kb-blhead button{margin-left:auto}
-  .kb-bldrop{display:flex;gap:8px;padding:10px;flex-wrap:wrap;min-height:54px;align-items:flex-start}
+  .kb-blrow{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-top:1px dashed var(--line)}
+  .kb-blrow:first-of-type{border-top:0}
+  /* Unassigned is not a lane, so it is divided off rather than listed as one more of them. */
+  .kb-blrow.nolane{border-top:1px solid var(--line);background:rgba(127,127,127,.05)}
+  .kb-bllane{flex:none;width:140px;padding-top:3px}
+  .kb-bllanenm{font-size:11.5px;font-weight:600}
+  .kb-blrow.nolane .kb-bllanenm{color:var(--muted)}
+  .kb-bllanelim{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+  .kb-bldrop{flex:1;display:flex;gap:8px;padding:0;flex-wrap:wrap;min-height:42px;align-items:flex-start}
+  .kb-tile.parked.nolane{border-style:dashed}
   .kb-bldrop.kb-over{background:var(--pill-active-bg)}
   .kb-blempty{font-size:11px;color:var(--muted);align-self:center}
   /* A parked tile is deliberately colourless: nothing on it should imply a clock. */
@@ -4471,21 +4480,33 @@ function renderKanban(host){
 
   const summary=`<div class="kb-summary"><span class="kb-chip ok">${sum.onTrack} on track</span><span class="kb-chip risk">${sum.atRisk} at risk</span><span class="kb-chip bad">${sum.breached} breached</span><span class="kb-chip">${sum.closed} closed</span><span class="kb-chip">${sum.total} total</span>`+
     (sum.backlog?`<span class="kb-chip backlog">${sum.backlog} backlog</span>`:"")+`</div>`;
-  /* The backlog: a board-level parking area, deliberately outside the grid. A tile here has no column,
-     so no lane rule applies to it yet — which is why it is not a row in the table: asking which swimlane
-     an unstarted tile sits in is a question with no answer. Dragging it into a stage decides both. */
+  /* The backlog: a parking area below the grid, grouped by lane. A parked tile may carry a lane — so you
+     can see which rules it will take when started — or none at all. "Unassigned" is the ABSENCE of a
+     lane, not a placeholder lane id, so assigning one later is a plain write with nothing to undo.
+     Every lane gets a group even when empty, because the group is also the drop target that assigns it. */
   const backlog=(function(){
-    const parked=RD.backlogTiles(board);
-    const tiles=parked.map(t=>
-      `<div class="kb-tile parked" draggable="true" data-kbtile="${t.id}">`+
+    const groups=RD.backlogByLane(board);
+    const parkedCount=groups.reduce((n,g)=>n+g.tiles.length,0);
+    const tileHtml=t=>
+      `<div class="kb-tile parked${(t.lane==null||t.lane==="")?" nolane":""}" draggable="true" data-kbtile="${t.id}">`+
         `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
         `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
-        `<div class="kb-tmeta"><span class="kb-tdays">\u2014</span><span>awaiting start</span></div></div>`).join("");
+        `<div class="kb-tmeta"><span class="kb-tdays">\u2014</span><span>${(t.lane==null||t.lane==="")?"no lane yet":"awaiting start"}</span></div></div>`;
+    const rows=groups.map(g=>{
+      const lim=(!g.unassigned && g.lane && g.lane.maxDaysPerCol!=null)
+        ? `will use max ${g.lane.maxDaysPerCol}d/col` : (g.unassigned?"lane chosen at start":"");
+      return `<div class="kb-blrow${g.unassigned?" nolane":""}">`+
+        `<div class="kb-bllane"><div class="kb-bllanenm">${esc(g.name)}</div>`+
+        (lim?`<div class="kb-bllanelim">${esc(lim)}</div>`:"")+`</div>`+
+        `<div class="kb-bldrop" data-kbbacklogdrop="${g.unassigned?"":esc(g.laneId)}">`+
+          (g.tiles.map(tileHtml).join("")||`<span class="kb-blempty">${g.unassigned?"drag a tile here to leave its lane open":"drag a tile here to put it in this lane"}</span>`)+
+        `</div></div>`;
+    }).join("");
     return `<div class="kb-backlog"><div class="kb-blhead">`+
-      `<span class="kb-bllab">BACKLOG</span><span class="kb-blcnt">${parked.length}</span>`+
+      `<span class="kb-bllab">BACKLOG</span><span class="kb-blcnt">${parkedCount}</span>`+
       `<span class="kb-blnote">not started \u2014 no clock running</span>`+
       `<button class="ghost mini" data-kbaddbacklog="${board.id}">+ tile</button></div>`+
-      `<div class="kb-bldrop" data-kbbacklogdrop="1">${tiles||`<span class="kb-blempty">drag a tile here to park it</span>`}</div></div>`;
+      `${rows}</div>`;
   })();
   const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
   const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
@@ -4551,7 +4572,12 @@ function wireKanbanDnd(host){
       const id=_kbDrag; if(!id) return;
       const board=boardById(activeBoardId()); if(!board) return;
       const t=(board.tiles||[]).find(x=>x.id===id); if(!t) return;
+      /* Parking clears column AND entered-stage date: the clock is gone, not paused, so a tile parked for
+         two months does not come back already breached. The group dropped into sets the lane — an empty
+         value is the unassigned group, which clears it rather than storing a placeholder. */
       t.col=null; t.enteredCol=null;
+      const lane=zone.dataset.kbbacklogdrop;
+      t.lane=(lane===""||lane==null)?null:lane;
       renderAll(); persist();
     });
   });
@@ -4559,8 +4585,7 @@ function wireKanbanDnd(host){
     const board=boardById(b.dataset.kbaddbacklog); if(!board) return;
     const nm=prompt("Tile (workstream driver) name:"); if(!nm) return;
     (board.tiles=board.tiles||[]).push({id:newId("tile"),name:nm,
-      lane:(board.swimlanes&&board.swimlanes[0]?board.swimlanes[0].id:null),
-      col:null, startDate:null, enteredCol:null});
+      lane:null, col:null, startDate:null, enteredCol:null});
     renderAll(); persist();
   });
 }

@@ -746,6 +746,27 @@
     return ((board && board.tiles) || []).filter(function (t) { return !tileInBacklog(t); });
   }
 
+  /* The backlog grouped by lane, for the parking area. A parked tile may carry a lane (so you can see
+     which rules it will take when started) or carry none at all — "unassigned" is the ABSENCE of a lane,
+     not a placeholder lane id. A placeholder would need removing later and would surface anywhere lanes
+     are enumerated; storing nothing means assigning one is a plain write with nothing to undo.
+     Every lane is returned even when empty, so there is somewhere to drag a tile to assign it, and the
+     unassigned group always comes last. */
+  function backlogByLane(board) {
+    var lanes = (board && board.swimlanes) || [];
+    var parked = backlogTiles(board);
+    var byLane = {};
+    parked.forEach(function (t) {
+      var key = (t.lane == null || t.lane === '') ? '' : t.lane;
+      (byLane[key] = byLane[key] || []).push(t);
+    });
+    var groups = lanes.map(function (l) {
+      return { laneId: l.id, lane: l, name: l.name || l.id, tiles: byLane[l.id] || [], unassigned: false };
+    });
+    groups.push({ laneId: null, lane: null, name: 'Unassigned', tiles: byLane[''] || [], unassigned: true });
+    return groups;
+  }
+
   function boardSummary(board, todayIso) {
     board = board || {};
     var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
@@ -2587,7 +2608,7 @@
     milestoneStepContribution: milestoneStepContribution,
     milestoneKrScore: milestoneKrScore,
     tileHealth: tileHealth,
-    boardSummary: boardSummary, tileInBacklog: tileInBacklog,
+    boardSummary: boardSummary, tileInBacklog: tileInBacklog, backlogByLane: backlogByLane,
     backlogTiles: backlogTiles, activeTiles: activeTiles,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
