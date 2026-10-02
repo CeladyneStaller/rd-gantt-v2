@@ -90,8 +90,12 @@ setTimeout(() => {
          tracking type entirely, and only another harness caught it. Check every type is still offered. */
       w.eval('subOpenAdd("keyResult");');
       const types = [...mb().querySelectorAll('[data-krtype] option')].map(o => o.value).sort().join(',');
-      ok(types === 'kpi,milestone,percentage,subkr',
-        "every tracking type survives the KPI-list rewrite (" + types + ")");
+      /* Sub-key results is deliberately NOT offered for a new KR: its KPIs are embedded in the parent
+         record rather than rows in exec.kpis, so they take no readings and never appear in the KR's KPI
+         section. Everything else must survive the rewrite. */
+      ok(types === 'kpi,milestone,percentage',
+        "a new KR offers percentage, KPI and milestone tracking (" + types + ")");
+      ok(types.indexOf('subkr') < 0, "…and not sub-key results, whose KPIs cannot take readings");
 
       ok(errs.length === 0, "no errors creating them" + (errs[0] ? ': ' + errs[0].slice(0, 80) : ''));
     } catch (e) { ok(false, 'create flow threw: ' + (e && e.message)); }
@@ -137,6 +141,33 @@ setTimeout(() => {
     } catch (e) { ok(false, 'edit flow threw: ' + (e && e.message)); }
   })();
 
+  // ---------- an existing sub-KR tracked KR still opens as itself ----------
+  (function () {
+    const { dom, errs } = boot('execution_app.html');
+    const w = dom.window, d = w.document;
+    try {
+      /* Hiding the option outright would leave the select with NO matching option for a record that
+         already uses it: the browser falls back to the first, and the next save silently converts a
+         sub-KR tracked KR to percentage, discarding its sub-results. */
+      w.eval(SEED.replace('renderAll();', '') + `
+        exec.keyResults=[{id:"KR1",objectiveId:"O1",statement:"Legacy",trackingType:"subkr",
+          subKrs:[{id:"s1",statement:"a",weight:100,trackingType:"percentage",progress:40}]}];
+        renderAll(); subOpenEdit("keyResult","KR1");`);
+      const mb = () => d.getElementById('modalBody');
+      const opts = [...mb().querySelectorAll('[data-krtype] option')].map(o => o.value);
+      ok(opts.indexOf('subkr') >= 0, "a KR that ALREADY uses sub-key results still offers it");
+      ok(mb().querySelector('[data-krtype]').value === 'subkr',
+        "…and the select shows it, rather than falling back to the first option");
+      ok(/legacy/i.test(mb().querySelector('[data-krtype]').textContent), "…marked as legacy");
+
+      mb().querySelector('[data-krsave]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      ok(w.eval('exec.keyResults[0].trackingType') === 'subkr',
+        "saving it does NOT convert it to another tracking type");
+      ok(w.eval('(exec.keyResults[0].subKrs||[]).length') === 1, "…and its sub-results survive");
+      ok(errs.length === 0, "no errors" + (errs[0] ? ': ' + errs[0].slice(0, 80) : ''));
+    } catch (e) { ok(false, 'legacy subkr flow threw: ' + (e && e.message)); }
+  })();
+
   // ---------- the sales app has the same modal ----------
   (function () {
     const { dom, errs } = boot('sales_app.html');
@@ -164,6 +195,10 @@ setTimeout(() => {
       ok(/kpis:existing\.length\?existing\.map\(krDraftKpiFrom\)/.test(salesSrc), "…and the same list-backed draft");
       ok(!/let pk=krPrimaryKpi\(kr\.id\);\n    if\(!pk\)/.test(salesSrc),
         "…with the single-KPI save path gone, not left beside the new one");
+      const sOpts = [...mb().querySelectorAll('[data-krtype] option')].map(o => o.value);
+      ok(sOpts.indexOf('subkr') < 0, "…and sub-key results hidden for new KRs there too");
+      ok(/tt==="subkr"\?`<option value="subkr" selected>/.test(salesSrc),
+        "…while an existing sub-KR tracked record still renders its option");
     } catch (e) { ok(false, 'sales flow threw: ' + (e && e.message)); }
   })();
 

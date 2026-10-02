@@ -3727,7 +3727,11 @@ function krModalBody(){
         <option value="percentage"${tt==="percentage"?" selected":""}>% completion</option>
         <option value="kpi"${tt==="kpi"?" selected":""}>KPI-based</option>
         <option value="milestone"${tt==="milestone"?" selected":""}>Milestone steps</option>
-        <option value="subkr"${tt==="subkr"?" selected":""}>Sub-key results</option>
+        ${/* Sub-key results is no longer offered for NEW key results: a sub-KR's KPIs are embedded in
+             the parent record rather than rows in exec.kpis, so they take no readings, never show in the
+             KR's KPI section, and are invisible to anything that walks the KPI list. It is still rendered
+             for a KR that already uses it — dropping it outright would leave the select with no matching
+             option, fall back to the first, and silently convert the record on the next save. */""}${tt==="subkr"?`<option value="subkr" selected>Sub-key results (legacy)</option>`:""}
       </select></div>
     <div style="display:${tt==="percentage"?"block":"none"}">
       <div class="modal-field"><span class="lbl">Progress</span><div class="pct-row"><input type="range" min="0" max="100" data-f="progress" value="${esc(d.progress)}" style="flex:1" data-pctslider><span class="pct-val" data-pctval>${Number(d.progress)||0}%</span></div></div>
