@@ -364,6 +364,25 @@
   .kb-tile.parked .kb-tdays{color:var(--muted);font-weight:400}
   .kb-chip.backlog{border-style:dashed;background:var(--panel2);color:var(--muted)}
   .kb-tile{position:relative}
+  .kb-av{position:absolute;top:3px;right:24px;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:9px;
+    display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .kb-av.none{background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:10px}
+  .kb-tname{padding-right:46px}
+  .asg-box{border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-top:10px}
+  .asg-head{display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .asg-lab{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.05em}
+  .asg-tog{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted)}
+  .asg-list{padding:8px 9px;display:flex;flex-direction:column;gap:5px;max-height:190px;overflow-y:auto}
+  .asg-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+  .asg-row.on{border-color:var(--pill-active-bd);background:var(--pill-active-bg)}
+  .asg-av{width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);
+    font-family:var(--mono);font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:none}
+  .asg-av.none{background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:11px}
+  .asg-tx{flex:1;min-width:0}
+  .asg-nm{display:block;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .asg-nm.muted{color:var(--muted)}
+  .asg-sub{display:block;font-size:9.5px;color:var(--muted)}
   .kb-tedit{position:absolute;top:3px;right:3px;width:18px;height:18px;padding:0;line-height:1;
     font-size:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
     border-radius:4px;cursor:pointer;opacity:0;transition:opacity .12s}
@@ -425,6 +444,10 @@
   /* ---- pass 2: gate rows + workstream header + collapse + chaining modal ---- */
   #modalBody .modal-field input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
   .ws-head{display:flex;align-items:center;gap:11px;padding:11px 12px 10px;flex-wrap:wrap}
+  .ws-grip{color:var(--muted);font-size:11px;letter-spacing:-2px;cursor:grab;user-select:none;opacity:0;transition:opacity .12s}
+  .sgset:hover .ws-grip,.ws-grip:focus{opacity:1}
+  .sgset.ws-dragging{opacity:.45}
+  .sgset.ws-over{box-shadow:inset 0 2px 0 var(--accent)}
   .ws-name{font-weight:600;font-size:13px;letter-spacing:.005em}
   .ws-name.click{cursor:pointer}
   .ws-name.click:hover{color:var(--accent)}
@@ -1774,7 +1797,16 @@ html[data-theme="dark"] #etb-view{
   function definerOf(kpi, kpis){ return rootOf(kpi, kpis); }
   function kpiDirection(kpi, kpis){ return rootOf(kpi, kpis).direction; }
   function kpiUnit(kpi, kpis){ return rootOf(kpi, kpis).unit; }
-  function kpiName(kpi, kpis){ return rootOf(kpi, kpis).name; }
+  /* A linked target shows the metric it inherits from, EXCEPT where this copy has been given its own
+     label. `localName` is that label: it belongs to this gate's row and is never followed up the link, so
+     renaming a target here cannot rename the metric every other host reads. Everything else — direction,
+     unit, target, value — still resolves through the definer; only the wording is local. */
+  function kpiName(kpi, kpis){
+    if (kpi && kpi.localName != null && String(kpi.localName).trim() !== '') return String(kpi.localName);
+    return rootOf(kpi, kpis).name;
+  }
+  // the name this KPI inherits, ignoring any local label — for showing what it is really linked to
+  function kpiSourceName(kpi, kpis){ return rootOf(kpi, kpis).name; }
 
   function objectiveQuarter(objId, execDocs){
     if(objId==null || !execDocs) return null; var pf=execDocs[PORTFOLIO_KEY]; if(!pf) return null;
@@ -2058,11 +2090,19 @@ html[data-theme="dark"] #etb-view{
 
   // Roll-up a board into the metrics a KPI/KR can read. A tile in the last column counts as "closed"
   // (not on/at-risk/breached). Also returns per-column tile counts.
-  /* A backlog tile is parked: it has reached no column, so no stage clock applies to it. That is the
-     whole definition — there is no "ignore the clock" flag, because a tile cannot then be both in a
-     column and exempt from it. Anything without a column is in the backlog. */
+  /* A backlog tile is parked: no stage clock applies to it. Two ways a tile qualifies, and both are the
+     absence of something the clock needs rather than a flag:
+       - no column, so there is no stage to be timed in;
+       - no swimlane, so there is no day limit to measure against. The limit lives on the lane, so a
+         lane-less tile in a column would be timed against nothing and read on-track forever however long
+         it sat there. Keeping it in the backlog says plainly that it is not being measured.
+     There is deliberately no "exempt from the clock" flag: a tile cannot be both in a timed column and
+     outside the timing. */
   function tileInBacklog(tile) {
-    return !tile || tile.col == null || tile.col === '';
+    if (!tile) return true;
+    if (tile.col == null || tile.col === '') return true;
+    if (tile.lane == null || tile.lane === '') return true;
+    return false;
   }
   function backlogTiles(board) {
     return ((board && board.tiles) || []).filter(tileInBacklog);
@@ -2514,6 +2554,72 @@ html[data-theme="dark"] #etb-view{
   // returns a nested tree: [{ key, dim, objs? , children? }] with '' (none) buckets ordered last.
   // owner was free text and is now a list of roster emails. Read BOTH shapes: a legacy string is a
   // one-element list, so nothing needs migrating and old data keeps grouping exactly as it did.
+  /* Who can be assigned a kanban tile, and who is worth offering FIRST.
+     The narrow set is the people who own an active objective in this division: they are the ones who
+     would plausibly pick the work up, so that is the useful default rather than a restriction. The wide
+     set is everyone known, for the deliberate case of assigning outside it.
+     The current assignee is ALWAYS included, marked, whatever the filter says. Someone whose objective
+     has since closed would otherwise vanish from the picker that shows their own assignment — the list
+     would quietly disagree with the tile. */
+  function divisionOwnerEmails(portfolio, divisionId, todayDay, objectiveState) {
+    var objs = (portfolio && portfolio.objectives) || [], seen = {}, out = [];
+    objs.forEach(function (o) {
+      if (!o || o.divisionId !== divisionId) return;
+      var ended = objectiveEndState(objectiveState, o.id);
+      if (ended) return;                                   // achieved or abandoned is not active work
+      if (todayDay != null && o.plannedEnd != null && o.plannedEnd < todayDay) return;
+      ownersOf(o).forEach(function (e) {
+        var k = String(e).trim().toLowerCase();
+        if (!k || seen[k]) return;
+        seen[k] = 1; out.push(String(e).trim());
+      });
+    });
+    return out;
+  }
+  function objectivesOwnedIn(portfolio, divisionId, email, todayDay, objectiveState) {
+    var k = String(email == null ? '' : email).trim().toLowerCase();
+    if (!k) return 0;
+    return ((portfolio && portfolio.objectives) || []).filter(function (o) {
+      if (!o || o.divisionId !== divisionId) return false;
+      if (objectiveEndState(objectiveState, o.id)) return false;
+      if (todayDay != null && o.plannedEnd != null && o.plannedEnd < todayDay) return false;
+      return ownersOf(o).some(function (e) { return String(e).trim().toLowerCase() === k; });
+    }).length;
+  }
+  /* The picker's rows. `narrow` true keeps the division owners; the current assignee is appended
+     whichever way, flagged so the UI can say why it is there. */
+  function assigneeOptions(opts) {
+    opts = opts || {};
+    var all = (opts.allEmails || []).map(function (e) { return String(e).trim(); }).filter(Boolean);
+    var owners = divisionOwnerEmails(opts.portfolio, opts.divisionId, opts.todayDay, opts.objectiveState);
+    var ownerSet = {}; owners.forEach(function (e) { ownerSet[e.toLowerCase()] = 1; });
+    var base = opts.narrow ? owners.slice() : all.slice();
+    var seen = {}; var rows = [];
+    base.forEach(function (e) {
+      var k = e.toLowerCase(); if (seen[k]) return; seen[k] = 1;
+      rows.push({ email: e, owns: objectivesOwnedIn(opts.portfolio, opts.divisionId, e, opts.todayDay, opts.objectiveState),
+                  isOwner: !!ownerSet[k], current: false, offRoster: all.indexOf(e) < 0 });
+    });
+    var cur = opts.current == null ? '' : String(opts.current).trim();
+    if (cur) {
+      var ck = cur.toLowerCase();
+      var hit = rows.filter(function (r) { return r.email.toLowerCase() === ck; })[0];
+      if (hit) hit.current = true;
+      else rows.unshift({ email: cur, owns: objectivesOwnedIn(opts.portfolio, opts.divisionId, cur, opts.todayDay, opts.objectiveState),
+                          isOwner: !!ownerSet[ck], current: true, offRoster: all.indexOf(cur) < 0 });
+    }
+    return rows;
+  }
+  function initialsOf(email) {
+    var s = String(email == null ? '' : email).trim();
+    if (!s) return '';
+    var local = s.split('@')[0].replace(/[._-]+/g, ' ').trim();
+    var parts = local.split(/\s+/).filter(Boolean);
+    if (!parts.length) return s.slice(0, 2).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   function ownersOf(rec) {
     if (!rec) return [];
     var v = rec.owner;
@@ -3898,7 +4004,7 @@ html[data-theme="dark"] #etb-view{
     definerOf: definerOf,
     kpiDirection: kpiDirection,
     kpiUnit: kpiUnit,
-    kpiName: kpiName,
+    kpiName: kpiName, kpiSourceName: kpiSourceName,
     effTarget: effTarget,
     effValue: effValue,
     linkOf: linkOf,
@@ -3921,7 +4027,8 @@ html[data-theme="dark"] #etb-view{
     unitIdOfDivision: unitIdOfDivision,
     divisionsInUnit: divisionsInUnit,
     divisionKind: divisionKind,
-    ownersOf: ownersOf,
+    ownersOf: ownersOf, divisionOwnerEmails: divisionOwnerEmails,
+    objectivesOwnedIn: objectivesOwnedIn, assigneeOptions: assigneeOptions, initialsOf: initialsOf,
     readingSourceId: readingSourceId,
     effValueSource: function(kpi, kpis, execDocs){ return effectiveValueEntry(kpi, kpis, execDocs); },
     sourcesOf: sourcesOf,
@@ -5534,6 +5641,10 @@ function migrateStageGateSets(x){
 }
 function adoptExec(ex){ exec=Object.assign(blankExec(), ex.doc); migrateStageGateSets(exec); exec.risks=(exec.risks||[]).map(RD.migrateProblem); execEtag=ex.etag; execVersion=ex.version; markSaved(); }
 async function loadAll(){
+  /* Not awaited: the roster only widens the assignee picker, so a slow or missing /roster must not
+     hold up the portfolio load. It re-renders on arrival; until then the picker falls back to the
+     people who already own objectives here. */
+  loadKbRoster();
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
   try{
     const p = await apiGet("portfolio");
@@ -5773,6 +5884,31 @@ function renderSubEditor(type, rec){
     <button class="ghost mini" data-cancel="1">Cancel</button></div>`;
   return html;
 }
+/* Edits typed into the sub-editor but not yet saved. Adding a KPI from inside the editor calls
+   renderAll(), which rebuilds the editor from the STORED record — so anything typed and not yet saved
+   was silently reverted, and the subsequent Save wrote the old values back. The KPI saved, the gate's or
+   key result's own edits did not.
+   Capturing the live fields before the re-render and replaying them after keeps both. */
+let pendingSubEdits=null;
+function captureSubEdits(){
+  const host=document.getElementById("modalBody") || document.getElementById("subEditor");
+  if(!host) return;
+  const scope=host.querySelector(".ed") ? host : null;
+  if(!scope || !scope.querySelector("[data-f]")) return;
+  const vals={};
+  scope.querySelectorAll("[data-f]").forEach(el=>{ vals[el.dataset.f]=el.value; });
+  pendingSubEdits=vals;
+}
+function applySubEdits(){
+  if(!pendingSubEdits) return;
+  const host=document.getElementById("modalBody") || document.getElementById("subEditor");
+  if(!host){ pendingSubEdits=null; return; }
+  Object.keys(pendingSubEdits).forEach(k=>{
+    const el=host.querySelector(`[data-f="${k}"]`);
+    if(el && el.value!==pendingSubEdits[k]) el.value=pendingSubEdits[k];
+  });
+  pendingSubEdits=null;
+}
 function readSubEditor(scope){
   const out={};
   scope.querySelectorAll("[data-f]").forEach(el=>{
@@ -5798,7 +5934,15 @@ function saveSub(thenLink){
   let newId=null;
   if(e){
     const rec = arr.find(x=>x.id===e.id);
-    if(type==="kpi" && isMemberKpi(rec)){ rec.target = (data.target===undefined ? null : data.target); } // override only
+    if(type==="kpi" && isMemberKpi(rec)){
+      /* A linked target inherits everything but its label. The target is an override, and the name is now
+         a LOCAL one: typing a different name here renames this gate's row, not the metric that every
+         other host reads through the same link. Clearing it falls back to the inherited name. */
+      rec.target = (data.target===undefined ? null : data.target);
+      const nm=(data.name==null?"":String(data.name)).trim();
+      const inherited=RD.kpiSourceName(rec, allKpisPool());
+      if(!nm || nm===inherited) delete rec.localName; else rec.localName=nm;
+    } // override only
     else Object.assign(rec, data);
   } else {
     const initHost = (type==="kpi" && a.hostType==="initiative");
@@ -6789,7 +6933,10 @@ function saveTgtModal(){
   else { applyDirTarget(pk, d); pk.unit=d.unit||null;
     if(d.type==="statistical"){ pk.statistic=d.statistic||"average"; pk.readCount=(d.readCount===""||d.readCount==null)?"":Number(d.readCount);
       if(d.readsFrom) pk.readsFrom=d.readsFrom; else delete pk.readsFrom; } else { delete pk.statistic; delete pk.readCount; } }
-  closeTgtModal(); renderAll(); setMsg((isGate?"Gate target":"KPI")+" saved","ok");
+  /* The editor behind this modal may hold unsaved typing; renderAll() would discard it. */
+  captureSubEdits();
+  closeTgtModal(); renderAll(); applySubEdits();
+  setMsg((isGate?"Gate target":"KPI")+" saved","ok");
 }
 
 /* ---------------- KPI link groups (v1.3.1) ---------------- */
@@ -6955,7 +7102,12 @@ function renderKpiOverrideEditor(rec){
   } else {
     tEd = `<label>Override target (blank = inherit)<input data-f="target" class="sm" type="number" value="${(own!=null&&typeof own!=='object')?own:''}"/></label>`;
   }
+  /* The label is editable even though everything else is inherited: it is this host's wording for the
+     metric, stored locally and never followed up the link, so it cannot rename the source. */
+  const lblEd = `<label style="grid-column:1/-1">Name on this gate (blank = inherited)`+
+    `<input data-f="name" type="text" value="${esc(rec&&rec.localName!=null?rec.localName:"")}" placeholder="${esc(RD.kpiSourceName(rec, allKpisPool()))}"/></label>`;
   return `<div class="ed">
+    ${lblEd}
     <div class="inherited">inherits <b>${esc(RD.kpiName(rec,pool)||'')}</b> · dir <b>${dir||''}</b> · unit <b>${esc(unit||'—')}</b> · from <b>${hostLabel(RD.definerOf(rec,pool))}</b><br/>inherited target <b>${fmtTarget(inhT,unit)}</b> — a higher level can override; blank here = inherit</div>
     ${tEd}</div><div class="row-actions" style="margin:0 0 8px">
     <button class="act mini" data-save="1">Save override</button>
@@ -7015,7 +7167,11 @@ function kpiTable(hostType, hostId, objScope){
     const member = isMemberKpi(k), defLinks = isDefinerWithLinks(k);
     const crit = (k.targetType==="binary") ? "pass" : ((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"") + fmtTarget(tgt, ""));
     const ovr = member ? (k.target!=null?'<span class="ovr">override</span>':'<span class="ovr">inherited</span>') : '';
-    const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}">linked</span>`
+    /* With a local label the row no longer shows the metric's own name anywhere, so the badge carries it:
+       otherwise a renamed target hides what it is actually linked to. */
+    const srcNm = member ? RD.kpiSourceName(k, AK) : "";
+    const renamed = member && k.localName!=null && String(k.localName).trim()!=="" && k.localName!==srcNm;
+    const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}${renamed?" \u00b7 "+esc(srcNm):""}">linked${renamed?" \u00b7 "+esc(srcNm):""}</span>`
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
     const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
     const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
@@ -7277,6 +7433,69 @@ let _kbDrag=null;         // tile being dragged, for the drag-and-drop reorder
    alone. Adding is the same form with an empty draft: one place to change when a tile gains a field.
    Moving the stage re-stamps enteredCol so the days-in-stage clock restarts, the same as dragging; NOT
    moving it must leave the stamp alone, or every edit silently resets the age that drives the colours. */
+/* The people list, from the same broker projection the planning app reads. If it is unavailable the
+   picker still works: it falls back to whoever already owns objectives here, which is the set that
+   matters most anyway. */
+let kbRoster = [];
+async function loadKbRoster(){
+  try{
+    const r = await fetch(`${BROKER}/roster`, {headers:auth()});
+    if(!r.ok) return;
+    const j = await r.json();
+    kbRoster = (j && j.users || []).filter(u=>u && u.email && !u.disabled).map(u=>u.email);
+    renderAll();
+  }catch(e){}
+}
+function kbAllEmails(){
+  const out=kbRoster.slice();
+  (portfolio.objectives||[]).forEach(o=>RD.ownersOf(o).forEach(e=>{
+    if(out.indexOf(e)<0) out.push(e);
+  }));
+  return out;
+}
+/* The toggle is a reading preference, not board data: whether I narrow the list should not change the
+   board for everyone else. */
+let kbNarrowAssignees=(function(){ try{ return localStorage.getItem("rd_kb_narrow")!=="0"; }catch(e){ return true; } })();
+function kbSetNarrow(v){ kbNarrowAssignees=!!v;
+  try{ localStorage.setItem("rd_kb_narrow", kbNarrowAssignees?"1":"0"); }catch(e){}
+}
+function kbAssigneeRows(current){
+  return RD.assigneeOptions({ portfolio, divisionId, todayDay:todayDay(),
+    objectiveState:(exec.objectiveState||[]), allEmails:kbAllEmails(),
+    narrow:kbNarrowAssignees, current:current||null });
+}
+function kbAssigneeHtml(current){
+  const rows=kbAssigneeRows(current);
+  const cur=(current==null?"":String(current));
+  const item=(r)=>{
+    const sel=(r.email===cur);
+    const why = r.isOwner ? `owns ${r.owns} active objective${r.owns===1?"":"s"}`
+              : (r.current ? "assigned, but owns nothing active here" : "no active objective here");
+    return `<label class="asg-row${sel?" on":""}">`+
+      `<input type="radio" name="kbasg" value="${esc(r.email)}"${sel?" checked":""}>`+
+      `<span class="asg-av" aria-hidden="true">${esc(RD.initialsOf(r.email))}</span>`+
+      `<span class="asg-tx"><span class="asg-nm">${esc(r.email)}</span>`+
+      `<span class="asg-sub">${esc(why)}</span></span></label>`;
+  };
+  return `<div class="asg-box"><div class="asg-head">`+
+      `<span class="asg-lab">ASSIGNED TO</span>`+
+      `<span class="asg-tog"><label for="kbnarrow">Division owners only</label>`+
+      `<input type="checkbox" id="kbnarrow" data-kbnarrow${kbNarrowAssignees?" checked":""} role="switch" aria-label="Show only people who own an active objective in this division"></span>`+
+    `</div><div class="asg-list">`+
+      rows.map(item).join("")+
+      `<label class="asg-row${!cur?" on":""}"><input type="radio" name="kbasg" value=""${!cur?" checked":""}>`+
+      `<span class="asg-av none" aria-hidden="true">\u2014</span>`+
+      `<span class="asg-tx"><span class="asg-nm muted">Unassigned</span>`+
+      `<span class="asg-sub">nobody owns this tile yet</span></span></label>`+
+    `</div><p class="hint">${kbNarrowAssignees?`Showing ${rows.length} of ${kbAllEmails().length} people \u2014 those owning an active objective in this division.`:`Showing everyone known.`}</p></div>`;
+}
+/* Assignment on the tile: initials in a disc, full name on hover. Unassigned draws a dashed empty disc
+   rather than nothing — a blank corner reads as a rendering gap, not as "nobody owns this". */
+function kbAvatarHtml(t){
+  const e=(t&&t.assignee)?String(t.assignee):"";
+  if(!e) return `<span class="kb-av none" title="Unassigned" aria-label="Unassigned">\u2014</span>`;
+  return `<span class="kb-av" title="${esc(e)}" aria-label="Assigned to ${esc(e)}">${esc(RD.initialsOf(e))}</span>`;
+}
 function kbTileForm(opts){
   const board=opts.board; if(!board) return;
   const isNew=!!opts.isNew;
@@ -7293,6 +7512,7 @@ function kbTileForm(opts){
       `<label>Started<input type="date" data-kbte-start value="${esc(t.startDate||"")}"></label>`+
       `<label>Entered this stage<input type="date" data-kbte-entered value="${esc(t.enteredCol||"")}"></label>`+
     `</div>`+
+    kbAssigneeHtml(t.assignee)+
     `<p class="hint">A tile left in the backlog runs no clock. Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</p>`+
     `<div class="kbte-foot">`+
       (isNew?"":`<button class="ghost danger" data-kbte-del>Delete tile</button>`)+
@@ -7308,16 +7528,40 @@ function kbTileForm(opts){
     const moved=(newCol!==(t.col||null));
     t.name=nm;
     t.lane=val("[data-kbte-lane]")||null;
-    t.col=newCol;
+    /* Clearing the swimlane sends the tile to the backlog by rule: the day limit lives on the lane, so a
+       lane-less tile in a column is timed against nothing. Drop the column and the clock with it, rather
+       than leaving a stage on a tile the board will not draw there. */
+    t.col=t.lane?newCol:null;
     t.startDate=val("[data-kbte-start]")||t.startDate||null;
+    const asg=(host.querySelector("input[name=kbasg]:checked")||{}).value||"";
+    if(asg) t.assignee=asg; else delete t.assignee;      // unassigned stores nothing, as with the lane
     const ent=val("[data-kbte-entered]");
     if(ent && ent!==t.enteredCol) t.enteredCol=ent;
-    else if(moved) t.enteredCol=newCol?todayIso():null;   // back to the backlog clears the clock entirely
+    else if(moved) t.enteredCol=(t.col?todayIso():null);   // parking, by column or by lane, clears the clock
+    /* Clearing the LANE parks the tile without the stage having "moved", so the branch above never fires
+       and a stale stamp survives — the tile would come back carrying the age it had before it was
+       parked. Parked means no clock, however it got parked. */
+    if(!t.col) t.enteredCol=null;
     /* A NEW tile created straight into a stage has no previous column to have "moved" from, so the
        branch above never fires and its clock would never start — it would sit at 0 days forever. */
-    if(isNew && newCol && t.enteredCol==null) t.enteredCol=todayIso();
+    if(isNew && t.col && t.enteredCol==null) t.enteredCol=todayIso();
     if(isNew) (board.tiles=board.tiles||[]).push(t);
     closeModal(); renderAll(); persist();
+  };
+  /* Flipping the toggle re-renders the list in place; the choice made so far is carried, so narrowing
+     the list cannot silently drop the person already picked. */
+  const nar=host.querySelector("[data-kbnarrow]");
+  if(nar) nar.onchange=()=>{
+    const picked=(host.querySelector("input[name=kbasg]:checked")||{}).value||"";
+    kbSetNarrow(nar.checked);
+    const box=host.querySelector(".asg-box");
+    if(box){
+      box.outerHTML=kbAssigneeHtml(picked||t.assignee||null);
+      /* outerHTML replaces the node, so the toggle's own handler goes with it: rebind just that one
+         rather than re-opening the whole form, which would discard the other fields' edits. */
+      const again=host.querySelector("[data-kbnarrow]");
+      if(again) again.onchange=nar.onchange;
+    }
   };
   host.querySelector("[data-kbte-cancel]").onclick=()=>closeModal();
   const del=host.querySelector("[data-kbte-del]");
@@ -7370,6 +7614,7 @@ function renderKanban(host){
            click would never land. Its own draggable="false" stops the drag from claiming the press. */
         return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}">`+
           `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
+          kbAvatarHtml(t)+
           `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
           `<div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
       }).join("");
@@ -7392,6 +7637,7 @@ function renderKanban(host){
     const tileHtml=t=>
       `<div class="kb-tile parked${(t.lane==null||t.lane==="")?" nolane":""}" draggable="true" data-kbtile="${t.id}">`+
         `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
+        kbAvatarHtml(t)+
         `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
         `<div class="kb-tmeta"><span class="kb-tdays">\u2014</span><span>${(t.lane==null||t.lane==="")?"no lane yet":"awaiting start"}</span></div></div>`;
     const rows=groups.map(g=>{
@@ -7568,6 +7814,86 @@ function openPlanCompare(objId, v){
     (to.reason?`<p class="note">\u201c${esc(to.reason)}\u201d</p>`:"")+
     `<div class="rp-grp">${body||`<div class="rp-empty">nothing changed</div>`}</div>`);
 }
+/* Duplicate a stage-gate, into its own workstream or another one in the same objective.
+   What copies: the definition — name, intention, planned date, and the KPIs hosted on it, so the copy is
+   measurable from the moment it exists.
+   What does NOT: anything that records what happened. A duplicate is work still to do, so actual date,
+   status and the readings taken against the original's KPIs are all left behind; carrying them over would
+   assert that the copy had already been passed and measured. Chain edges are not copied either — the
+   original's position in a sequence is not the copy's. */
+function sgDuplicate(gid){
+  const g=exec.stageGates.find(x=>x.id===gid); if(!g) return;
+  const sets=objSetsOrdered();
+  const run=(setId)=>{
+    const id=RD.allocId(SUB.stageGate.idType, selectedObj, exec.stageGates.map(x=>x.id));
+    const copy={ id, objectiveId:g.objectiveId, setId:setId||g.setId||ensureDefaultSet(),
+      name:(g.name||"")+" (copy)", intention:g.intention||"",
+      plannedDate:(g.plannedDate==null?null:g.plannedDate),
+      actualDate:null, status:"pending",
+      order:(exec.stageGates.filter(x=>x.objectiveId===g.objectiveId).length) };
+    exec.stageGates.push(copy);
+    (exec.kpis||[]).filter(k=>k.hostType==="stageGate" && k.hostId===gid).forEach(k=>{
+      const kid=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id));
+      const nk=Object.assign({}, k, {id:kid, hostId:id});
+      delete nk.current;                      // a measured value belongs to the gate it was measured on
+      exec.kpis.push(nk);
+    });
+    renderAll(); persist();
+    setMsg("Gate duplicated"+(setId&&setId!==g.setId?" into "+(sets.find(s=>s.id===setId)||{}).name:"")+".","ok");
+  };
+  if(sets.length<2){ run(g.setId); return; }
+  /* With more than one workstream the destination is a real choice, so ask rather than assume. */
+  openModal("Duplicate gate",
+    `<div class="ed"><label style="grid-column:1/-1">Workstream`+
+      `<select data-sgdupset>${sets.map(s=>`<option value="${esc(s.id)}"${s.id===g.setId?" selected":""}>${esc(s.name||s.id)}</option>`).join("")}</select></label></div>`+
+    `<p class="hint">The copy takes the gate's name, intention, date and targets. Its status resets to pending and no readings come with it.</p>`+
+    `<div class="kbte-foot"><span style="flex:1"></span>`+
+      `<button class="ghost" data-sgdupcancel>Cancel</button>`+
+      `<button class="act" data-sgdupgo>Duplicate</button></div>`);
+  const host=document.getElementById("modalBody"); if(!host) return;
+  host.querySelector("[data-sgdupcancel]").onclick=()=>closeModal();
+  host.querySelector("[data-sgdupgo]").onclick=()=>{
+    const sel=host.querySelector("[data-sgdupset]");
+    const setId=sel?sel.value:g.setId;
+    closeModal(); run(setId);
+  };
+}
+/* Reordering workstreams. The letters (Workstream A, B, C) are positional, so the order is what a reader
+   sees — it is not cosmetic. Every set is rewritten with an explicit index rather than only the moved
+   one: the list sorts by `order` with a name tiebreak, so leaving gaps or duplicate values makes the
+   result depend on the tiebreak rather than on what was dragged. */
+let __wsDrag=null;
+function wsReorder(fromId, toId){
+  if(!fromId || !toId || fromId===toId) return false;
+  const sets=objSetsOrdered();
+  const from=sets.findIndex(s=>s.id===fromId), to=sets.findIndex(s=>s.id===toId);
+  if(from<0 || to<0) return false;
+  const moved=sets.splice(from,1)[0];
+  sets.splice(to,0,moved);
+  sets.forEach((s,i)=>{ const rec=(exec.stageGateSets||[]).find(x=>x.id===s.id); if(rec) rec.order=i; });
+  return true;
+}
+function wireWsDrag(host){
+  host.querySelectorAll("[data-wsblock]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{
+      /* A gate row inside the block is its own drag in the revision modal; only the grip starts a
+         workstream move, so dragging a gate cannot silently reorder its parent. */
+      if(!(e.target&&e.target.closest&&e.target.closest("[data-wsgrip]"))){ e.preventDefault(); return; }
+      __wsDrag=el.dataset.wsblock; el.classList.add("ws-dragging");
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain", __wsDrag); }catch(_){} }
+    });
+    el.addEventListener("dragend",()=>{ el.classList.remove("ws-dragging"); __wsDrag=null;
+      host.querySelectorAll(".ws-over").forEach(x=>x.classList.remove("ws-over")); });
+    el.addEventListener("dragover",e=>{ if(!__wsDrag||__wsDrag===el.dataset.wsblock) return;
+      e.preventDefault(); el.classList.add("ws-over"); });
+    el.addEventListener("dragleave",()=>el.classList.remove("ws-over"));
+    el.addEventListener("drop",e=>{
+      e.preventDefault(); el.classList.remove("ws-over");
+      const src=__wsDrag; __wsDrag=null;
+      if(wsReorder(src, el.dataset.wsblock)){ renderAll(); persist(); setMsg("Workstreams reordered.","ok"); }
+    });
+  });
+}
 function renderGates(){
   const host=document.getElementById("subSG");
   /* The Kanban is an alternative VIEW of the same objective, not a second set of gates. Switching
@@ -7588,7 +7914,11 @@ function renderGates(){
     const pctCol=pct==null?'var(--muted)':col(RD.band(pct));
     const chained=set.chained!==false;
     const passed=gates.filter(g=>g.actualDate!=null).length;
-    inner+=`<div class="sgset"><div class="ws-head">
+    /* Only draggable when there is more than one: a lone workstream has nowhere to go, and a handle that
+       does nothing is worse than no handle. */
+    const dragOn = sets.length > 1;
+    inner+=`<div class="sgset" data-wsblock="${esc(set.id)}"${dragOn?' draggable="true"':''}><div class="ws-head">
+      ${dragOn?`<span class="ws-grip" data-wsgrip title="Drag to reorder workstreams" aria-hidden="true">\u22ee\u22ee</span>`:''}
       <span class="ws-eyebrow">Workstream ${String.fromCharCode(65+si)}</span><span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
       <span class="ws-meter"><span class="ws-bar"><span class="ws-fill" style="width:${pct==null?0:Math.round(pct)}%;background:${pctCol}"></span></span><span class="ws-pct" style="color:${pctCol}">${pctTxt}</span><span class="ws-cnt">${passed} / ${gates.length}</span></span>
       <span class="ws-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini btn-ico" data-wsedit="${set.id}" title="edit workstream">\u270e</button></span>
@@ -7610,7 +7940,7 @@ function renderGates(){
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">revision v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
-        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${gvMarkHtml(g.id)}<button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${gvMarkHtml(g.id)}<button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button><button class="cd-btn" onclick="event.stopPropagation();sgDuplicate('${g.id}')" title="duplicate this gate, in this workstream or another">Duplicate</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
@@ -7887,6 +8217,7 @@ function wireExec(host){
   /* The mode toggle appears in BOTH views, so it has to be wired in both: wireKanban covers the board
      side, and without this the switch is one-way — you could reach the Kanban and not get back. */
   host.querySelectorAll("[data-gatemode]").forEach(b=>b.onclick=()=>setGateMode(selectedObj, b.dataset.gatemode));
+  wireWsDrag(host);
   host.querySelectorAll("[data-ph-cmp]").forEach(b=>b.onclick=()=>openPlanCompare(selectedObj, +b.dataset.phCmp));
   host.querySelectorAll("[data-addsg]").forEach(b=>b.onclick=()=>{ pendingGateSet=ensureDefaultSet(); subOpenAdd("stageGate"); });
   host.querySelectorAll("[data-addtask]").forEach(b=>b.onclick=()=>subOpenAdd("task"));

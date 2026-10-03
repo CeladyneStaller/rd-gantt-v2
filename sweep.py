@@ -61,6 +61,9 @@ if os.path.isdir(_nm):
     ENV["NODE_PATH"] = _nm          # otherwise let node resolve node_modules itself
 
 
+# Generous: the slowest legitimate harness runs in ~15s, so anything past this is stuck, not busy.
+HARNESS_TIMEOUT = int(os.environ.get("RD_HARNESS_TIMEOUT", "120"))
+
 DEPS = ("rdcore.js", "backfill.js")
 
 
@@ -98,8 +101,15 @@ def etb_plumbing():
 
 def run(name):
     runner = [sys.executable] if name.endswith(".py") else ["node"]
-    p = subprocess.run(runner + [name], capture_output=True, text=True, cwd=CWD, env=ENV,
-                       encoding="utf-8", errors="replace")   # harness output is UTF-8, not the OS default
+    # A harness that never exits used to hang the whole run with no output at all: subprocess.run had no
+    # timeout and the loop prints only at the end, so a stall looked identical to slowness and took two
+    # sessions to locate. A timed-out harness is a FAILURE, named, not a silent wait.
+    try:
+        p = subprocess.run(runner + [name], capture_output=True, text=True, cwd=CWD, env=ENV,
+                           encoding="utf-8", errors="replace",   # harness output is UTF-8, not the OS default
+                           timeout=HARNESS_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return 1, None, f"FAIL: timed out after {HARNESS_TIMEOUT}s without exiting"
     out = (p.stdout or "") + (p.stderr or "")
     m = COUNT_RE.search(out)
     return p.returncode, (int(m.group(1)) if m else None), out
@@ -131,6 +141,8 @@ def main():
 
     fails, grew, unguarded, counts = [], [], [], {}
     for n in names:
+        # One line per harness, flushed: without it a stall is invisible and the run looks merely slow.
+        print(f"  {n}", flush=True)
         rc, cnt, out = run(n)
         counts[n] = cnt
         want = base.get(n)

@@ -181,8 +181,14 @@ setTimeout(async () => {
     const bd = { columns: [{ id: 'c1' }, { id: 'c2' }], swimlanes: [{ id: 'L', maxDaysPerCol: 14 }],
       tiles: [{ id: 'A', lane: 'L', col: 'c1', enteredCol: '2026-09-28' },
               { id: 'B', lane: 'L', col: null }, { id: 'C', lane: 'L' }] };
-    ok(RDeng.tileInBacklog({ col: null }) && RDeng.tileInBacklog({}), "a tile with no column is in the backlog");
-    ok(!RDeng.tileInBacklog({ col: 'c1' }), "…and one in a column is not");
+    ok(RDeng.tileInBacklog({ col: null, lane: 'L' }) && RDeng.tileInBacklog({}), "a tile with no column is in the backlog");
+    ok(!RDeng.tileInBacklog({ col: 'c1', lane: 'L' }), "…and one in a column with a lane is not");
+    /* A tile with no swimlane is parked BY RULE, whatever column it claims: the day limit lives on the
+       lane, so a lane-less tile in a column is timed against nothing and reads on-track forever however
+       long it sits there. */
+    ok(RDeng.tileInBacklog({ col: 'c1', lane: null }),
+      "a tile with NO SWIMLANE is in the backlog even when it claims a column");
+    ok(RDeng.tileInBacklog({ col: 'c1', lane: '' }), "…and an empty lane counts the same as none");
     ok(RDeng.backlogTiles(bd).map(t => t.id).join(',') === 'B,C', "the backlog is every parked tile");
     ok(RDeng.activeTiles(bd).map(t => t.id).join(',') === 'A', "…and the rest are active");
 
@@ -328,6 +334,27 @@ setTimeout(async () => {
       "a BACKLOG group's button leaves the stage empty — a tile added there is not being started");
     addMb().querySelector('[data-kbte-cancel]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 
+    /* ---- clearing the swimlane parks the tile ---- */
+    w.eval(`(function(){var b=exec.boards[0];
+      b.tiles=[{id:"LV",name:"Live",lane:b.swimlanes[0].id,col:b.columns[0].id,enteredCol:"2026-09-25"}];
+      renderAll();})();`);
+    ok(host().querySelectorAll('.kb-cell .kb-tile').length === 1, "a tile with a lane and a column is in the grid");
+    host().querySelector('[data-kbtiledit]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const laneSel = d.getElementById('modalBody').querySelector('[data-kbte-lane]');
+    laneSel.value = '';
+    d.getElementById('modalBody').querySelector('[data-kbte-save]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+
+    const parked = JSON.parse(w.eval('JSON.stringify(exec.boards[0].tiles[0])'));
+    ok(parked.lane === null, "clearing its swimlane stores no lane");
+    ok(parked.col === null, "…and drops the column, since the board will not draw it there anyway");
+    /* Without this the stamp survives: the column cleared without the stage "moving", so the re-stamp
+       branch never fires and the tile returns carrying the age it had before it was parked. */
+    ok(parked.enteredCol === null, "…and clears the clock, so it does not come back already aged");
+    ok(host().querySelectorAll('.kb-cell .kb-tile').length === 0, "the tile leaves the grid");
+    ok(host().querySelectorAll('.kb-tile.parked').length === 1, "…and appears in the backlog");
+    ok(!!host().querySelector('.kb-blrow.nolane .kb-tile'), "…under Unassigned");
+    ok(w.eval('RD.boardSummary(exec.boards[0], todayIso()).backlog') === 1, "…counted as backlog, not on track");
+
     // the sales app has the same thing
     const salesBl = fs.readFileSync((process.env.RD_OUT || '/home/claude/work') + '/sales_app.html', 'utf8');
     /* The class alone proves nothing — it is in the stylesheet whether or not the band is mounted.
@@ -336,6 +363,8 @@ setTimeout(async () => {
     ok(/const backlog=\(function\(\)\{/.test(salesBl), "…and builds it");
     ok(/data-kbbacklogdrop/.test(salesBl), "…as a drop target");
     ok(/t\.col=null; t\.enteredCol=null;/.test(salesBl), "…clearing both fields on park, exactly as the execution app does");
+    ok(/t\.col=t\.lane\?newCol:null;/.test(salesBl), "…and parking a tile whose lane is cleared");
+    ok(/if\(!t\.col\) t\.enteredCol=null;/.test(salesBl), "…clearing its clock with it");
     ok(/kb-blhead/.test(salesBl) && /data-kbaddtile/.test(salesBl), "…and can add a tile straight to it");
     ok(/RD\.backlogByLane\(board\)/.test(salesBl), "…grouped by lane as well");
     ok(/class="kb-blrow\$\{g\.unassigned\?" nolane":""\}/.test(salesBl), "…with its own unassigned group");
@@ -379,7 +408,7 @@ setTimeout(async () => {
     ok(/function kbTileForm\(/.test(salesBl), "…using the same add/edit form");
     ok(/kbTileAdd\(b\.dataset\.kbaddtile, b\.dataset\.kblane, b\.dataset\.kbcol\)/.test(salesBl),
       "…with every + tile routed through it, lane and stage carried");
-    ok(/if\(isNew && newCol && t\.enteredCol==null\) t\.enteredCol=todayIso\(\);/.test(salesBl),
+    ok(/if\(isNew && t\.col && t\.enteredCol==null\) t\.enteredCol=todayIso\(\);/.test(salesBl),
       "…and a new tile created into a stage starting its clock");
     ok(!/prompt\("Tile \(workstream driver\) name:"\)/.test(salesBl), "…and no name-only prompt left");
 
@@ -421,7 +450,7 @@ setTimeout(async () => {
     // the behaviour that is easy to get subtly wrong on a copy
     /* The stamp is set on a move INTO a stage and cleared on a move back to the backlog — both in one
        expression now, so match that rather than the older one-line form. */
-    ok(/else if\(moved\) t\.enteredCol=newCol\?todayIso\(\):null;/.test(salesSrc),
+    ok(/else if\(moved\) t\.enteredCol=\(t\.col\?todayIso\(\):null\);/.test(salesSrc),
       "…and re-stamps the stage clock only when the stage actually changed, clearing it on a park");
 
     // the editor function itself must be the SAME code in both, comments aside

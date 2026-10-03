@@ -10,6 +10,7 @@
   "connected_reconstruct.cjs": 43,
   "core.test.js": 390,
   "division_move.cjs": 20,
+  "editor_edit_survives.cjs": 23,
   "etb_autosave.test.cjs": 5,
   "etb_current_step.cjs": 112,
   "etb_graph_modal.cjs": 35,
@@ -27,7 +28,7 @@
   "etb_phase3_kpi.test.js": 12,
   "etb_phase4_cleanup.test.js": 4,
   "etb_refresh_hook.test.js": 4,
-  "exec_kanban.cjs": 131,
+  "exec_kanban.cjs": 143,
   "exec_owner.cjs": 24,
   "fmea_evidence.cjs": 88,
   "gantt_cancelled.cjs": 14,
@@ -38,6 +39,7 @@
   "gantt_sales_tracking.cjs": 20,
   "gantt_timeframe.cjs": 68,
   "gantt_view_toggles.cjs": 54,
+  "gate_duplicate.cjs": 33,
   "grouped_delete.cjs": 9,
   "grouping_none.cjs": 22,
   "hierarchy_broker.test.py": 9,
@@ -59,6 +61,7 @@
   "kr_row_ui.cjs": 13,
   "layer_filter.cjs": 7,
   "link_typed.cjs": 35,
+  "linked_target_rename.cjs": 29,
   "milestone_engine.cjs": 29,
   "milestone_pause.cjs": 53,
   "milestone_product.cjs": 14,
@@ -110,6 +113,8 @@
   "struct_ms_levels.cjs": 14,
   "target_value.cjs": 16,
   "theme_toggle.test.js": 12,
+  "tile_assignment.cjs": 48,
   "today_day_local.cjs": 105,
-  "unicode_escape_guard.cjs": 10
+  "unicode_escape_guard.cjs": 10,
+  "ws_reorder.cjs": 18
 }
