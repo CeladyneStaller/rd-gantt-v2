@@ -45,9 +45,13 @@ setTimeout(() => {
     const w = dom.window, d = w.document;
     try {
       w.eval(SEED('rd'));
-      ok(/Duplicate/.test(d.getElementById('subSG').textContent), "a gate row offers Duplicate");
-
-      w.eval('sgDuplicate("G1");');
+      /* Duplicate moved OFF the row and into the editor: a row button fires on a record you may not have
+         open, and the row was already carrying several controls. */
+      ok(!/Duplicate/.test(d.getElementById('subSG').textContent), "the gate row no longer carries Duplicate");
+      w.eval('subOpenEdit("stageGate","G1");');
+      const gmb = () => d.getElementById('modalBody');
+      ok(!!gmb().querySelector('[data-gatedup]'), "…the gate's edit modal does");
+      gmb().querySelector('[data-gatedup]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
       const gs = JSON.parse(w.eval('JSON.stringify(exec.stageGates)'));
       ok(gs.length === 2, "duplicating adds a gate");
       const copy = gs.find(g => g.id !== 'G1');
@@ -117,14 +121,62 @@ setTimeout(() => {
     } catch (e) { ok(false, 'cross-workstream flow threw: ' + (e && e.message)); }
   })();
 
+  // ---------- duplicating a key result ----------
+  (function () {
+    const { dom, errs } = boot('execution_app.html');
+    const w = dom.window, d = w.document;
+    try {
+      w.eval(`persist=function(){};
+        portfolio={units:[],divisions:[{id:"D",name:"D",kind:"rd"}],products:[],models:[],
+          initiatives:[{id:"I",name:"I",divisionId:"D"}],
+          objectives:[{id:"O1",statement:"O",divisionId:"D",initiativeId:"I",quarter:"2026Q2",plannedStart:2200,plannedEnd:2600}],
+          kpis:[],kpiDefs:[],kpiUpdates:[],catchupPlans:[]};
+        exec.keyResults=[{id:"KR1",objectiveId:"O1",statement:"Durability",trackingType:"kpi",progress:70,
+          subKrs:[{id:"s1",statement:"part",weight:100,trackingType:"percentage",progress:40}]}];
+        exec.kpis=[{id:"K1",objectiveId:"O1",hostType:"keyResult",hostId:"KR1",name:"decay",target:10,current:8}];
+        exec.kpiUpdates=[{id:"u1",kpiId:"K1",value:8,timestamp:1}];
+        divisionId="D"; selectedObj="O1"; renderAll(); subOpenEdit("keyResult","KR1");`);
+      const mb = () => d.getElementById('modalBody');
+      ok(!!mb().querySelector('[data-krdup]'), "the KR edit modal offers Duplicate");
+
+      mb().querySelector('[data-krdup]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      const krs = JSON.parse(w.eval('JSON.stringify(exec.keyResults)'));
+      ok(krs.length === 2, "duplicating adds a key result");
+      const copy = krs.find(k => k.id !== 'KR1');
+      ok(/copy/i.test(copy.statement), "…marked as a copy (" + copy.statement + ")");
+      ok(copy.trackingType === 'kpi', "…keeping how it is tracked");
+      /* A copy is work still to do: carrying 70% across would assert progress nobody has made. */
+      ok(copy.progress === 0, "…with progress reset, not inherited (" + copy.progress + ")");
+      ok((copy.subKrs || []).length === 1, "…sub-results copied structurally");
+      ok(copy.subKrs[0].progress === 0, "…with their progress reset too");
+
+      const kpis = JSON.parse(w.eval('JSON.stringify(exec.kpis)'));
+      ok(kpis.length === 2, "its KPIs are copied, so the duplicate is measurable at once");
+      const nk = kpis.find(k => k.hostId === copy.id);
+      ok(!!nk && nk.id !== 'K1', "…as new KPIs rather than the same rows re-hosted");
+      ok(nk.target === 10, "…keeping the target");
+      ok(nk.current == null, "…but not the measured value");
+      ok(w.eval('exec.kpiUpdates.length') === 1, "…and no readings follow");
+      ok(w.eval('exec.keyResults.find(k=>k.id==="KR1").progress') === 70, "the original is unchanged");
+      ok(errs.length === 0, "no errors" + (errs[0] ? ': ' + errs[0].slice(0, 70) : ''));
+
+      // a NEW key result has nothing to duplicate
+      w.eval('subCancel(); subOpenAdd("keyResult");');
+      ok(!mb().querySelector('[data-krdup]'), "a key result being created offers no Duplicate");
+    } catch (e) { ok(false, 'KR duplicate flow threw: ' + (e && e.message)); }
+  })();
+
   // ---------- the sales app ----------
   (function () {
     const { dom, errs } = boot('sales_app.html');
     const w = dom.window, d = w.document;
     try {
       w.eval(SEED('sales'));
-      ok(/Duplicate/.test(d.getElementById('subSG').textContent), "the sales app offers Duplicate too");
-      w.eval('sgDuplicate("G1");');
+      w.eval('subOpenEdit("stageGate","G1");');
+      ok(!!d.getElementById('modalBody').querySelector('[data-gatedup]'),
+        "the sales app's gate modal offers Duplicate too");
+      d.getElementById('modalBody').querySelector('[data-gatedup]')
+        .dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
       const gs = JSON.parse(w.eval('JSON.stringify(exec.stageGates)'));
       ok(gs.length === 2, "…and duplicates");
       const copy = gs.find(g => g.id !== 'G1');
@@ -135,6 +187,8 @@ setTimeout(() => {
       ok(/function sgDuplicate\(/.test(salesSrc), "…using the same function");
       ok(/actualDate:null, status:"pending"/.test(salesSrc), "…with the same outcome reset");
       ok(/delete nk\.current;/.test(salesSrc), "…and the same measured-value drop");
+      ok(/function krDuplicate\(/.test(salesSrc), "…and can duplicate a key result as well");
+      ok(/data-krdup=/.test(salesSrc), "…from its edit modal");
     } catch (e) { ok(false, 'sales flow threw: ' + (e && e.message)); }
   })();
 

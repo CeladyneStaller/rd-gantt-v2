@@ -312,6 +312,12 @@
   .rp-fin.over{border-left-color:var(--bad)}
   .rp-fin button{margin-left:auto;white-space:nowrap}
   .rp-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .wsd-opt{grid-column:1/-1;display:flex;align-items:flex-start;gap:9px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:7px;cursor:pointer;font-size:12px}
+  .wsd-opt input{margin:2px 0 0}
+  .wsd-opt .hint{margin:2px 0 0;font-size:10.5px}
+  .wsd-opt select{height:24px;font-size:11.5px;margin-left:4px}
+  button.act.danger{background:var(--bad);border-color:var(--bad);color:var(--on-danger)}
   .kbte-foot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
   button.ghost.danger{border-color:var(--pill-bad-bd);color:var(--pill-bad-fg)}
   .rp-why{flex:1;min-width:0;height:27px;font-size:11.5px}
@@ -6369,6 +6375,11 @@ function wireModalBody(body){
   const gl = body.querySelector("[data-gatelink]"); if(gl) gl.onclick=()=>saveSub(true);
   const apt = body.querySelector("[data-addpendingtarget]"); if(apt) apt.onclick=()=>openTgtModal("__pending__", null);
   wirePendingTgt(body);
+  const gdup = body.querySelector("[data-gatedup]");
+  /* Closing first: sgDuplicate re-renders, and leaving a stale editor open over the result is confusing
+     when the copy appears behind it. Unsaved edits in this modal are NOT carried into the copy — the
+     copy is made from the stored gate, which is what "duplicate this gate" means. */
+  if(gdup) gdup.onclick=()=>{ const id=gdup.dataset.gatedup; closeModal(); sgDuplicate(id); };
   const gd = body.querySelector("[data-gatedel]");
   if(gd) gd.onclick=()=>{
     if(gd.getAttribute("data-armed")!=="1"){ gd.setAttribute("data-armed","1"); gd.textContent="Confirm delete"; return; }
@@ -6474,8 +6485,12 @@ function gateModalBody(g){
       <p class="hint" style="margin:12px 0 0">Or Link the gate straight to a product / model / initiative metric; predecessors can be added after saving.</p>`;
   }
   const gateLink = isEdit ? '' : `<button class="ghost mini" data-gatelink="1" title="save this gate and link it to a metric">Link…</button>`;
+  /* Duplicate lives with the other record-level actions rather than on the row: a row button fires on a
+     record you may not have open, and the row is already crowded. Only when EDITING — there is nothing
+     to duplicate until the gate exists. */
+  const gateDup = isEdit ? `<button class="ghost mini" data-gatedup="${g.id}" title="duplicate this gate, in this workstream or another">Duplicate</button>` : '';
   const gateDel = isEdit ? `<button class="gc-uncomplete" data-gatedel="${g.id}" title="delete this gate">Delete gate</button>` : '';
-  h+=`<div class="row-actions${isEdit?' gate-foot':''}">${gateDel}<span class="ra-right"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></span></div>`;
+  h+=`<div class="row-actions${isEdit?' gate-foot':''}">${gateDel}${gateDup}<span class="ra-right"><button class="act mini" data-save="1">${isEdit?'Update':'Add'}</button>${gateLink}<button class="ghost mini" data-cancel="1">Cancel</button></span></div>`;
   return h;
 }
 
@@ -6594,6 +6609,38 @@ function krKpiListHtml(){
     `<p class="hint">The key result scores as the mean of all its KPIs \u2014 an unmeasured one counts as nothing achieved.</p>`+
   `</div>`;
 }
+/* Duplicate a key result. Same split as a gate: the DEFINITION copies, the record of what happened does
+   not. A KR carries more shapes than a gate, so each needs a decision:
+     - hosted KPIs copy as new KPIs with their targets, but WITHOUT their readings or measured values;
+     - sub-KRs and milestone steps copy structurally, with their progress and completion reset — a copy
+       is work still to do, and carrying 70% across would assert progress nobody has made;
+     - the manual percentage resets for the same reason. */
+function krDuplicate(krId){
+  const kr=(exec.keyResults||[]).find(k=>k.id===krId); if(!kr) return;
+  const id=RD.allocId(SUB.keyResult.idType, selectedObj, exec.keyResults.map(x=>x.id));
+  const copy={ id, objectiveId:kr.objectiveId,
+    statement:(kr.statement||"")+" (copy)",
+    trackingType:kr.trackingType||"percentage",
+    progress:0 };
+  if(kr.creditMode) copy.creditMode=kr.creditMode;
+  if(Array.isArray(kr.steps)) copy.steps=kr.steps.map(s=>{
+    const n=JSON.parse(JSON.stringify(s)); delete n.doneDate; delete n.done; n.progress=0; return n;
+  });
+  if(Array.isArray(kr.subKrs)) copy.subKrs=kr.subKrs.map(s=>{
+    const n=JSON.parse(JSON.stringify(s));
+    n.progress=0;
+    if(Array.isArray(n.kpis)) n.kpis=n.kpis.map(k=>{ const c=Object.assign({},k); delete c.current; return c; });
+    return n;
+  });
+  exec.keyResults.push(copy);
+  (exec.kpis||[]).filter(k=>k.hostType==="keyResult" && k.hostId===krId).forEach(k=>{
+    const kid=RD.allocId("kpi", selectedObj, exec.kpis.map(x=>x.id));
+    const nk=Object.assign({}, k, {id:kid, hostId:id});
+    delete nk.current;                 // a measured value belongs to the KR it was measured on
+    exec.kpis.push(nk);
+  });
+  renderAll(); persist(); setMsg("Key result duplicated.","ok");
+}
 function krModalBody(){
   const d=draftKr, tt=d.trackingType;
   return `
@@ -6624,7 +6671,7 @@ function krModalBody(){
       <div class="modal-field"><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl" style="margin:0">Sub-key results</span><button class="ghost mini" type="button" data-addsubkr>+ Add sub-KR</button></div>
         <div class="skr-list" id="krSubList">${draftSubKrListHtml()}</div></div>
     </div>
-    <div class="row-actions"><button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link\u2026</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
+    <div class="row-actions">${d.id?`<button class="ghost mini" type="button" data-krdup="${esc(d.id)}" title="duplicate this key result">Duplicate</button>`:""}<button class="act mini" type="button" data-krsave>${d.id?"Update KR":"Save KR"}</button><button class="ghost mini" type="button" data-krlink title="save this key result and link it to a product / model / initiative metric">Link\u2026</button><button class="ghost mini" type="button" data-krcancel>Cancel</button></div>`;
 }
 function krRerenderBody(){ document.getElementById("modalBody").innerHTML=krModalBody(); wireKrModal(); }
 function refreshKrSubList(){ const el=document.getElementById("krSubList"); if(el){ el.innerHTML=draftSubKrListHtml(); wireKrModal(); } }
@@ -6666,6 +6713,10 @@ function wireKrModal(){
   const add=body.querySelector("[data-addsubkr]"); if(add) add.onclick=()=>openSubKrModal(null);
   body.querySelectorAll("[data-editsubkr]").forEach(el=>el.onclick=()=>openSubKrModal(Number(el.dataset.editsubkr)));
   body.querySelectorAll("[data-delsubkr]").forEach(el=>el.onclick=()=>{ draftKr.subKrs.splice(Number(el.dataset.delsubkr),1); refreshKrSubList(); });
+  const kdup=body.querySelector("[data-krdup]");
+  /* Closes first, as with a gate: the copy is made from the STORED key result, so leaving the editor
+     open over it would suggest the unsaved edits came along. */
+  if(kdup) kdup.onclick=()=>{ const id=kdup.dataset.krdup; closeSubKrModal(); krDuplicate(id); };
   const sv=body.querySelector("[data-krsave]"); if(sv) sv.onclick=()=>saveKrModal(false);
   const lk=body.querySelector("[data-krlink]"); if(lk) lk.onclick=()=>saveKrModal(true);
   const cx=body.querySelector("[data-krcancel]"); if(cx) cx.onclick=subCancel;
@@ -7381,14 +7432,75 @@ function openWorkstreamModal(setId){
     closeModal(); persist(); renderAll(); setMsg(set?"Workstream updated":"Workstream added","ok");
   };
   const dl=mb.querySelector("[data-wsdel]");
-  if(dl){ let armed=false; dl.onclick=()=>{
-    if(!armed){ armed=true; dl.textContent="Confirm delete"; return; }
-    const id=dl.dataset.wsdel, others=objSetsOrdered().filter(x=>x.id!==id), gts=gatesOfSet(id);
-    if(gts.length && !others.length){ setMsg("Can't delete the only workstream while it holds gates \u2014 add another first.","err"); return; }
-    if(gts.length){ const to=others[0].id; gts.forEach(g=>{ g.setId=to; }); }
-    exec.stageGateSets=(exec.stageGateSets||[]).filter(x=>x.id!==id);
-    closeModal(); persist(); renderAll(); setMsg("Workstream deleted"+(gts.length?" \u2014 gates moved to "+esc(others[0].name||'another'):""),"ok");
-  }; }
+  if(dl) dl.onclick=()=>wsDeleteModal(dl.dataset.wsdel);
+}
+/* Deleting a workstream asks what becomes of its gates, and that question IS the confirmation — the
+   armed two-click it replaces confirmed nothing useful, and silently moved the gates to whichever
+   workstream happened to be first. Losing a gate is not recoverable from the UI, so the destructive
+   choice is never the default and the counts are stated before anything happens. */
+function wsDeleteModal(setId){
+  const set=(exec.stageGateSets||[]).find(s=>s.id===setId); if(!set) return;
+  const gates=gatesOfSet(setId);
+  const others=objSetsOrdered().filter(s=>s.id!==setId);
+  const nm=esc(set.name||"(unnamed workstream)");
+
+  if(!gates.length){
+    openModal("Delete workstream",
+      `<p class="hint">Delete <b>${nm}</b>? It holds no stage-gates, so nothing else changes.</p>`+
+      `<div class="kbte-foot"><span style="flex:1"></span>`+
+        `<button class="ghost" data-wsdcancel>Cancel</button>`+
+        `<button class="act danger" data-wsdgo="empty">Delete workstream</button></div>`);
+  } else if(!others.length){
+    /* Moving is impossible with nowhere to move to, so the only non-destructive answer is to stop. */
+    openModal("Delete workstream",
+      `<p class="hint"><b>${nm}</b> is the only workstream and holds <b>${gates.length}</b> stage-gate${gates.length===1?"":"s"}.</p>`+
+      `<div class="ed"><label class="wsd-opt"><input type="radio" name="wsdisp" value="cancel" checked>`+
+        `<span><b>Keep everything</b><br><span class="hint">Add another workstream first if you want to move the gates.</span></span></label>`+
+      `<label class="wsd-opt"><input type="radio" name="wsdisp" value="delete">`+
+        `<span><b>Delete the workstream and its ${gates.length} stage-gate${gates.length===1?"":"s"}</b><br>`+
+        `<span class="hint">Their targets and recorded dates go too. This cannot be undone.</span></span></label></div>`+
+      `<div class="kbte-foot"><span style="flex:1"></span>`+
+        `<button class="ghost" data-wsdcancel>Cancel</button>`+
+        `<button class="act danger" data-wsdgo="choice">Continue</button></div>`);
+  } else {
+    const opts=others.map(o=>`<option value="${esc(o.id)}">${esc(o.name||o.id)}</option>`).join("");
+    openModal("Delete workstream",
+      `<p class="hint"><b>${nm}</b> holds <b>${gates.length}</b> stage-gate${gates.length===1?"":"s"}. What should happen to ${gates.length===1?"it":"them"}?</p>`+
+      `<div class="ed"><label class="wsd-opt"><input type="radio" name="wsdisp" value="move" checked>`+
+        `<span><b>Move ${gates.length===1?"it":"them"} to</b> <select data-wsdto>${opts}</select><br>`+
+        `<span class="hint">The gates keep their dates, targets and history.</span></span></label>`+
+      `<label class="wsd-opt"><input type="radio" name="wsdisp" value="delete">`+
+        `<span><b>Delete ${gates.length===1?"it":"them"} with the workstream</b><br>`+
+        `<span class="hint">Their targets and recorded dates go too. This cannot be undone.</span></span></label></div>`+
+      `<div class="kbte-foot"><span style="flex:1"></span>`+
+        `<button class="ghost" data-wsdcancel>Cancel</button>`+
+        `<button class="act danger" data-wsdgo="choice">Continue</button></div>`);
+  }
+
+  const host=document.getElementById("modalBody"); if(!host) return;
+  host.querySelector("[data-wsdcancel]").onclick=()=>closeModal();
+  host.querySelector("[data-wsdgo]").onclick=()=>{
+    const mode=(host.querySelector("input[name=wsdisp]:checked")||{}).value||"empty";
+    if(mode==="cancel"){ closeModal(); return; }
+    if(mode==="move"){
+      const sel=host.querySelector("[data-wsdto]");
+      const to=sel?sel.value:(others[0]||{}).id;
+      if(!to){ setMsg("Nowhere to move the gates to.","err"); return; }
+      gates.forEach(g=>{ g.setId=to; });
+    } else if(mode==="delete"){
+      const ids=gates.map(g=>g.id);
+      exec.stageGates=(exec.stageGates||[]).filter(g=>ids.indexOf(g.id)<0);
+      /* A deleted gate takes its hosted KPIs with it, or they point at a gate the plan no longer has
+         and every score reading them measures nothing. */
+      exec.kpis=(exec.kpis||[]).filter(k=>!(k.hostType==="stageGate" && ids.indexOf(k.hostId)>=0));
+      exec.stageGateEdges=(exec.stageGateEdges||[]).filter(e=>ids.indexOf(e.from)<0 && ids.indexOf(e.to)<0);
+    }
+    exec.stageGateSets=(exec.stageGateSets||[]).filter(x=>x.id!==setId);
+    closeModal(); persist(); renderAll();
+    setMsg(mode==="delete"
+      ? `Workstream and ${gates.length} stage-gate${gates.length===1?"":"s"} deleted.`
+      : (gates.length?`Workstream deleted \u2014 ${gates.length} gate${gates.length===1?"":"s"} moved.`:"Workstream deleted."),"ok");
+  };
 }
 /* ---- Kanban stage-gating (ported from the sales app, same engine) --------------------------------
    A board is ONE gate sequence: columns are the gates, tiles are parallel workstreams running that
@@ -7940,7 +8052,7 @@ function renderGates(){
       const cuTag=cuEntry?` <span class="cu-tag">\u21bb re-committed</span>`:"";
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">revision v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
-        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${gvMarkHtml(g.id)}<button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button><button class="cd-btn" onclick="event.stopPropagation();sgDuplicate('${g.id}')" title="duplicate this gate, in this workstream or another">Duplicate</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
+        <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${gvMarkHtml(g.id)}<button class="cd-btn" onclick="event.stopPropagation();openConnectData('stageGate','${g.id}')" title="import measured values from the analysis portal">Connect data</button>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
         <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
         <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>

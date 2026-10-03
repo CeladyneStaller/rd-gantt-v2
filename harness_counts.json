@@ -39,7 +39,7 @@
   "gantt_sales_tracking.cjs": 20,
   "gantt_timeframe.cjs": 68,
   "gantt_view_toggles.cjs": 54,
-  "gate_duplicate.cjs": 33,
+  "gate_duplicate.cjs": 51,
   "grouped_delete.cjs": 9,
   "grouping_none.cjs": 22,
   "hierarchy_broker.test.py": 9,
@@ -103,7 +103,7 @@
   "sg_complete_ui.cjs": 14,
   "sg_intent_deps.cjs": 8,
   "sg_kr_multilink.cjs": 8,
-  "sg_row_ui.cjs": 32,
+  "sg_row_ui.cjs": 34,
   "sgset_migration.cjs": 11,
   "sgset_planning.cjs": 14,
   "sgset_ui.cjs": 19,
@@ -116,5 +116,6 @@
   "tile_assignment.cjs": 48,
   "today_day_local.cjs": 105,
   "unicode_escape_guard.cjs": 10,
+  "ws_delete.cjs": 32,
   "ws_reorder.cjs": 18
 }

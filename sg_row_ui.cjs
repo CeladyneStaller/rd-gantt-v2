@@ -62,13 +62,18 @@ setTimeout(()=>{ const d=w.document, s=d.createElement('script');
     mb.querySelector('[data-wschoice="chained"]').click(); mb.querySelector('[data-ws-save]').click();
     ok((exec.stageGateSets||[]).find(x=>x.id==='S2').chained===true, 'editing can switch a workstream to chained');
 
-    // workstream modal - DELETE (2-click, reassigns its gate)
+    /* Workstream delete now opens a modal that ASKS what becomes of the gates — that question is the
+       confirmation. The armed two-click it replaced confirmed nothing useful and silently moved the
+       gates to whichever workstream happened to be first. */
     openWorkstreamModal('S2'); mb=D.getElementById('modalBody');
     var dl=mb.querySelector('[data-wsdel]'); dl.click();
-    ok(/Confirm/i.test(dl.textContent), 'delete arms on first click');
-    dl.click();
-    ok(!(exec.stageGateSets||[]).some(x=>x.id==='S2'), 'second click deletes the workstream');
-    ok(exec.stageGates.find(g=>g.id==='c1').setId!=='S2', 'its gate was reassigned, not orphaned');
+    mb=D.getElementById('modalBody');
+    ok(!!mb.querySelector('[data-wsdgo]'), 'delete opens the disposition modal');
+    ok(mb.querySelectorAll('input[name=wsdisp]').length===2, 'it offers move or delete');
+    ok((mb.querySelector('input[name=wsdisp]:checked')||{}).value==='move', 'move is the default, not delete');
+    mb.querySelector('[data-wsdgo]').click();
+    ok(!(exec.stageGateSets||[]).some(x=>x.id==='S2'), 'confirming deletes the workstream');
+    ok(exec.stageGates.find(g=>g.id==='c1').setId!=='S2', 'its gate was moved, not orphaned');
    }catch(e){ out.push('FAIL threw: '+e.message+'  '+((e.stack||'').split('\\n')[1]||'')); }
    D.body.setAttribute('data-out', out.join('\\n'));
   })();`;
