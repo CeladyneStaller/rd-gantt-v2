@@ -181,7 +181,12 @@ def main():
         for n, why in fails:
             print(f"  {n}: {why}")
     if update:
-        json.dump(counts, open(BASE, "w", encoding="utf-8"), indent=1, sort_keys=True)
+        # indent=2 and a trailing newline match how this file was first written. Writing it any other
+        # way reindents all ~120 lines, so a baseline bump of one number lands as a whole-file diff and
+        # the single line that actually changed is unreviewable.
+        with open(BASE, "w", encoding="utf-8") as fh:
+            json.dump(counts, fh, indent=2, sort_keys=True)
+            fh.write("\n")
         print(f"\nbaseline written: {BASE}")
     sys.exit(1 if fails else 0)
 
