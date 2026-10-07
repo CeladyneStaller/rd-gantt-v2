@@ -447,21 +447,19 @@ function makeFetch(store){
                    {id:'p2',name:'By hand',unit:'V'}];
       e.actual_outcome={result_id:'rp',recorded_date:'2026-07-22',
         key_read_values:{ p1:[0.66,0.68,0.70,0.67,0.69], p2:0.5 },
-        key_read_sources:{ p1:{portal:'analysis',sample:'MEA-17',bucket:'polcurve',key:'OCV',
-                              cond:{T_C:80,RH_pct:100}, job_id:'j-1041', run_t:'2026-07-19T14:02:00Z'} }};})()`);
+        key_read_samples:{ p1:['MEA-17'] }};})()`);
   const pv = d.createElement("div"); d.body.appendChild(pv);
   w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.body.lastChild.appendChild(n);})()");
   const chips = [...pv.querySelectorAll(".kr-observed .src-chip")];
-  ok(chips.length === 1, "exactly the IMPORTED key read carries an analysis chip (" + chips.length + ")");
-  ok(chips.length === 1 && /analysis/.test(chips[0].textContent), "…labelled as coming from the analysis portal");
+  ok(chips.length === 1, "exactly the IMPORTED key read carries a provenance chip (" + chips.length + ")");
+  ok(chips.length === 1 && /MEA-17/.test(chips[0].textContent), "…labelled with the sample it came from");
   const tip = chips.length ? (chips[0].getAttribute("title") || "") : "";
-  ok(/MEA-17/.test(tip), "…naming the sample it came from");
-  ok(/80/.test(tip), "…and the conditions it was measured under");
+  ok(/MEA-17/.test(tip), "…the tooltip names the sample");
   ok(pv.querySelectorAll(".kr-observed").length >= 2, "the hand-entered key read still renders its observed value");
   ok(chips.length === 1, "…without a spurious provenance chip");
 
-  // absent key_read_sources = hand-entered, which is every legacy outcome
-  w.eval("delete window.__ETBH.tree().experiments.exp_1.actual_outcome.key_read_sources;");
+  // absent provenance = hand-entered, which is every legacy outcome
+  w.eval("(function(){var o=window.__ETBH.tree().experiments.exp_1.actual_outcome; delete o.key_read_sources; delete o.key_read_samples;})();");
   const pv2 = d.createElement("div"); d.body.appendChild(pv2);
   w.eval("(function(){var n=window.__ETBH.renderKeyReads('exp_1'); if(n) document.body.lastChild.appendChild(n);})()");
   ok(pv2.querySelectorAll(".src-chip").length === 0, "a legacy outcome with no sources shows no chips (migration-safe)");

@@ -53,11 +53,20 @@ setTimeout(() => {
         new w.Event(type, { bubbles: true, cancelable: true }), { dataTransfer: dt }));
 
       ok(blocks().length === 3, "each workstream renders as its own block");
-      ok(blocks().every(b => b.getAttribute('draggable') === 'true'), "…draggable when there is more than one");
       ok(d.querySelectorAll('[data-wsgrip]').length === 3, "…each with a drag handle");
       ok(order() === 'S1,S2,S3', "…in their stored order");
 
-      // drag the last onto the first
+      /* WHERE `draggable` SITS IS THE GATING MECHANISM, so assert it rather than assuming it.
+         The browser fires `dragstart` on the element carrying `draggable` — so if that is the block,
+         `e.target` is the block and a guard looking for the descendant grip can never match
+         (`closest` walks up, not down), cancelling every drag while CSS still shows a grab cursor.
+         Putting `draggable` on the handle alone makes the browser do the gating. */
+      ok([...d.querySelectorAll('[data-wsgrip]')].every(g => g.getAttribute('draggable') === 'true'),
+        "the drag handle is the draggable element");
+      ok(!d.querySelector('[data-wsblock][draggable="true"]'),
+        "…and the block itself is NOT draggable, so only the handle can start a move");
+
+      /* Dispatch on the grip, which is where a browser fires it now that the grip is the drag source. */
       fire(blocks()[2].querySelector('[data-wsgrip]'), 'dragstart');
       fire(blocks()[0], 'drop');
       ok(order() === 'S3,S1,S2', "dragging a workstream onto an earlier one moves it there (" + order() + ")");
@@ -73,12 +82,30 @@ setTimeout(() => {
       ok(d.querySelector('[data-wsblock="S3"] .ws-eyebrow').textContent.trim().endsWith('A'),
         "…so the block now first is Workstream A");
 
+      /* A drop only fires in a browser if dragover cancelled the default, so the cancel is part of the
+         contract, not an implementation detail: dispatchEvent returns false when preventDefault ran. */
+      const mid = blocks()[1].dataset.wsblock;
+      fire(blocks()[1].querySelector('[data-wsgrip]'), 'dragstart');
+      ok(w.eval('__wsDrag') === mid,
+        "a dragstart on the handle actually begins the drag (" + w.eval('String(__wsDrag)') + ")");
+      ok(fire(blocks()[0], 'dragover') === false,
+        "…and dragover over another workstream cancels the default, which is what lets a drop fire");
+      ok(fire(blocks()[1], 'dragover') === true,
+        "…while dragging over itself does not, so it is not a drop target");
+      fire(blocks()[1].querySelector('[data-wsgrip]'), 'dragend');
+
       // a drag that does not start on the handle must not reorder
       const before = order();
       fire(blocks()[1].querySelector('.ws-name'), 'dragstart');
       fire(blocks()[0], 'drop');
       ok(order() === before,
         "a drag that did not start on the handle reorders nothing — a gate drag cannot move its parent");
+      /* The realistic version of the same check: a browser that fired dragstart on the BLOCK (which is
+         what happens if `draggable` moves back onto it) must still not reorder anything. */
+      fire(blocks()[1], 'dragstart');
+      fire(blocks()[0], 'drop');
+      ok(order() === before && w.eval('__wsDrag') === null,
+        "…and a dragstart on the block body starts nothing either");
 
       // dropping a block on itself is not a move
       fire(blocks()[0].querySelector('[data-wsgrip]'), 'dragstart');
@@ -103,7 +130,7 @@ setTimeout(() => {
       dom.window.eval(SEED(1));
       /* One workstream has nowhere to go: a handle that does nothing is worse than no handle. */
       ok(d.querySelectorAll('[data-wsgrip]').length === 0, "a lone workstream shows no drag handle");
-      ok(!d.querySelector('[data-wsblock][draggable="true"]'), "…and is not draggable");
+      ok(!d.querySelector('#subSG [draggable="true"]'), "…and nothing in the section is draggable");
       ok(errs.length === 0, "no errors" + (errs[0] ? ': ' + errs[0].slice(0, 80) : ''));
     } catch (e) { ok(false, 'single-set flow threw: ' + (e && e.message)); }
   })();

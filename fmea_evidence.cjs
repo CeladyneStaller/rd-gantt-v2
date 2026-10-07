@@ -48,6 +48,39 @@ const out = []; const ok = (c, m) => out.push((c ? 'ok  ' : 'FAIL ') + m);
 })();
 
 
+// ---------- the LOAD path must not discard evidence ----------
+// This is the one that was missing. migrateProblem rebuilds every problem from an explicit field list,
+// so anything not named there is silently dropped when the document is read back. The save was correct
+// the whole time; the load threw the experiments away. A round trip through JSON.parse/stringify —
+// which is what the earlier tests did — does not exercise this at all.
+(function () {
+  const X = [{ xid: 'x1', code: 'EXP-1', hypothesis: 'H', toggle: 'T', test: 'E',
+    samples: ['S1'], key_reads: [{ krid: 'k1', name: 'OCV', unit: 'V' }],
+    values: { S1: { k1: '0.67' } }, notes: 'N', verdict: 'confirmed', conclusion: 'C' }];
+  const stored = { rid: 'r1', problem: 'P', objectiveId: 'O1', modes: [
+    { mid: 'm1', mode: 'M', experiments: X, effects: [
+      { eid: 'e1', effect: 'E', experiments: X, causes: [
+        { cid: 'c1', cause: 'C', severity: 7, occurrence: 6, detection: 5, mitigation: '', experiments: X }] }] }] };
+  const back = RD.migrateProblem(stored);
+
+  ok((back.modes[0].experiments || []).length === 1, "a MODE-level experiment survives the load migration");
+  ok((back.modes[0].effects[0].experiments || []).length === 1, "…an EFFECT-level one too");
+  ok((back.modes[0].effects[0].causes[0].experiments || []).length === 1, "…and a CAUSE-level one");
+  const rt = (back.modes[0].experiments || [])[0] || {};
+  ok(rt.code === 'EXP-1' && rt.hypothesis === 'H' && rt.verdict === 'confirmed', "…with its details intact");
+  ok(((rt.values || {}).S1 || {}).k1 === '0.67', "…including the recorded values");
+  ok((rt.key_reads || []).length === 1 && (rt.samples || []).length === 1, "…and its key reads and samples");
+
+  // a problem with no evidence must not gain an empty array — the shape stays as it was
+  const plain = RD.migrateProblem({ rid: 'r2', modes: [{ mid: 'm', effects: [{ eid: 'e', causes: [{ cid: 'c' }] }] }] });
+  ok(!('experiments' in plain.modes[0]), "a problem with no evidence is unchanged by the migration");
+  ok(!('experiments' in plain.modes[0].effects[0].causes[0]), "…at every level");
+
+  // and the migration still normalises what it always did
+  ok(plain.modes[0].effects[0].causes[0].severity === 1, "the migration still fills missing S/O/D defaults");
+  ok(plain.status === 'open', "…and the problem status");
+})();
+
 // ---------- the modal flow, through the real DOM ----------
 // Buttons are clicked, not called: the point is that "+ Experiment" is reachable at all three levels
 // and that what it opens edits the node it was launched from.
@@ -209,7 +242,9 @@ setTimeout(() => {
     causeBtn2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
     w.eval("var x=draftRisk.modes[0].effects[0].causes[0].experiments[0]; x.hypothesis='H'; x.samples=['S1']; x.key_reads=[{krid:'k1',name:'OCV',unit:'V'}]; x.values={S1:{k1:'0.67'}}; x.verdict='confirmed';");
 
-    const liveExps = () => JSON.parse(w.eval("JSON.stringify(((exec.risks[0].modes[0].effects[0].causes[0].experiments)||[]))"));
+    const liveExps = () => JSON.parse(w.eval(
+      "(function(){var r=(exec.risks||[])[0]||{};var m=(r.modes||[])[0]||{};var e=(m.effects||[])[0]||{};" +
+      "var c=(e.causes||[])[0]||{};return JSON.stringify(c.experiments||[]);})()"));
     ok(liveExps().length === 0, "before saving, the experiment is only in the draft");
 
     // click the modal's own Save experiment button — not the function
@@ -252,11 +287,49 @@ setTimeout(() => {
     w.eval("addDraftExperiment(1,0,0);");
     const fxSave2 = [...d.querySelectorAll('#fxOverlay button')].find(b => /Save experiment/.test(b.textContent));
     if (fxSave2) fxSave2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
-    const shifted = JSON.parse(w.eval("JSON.stringify(((exec.risks[0].modes[0].effects[0].causes[0].experiments)||[]))"));
+    const shifted = JSON.parse(w.eval(
+      "(function(){var r=(exec.risks||[]).filter(function(x){return x.rid==='r8';})[0]||{};" +
+      "var m=(r.modes||[]).filter(function(x){return x.mid==='mZ';})[0]||{};" +
+      "var e=(m.effects||[])[0]||{};var c=(e.causes||[])[0]||{};return JSON.stringify(c.experiments||[]);})()"));
     ok(shifted.length === 1, "the experiment still reaches the right node after an index shift — matched by id, not position");
 
+    // The write-nothing path: a node created in THIS editing session has no counterpart in the saved
+    // document. The surgical per-node commit silently wrote nothing here, which is how evidence was
+    // being lost — every assertion above passed while this case did.
+    w.eval(`exec.risks=[{rid:'r7',problem:'Draft node',objectiveId:'O1',gateId:null,status:'open',knowns:[],modes:[
+      {mid:'m7',mode:'M',status:'open',effects:[{eid:'e7',effect:'E',status:'open',causes:[
+        {cid:'c7',cause:'existing',severity:5,occurrence:5,detection:5,mitigation:'',status:'open'}]}]}]}];
+      openEditFmeaModal('r7');
+      draftRisk.modes[0].effects[0].causes.push({cid:'cNEW',cause:'created just now',severity:1,occurrence:1,detection:1,mitigation:'',status:'open'});
+      renderFmeaModes(); window.__persistCalls=0;`);
+    const newBtn = [...d.querySelectorAll('#fmeaBody button')].filter(b => /\+ Experiment/.test(b.textContent)).pop();
+    newBtn.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const saveNew = [...d.querySelectorAll('#fxOverlay button')].find(b => /Save experiment/.test(b.textContent));
+    if (saveNew) saveNew.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const savedNew = JSON.parse(w.eval(
+      "(function(){var r=(exec.risks||[]).filter(function(x){return x.rid==='r7';})[0]||{};" +
+      "var m=(r.modes||[])[0]||{};var e=(m.effects||[])[0]||{};" +
+      "return JSON.stringify((e.causes||[]).filter(function(c){return c.cid==='cNEW';})[0]||null);})()"));
+    ok(!!savedNew, "a cause created during this session is written to the document");
+    ok(!!savedNew && (savedNew.experiments || []).length === 1, "…carrying the experiment attached to it");
+    ok(w.eval("window.__persistCalls") > 0, "…and a save is requested, not silently skipped");
+
+    // and a problem that has never been saved at all still cannot swallow evidence
+    w.eval(`window.__persistCalls=0; window.__before=exec.risks.length;
+      editingRiskId=null;
+      draftRisk={rid:'rNEW',problem:'',objectiveId:null,gateId:null,status:'open',knowns:[],modes:[
+        {mid:'mX',mode:'New mode',status:'open',effects:[{eid:'eX',effect:'E',status:'open',causes:[
+          {cid:'cX',cause:'C',severity:1,occurrence:1,detection:1,mitigation:'',status:'open'}]}]}]};
+      renderFmeaModes();`);
+    const nb2 = [...d.querySelectorAll('#fmeaBody button')].filter(b => /\+ Experiment/.test(b.textContent)).pop();
+    nb2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const sv2 = [...d.querySelectorAll('#fxOverlay button')].find(b => /Save experiment/.test(b.textContent));
+    if (sv2) sv2.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    ok(w.eval("exec.risks.length") === w.eval("window.__before") + 1, "an unsaved problem is created rather than losing the evidence in it");
+    ok(w.eval("window.__persistCalls") > 0, "…and that write is requested too");
+
   } catch (e) {
-    ok(false, "DOM flow threw: " + (e && e.message));
+    ok(false, "DOM flow threw: " + (e && e.message) + " @ " + String((e&&e.stack||"").split("\n")[1]||"").trim().slice(0,90));
   }
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });

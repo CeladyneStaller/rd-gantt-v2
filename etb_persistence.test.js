@@ -15,7 +15,10 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     apiPut=async function(id,doc,im){var e=STORE[id];var cv=e?e.version:0;if(im!==ef(id,cv)&&im!==String(cv))throw new Error('412 '+id);STORE[id]={version:cv+1,doc:JSON.parse(JSON.stringify(doc))};return {version:cv+1,etag:ef(id,cv+1)};};
   })();
   function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  function hasExp(pid,eid){return !!(typeof exec!=='undefined'&&exec&&exec.etbTrees&&exec.etbTrees[pid]&&exec.etbTrees[pid].experiments&&exec.etbTrees[pid].experiments[eid]);}
+  // exec.etbTrees[pid] is the objective's BAG (schema 1 = a bare tree, schema 2 = {trees,activeTid}).
+  // Read through the normaliser so this test asserts behaviour, not storage shape.
+  function treeOf(pid){ try{ return RD.etbActiveTree((typeof exec!=='undefined'&&exec&&exec.etbTrees)?exec.etbTrees[pid]:null); }catch(e){ return null; } }
+  function hasExp(pid,eid){ var t=treeOf(pid); return !!(t&&t.experiments&&t.experiments[eid]); }
   function mkExp(id,code,results){return {id:id,code:code,name:code,status:'planned',key_reads:[],possible_results:results||[],actual_outcome:null,audit_log:[]};}
   async function run(){ var R=window.__R;
     portfolio={divisions:[{id:'FC',name:'FC'}],products:[{id:'P1',name:'X',divisionId:'FC'}],initiatives:[{id:'I1',divisionId:'FC',productId:'P1'}],objectives:[
@@ -45,7 +48,7 @@ setTimeout(()=>{ const d=dom.window.document, s=d.createElement('script');
     R.switchFlushesO2 = hasExp('O2','exp_B1');
 
     // D) refresh: the persist store (exec.etbTrees) is authoritative on reload — drop exp_A2 there, reload, working tree follows
-    delete exec.etbTrees['O1'].experiments['exp_A2']; await ETB.loadForHub();
+    { var __t=treeOf('O1'); if(__t&&__t.experiments) delete __t.experiments['exp_A2']; } await ETB.loadForHub();
     R.refreshRestoresA1 = !!ETB.experimentById('exp_A1');
     R.refreshRestoresA3 = !!ETB.experimentById('exp_A3');
     R.refreshDropsLocal = !ETB.experimentById('exp_A2');

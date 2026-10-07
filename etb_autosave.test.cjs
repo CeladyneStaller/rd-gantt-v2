@@ -2,6 +2,8 @@
 // The ETB no longer owns a broker debounce; it syncs the active tree into exec.etbTrees and
 // lets the host's persist() flush EXEC-<div>. This asserts that contract.
 const fs=require("fs");
+// the write-back normalises through rdcore, so the plumbing block needs RD in scope
+global.RD=require((process.env.RD_SRC||'/home/claude/work')+'/rdcore.js');
 const block=fs.readFileSync((process.env.RD_TMP||'/tmp')+'/etb_plumbing.js','utf8');
 let persistCalls=0; global.persist=function(){persistCalls++;};
 global.exec={etbTrees:{}};
@@ -15,7 +17,8 @@ let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++;console.error('FAIL:',m);} else co
 global.__setSuppress(false);
 // 1) a change syncs the active tree into the divisional exec doc, keyed by objective
 persistCalls=0; global.exec.etbTrees={}; global.window.__etbOnChange();
-ok(global.exec.etbTrees.O1 && global.exec.etbTrees.O1.experiments && global.exec.etbTrees.O1.experiments.X===1, "onChange writes active tree into exec.etbTrees[pid]");
+const treeOf=(bag)=>{ try{ return global.RD.etbActiveTree(bag); }catch(e){ return null; } };
+ok((treeOf(global.exec.etbTrees.O1)||{}).experiments && treeOf(global.exec.etbTrees.O1).experiments.X===1, "onChange writes active tree into exec.etbTrees[pid]");
 // 2) ...and triggers the host persist() (which owns the EXEC-<div> write + flush)
 ok(persistCalls>=1, "onChange calls host persist()");
 // 3) suppressed (initial load): no write, no persist -> can't clobber the loaded tree
@@ -27,7 +30,7 @@ activePid=null; persistCalls=0; global.exec.etbTrees={}; global.window.__etbOnCh
 ok(Object.keys(global.exec.etbTrees).length===0, "onChange with no active objective writes nothing");
 // 5) a fresh objective id keys a second tree without dropping the first
 global.exec.etbTrees={O1:{experiments:{X:1}}}; activePid="O2"; activeTree={experiments:{Y:2}}; global.window.__etbOnChange();
-ok(global.exec.etbTrees.O1 && global.exec.etbTrees.O2 && global.exec.etbTrees.O2.experiments.Y===2, "second objective tree coexists in exec.etbTrees");
+ok(global.exec.etbTrees.O1 && global.exec.etbTrees.O2 && (treeOf(global.exec.etbTrees.O2)||{}).experiments.Y===2, "second objective tree coexists in exec.etbTrees");
 
 console.log(f?('\n'+f+' / '+n+' FAILED'):('\nPASS — '+n+' ETB write-through plumbing assertions green'));
 process.exit(f?1:0);

@@ -450,8 +450,10 @@
   /* ---- pass 2: gate rows + workstream header + collapse + chaining modal ---- */
   #modalBody .modal-field input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-family:var(--sans);font-size:13px}
   .ws-head{display:flex;align-items:center;gap:11px;padding:11px 12px 10px;flex-wrap:wrap}
-  .ws-grip{color:var(--muted);font-size:11px;letter-spacing:-2px;cursor:grab;user-select:none;opacity:0;transition:opacity .12s}
+  .ws-grip{color:var(--muted);font-size:11px;letter-spacing:-2px;cursor:grab;user-select:none;opacity:0;transition:opacity .12s;padding:2px 1px}
   .sgset:hover .ws-grip,.ws-grip:focus{opacity:1}
+  .ws-grip:active{cursor:grabbing}
+  .sgset.ws-dragging .ws-grip{opacity:1;cursor:grabbing}
   .sgset.ws-dragging{opacity:.45}
   .sgset.ws-over{box-shadow:inset 0 2px 0 var(--accent)}
   .ws-name{font-weight:600;font-size:13px;letter-spacing:.005em}
@@ -5170,19 +5172,41 @@ function wsReorder(fromId, toId){
   return true;
 }
 function wireWsDrag(host){
-  host.querySelectorAll("[data-wsblock]").forEach(el=>{
-    el.addEventListener("dragstart",e=>{
-      /* A gate row inside the block is its own drag in the revision modal; only the grip starts a
-         workstream move, so dragging a gate cannot silently reorder its parent. */
-      if(!(e.target&&e.target.closest&&e.target.closest("[data-wsgrip]"))){ e.preventDefault(); return; }
+  /* `draggable` sits on the GRIP, not on the block, and that placement is the whole gating mechanism.
+     A gate row inside a block is its own drag in the revision modal, and the block holds editable
+     names, so a workstream move has to start from the handle and nowhere else. The browser enforces
+     exactly that when only the handle is draggable. Trying to enforce it from the block instead —
+     `draggable` on the block plus a `dragstart` guard on `e.target` — cannot work: `dragstart` fires
+     on the element carrying `draggable`, so the target is that block and never the descendant grip
+     (`closest` walks up, not down). The guard then cancels EVERY drag while the handle still shows a
+     grab cursor from CSS, which is what made this look wired up when it was dead. */
+  host.querySelectorAll("[data-wsgrip]").forEach(grip=>{
+    grip.addEventListener("dragstart",e=>{
+      const el=grip.closest("[data-wsblock]"); if(!el) return;
       __wsDrag=el.dataset.wsblock; el.classList.add("ws-dragging");
-      if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain", __wsDrag); }catch(_){} }
+      if(e.dataTransfer){
+        e.dataTransfer.effectAllowed="move";
+        /* Firefox refuses to start a drag unless dragstart sets data. */
+        try{ e.dataTransfer.setData("text/plain", __wsDrag); }catch(_){}
+        /* Otherwise the drag image is the 11px handle glyph rather than the block being moved. */
+        try{ e.dataTransfer.setDragImage(el, 24, 16); }catch(_){}
+      }
     });
-    el.addEventListener("dragend",()=>{ el.classList.remove("ws-dragging"); __wsDrag=null;
-      host.querySelectorAll(".ws-over").forEach(x=>x.classList.remove("ws-over")); });
-    el.addEventListener("dragover",e=>{ if(!__wsDrag||__wsDrag===el.dataset.wsblock) return;
-      e.preventDefault(); el.classList.add("ws-over"); });
-    el.addEventListener("dragleave",()=>el.classList.remove("ws-over"));
+    grip.addEventListener("dragend",()=>{
+      host.querySelectorAll(".ws-dragging").forEach(x=>x.classList.remove("ws-dragging"));
+      host.querySelectorAll(".ws-over").forEach(x=>x.classList.remove("ws-over"));
+      __wsDrag=null;
+    });
+  });
+  host.querySelectorAll("[data-wsblock]").forEach(el=>{
+    /* Both dragenter and dragover have to preventDefault, or the drop never fires. */
+    const over=e=>{ if(!__wsDrag||__wsDrag===el.dataset.wsblock) return;
+      e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; el.classList.add("ws-over"); };
+    el.addEventListener("dragenter",over);
+    el.addEventListener("dragover",over);
+    /* dragleave also fires crossing into a child, which would strobe the marker on every gate row. */
+    el.addEventListener("dragleave",e=>{ if(e.relatedTarget && el.contains(e.relatedTarget)) return;
+      el.classList.remove("ws-over"); });
     el.addEventListener("drop",e=>{
       e.preventDefault(); el.classList.remove("ws-over");
       const src=__wsDrag; __wsDrag=null;
@@ -5213,8 +5237,8 @@ function renderGates(){
     /* Only draggable when there is more than one: a lone workstream has nowhere to go, and a handle that
        does nothing is worse than no handle. */
     const dragOn = sets.length > 1;
-    inner+=`<div class="sgset" data-wsblock="${esc(set.id)}"${dragOn?' draggable="true"':''}><div class="ws-head">
-      ${dragOn?`<span class="ws-grip" data-wsgrip title="Drag to reorder workstreams" aria-hidden="true">\u22ee\u22ee</span>`:''}
+    inner+=`<div class="sgset" data-wsblock="${esc(set.id)}"><div class="ws-head">
+      ${dragOn?`<span class="ws-grip" data-wsgrip draggable="true" aria-label="Drag to reorder workstreams" title="Drag to reorder workstreams">\u22ee\u22ee</span>`:''}
       <span class="ws-eyebrow">Workstream ${String.fromCharCode(65+si)}</span><span class="ws-name click" data-wsedit="${set.id}" title="edit workstream">${esc(set.name||'(unnamed workstream)')}</span>${chainSymbol(chained)}
       <span class="ws-meter"><span class="ws-bar"><span class="ws-fill" style="width:${pct==null?0:Math.round(pct)}%;background:${pctCol}"></span></span><span class="ws-pct" style="color:${pctCol}">${pctTxt}</span><span class="ws-cnt">${passed} / ${gates.length}</span></span>
       <span class="ws-acts"><button class="ghost mini" data-addsg-set="${set.id}">+ gate</button><button class="ghost mini btn-ico" data-wsedit="${set.id}" title="edit workstream">\u270e</button></span>

@@ -1,7 +1,7 @@
 const {JSDOM, VirtualConsole}=require("jsdom"); const fs=require("fs");
 let html=fs.readFileSync((process.env.RD_OUT||'/mnt/user-data/outputs')+'/execution_app.html','utf8');
 html=html.replace("\ninit();\n\n})();",
- "\ninit(); window.__H={ get tree(){return state.tree;}, apid:function(){return state.activeProjectId;}, softRefresh:softRefresh, addExp:function(){return addExperiment(state.tree,{});}, hasCreds:function(){try{return ETB.hasCreds();}catch(e){return 'ERR:'+e.message;}}, execTrees:function(){try{return JSON.parse(JSON.stringify((typeof exec!=='undefined'&&exec&&exec.etbTrees)||{}));}catch(e){return {err:e.message};}} };\n\n})();");
+ "\ninit(); window.__H={ get tree(){return state.tree;}, apid:function(){return state.activeProjectId;}, softRefresh:softRefresh, addExp:function(){return addExperiment(state.tree,{});}, hasCreds:function(){try{return ETB.hasCreds();}catch(e){return 'ERR:'+e.message;}}, execTrees:function(){try{return JSON.parse(JSON.stringify((typeof exec!=='undefined'&&exec&&exec.etbTrees)||{}));}catch(e){return {err:e.message};}}, treeIn:function(bag){ try{ var w=RD.etbTreesOf(bag); return w.trees[0]||null; }catch(e){ return null; } } };\n\n})();");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function makeFetch(store,putLog,delay){ delay=delay||{}; return function(url,opts){ opts=opts||{}; const m=/\/state\/([^/?]+)/.exec(String(url)); const id=m?decodeURIComponent(m[1]):null;
   if((opts.method||"GET").toUpperCase()==="PUT"){ let body={}; try{body=JSON.parse(opts.body);}catch(e){} const prev=store[id]; const ver=(prev?prev.version:0)+1; store[id]={doc:body.doc,etag:String(ver),version:ver}; putLog.push({id,doc:body.doc}); return Promise.resolve({ok:true,status:200,json:()=>Promise.resolve({etag:String(ver),version:ver})}); }
@@ -26,7 +26,8 @@ function loadApp(store,putLog,delay){
     const eid=A.w.__H.addExp(); A.w.__H.softRefresh(); await sleep(2600);   // host persist() debounce
     ok(nonEtbPuts(putLog).length===0, "A: NO write to any ETB-<div> bin ("+JSON.stringify(nonEtbPuts(putLog).map(p=>p.id))+")");
     const exdoc=store["EXEC-D1"]&&store["EXEC-D1"].doc;
-    ok(exdoc&&exdoc.etbTrees&&exdoc.etbTrees.O1&&exdoc.etbTrees.O1.experiments&&exdoc.etbTrees.O1.experiments[eid], "A: experiment saved into EXEC-D1.doc.etbTrees.O1 (divisional bin)");
+    { const t0=A.w.__H.treeIn(exdoc&&exdoc.etbTrees&&exdoc.etbTrees.O1);
+      ok(t0&&t0.experiments&&t0.experiments[eid], "A: experiment saved into EXEC-D1.doc.etbTrees.O1 (divisional bin)"); }
     const B=loadApp(store,putLog,{}); await sleep(900);
     ok(B.w.__H&&B.w.__H.tree&&B.w.__H.tree.experiments&&B.w.__H.tree.experiments[eid], "A: experiment round-trips after reload from EXEC-D1"); }
 
@@ -35,7 +36,8 @@ function loadApp(store,putLog,delay){
     const w=loadApp(store,putLog,{}); await sleep(1600);
     ok(w.w.__H.tree&&w.w.__H.tree.experiments&&w.w.__H.tree.experiments["X-1"], "B: prior tree loaded from EXEC-D1.etbTrees into view");
     ok(nonEtbPuts(putLog).length===0, "B: NO ETB-<div> writes on load");
-    ok(store["EXEC-D1"].doc.etbTrees.O1.experiments["X-1"], "B: prior tree preserved in divisional bin"); }
+    { const t1=w.w.__H.treeIn(store["EXEC-D1"].doc.etbTrees.O1);
+      ok(t1&&t1.experiments&&t1.experiments["X-1"], "B: prior tree preserved in divisional bin"); } }
 
   // C) SLOW load, pre-seeded: no clobber of the divisional bin
   { const store={ portfolio:{doc:pf(),etag:"1",version:1}, "EXEC-D1":{doc:priorExec(),etag:"5",version:5} }; const putLog=[];

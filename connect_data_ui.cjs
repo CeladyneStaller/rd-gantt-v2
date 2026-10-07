@@ -224,7 +224,9 @@ function makeFetch(store){
   const oBox=[...d.querySelectorAll('#cdBody input[type=checkbox][data-cdpick]')].find(b=>b.getAttribute("data-key")==="OCV");
   ok(!!oBox, "a second value is selectable for the scale test");
   if(oBox){ oBox.checked=true; oBox.dispatchEvent(new w.Event("change")); await sleep(80); }
-  const scaleSel=d.querySelector("#cdBody select.cd-scale");
+  // the scale scales the VALUE, so it must live in the value cell — asserting it exists "somewhere"
+  // would pass even if it were back in the target column squeezing the dropdown.
+  const scaleSel=d.querySelector("#cdBody td.cd-v select.cd-scale");
   ok(!!scaleSel, "a ticked row offers a scale selector");
   ok(!!scaleSel && scaleSel.value==="1", "…defaulting to ×1, so scaling is opt-in");
   const scaleOpts=scaleSel?[...scaleSel.options].map(o=>o.value):[];
@@ -232,16 +234,20 @@ function makeFetch(store){
 
   // choose ×1000 and confirm the row previews the scaled value
   if(scaleSel){ scaleSel.value="1000"; scaleSel.dispatchEvent(new w.Event("change")); await sleep(80); }
-  const vShown=d.querySelector("#cdBody .cd-vscaled");
+  const vShown=d.querySelector("#cdBody td.cd-v .cd-vscaled");
   ok(!!vShown, "choosing a scale previews the scaled value on the row");
   ok(!!vShown && Math.abs(Number(vShown.textContent)-953)<1e-6, "…0.953 shown as 953 under ×1000 ("+(vShown&&vShown.textContent)+")");
-  ok(!!d.querySelector("#cdBody .cd-vwas"), "…while still showing what it was");
+  ok(!!d.querySelector("#cdBody td.cd-v .cd-vwas"), "…while still showing what it was");
 
   const beforeScale=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)")).length;
-  const oSel=[...d.querySelectorAll("#cdBody td.cd-t select")].find(s=>!s.classList.contains("cd-scale"));
+  ok(d.querySelectorAll("#cdBody td.cd-t select").length===1, "the Import-into cell holds the target dropdown alone ("+d.querySelectorAll("#cdBody td.cd-t select").length+")");
+  ok(!d.querySelector("#cdBody td.cd-t select.cd-scale"), "…with no scale selector competing for its width");
+  const oSel=d.querySelector("#cdBody td.cd-t select");
+  // the rule existing is not enough — the element has to actually carry the class
+  ok(!!oSel && oSel.classList.contains("cd-tsel"), "the target dropdown carries the class that fills its column");
   if(oSel){ oSel.value="K-11"; oSel.dispatchEvent(new w.Event("change")); await sleep(60); }
   // re-pick the scale after the target re-render, then import
-  const scaleSel2=d.querySelector("#cdBody select.cd-scale");
+  const scaleSel2=d.querySelector("#cdBody td.cd-v select.cd-scale");
   if(scaleSel2 && scaleSel2.value!=="1000"){ scaleSel2.value="1000"; scaleSel2.dispatchEvent(new w.Event("change")); await sleep(60); }
   d.getElementById("cdImport").click(); await sleep(200);
   const afterUps=JSON.parse(w.eval("JSON.stringify(exec.kpiUpdates)"));
@@ -271,6 +277,16 @@ function makeFetch(store){
   ok(!!valsRule && /fixed/.test(valsRule.style.cssText||""), "the table uses fixed layout, so declared widths are honoured");
   const tgtRule=sheet.find(r=>r.selectorText && r.selectorText.indexOf("col.c-tgt")>=0);
   ok(!!tgtRule && parseInt(tgtRule.style.width,10)>=240, "the Import-into column is wide enough for a target and a scale ("+(tgtRule&&tgtRule.style.width)+")");
+  // the scale must be width-BOUNDED — unbounded it sprawls and squeezes whatever shares its space,
+  // which is what made the target unreadable. jsdom does no layout, so assert the rule.
+  const scaleRule=sheet.find(r=>r.selectorText && /\.cd-scale$/.test(r.selectorText));
+  ok(!!scaleRule, "the scale selector has a style rule");
+  ok(!!scaleRule && /max-width/.test(scaleRule.style.cssText||""), "…with a max-width, so it cannot sprawl ("+(scaleRule&&scaleRule.style.maxWidth)+")");
+  // jsdom does not expose maxWidth as a property (same as tableLayout) — read it out of cssText
+  const mw=scaleRule ? (String(scaleRule.style.cssText||"").match(/max-width:\s*(\d+)px/)||[])[1] : null;
+  ok(mw!=null && Number(mw)<=96, "…bounded small, it only ever shows \u00d71000 ("+mw+"px)");
+  const tselRule=sheet.find(r=>r.selectorText && /\.cd-tsel$/.test(r.selectorText));
+  ok(!!tselRule && /width/.test(tselRule.style.cssText||""), "the target dropdown is sized to fill its column");
 
   out.forEach(l => { if (l.startsWith('FAIL')) console.log(l); });
   const fl=out.filter(x=>x.startsWith('FAIL'));
