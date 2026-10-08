@@ -567,24 +567,68 @@
     return clamp(raw, 0, 100);
   }
 
-  // group/level-aware score: resolved target (down) vs resolved value (up),
-  // direction from the definer.
-  function kpiScoreResolved(kpi, kpis, execDocs) {
+  // group/level-aware score of a resolved value: resolved target (down) vs the value (up), direction
+  // from the definer. This is the UNDISCOUNTED score — what the samples measured so far are worth.
+  function scoreOfValue(kpi, kpis, value) {
     var defn = definerOf(kpi, kpis);
     if (defn.targetType === 'binary') {
-      var bv = effValue(kpi, kpis, execDocs);
-      if (bv == null) return null;
-      return bv >= 1 ? 100 : 0;
+      if (value == null) return null;
+      return value >= 1 ? 100 : 0;
     }
     var target = effTarget(kpi, kpis);
     if (target == null) return null;
-    var value = effValue(kpi, kpis, execDocs);
     if (value == null) return null;
     var dir = kpiDirection(kpi, kpis);
     var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
                                 : progressLinear(value, target, dir);
     return clamp(raw, 0, 100);
   }
+
+  // ---- partial check-in: the sample-completeness discount ------------------------------------------
+  // A statistical KPI with an expected sample size (readCount) is scored on what has been measured, then
+  // DISCOUNTED by how much of the sample is in:   score = raw x min(n, readCount) / readCount.
+  // Before this, two readings of twenty at target scored 100, and since gateAtTarget is score === 100 a
+  // gate could AUTO-PASS on a tenth of its data. The discount closes that without a separate rule: a short
+  // sample cannot reach 100. `raw` travels alongside so a screen can say what was withheld ("92 without
+  // discount"); every number that is discounted must be shown with it, or a sampling gap reads as poor
+  // performance. A KPI with no readCount, a non-statistical KPI and a binary KPI are never discounted.
+  //
+  // WHICH readings are counted matters. A linked member can be scored on readings posted elsewhere in its
+  // group (effectiveValueEntry picks a winner from the pool), so n comes from the KPI whose readings WON,
+  // read at that KPI's reading source (a borrowed sample counts where it lives). The expected size comes
+  // from the root definer — the same record resolvedReadingValue takes the statistic from — so the
+  // statistic and its completeness can never be measured over different data.
+  function sampleOfEntry(kpi, kpis, execDocs, entry) {
+    var root = rootOf(kpi, kpis);
+    var stat = !!root && root.targetType === 'statistical';
+    var want = stat ? Number(root.readCount) : NaN;
+    if (!stat || !isFinite(want) || !(want > 0)) {
+      return { statistical: stat, expected: null, n: null, factor: 1, partial: false };
+    }
+    if (!entry || entry.value == null) return { statistical: true, expected: want, n: 0, factor: 1, partial: false };
+    var src = kpiById(entry.src, kpis) || kpi;
+    var n = readingCount(readingSourceId(src, kpis), execDocs);
+    return { statistical: true, expected: want, n: n, factor: Math.min(n, want) / want, partial: n < want };
+  }
+  function kpiSample(kpi, kpis, execDocs) {
+    return sampleOfEntry(kpi, kpis, execDocs, effectiveValueEntry(kpi, kpis, execDocs));
+  }
+  // kpiScoreParts -> { score, raw, n, expected, factor, partial }: the score that counts, the score on the
+  // samples so far, and how far in. One pool resolution feeds both, so they always describe the same value.
+  function kpiScoreParts(kpi, kpis, execDocs) {
+    var entry = effectiveValueEntry(kpi, kpis, execDocs);
+    var raw = scoreOfValue(kpi, kpis, entry ? entry.value : null);
+    var smp = sampleOfEntry(kpi, kpis, execDocs, entry);
+    return {
+      score: raw == null ? null : raw * smp.factor,
+      raw: raw, n: smp.n, expected: smp.expected, factor: smp.factor,
+      partial: raw != null && smp.partial
+    };
+  }
+  // The score every rollup, band, gate check and app consumes: DISCOUNTED.
+  function kpiScoreResolved(kpi, kpis, execDocs) { return kpiScoreParts(kpi, kpis, execDocs).score; }
+  // What the same KPI scores on its samples so far, ignoring how many are missing.
+  function kpiScoreRaw(kpi, kpis, execDocs) { return kpiScoreParts(kpi, kpis, execDocs).raw; }
 
   // all KPIs hosted by (hostType, hostId), scanned across exec docs
   function kpisFor(hostType, hostId, execDocs) {
@@ -621,17 +665,37 @@
   //     no targets at all        -> null (unscored, no band)
   //     targets, none read       -> null (unscored, no band)  <- g1's intent, preserved
   //     targets, >=1 read        -> mean over ALL targets, unread ones counting 0
-  function meanScorable(kpis, execDocs) {
+  // `raw` (optional) averages the UNDISCOUNTED KPI scores instead — the "without discount" figure a screen
+  // shows beside a partial check-in. Everything that decides anything (bands, rollups, gate passes) uses
+  // the default, discounted path; raw is for display only.
+  function meanScorable(kpis, execDocs, raw) {
     var all = allKpis(execDocs);
     var scores = [], anyRead = false;
     for (var i = 0; i < kpis.length; i++) {
       if (!hasTarget(kpis[i], all)) continue;
-      var s = kpiScoreResolved(kpis[i], all, execDocs);
+      var p = kpiScoreParts(kpis[i], all, execDocs);
+      var s = raw ? p.raw : p.score;
       if (s != null) anyRead = true;
       scores.push(s == null ? 0 : s);
     }
     if (!anyRead) return null;
     return mean(scores);
+  }
+  // hostSample(hostType, hostId, execDocs) -> { partial, partialCount, n, expected }
+  // Totals for a caption like "8 of 20 samples": every statistical KPI on the host that HAS an expected
+  // size, n capped at that size so an over-sampled KPI cannot mask a short one. `partial` is true only when
+  // some KPI has been read but is still short — an unread KPI is "no read", not a partial check-in.
+  function hostSample(hostType, hostId, execDocs) {
+    var all = allKpis(execDocs), ks = kpisFor(hostType, hostId, execDocs);
+    var n = 0, want = 0, partialCount = 0;
+    for (var i = 0; i < ks.length; i++) {
+      if (!hasTarget(ks[i], all)) continue;
+      var p = kpiScoreParts(ks[i], all, execDocs);
+      if (p.expected == null) continue;
+      n += Math.min(p.n || 0, p.expected); want += p.expected;
+      if (p.partial) partialCount++;
+    }
+    return { partial: partialCount > 0, partialCount: partialCount, n: n, expected: want };
   }
 
   // find a KR object across exec docs
@@ -906,7 +970,9 @@
     return { due: due, feasible: feasible };
   }
 
-  function keyResultScore(krId, execDocs) {
+  // `raw` (optional): the undiscounted score, for display beside a partial check-in. Only a KPI-tracked KR
+  // can be partial — percentage, sub-KR and milestone tracking have no readings to be short of.
+  function keyResultScore(krId, execDocs, raw) {
     var kr = findKr(krId, execDocs);
     var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
     if (tt === 'percentage') {
@@ -915,7 +981,12 @@
     }
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     if (tt === 'milestone') return milestoneKrScore(kr);
-    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
+    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs, raw);
+  }
+  function keyResultSample(krId, execDocs) {
+    var kr = findKr(krId, execDocs);
+    if (kr && (kr.trackingType || 'kpi') !== 'kpi') return { partial: false, partialCount: 0, n: 0, expected: 0 };
+    return hostSample('keyResult', krId, execDocs);
   }
   // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
   function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
@@ -936,7 +1007,7 @@
     return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
-  function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  function stageGateScore(sgId, execDocs, raw) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs, raw); }
   // gateAtTarget -> true iff EVERY target on the gate has been read and is at/above target. Unread targets
   // score 0 (see meanScorable), so a gate cannot pass on the strength of the one target somebody measured.
   // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
@@ -954,7 +1025,7 @@
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
   // gating/readiness signal, NOT folded into the OKR score — same stance as stageGateScore).
-  function milestoneScore(msId, execDocs) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs); }
+  function milestoneScore(msId, execDocs, raw) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs, raw); }
   // milestoneAchieved -> manual completion mark (ms.completedDate) OR KPI score at 100.
   // A milestone with no scorable KPIs is achieved only by the manual mark.
   function milestoneAchieved(ms, execDocs) {
@@ -980,16 +1051,22 @@
   // unread KPI, and for the same reason: an objective must not read well because most of its Key
   // Results have nothing behind them yet. Only when NOTHING is scorable is the objective unscored,
   // which keeps "an objective with no Key Result has no band" intact.
-  function objectiveScore(objId, execDocs) {
+  function objectiveScore(objId, execDocs, raw) {
     var krs = krsForObjective(objId, execDocs);
     var scores = [], anyScored = false;
     for (var i = 0; i < krs.length; i++) {
-      var s = keyResultScore(krs[i].id, execDocs);
+      var s = keyResultScore(krs[i].id, execDocs, raw);
       if (s != null) anyScored = true;
       scores.push(s == null ? 0 : s);
     }
     if (!anyScored) return null;
     return mean(scores);
+  }
+  // How many of an objective's KRs are partial check-ins — 0 means its score carries no discount.
+  function objectivePartialCount(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs), c = 0;
+    for (var i = 0; i < krs.length; i++) if (keyResultSample(krs[i].id, execDocs).partial) c++;
+    return c;
   }
 
   // ---- hierarchy lookups (Phase 1) -----------------------------------------
@@ -2653,6 +2730,12 @@
     allocId: allocId,
     kpiScore: kpiScore,
     kpiScoreResolved: kpiScoreResolved,
+    kpiScoreRaw: kpiScoreRaw,
+    kpiScoreParts: kpiScoreParts,
+    kpiSample: kpiSample,
+    hostSample: hostSample,
+    keyResultSample: keyResultSample,
+    objectivePartialCount: objectivePartialCount,
     kpiCurrentValue: kpiCurrentValue,
     kpisFor: kpisFor,
     groupMembers: groupMembers,

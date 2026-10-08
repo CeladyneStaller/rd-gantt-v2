@@ -23,6 +23,7 @@
     --pill-active-bg:#16233e; --pill-active-fg:#7ca8ff; --pill-active-bd:#2a3a5a;
     --pill-info-bg:#13314a; --pill-info-fg:#add4ff; --pill-info-bd:#1d4a6e;
     --on-accent:#08121a; --on-danger:#1a0a0c; --scrim:rgba(0,0,0,.55);
+    --hatch-ink:rgba(173,212,255,.42); --pt-cell:rgba(19,49,74,.35);
     --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
     --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   }
@@ -36,6 +37,7 @@
     --pill-neutral-bg:#eeeeeb; --pill-neutral-fg:#5f6166;
     --pill-active-bg:#dbe6f1; --pill-active-fg:#2d6cae; --pill-active-bd:#c5d6e8;
     --pill-info-bg:#e7f0fb; --pill-info-fg:#1d4a6e; --pill-info-bd:#bcd6f0;
+    --hatch-ink:rgba(29,74,110,.55); --pt-cell:rgba(231,240,251,.45);
     --on-accent:#ffffff; --on-danger:#ffffff; --scrim:rgba(15,23,42,.32);
   }
   .theme-toggle{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
@@ -174,6 +176,35 @@
   .m-badge.near{background:var(--pill-warn-bg);color:var(--pill-warn-fg)} .m-badge.near .d{background:var(--warn)}
   .m-badge.miss{background:var(--pill-bad-bg);color:var(--pill-bad-fg)} .m-badge.miss .d{background:var(--bad)}
   .m-badge.none{background:var(--pill-neutral-bg);color:var(--pill-neutral-fg)} .m-badge.none .d{background:var(--none)}
+  /* ---- partial check-in. Navy (the info pill) because no band uses it, so it can never be read as a status;
+     the hatch spans discounted -> raw so the gap reads as "not counted yet" rather than as missing score. */
+  .pt-tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:5px;padding:2px 7px;white-space:nowrap}
+  .pt-ico{flex:none}
+  .pt-hatch{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(-45deg,var(--hatch-ink) 0 2px,transparent 2px 4.5px);pointer-events:none}
+  .pt-cap{margin-top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.02em;line-height:1.35;display:flex;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:1px;color:var(--pill-info-fg)}
+  .pt-cap + .pace-cap,.pt-cap + .pt-cap{margin-top:4px}
+  .pt-cap.sub{color:var(--muted)}
+  .pt-cnt{color:var(--pill-info-fg);letter-spacing:0}
+  .pt-wo{color:var(--pill-info-fg)}
+  .st-col{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .st-stack{display:inline-flex;flex-direction:column;align-items:stretch;gap:4px;min-width:86px}
+  .st-stack .pt-tag,.st-stack .m-badge{justify-content:center}
+  table.mtbl th.m-score-h{color:var(--pill-info-fg);background:var(--pill-info-bg);font-weight:600}
+  table.mtbl td.m-score{font-family:var(--mono);background:var(--pt-cell);white-space:nowrap}
+  .sv{font-weight:700}
+  .sv.met{color:var(--ok)} .sv.near{color:var(--warn)} .sv.miss{color:var(--bad)} .sv.none{color:var(--muted);font-weight:400}
+  .pt-math{display:block;font-size:9px;font-weight:400;letter-spacing:.02em;margin-top:2px;color:var(--pill-info-fg)}
+  .pt-math b,.sp-pt-math b{font-weight:700}
+  .pt-math b.met,.sp-pt-math b.met{color:var(--pill-ok-fg)} .pt-math b.near,.sp-pt-math b.near{color:var(--pill-warn-fg)} .pt-math b.miss,.sp-pt-math b.miss{color:var(--pill-bad-fg)}
+  .sp-partial{margin-top:9px;border:1px solid var(--pill-info-bd);background:var(--pill-info-bg);border-radius:7px;padding:8px 9px;color:var(--pill-info-fg)}
+  .sp-pt-h{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .sp-pt-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px}
+  .sp-pt-row .sp-pt-wo{font-family:var(--mono);font-size:10.5px}
+  .sp-pt-bar{position:relative;height:5px;border-radius:3px;background:var(--panel);margin-top:6px;overflow:hidden}
+  .sp-pt-fill{position:absolute;left:0;top:0;bottom:0}
+  .sp-pt-fill.met{background:var(--ok)} .sp-pt-fill.near{background:var(--warn)} .sp-pt-fill.miss{background:var(--bad)}
+  .sp-pt-math{font-family:var(--mono);font-size:10px;margin-top:6px}
+  .sp-pt-more{font-size:11px;margin-top:3px;color:var(--ink)}
   table.mtbl .m-post{white-space:nowrap}
   table.mtbl .m-post .tiny{width:62px}
   table.mtbl .m-acts{text-align:right;white-space:nowrap}
@@ -200,7 +231,7 @@
   .gate-block:hover{background:var(--panel2)}
   .gate-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
   .gate-block.st-passed{--rail:var(--ok)} .gate-block.st-passed-late{--rail:var(--warn)} .gate-block.st-overdue{--rail:var(--bad)} .gate-block.st-pending{--rail:var(--none)}
-  .grow{display:grid;grid-template-columns:1fr 116px 124px 250px;align-items:start;column-gap:16px}
+  .grow{display:grid;grid-template-columns:1fr 116px 168px 250px;align-items:start;column-gap:16px}
   .g-id{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   .g-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent2);background:var(--pill-active-bg);border:1px solid var(--pill-active-bd);border-radius:6px;padding:2px 7px;flex:none;cursor:pointer}
   .g-name{font-weight:600;font-size:14px;color:var(--ink);letter-spacing:-.005em}
@@ -215,8 +246,8 @@
   .g-ready .r-lab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
   .g-ready .r-val{font-family:var(--mono);font-size:13px;font-weight:700}
   .g-ready .r-val .u{font-size:10px;color:var(--muted);font-weight:400}
-  .g-ready .r-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
-  .g-ready .r-fill{height:100%;border-radius:2px}
+  .g-ready .r-bar{position:relative;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .g-ready .r-fill{display:block;height:100%;border-radius:2px}   /* a span: without display:block it is inline and renders 0x0 */
   .g-ready.empty .r-val{color:var(--muted)}
   .g-sched{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;align-items:center;line-height:1.35}
   .g-sched .gs-c{min-width:0}
@@ -375,7 +406,7 @@
   .kr-block:hover{background:var(--panel2)}
   .kr-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,transparent)}
   .kr-block.b-on{--rail:var(--ok)} .kr-block.b-risk{--rail:var(--warn)} .kr-block.b-behind{--rail:var(--bad)} .kr-block.b-none{--rail:var(--none)}
-  .krow{display:grid;grid-template-columns:1fr 120px 176px 60px;align-items:start;column-gap:16px}
+  .krow{display:grid;grid-template-columns:1fr 136px 224px 60px;align-items:start;column-gap:16px}
   .kr-band{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:5px;padding:3px 8px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
   .kr-band .d{width:5px;height:5px;border-radius:50%}
   .kr-band.on{background:var(--pill-ok-bg);color:var(--pill-ok-fg)} .kr-band.on .d{background:var(--ok)}
@@ -385,7 +416,7 @@
   .pace-bar{position:relative;height:5px;border-radius:3px;background:var(--line);margin-top:2px}
   .pace-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px}
   .pace-mark{position:absolute;top:-3px;height:11px;width:2px;border-radius:1px;background:var(--muted);box-shadow:0 0 0 1.5px var(--panel)}
-  .pace-cap{margin-top:7px;font-family:var(--mono);font-size:10px;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+  .pace-cap{margin-top:7px;font-family:var(--mono);font-size:10px;letter-spacing:.02em;display:flex;flex-wrap:wrap;align-items:center;gap:1px 6px}
   .pace-cap .ico{font-size:9px}
   .pace-cap.ok{color:var(--muted)} .pace-cap.risk{color:var(--warn)} .pace-cap.behind{color:var(--bad)}
   .pace-cap .el{color:var(--none)}
@@ -653,7 +684,9 @@
   .qw-track{flex:1;min-width:120px;height:7px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;overflow:hidden}
   .qw-fill{height:100%;background:var(--accent)}
   /* metric mini-bar */
-  .mc-bar{height:4px;background:var(--panel2);border-radius:3px;overflow:hidden;margin:9px 0 0}
+  .mc-bar{position:relative;height:4px;background:var(--panel2);border-radius:3px;overflow:hidden;margin:9px 0 0}
+  .mc-sub.pt-sub{display:flex;flex-wrap:wrap;align-items:center;gap:5px 6px}
+  .pt-block{flex-basis:100%}
   .mc-bar-fill{height:100%}
   /* signal bars */
   .bar-area{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:0 0 18px}
@@ -1685,24 +1718,68 @@ html[data-theme="dark"] #etb-view{
     return clamp(raw, 0, 100);
   }
 
-  // group/level-aware score: resolved target (down) vs resolved value (up),
-  // direction from the definer.
-  function kpiScoreResolved(kpi, kpis, execDocs) {
+  // group/level-aware score of a resolved value: resolved target (down) vs the value (up), direction
+  // from the definer. This is the UNDISCOUNTED score — what the samples measured so far are worth.
+  function scoreOfValue(kpi, kpis, value) {
     var defn = definerOf(kpi, kpis);
     if (defn.targetType === 'binary') {
-      var bv = effValue(kpi, kpis, execDocs);
-      if (bv == null) return null;
-      return bv >= 1 ? 100 : 0;
+      if (value == null) return null;
+      return value >= 1 ? 100 : 0;
     }
     var target = effTarget(kpi, kpis);
     if (target == null) return null;
-    var value = effValue(kpi, kpis, execDocs);
     if (value == null) return null;
     var dir = kpiDirection(kpi, kpis);
     var raw = (dir === 'range') ? progressRange(value, target.lo, target.hi)
                                 : progressLinear(value, target, dir);
     return clamp(raw, 0, 100);
   }
+
+  // ---- partial check-in: the sample-completeness discount ------------------------------------------
+  // A statistical KPI with an expected sample size (readCount) is scored on what has been measured, then
+  // DISCOUNTED by how much of the sample is in:   score = raw x min(n, readCount) / readCount.
+  // Before this, two readings of twenty at target scored 100, and since gateAtTarget is score === 100 a
+  // gate could AUTO-PASS on a tenth of its data. The discount closes that without a separate rule: a short
+  // sample cannot reach 100. `raw` travels alongside so a screen can say what was withheld ("92 without
+  // discount"); every number that is discounted must be shown with it, or a sampling gap reads as poor
+  // performance. A KPI with no readCount, a non-statistical KPI and a binary KPI are never discounted.
+  //
+  // WHICH readings are counted matters. A linked member can be scored on readings posted elsewhere in its
+  // group (effectiveValueEntry picks a winner from the pool), so n comes from the KPI whose readings WON,
+  // read at that KPI's reading source (a borrowed sample counts where it lives). The expected size comes
+  // from the root definer — the same record resolvedReadingValue takes the statistic from — so the
+  // statistic and its completeness can never be measured over different data.
+  function sampleOfEntry(kpi, kpis, execDocs, entry) {
+    var root = rootOf(kpi, kpis);
+    var stat = !!root && root.targetType === 'statistical';
+    var want = stat ? Number(root.readCount) : NaN;
+    if (!stat || !isFinite(want) || !(want > 0)) {
+      return { statistical: stat, expected: null, n: null, factor: 1, partial: false };
+    }
+    if (!entry || entry.value == null) return { statistical: true, expected: want, n: 0, factor: 1, partial: false };
+    var src = kpiById(entry.src, kpis) || kpi;
+    var n = readingCount(readingSourceId(src, kpis), execDocs);
+    return { statistical: true, expected: want, n: n, factor: Math.min(n, want) / want, partial: n < want };
+  }
+  function kpiSample(kpi, kpis, execDocs) {
+    return sampleOfEntry(kpi, kpis, execDocs, effectiveValueEntry(kpi, kpis, execDocs));
+  }
+  // kpiScoreParts -> { score, raw, n, expected, factor, partial }: the score that counts, the score on the
+  // samples so far, and how far in. One pool resolution feeds both, so they always describe the same value.
+  function kpiScoreParts(kpi, kpis, execDocs) {
+    var entry = effectiveValueEntry(kpi, kpis, execDocs);
+    var raw = scoreOfValue(kpi, kpis, entry ? entry.value : null);
+    var smp = sampleOfEntry(kpi, kpis, execDocs, entry);
+    return {
+      score: raw == null ? null : raw * smp.factor,
+      raw: raw, n: smp.n, expected: smp.expected, factor: smp.factor,
+      partial: raw != null && smp.partial
+    };
+  }
+  // The score every rollup, band, gate check and app consumes: DISCOUNTED.
+  function kpiScoreResolved(kpi, kpis, execDocs) { return kpiScoreParts(kpi, kpis, execDocs).score; }
+  // What the same KPI scores on its samples so far, ignoring how many are missing.
+  function kpiScoreRaw(kpi, kpis, execDocs) { return kpiScoreParts(kpi, kpis, execDocs).raw; }
 
   // all KPIs hosted by (hostType, hostId), scanned across exec docs
   function kpisFor(hostType, hostId, execDocs) {
@@ -1739,17 +1816,37 @@ html[data-theme="dark"] #etb-view{
   //     no targets at all        -> null (unscored, no band)
   //     targets, none read       -> null (unscored, no band)  <- g1's intent, preserved
   //     targets, >=1 read        -> mean over ALL targets, unread ones counting 0
-  function meanScorable(kpis, execDocs) {
+  // `raw` (optional) averages the UNDISCOUNTED KPI scores instead — the "without discount" figure a screen
+  // shows beside a partial check-in. Everything that decides anything (bands, rollups, gate passes) uses
+  // the default, discounted path; raw is for display only.
+  function meanScorable(kpis, execDocs, raw) {
     var all = allKpis(execDocs);
     var scores = [], anyRead = false;
     for (var i = 0; i < kpis.length; i++) {
       if (!hasTarget(kpis[i], all)) continue;
-      var s = kpiScoreResolved(kpis[i], all, execDocs);
+      var p = kpiScoreParts(kpis[i], all, execDocs);
+      var s = raw ? p.raw : p.score;
       if (s != null) anyRead = true;
       scores.push(s == null ? 0 : s);
     }
     if (!anyRead) return null;
     return mean(scores);
+  }
+  // hostSample(hostType, hostId, execDocs) -> { partial, partialCount, n, expected }
+  // Totals for a caption like "8 of 20 samples": every statistical KPI on the host that HAS an expected
+  // size, n capped at that size so an over-sampled KPI cannot mask a short one. `partial` is true only when
+  // some KPI has been read but is still short — an unread KPI is "no read", not a partial check-in.
+  function hostSample(hostType, hostId, execDocs) {
+    var all = allKpis(execDocs), ks = kpisFor(hostType, hostId, execDocs);
+    var n = 0, want = 0, partialCount = 0;
+    for (var i = 0; i < ks.length; i++) {
+      if (!hasTarget(ks[i], all)) continue;
+      var p = kpiScoreParts(ks[i], all, execDocs);
+      if (p.expected == null) continue;
+      n += Math.min(p.n || 0, p.expected); want += p.expected;
+      if (p.partial) partialCount++;
+    }
+    return { partial: partialCount > 0, partialCount: partialCount, n: n, expected: want };
   }
 
   // find a KR object across exec docs
@@ -2024,7 +2121,9 @@ html[data-theme="dark"] #etb-view{
     return { due: due, feasible: feasible };
   }
 
-  function keyResultScore(krId, execDocs) {
+  // `raw` (optional): the undiscounted score, for display beside a partial check-in. Only a KPI-tracked KR
+  // can be partial — percentage, sub-KR and milestone tracking have no readings to be short of.
+  function keyResultScore(krId, execDocs, raw) {
     var kr = findKr(krId, execDocs);
     var tt = kr ? (kr.trackingType || 'kpi') : 'kpi';
     if (tt === 'percentage') {
@@ -2033,7 +2132,12 @@ html[data-theme="dark"] #etb-view{
     }
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
     if (tt === 'milestone') return milestoneKrScore(kr);
-    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs);
+    return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs, raw);
+  }
+  function keyResultSample(krId, execDocs) {
+    var kr = findKr(krId, execDocs);
+    if (kr && (kr.trackingType || 'kpi') !== 'kpi') return { partial: false, partialCount: 0, n: 0, expected: 0 };
+    return hostSample('keyResult', krId, execDocs);
   }
   // Pace-aware KR status: attainment vs how far the parent objective's timeline has elapsed.
   function keyResultPaceBand(attainment, plannedStart, plannedEnd, today) {
@@ -2054,7 +2158,7 @@ html[data-theme="dark"] #etb-view{
     return { attainment: att, elapsed: elapsed, gap: (att != null && elapsed != null) ? (elapsed - att) : null, band: keyResultPaceBand(att, ps, pe, today) };
   }
   // stageGateScore -> mean of the gate's KPIs (gating/readiness; NOT in OKR score)
-  function stageGateScore(sgId, execDocs) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs); }
+  function stageGateScore(sgId, execDocs, raw) { return meanScorable(kpisFor('stageGate', sgId, execDocs), execDocs, raw); }
   // gateAtTarget -> true iff EVERY target on the gate has been read and is at/above target. Unread targets
   // score 0 (see meanScorable), so a gate cannot pass on the strength of the one target somebody measured.
   // A gate with NO scorable KPIs scores null (not 100), so this is the built-in 0/0 auto-complete guard.
@@ -2072,7 +2176,7 @@ html[data-theme="dark"] #etb-view{
   function hostScore(hostType, hostId, execDocs) { return meanScorable(kpisFor(hostType, hostId, execDocs), execDocs); }
   // milestoneScore -> mean of the milestone's KPIs (peer of initiative in the KPI tree; a standalone
   // gating/readiness signal, NOT folded into the OKR score — same stance as stageGateScore).
-  function milestoneScore(msId, execDocs) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs); }
+  function milestoneScore(msId, execDocs, raw) { return meanScorable(kpisFor('milestone', msId, execDocs), execDocs, raw); }
   // milestoneAchieved -> manual completion mark (ms.completedDate) OR KPI score at 100.
   // A milestone with no scorable KPIs is achieved only by the manual mark.
   function milestoneAchieved(ms, execDocs) {
@@ -2098,16 +2202,22 @@ html[data-theme="dark"] #etb-view{
   // unread KPI, and for the same reason: an objective must not read well because most of its Key
   // Results have nothing behind them yet. Only when NOTHING is scorable is the objective unscored,
   // which keeps "an objective with no Key Result has no band" intact.
-  function objectiveScore(objId, execDocs) {
+  function objectiveScore(objId, execDocs, raw) {
     var krs = krsForObjective(objId, execDocs);
     var scores = [], anyScored = false;
     for (var i = 0; i < krs.length; i++) {
-      var s = keyResultScore(krs[i].id, execDocs);
+      var s = keyResultScore(krs[i].id, execDocs, raw);
       if (s != null) anyScored = true;
       scores.push(s == null ? 0 : s);
     }
     if (!anyScored) return null;
     return mean(scores);
+  }
+  // How many of an objective's KRs are partial check-ins — 0 means its score carries no discount.
+  function objectivePartialCount(objId, execDocs) {
+    var krs = krsForObjective(objId, execDocs), c = 0;
+    for (var i = 0; i < krs.length; i++) if (keyResultSample(krs[i].id, execDocs).partial) c++;
+    return c;
   }
 
   // ---- hierarchy lookups (Phase 1) -----------------------------------------
@@ -3771,6 +3881,12 @@ html[data-theme="dark"] #etb-view{
     allocId: allocId,
     kpiScore: kpiScore,
     kpiScoreResolved: kpiScoreResolved,
+    kpiScoreRaw: kpiScoreRaw,
+    kpiScoreParts: kpiScoreParts,
+    kpiSample: kpiSample,
+    hostSample: hostSample,
+    keyResultSample: keyResultSample,
+    objectivePartialCount: objectivePartialCount,
     kpiCurrentValue: kpiCurrentValue,
     kpisFor: kpisFor,
     groupMembers: groupMembers,
@@ -4834,6 +4950,16 @@ function samplePopHtml(kpiId){
   const allBatches=[]; reads.forEach(u=>{ const b=(u.batch!=null?String(u.batch):""); if(allBatches.indexOf(b)<0) allBatches.push(b); });
   const cntTxt=exp?`${n} / ${exp} ${complete?"\u2713":"\u26a0"}`:`${n} read${n===1?"":"s"}`;
   const critTxt=(dk.targetType==="binary")?"pass":((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"")+fmtTarget(tgt,"")+(unit?" "+unit:""));
+  /* where readings are entered is where a short sample is most worth explaining: what it scores now, what it
+     would score undiscounted, and how many readings are still owed */
+  const pp=RD.kpiScoreParts(k, AK, EM), owed=pp.partial?(pp.expected-pp.n):0;
+  const ptBlock = pp.partial ? `<div class="sp-partial">`+
+      `<div class="sp-pt-h">${PT_ICON}Partial check-in</div>`+
+      `<div class="sp-pt-row"><span>Scores <b class="sv ${scoreCls(pp.score)}">${Math.round(pp.score)}</b></span><span class="sp-pt-wo">${Math.round(pp.raw)} without discount</span></div>`+
+      `<div class="sp-pt-bar"><span class="sp-pt-fill ${scoreCls(pp.score)}" style="width:${Math.max(0,Math.min(100,pp.score))}%"></span>${ptHatch(pp.score, pp.raw)}</div>`+
+      `<div class="sp-pt-math"><b class="${scoreCls(pp.raw)}">${Math.round(pp.raw)}</b> \u00d7 ${pp.n}/${pp.expected} samples = ${Math.round(pp.score)}</div>`+
+      `<div class="sp-pt-more">${owed} more reading${owed===1?"":"s"} to a full check-in</div>`+
+    `</div>` : "";
   const curBatch=RD.latestBatchId(reads);
   const rows=reads.length ? reads.map((u,i)=>{
       const armed=samplePopArmed===i;
@@ -4843,7 +4969,7 @@ function samplePopHtml(kpiId){
     : `<div class="sp-none">no readings yet \u2014 add the first measurement below</div>`;
   return `<div class="sp-h"><span class="sp-name">${esc(RD.kpiName(k,AK)||"")}</span><button class="sp-x" data-sp-close title="Close">\u2715</button></div>`+
     `<div class="sp-sum"><span class="sp-stat">${esc(statLbl)} = <b>${computed==null?"\u2014":esc(String(Math.round(computed*1000)/1000))}</b>${computed!=null&&unit?" "+esc(unit):""}</span><span class="sp-cnt ${complete?"ok":"warn"}">${cntTxt}</span></div>`+
-    `<div class="sp-tgt">target ${esc(critTxt)}</div>`+
+    `<div class="sp-tgt">target ${esc(critTxt)}</div>`+ptBlock+
     `<div class="sp-list">${rows}</div>`+
     `<div class="sp-add"><input type="number" step="any" class="sp-in" placeholder="new reading" data-sp-in/><button class="act mini" data-sp-add>Add</button>`+
       `<button class="ghost mini" data-sp-newbatch title="Start a fresh sample \u2014 earlier readings are kept but stop counting">+ New batch</button></div>`+
@@ -4940,6 +5066,8 @@ function listOpen(key){ return panelCollapsed.has(key)?" collapsed":""; }
 function objMetricStrip(o){
   const em=emForCore(), td=todayDay();
   const sc=RD.objectiveScore(selectedObj, em), b=RD.band(sc);
+  /* the objective inherits its KRs' discount, so it inherits the label and the undiscounted figure too */
+  const opc=RD.objectivePartialCount(selectedObj, em), scRaw=opc?RD.objectiveScore(selectedObj, em, true):null;
   const krs=exec.keyResults.filter(r=>r.objectiveId===selectedObj);
   const krOn=krs.filter(k=>RD.band(RD.keyResultScore(k.id, em))==="on-track").length;
   const gates=exec.stageGates.filter(r=>r.objectiveId===selectedObj);
@@ -4966,13 +5094,13 @@ function objMetricStrip(o){
   const eoVal = objES ? (objES.status==='abandoned'?'Abandoned':'Achieved') : schedVal;
   const eoCol = objES ? (objES.status==='abandoned'?'var(--none)':'var(--ok)') : schedColor;
   const eoSub = objES ? (`ended ${dayToIso(objES.endedDay)}`+(_eoOver!=null&&_eoOver>0?` · was +${_eoOver}d over at close`:"")) : `${o.plannedEnd!=null?`planned ${dayToIso(o.plannedEnd)} · `:""}${schedSub}`;
-  const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div></div>`;
+  const scBar = sc==null?"":`<div class="mc-bar"><div class="mc-bar-fill" style="width:${Math.round(sc)}%;background:${col(b)}"></div>${ptHatch(sc, scRaw)}</div>`;
   const roll = RD.fmeaRollup(RD.fmeaProblemsFor(exec, selectedObj), execGatePassed);
   const riskColor = roll.openHigh>0?"var(--bad)":roll.openMed>0?"var(--warn)":roll.total?"var(--ok)":"var(--muted)";
   const riskSub = roll.total?`${roll.total} problem${roll.total===1?"":"s"} · worst RPN ${roll.worst}`:"No FMEA items";
   return `<div class="metrics">
-    <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub"><span class="band ${b}">${b.replace("-"," ")}</span></div></div>
-    <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track</div></div>
+    <div class="mc"><div class="mc-label">Objective score</div><div class="mc-val" style="color:${col(b)}">${sc==null?"—":Math.round(sc)}</div>${scBar}<div class="mc-sub${opc?' pt-sub':''}"><span class="band ${b}">${b.replace("-"," ")}</span>${opc?ptTag('Partial'):''}${opc&&scRaw!=null?`<span class="pt-wo pt-block">${Math.round(scRaw)} without discount</span>`:''}</div></div>
+    <div class="mc"><div class="mc-label">Key results</div><div class="mc-val">${krs.length}</div><div class="mc-sub">${krOn} on track${opc?` · <span class="pt-wo">${opc} partial</span>`:''}</div></div>
     <div class="mc"><div class="mc-label">Stage-gates</div><div class="mc-val">${gates.length}</div><div class="mc-sub">${gPass} passed · ${gOver} overdue</div></div>
     <div class="mc"><div class="mc-label">Gate health</div><div class="mc-val" style="color:${ghCol}">${ghTxt}</div><div class="mc-sub">${nSets} set${nSets===1?"":"s"} · weakest % passed</div></div>
     <div class="mc${schedAlarm?' sched-alarm':''}${objES?' sched-ended':''}">${schedAlarm?`<span class="alarm-tag">\u25cf +${slip}d</span>`:""}<div class="mc-label">Schedule</div><div class="mc-val small" style="color:${eoCol}">${eoVal}</div><div class="mc-sub">${eoSub}</div>${!objES&&accel>0?`<div class="mc-accel">↑ ${accel}d acceleration possible</div>`:""}${cuBtn}</div>
@@ -5165,6 +5293,27 @@ let pendingTgtEditIdx=null;                 // which draft target is being edite
 let draftSubKr=null, draftSubKrIdx=null;    // sub-KR sub-modal draft
 const STAT_OPTS=[["average","Average"],["median","Median"],["stddev","Standard deviation"],["cv","Coefficient of variation (CV)"],["range","Range"],["max","Max"],["min","Min"]];
 const STAT_SHORT={average:"avg",median:"median",stddev:"std dev",cv:"CV",range:"range",max:"max",min:"min"};
+/* ---- partial check-in: one vocabulary wherever a discounted number appears ---------------------------
+   A statistical KPI short of its expected sample size scores raw x n/N (RD.kpiScoreParts). Every discounted
+   number is shown WITH its undiscounted one — a sampling gap shown alone reads as poor performance. */
+const PT_ICON='<svg class="pt-ico" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" stroke-width="1.4"></circle><path d="M5 1a4 4 0 0 0 0 8z" fill="currentColor"></path></svg>';
+function ptTag(label){ return `<span class="pt-tag">${PT_ICON}${esc(label||"Partial")}</span>`; }
+/* A statistic is COMPUTED, so it carries float noise (the average of 1.81, 1.83, 1.82, 1.84 is 1.8250000000000002).
+   Round it the way the readings popover always has; a single posted reading is shown exactly as entered. */
+function fmtCur(cv, isStat){ if(cv==null) return ''; return (isStat && typeof cv==='number' && isFinite(cv)) ? String(Math.round(cv*1000)/1000) : String(cv); }
+/* band class of a score, in the KPI table's vocabulary (met / near / miss / none) */
+function scoreCls(s){ const b=RD.band(s); return b==='on-track'?'met':b==='at-risk'?'near':b==='off-track'?'miss':'none'; }
+/* the hatched segment from the discounted to the undiscounted score, inside any position:relative bar track */
+function ptHatch(disc, raw){
+  if(disc==null || raw==null || !(raw>disc)) return '';
+  const l=Math.max(0,Math.min(100,disc)), r=Math.max(0,Math.min(100,raw));
+  return `<span class="pt-hatch" style="left:${l}%;width:${r-l}%"></span>`;
+}
+/* "◐ 92% without discount · 8 of 20 samples" */
+function ptCaption(raw, smp){
+  if(raw==null || !smp || !smp.partial) return '';
+  return `<div class="pt-cap">${PT_ICON}<span>${Math.round(raw)}% without discount</span><span>· ${smp.n} of ${smp.expected} samples</span></div>`;
+}
 function clampPct(v){ v=Number(v); return isNaN(v)?0:Math.max(0,Math.min(100,v)); }
 function parseTargetNum(t){ if(t===""||t==null) return null; const n=Number(t); return isNaN(n)?null:n; }
 function segHtml(opts,cur,attr){ return `<div class="seg">`+opts.map(o=>`<button type="button" class="seg-btn${cur===o[0]?" on":""}" data-${attr}="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
@@ -5858,13 +6007,14 @@ function initKpiTableRO(initId){
   rows.forEach(k=>{
     const isLegacy = exec.kpis.indexOf(k)>=0;
     const name=RD.kpiName(k,pool), dir=RD.kpiDirection(k,pool), unit=RD.kpiUnit(k,pool);
-    const tgt=RD.effTarget(k,pool), cv=RD.effValue(k,pool,EM), s=RD.kpiScoreResolved(k,pool,EM);
+    const ip=RD.kpiScoreParts(k,pool,EM);
+    const tgt=RD.effTarget(k,pool), cv=RD.effValue(k,pool,EM), s=ip.score;
     const links=exec.kpis.filter(m=>m.id!==k.id && groupOf(m)===groupOf(k)).length;
     const tag = isLegacy ? ` <span class="pill" title="defined locally — move it to the portfolio from the Planning app">local</span>` : '';
     h += `<tr><td>${esc(name||'')||'(unnamed)'}${tag}</td><td class="mono">${dir||''}</td>
       <td class="mono">${fmtTarget(tgt,unit)}</td>
-      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':cv}</td>
-      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}</td>
+      <td class="kpi-now">${cv==null?'<span class="pill">no read</span>':esc(fmtCur(cv, RD.definerOf(k,pool).targetType==='statistical'))}</td>
+      <td style="color:${col(RD.band(s))};font-weight:600">${s==null?'—':Math.round(s)}${ip.partial?` ${ptTag('Partial')}<span class="pt-math"><b class="${scoreCls(ip.raw)}">${Math.round(ip.raw)}</b> × ${ip.n}/${ip.expected} samples</span>`:''}</td>
       <td>${links>0?`<span class="linkbadge">🔗 ${links}</span>`:'<span class="pill">—</span>'}</td></tr>`;
   });
   h += `</tbody></table>`;
@@ -5900,11 +6050,14 @@ function kpiTable(hostType, hostId, objScope){
   const AK = allKpisPool(), EM = emForCore();
   const rows = AK.filter(k=>k.objectiveId===objScope && k.hostType===hostType && k.hostId===hostId);
   const isGate = hostType==="stageGate";
-  let h = `<table class="mtbl"><colgroup><col style="width:32%"/><col style="width:14%"/><col style="width:11%"/><col style="width:13%"/><col style="width:15%"/><col style="width:15%"/></colgroup><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
-  if(!rows.length) h += `<tr><td colspan="6" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
+  let h = `<table class="mtbl"><colgroup><col style="width:27%"/><col style="width:12%"/><col style="width:9%"/><col style="width:13%"/><col style="width:13%"/><col style="width:14%"/><col style="width:12%"/></colgroup><thead><tr><th>${isGate?"Target":"KPI"}</th><th class="num">${isGate?"Pass criterion":"Target"}</th><th>Unit</th><th class="num">Current</th><th class="num m-score-h">Score</th><th class="ctr">Status</th><th class="m-act-h"></th></tr></thead><tbody>`;
+  if(!rows.length) h += `<tr><td colspan="7" class="mtbl-empty">no ${isGate?"targets":"KPIs"} yet — add or link a measurement</td></tr>`;
   rows.forEach(k=>{
     const name = RD.kpiName(k, AK), dir = RD.kpiDirection(k, AK), unit = RD.kpiUnit(k, AK);
-    const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = RD.kpiScoreResolved(k, AK, EM);
+    /* One pool resolution gives the score that counts (discounted), the score on the samples so far (raw),
+       and how far in the sample is — so the cell, the math and the status can never describe different data. */
+    const pp = RD.kpiScoreParts(k, AK, EM);
+    const tgt = RD.effTarget(k, AK), cv = RD.effValue(k, AK, EM), s = pp.score, rs = pp.raw;
     const member = isMemberKpi(k), defLinks = isDefinerWithLinks(k);
     const crit = (k.targetType==="binary") ? "pass" : ((dir==="up"?"\u2265 ":dir==="down"?"\u2264 ":"") + fmtTarget(tgt, ""));
     const ovr = member ? (k.target!=null?'<span class="ovr">override</span>':'<span class="ovr">inherited</span>') : '';
@@ -5914,19 +6067,29 @@ function kpiTable(hostType, hostId, objScope){
     const renamed = member && k.localName!=null && String(k.localName).trim()!=="" && k.localName!==srcNm;
     const badge = member ? `<span class="linkbadge" title="inherits from ${esc(hostLabel(RD.definerOf(k,AK)))}${renamed?" \u00b7 "+esc(srcNm):""}">linked${renamed?" \u00b7 "+esc(srcNm):""}</span>`
                 : defLinks ? `<span class="linkbadge" title="defines a linked metric">defines ${groupMemberCount(k.groupId)-1}</span>` : '';
-    const dk = RD.definerOf(k, AK), isStat = dk.targetType==='statistical';
-    const expReads = isStat && Number(dk.readCount)>0 ? Number(dk.readCount) : 0;   // expected sample size (blank -> no completeness gate)
-    const nReads = expReads ? RD.readingCount(RD.readingSourceId(k, AK), EM) : 0, complete = !expReads || nReads>=expReads;   // a borrowed sample is counted where it lives
+    const dk = RD.definerOf(k, AK);
+    /* Completeness comes from the engine (pp), not a count of this KPI's own readings: a KPI scored on readings
+       posted elsewhere in its link group is counted where those readings live, and "4/10" here must be the same
+       4/10 the score was discounted by. A borrowed sample (readsFrom) is likewise counted where it lives. */
+    const expReads = pp.expected || 0, nReads = pp.n || 0, complete = !expReads || nReads>=expReads;
     const statSub = expReads ? `<span class="m-cur-sub ${complete?'ok':'warn'}">${STAT_SHORT[dk.statistic||'average']} \u00b7 ${nReads}/${expReads} ${complete?'\u2713':'\u26a0'}</span>` : '';
-    const bnd = RD.band(s), bc = bnd==='on-track'?'met':bnd==='at-risk'?'near':bnd==='off-track'?'miss':'none';
+    /* Current is the measurement against its target, so it takes the RAW score's band; Score is what counts so far.
+       They differ only on a partial check-in, where the half-circle tag says why. */
+    const bcRaw = scoreCls(rs), bcScore = scoreCls(s);
+    const rawStatus = rs==null?'open':(rs>=100?'on track':RD.band(rs)==='on-track'?'on track':RD.band(rs)==='at-risk'?'near':'below');
     const metOk = (s!=null && s>=100 && complete);   // statistical: "met" needs the target reached AND a complete sample
-    const stTxt = s==null?'open':(metOk?'met':(s>=100?'on track':bnd==='on-track'?'on track':bnd==='at-risk'?'near':'below'));
+    /* a partial check-in is never "met": its status pill is what the samples so far earn, under the Partial tag */
+    const stTxt = s==null?'open':(pp.partial?rawStatus:(metOk?'met':rawStatus));
+    const stPill = `<span class="m-badge ${bcRaw}"><span class="d"></span>${stTxt}</span>`;
+    const scoreCell = s==null ? '<span class="m-noread">\u2014</span>'
+      : `<span class="sv ${bcScore}">${Math.round(s)}</span>`+(pp.partial?`<span class="pt-math" title="${Math.round(rs)} on the samples so far, discounted to ${nReads} of ${expReads}"><b class="${bcRaw}">${Math.round(rs)}</b> \u00d7 ${nReads}/${expReads} samples</span>`:'');
     h += `<tr>
       <td class="m-name"><a class="rowedit" data-edit="kpi:${k.id}" title="edit">${esc(name||'')||'(unnamed)'}</a>${badge?' '+badge:''}</td>
       <td class="num m-crit">${crit}${ovr?' '+ovr:''}</td>
       <td class="m-unit">${esc(unit||'')||'\u2014'}</td>
-      <td class="num m-cur ${bc}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(String(cv))}${statSub}</td>
-      <td class="ctr"><span class="m-badge ${bc}"><span class="d"></span>${stTxt}</span></td>
+      <td class="num m-cur ${bcRaw}" data-postcell="${k.id}" title="Click to post a reading">${cv==null?'<span class="m-noread">no read</span>':esc(fmtCur(cv, dk.targetType==='statistical'))}${statSub}</td>
+      <td class="num m-score">${scoreCell}</td>
+      <td class="ctr">${pp.partial?`<span class="st-stack">${ptTag('Partial')}${stPill}</span>`:stPill}</td>
       <td class="m-acts">${member?`<button class="ghost mini" data-unlink="${k.id}">unlink</button>`:''}<button class="ghost mini danger ${armedDel===k.id?'armed':''}" data-del="kpi:${k.id}">${armedDel===k.id?'confirm':'\u00d7'}</button></td></tr>`;
   });
   h += `</tbody></table>`;
@@ -5942,6 +6105,8 @@ function renderKRs(){
   krs.forEach((kr,idx)=>{
     const pace=RD.keyResultPace(kr.id, obj, EM, td);
     const att=pace.attainment, el=pace.elapsed, band=pace.band;
+    /* a partial check-in shows what the discount withheld: hatched to the raw figure, and the caption says so */
+    const ksmp=RD.keyResultSample(kr.id, EM), attRaw=ksmp.partial?RD.keyResultScore(kr.id, EM, true):null;
     const bm=bandMap[band]||['No data','none'], bTxt=bm[0], bCls=bm[1], c=col(band);
     const attTxt=att==null?'\u2014':Math.round(att);
     let cap='';
@@ -5959,16 +6124,16 @@ function renderKRs(){
     const toggle = isMs
       ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>${msDone}/${msTot} step${msTot===1?"":"s"} \u00b7 ${att==null?"\u2014":Math.round(att)+"%"}</button>`
       : kk.length
-      ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span></button>`
+      ? `<button class="tgt-toggle" data-krtoggle="${kr.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>KPIs <span class="cnt">${metCnt} of ${kk.length} on target</span>${ksmp.partial?`<span class="pt-cnt">\u00b7 ${ksmp.partialCount} partial</span>`:''}</button>`
       : `<button class="tgt-toggle add" data-addkpi="keyResult:${kr.id}">+ add a KPI</button>`;
     const panel = open ? (isMs ? `<div class="tgt-panel">${msStatusPanel(kr)}</div>` : `<div class="tgt-panel">${kpiTable("keyResult", kr.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="keyResult:${kr.id}">+ KPI</button><button class="ghost mini" data-addlink="keyResult:${kr.id}">+ link</button></div></div>`) : '';
     inner+=`<div class="kr-block b-${bCls}"><div class="krow">
       <div class="g-id"><span class="g-chip" data-edit="keyResult:${kr.id}" title="edit">${isMs?("KR-M"+(krs.slice(0,idx+1).filter(r=>r.trackingType==="milestone").length)):("KR"+(idx+1))}</span><span class="g-name click" data-edit="keyResult:${kr.id}">${esc(kr.statement||kr.id)}</span></div>
-      <div class="g-status-cell"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span></div>
+      <div class="g-status-cell st-col"><span class="kr-band ${bCls}"><span class="d"></span>${bTxt}</span>${ksmp.partial?ptTag('Partial check-in'):''}</div>
       <div class="g-ready">
         <div class="r-top"><span class="r-lab">Attainment</span><span class="r-val" style="color:${c}">${attTxt}${att==null?'':'<span class="u">%</span>'}</span></div>
-        <div class="pace-bar"><span class="pace-fill" style="width:${att==null?0:Math.round(att)}%;background:${c}"></span>${el!=null?`<span class="pace-mark" style="left:${Math.round(el)}%"></span>`:''}</div>
-        ${cap}
+        <div class="pace-bar"><span class="pace-fill" style="width:${att==null?0:Math.round(att)}%;background:${c}"></span>${ptHatch(att, attRaw)}${el!=null?`<span class="pace-mark" style="left:${Math.round(el)}%"></span>`:''}</div>
+        ${ptCaption(attRaw, ksmp)}${cap}
       </div>
       <div class="g-acts"><button class="ghost mini btn-ico" data-edit="keyResult:${kr.id}" title="edit">\u270e</button><button class="ghost mini btn-ico danger ${armedDel===kr.id?'armed':''}" data-del="keyResult:${kr.id}" title="delete">${armedDel===kr.id?'\u2713':'\u00d7'}</button></div>
       </div>
@@ -6056,9 +6221,11 @@ function gateKpiRows(gateId, objScope){
   if(!rows.length) return `<tr><td colspan="3" class="gc-empty">no KPIs on this gate</td></tr>`;
   return rows.map(k=>{
     const name=RD.kpiName(k,AK), unit=RD.kpiUnit(k,AK);
-    const tgt=RD.effTarget(k,AK), cv=RD.effValue(k,AK,EM), s=RD.kpiScoreResolved(k,AK,EM);
-    const c=col(RD.band(s)), cur=(cv==null)?'no read':(esc(String(cv))+(unit?' '+esc(unit):''));
-    return `<tr><td>${esc(name||'(unnamed)')}</td><td>${fmtTarget(tgt,unit)}</td><td style="color:${c}"><span class="gc-dot" style="background:${c}"></span>${cur}</td></tr>`;
+    const gp=RD.kpiScoreParts(k,AK,EM);
+    const tgt=RD.effTarget(k,AK), cv=RD.effValue(k,AK,EM);
+    /* the measurement against its target, as in the KPI table — the Partial tag carries the sample shortfall */
+    const c=col(RD.band(gp.raw)), cur=(cv==null)?'no read':(esc(fmtCur(cv, RD.definerOf(k,AK).targetType==='statistical'))+(unit?' '+esc(unit):''));
+    return `<tr><td>${esc(name||'(unnamed)')}${gp.partial?' '+ptTag('Partial '+gp.n+'/'+gp.expected):''}</td><td>${fmtTarget(tgt,unit)}</td><td style="color:${c}"><span class="gc-dot" style="background:${c}"></span>${cur}</td></tr>`;
   }).join('');
 }
 function openMarkComplete(gateId){
@@ -6292,13 +6459,15 @@ function renderGates(){
     if(!gates.length) inner+=`<p class="hint" style="margin:0 0 10px 12px">no gates in this workstream</p>`;
     gates.forEach(g=>{
       const sc=RD.stageGateScore(g.id, EM); let st=RD.classifyGate(g, td); const cancelled=objEnded && g.actualDate==null; if(cancelled) st='cancelled';
+      /* Readiness is discounted, so a gate cannot reach 100 — or auto-pass — on part of its sample. */
+      const gsmp=RD.hostSample('stageGate', g.id, EM), scRaw=gsmp.partial?RD.stageGateScore(g.id, EM, true):null;
       const cmt=g.baselineDate!=null?`<span class="g-committed" title="committed ${dayToIso(g.baselineDate)}">committed</span>`:'';
       const scol=col(RD.band(sc)), sv=sc==null?'\u2014':Math.round(sc);
       const open=expandedGates.has(g.id);
       const tk=AK.filter(k=>k.objectiveId===selectedObj && k.hostType==="stageGate" && k.hostId===g.id);
       const metCnt=tk.filter(k=>{const s2=RD.kpiScoreResolved(k,AK,EM); return s2!=null&&s2>=100;}).length;
       const toggle = tk.length
-        ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span></button>`
+        ? `<button class="tgt-toggle" data-gtoggle="${g.id}" aria-expanded="${open}"><span class="arw">\u25b6</span>Targets <span class="cnt">${metCnt} / ${tk.length} met</span>${gsmp.partial?`<span class="pt-cnt">\u00b7 ${gsmp.partialCount} partial</span>`:''}</button>`
         : `<button class="tgt-toggle add" data-addkpi="stageGate:${g.id}">+ add a target</button><button class="tgt-toggle add" data-addlink="stageGate:${g.id}">+ add linked KPI</button>`;
       const panel = open ? `<div class="tgt-panel">${kpiTable("stageGate", g.id, selectedObj)}<div class="tgt-foot"><button class="ghost mini" data-addkpi="stageGate:${g.id}">+ target</button><button class="ghost mini" data-addlink="stageGate:${g.id}">+ link</button></div></div>` : '';
       const fc=cancelled?{est:'<span class="fc-est cnl">cancelled</span>', delta:''}:gateForecastMeta(g, gEff, gEarly, gAcc, td, gates);
@@ -6307,8 +6476,8 @@ function renderGates(){
       const cuLine=cuEntry?`<div class="gs-recommit"><span class="lab">revision v${cuEntry.version||1}</span><span class="was">${dayToIso(cuEntry.originalDate)||'\u2014'}</span><span class="arrow">\u2192</span><span class="now">${dayToIso(cuEntry.newDate)||'\u2014'}</span></div>`:"";
       inner+=`<div class="gate-block st-${st}"><div class="grow">
         <div class="g-id"><span class="g-chip" data-edit="stageGate:${g.id}" title="edit">${esc(gateLabel(g.id))}</span><span class="g-name click" data-edit="stageGate:${g.id}">${esc(g.name||g.id)}</span>${cmt}${cuTag}${g.intention?`<div class="g-intent"><span class="lab">Intent</span><span class="txt">${esc(g.intention)}</span></div>`:''}</div>
-        <div class="g-status-cell"><span class="statepill ${st}">${st.replace('-',' ')}</span></div>
-        <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span></div></div>
+        <div class="g-status-cell st-col"><span class="statepill ${st}">${st.replace('-',' ')}</span>${gsmp.partial?ptTag('Partial'):''}</div>
+        <div class="g-ready ${sc==null?'empty':''}"><div class="r-top"><span class="r-lab">Readiness</span><span class="r-val" style="color:${scol}">${sv}${sc==null?'':'<span class="u">%</span>'}</span></div><div class="r-bar"><span class="r-fill" style="width:${sc==null?0:Math.round(sc)}%;background:${scol}"></span>${ptHatch(sc, scRaw)}</div>${gsmp.partial?`${ptCaption(scRaw, gsmp)}<div class="pt-cap sub">reaches 100 only once all ${gsmp.expected} are in</div>`:''}</div>
         <div class="g-sched"><div class="gs-c gs-plan"><span class="gs-k">planned</span> ${dayToIso(g.plannedDate)||'\u2014'}</div><div class="gs-c gs-est">${fc.est}</div><div class="gs-c gs-done">${cancelled?'':gateCompletionControl(g, st)}</div><div class="gs-c gs-delta">${fc.delta}</div>${cuLine}</div>
         </div>
         <div class="g-tgt">${toggle}${panel}</div>

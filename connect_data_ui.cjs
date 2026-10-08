@@ -165,7 +165,10 @@ function makeFetch(store){
   const det = host.querySelector("tr.prov-tr details.prov-d");
   ok(!!det, "a collapsible source row is rendered under the reading");
   ok(!!det && !det.open, "the source row is COLLAPSED by default");
-  ok(!!det && det.closest("td").getAttribute("colspan") === "6", "it spans the full table width");
+  /* Compare against the table's own header count, not a literal: the KPI table grew a Score column (6 -> 7),
+     and a hardcoded width would either break on every column change or, worse, pass a row that falls short. */
+  const _cols = det ? det.closest("table").querySelectorAll("thead th").length : -1;
+  ok(!!det && _cols > 0 && det.closest("td").getAttribute("colspan") === String(_cols), "it spans the full table width (" + _cols + " columns)");
   const body = det && det.querySelector(".prov-body");
   const txt = body ? body.textContent : "";
   ok(/MEA-17/.test(txt) && /polcurve/.test(txt), "the source body names the sample and analysis");
