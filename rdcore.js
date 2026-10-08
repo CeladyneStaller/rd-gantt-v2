@@ -1082,10 +1082,13 @@
     return m;
   }
 
+  // Band thresholds. Half-open from the top: on-track is 80 and up, at-risk is 65 up to (not including)
+  // 80, off-track is everything below 65. Changing these numbers re-bands every score in every app, so
+  // the boundaries are pinned by assertion in core.test.js rather than left to interior sample values.
   function band(s) {
     if (s == null) return 'no-band';
-    if (s >= 90) return 'on-track';
-    if (s >= 70) return 'at-risk';
+    if (s >= 80) return 'on-track';
+    if (s >= 65) return 'at-risk';
     return 'off-track';
   }
 
