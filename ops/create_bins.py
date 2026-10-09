@@ -26,6 +26,10 @@ Env:
 Usage:
   python ops/create_bins.py                 # human log on stderr, env block on stdout
   python ops/create_bins.py > new_bins.env  # capture just the env block (do NOT commit)
+  ONLY=prefs python ops/create_bins.py      # just the named bin(s) — for a bin added after the first run
+
+  ONLY is how a later bin gets made without re-running everything (which would duplicate every bin). The
+  per-person settings bin, `prefs` -> PREFS_BIN, is made ONLY this way: it is not a /state document.
 """
 import json
 import os
@@ -84,9 +88,15 @@ def create_bin(doc_id: str) -> str:
         sys.exit(f"network error creating '{doc_id}': {e.reason}")
 
 
+LATER_DOC_IDS = ["prefs"]          # served by /prefs/{email}, not /state — created only when asked for by name
+ONLY = [d.strip() for d in os.environ.get("ONLY", "").split(",") if d.strip()]
+_unknown = [d for d in ONLY if d not in DOC_IDS + LATER_DOC_IDS]
+if _unknown:
+    sys.exit(f"ONLY names unknown doc(s): {', '.join(_unknown)} (known: {', '.join(DOC_IDS + LATER_DOC_IDS)})")
+
 print("# creating unified app bins (these are NEW and isolated):", file=sys.stderr)
 # env lines are printed incrementally, so a mid-run failure still records what was made
-for doc_id in DOC_IDS:
+for doc_id in (ONLY or DOC_IDS):
     bin_id = create_bin(doc_id)
     print(f"  {doc_id:16} -> {bin_id}", file=sys.stderr)
     print(f"{env_name(doc_id)}={bin_id}")   # stdout: redirectable env line

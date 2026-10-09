@@ -848,6 +848,109 @@
     return groups;
   }
 
+  /* ---- Done-column window: a per-viewer DISPLAY filter --------------------------------------------------
+     A finished tile's age runs from enteredCol, which dropTile stamps every time a tile changes column — so a
+     tile already carries the day it reached the last column, and nothing new has to be recorded. The window
+     only decides what is DRAWN: boardSummary below still counts every closed tile, and gate dates and
+     metrics read the board itself, never this. */
+  function normDoneWindow(w) {
+    if (w === 'all' || w === 'none') return w;
+    var n = Number(w);
+    return (w !== null && w !== '' && isFinite(n) && n > 0) ? Math.floor(n) : 'all';
+  }
+  function doneTileAge(tile, todayIso) {
+    var t = _kIsoDay(todayIso), e = _kIsoDay(tile && tile.enteredCol);
+    if (t == null || e == null) return null;
+    return Math.max(0, t - e);
+  }
+  /* doneSplit(board, window, todayIso) -> { total, shown, byLane: { laneId: { shown:[], older:[] } } }
+     "Last 14 days" keeps a tile finished 14 days ago and drops one finished 15 days ago. A tile that cannot be
+     dated is always shown under a day window: hiding something whose age is unknown would make it vanish for
+     a reason nobody could see. 'none' is the count-only setting, so it shows nothing at all. Parked tiles are
+     excluded exactly as boardSummary excludes them. */
+  function doneSplit(board, win, todayIso) {
+    win = normDoneWindow(win);
+    var cols = (board && board.columns) || [];
+    var lastId = cols.length ? cols[cols.length - 1].id : null;
+    var out = { total: 0, shown: 0, byLane: {} };
+    if (lastId == null) return out;
+    var tiles = (board && board.tiles) || [];
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      if (t.col !== lastId || tileInBacklog(t)) continue;
+      var lane = out.byLane[t.lane] || (out.byLane[t.lane] = { shown: [], older: [] });
+      out.total++;
+      var age = doneTileAge(t, todayIso);
+      var show = (win === 'all') || (win !== 'none' && (age == null || age <= win));
+      if (show) { lane.shown.push(t); out.shown++; } else lane.older.push(t);
+    }
+    return out;
+  }
+  /* newest-finished first; undated tiles last; otherwise the board's own order (a stable sort) */
+  function doneByRecency(tiles, todayIso) {
+    return (tiles || []).map(function (t, i) { return { t: t, i: i, a: doneTileAge(t, todayIso) }; })
+      .sort(function (x, y) {
+        if (x.a == null && y.a == null) return x.i - y.i;
+        if (x.a == null) return 1;
+        if (y.a == null) return -1;
+        return (x.a - y.a) || (x.i - y.i);
+      }).map(function (r) { return r.t; });
+  }
+
+  /* ---- The Done-column choice follows the PERSON: who is viewing, and squaring this device with the broker --
+     The apps share an origin with the Hub, so the Hub's sign-in (localStorage 'hub_session_v1') names the
+     viewer. hubSessionEmail applies the Hub's own test — it parses, carries an email, and has not expired —
+     and anything else means nobody is signed in, never a guess. Lower-cased: the broker keys people by
+     lower-cased email, and a capital letter must not split one person into two. */
+  function hubSessionEmail(raw, nowMs) {
+    var s;
+    try { s = (typeof raw === 'string') ? JSON.parse(raw) : raw; } catch (e) { return null; }
+    if (!s || typeof s !== 'object' || typeof s.email !== 'string') return null;
+    var em = s.email.trim().toLowerCase();
+    if (em.indexOf('@') < 1) return null;
+    if (typeof s.expiresAt !== 'number' || !(s.expiresAt > nowMs)) return null;
+    return em;
+  }
+  /* doneVal(p) -> one board's choice as it is STORED, or null for the default (all · cards). The default is
+     never stored — the "empty == default" rule the Hub's boardPrefs follows — so a board someone reset reads
+     exactly like a board nobody touched, on every device. */
+  function doneVal(p) {
+    var win = normDoneWindow(p && p.win), style = (p && p.style === 'compact') ? 'compact' : 'cards';
+    return (win === 'all' && style === 'cards') ? null : { win: win, style: style };
+  }
+  /* reconcileDone(server, account, anon) -> { prefs, push }
+       server  : this person's choices as the broker holds them, { boardId: {win, style} } ({} when none)
+       account : this device's copy for this person, { prefs, pending: [boardId] }. Null — or marked
+                 { first: true } when the person changed something before the broker ever answered — the
+                 FIRST time the person is seen signed in on this device.
+       anon    : this browser's signed-out choices. Read only that first time, so choices made here before
+                 sync existed are carried up to the person — for boards the broker has nothing for.
+       prefs   : what this device now shows for the person (defaults absent)
+       push    : what still has to be sent, { boardId: value | null } — null puts the board back to the default
+     The broker wins, except for boards this device changed and has not yet delivered (pending): those win
+     and go again. A reset is pending-null, so it is deleted rather than resurrected by a stale copy. */
+  function reconcileDone(server, account, anon) {
+    var has = Object.prototype.hasOwnProperty, prefs = {}, push = {}, k, v;
+    server = (server && typeof server === 'object') ? server : {};
+    for (k in server) if (has.call(server, k)) { v = doneVal(server[k]); if (v) prefs[k] = v; }
+    if (!account || account.first) {
+      anon = (anon && typeof anon === 'object') ? anon : {};
+      for (k in anon) if (has.call(anon, k) && !has.call(prefs, k)) {
+        v = doneVal(anon[k]); if (v) { prefs[k] = v; push[k] = v; }
+      }
+    }
+    if (account) {
+      var mine = (account.prefs && typeof account.prefs === 'object') ? account.prefs : {};
+      var pend = Array.isArray(account.pending) ? account.pending : [];
+      for (var i = 0; i < pend.length; i++) {
+        k = String(pend[i]); v = doneVal(mine[k]);
+        if (v) prefs[k] = v; else delete prefs[k];
+        push[k] = v;
+      }
+    }
+    return { prefs: prefs, push: push };
+  }
+
   function boardSummary(board, todayIso) {
     board = board || {};
     var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
@@ -2779,6 +2882,8 @@
     milestoneKrScore: milestoneKrScore,
     tileHealth: tileHealth,
     boardSummary: boardSummary, tileInBacklog: tileInBacklog, backlogByLane: backlogByLane,
+    normDoneWindow: normDoneWindow, doneTileAge: doneTileAge, doneSplit: doneSplit, doneByRecency: doneByRecency,
+    hubSessionEmail: hubSessionEmail, doneVal: doneVal, reconcileDone: reconcileDone,
     backlogTiles: backlogTiles, activeTiles: activeTiles,
     dropTile: dropTile,
     gateDueDates: gateDueDates,

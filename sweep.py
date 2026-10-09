@@ -26,6 +26,7 @@ import glob, json, os, re, shutil, subprocess, sys
 SLOW = {
     "connect_data_ui.cjs", "pd_notes.cjs", "recover_stranded.cjs", "kpi_readsfrom.cjs",
     "etb_graph_modal.cjs", "gantt_view_toggles.cjs", "gantt_patches.cjs", "stat_recorder_ui.cjs",
+    "kanban_done_sync_ui.cjs",      # twelve app boots: six "devices" in each of two apps
 }
 
 

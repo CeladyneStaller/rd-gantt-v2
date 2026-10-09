@@ -281,6 +281,32 @@
   .kb-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .kb-chip{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 8px}
   .kb-chip.ok{color:var(--ok);border-color:var(--pill-ok-bd)}
+  /* ---- Done column: per-viewer window + compact rows (navy info pill: a view setting, never a status) ---- */
+  .kb-gridwrap{position:relative}
+  .kb-donebtn{margin-left:8px;font-family:var(--mono);font-size:9.5px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--pill-info-fg);background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:5px;padding:1px 7px;cursor:pointer;vertical-align:1px}
+  .kb-donebtn:hover{filter:brightness(1.08)}
+  .kb-donemenu{position:absolute;z-index:20;top:36px;right:10px;width:266px;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 12px 30px rgba(0,0,0,.28);padding:10px 12px;font-family:var(--sans)}
+  .kb-dm-sec + .kb-dm-sec{border-top:1px solid var(--line);margin-top:8px;padding-top:9px}
+  .kb-dm-h{font-size:11px;font-weight:600;color:var(--ink);margin-bottom:6px;padding-right:18px}
+  .kb-dm-opt{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+  .kb-dm-opt.on{background:var(--pill-info-bg);color:var(--pill-info-fg);font-weight:600}
+  .kb-dm-opt input{margin:0}
+  .kb-dm-seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .kb-dm-seg label{flex:1;position:relative;display:flex;align-items:center;justify-content:center;font-size:12px;padding:6px 8px;cursor:pointer;background:var(--panel);color:var(--ink)}
+  .kb-dm-seg label + label{border-left:1px solid var(--line)}
+  .kb-dm-seg label.on{background:var(--pill-info-bg);color:var(--pill-info-fg);font-weight:600}
+  .kb-dm-seg input{position:absolute;opacity:0;width:1px;height:1px}
+  .kb-dm-seg label:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
+  .kb-dm-f{border-top:1px solid var(--line);margin-top:9px;padding-top:7px;font-size:10.5px;color:var(--muted);line-height:1.45}
+  .kb-dm-x{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;line-height:1}
+  .kb-dm-x:hover{color:var(--ink)}
+  .kb-tile.kb-drow{display:flex;align-items:center;gap:7px;padding:4px 8px;margin-bottom:4px;border-radius:6px;font-size:12px;opacity:.9}
+  .kb-drow .kb-dck{color:var(--accent);font-size:10px;flex:none}
+  .kb-drow .kb-dnm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+  .kb-drow .kb-dage{font-family:var(--mono);font-size:9.5px;color:var(--muted);flex:none}
+  .kb-drow .kb-tedit{position:static;flex:none}
+  .kb-older{display:block;width:100%;box-sizing:border-box;margin-top:6px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--pill-info-fg);background:transparent;border:1px dashed var(--pill-info-bd);border-radius:6px;padding:4px 8px;cursor:pointer}
+  .kb-older:hover{background:var(--pill-info-bg)}
   .kb-chip.risk{color:var(--warn);border-color:var(--pill-warn-bd)}
   .kb-chip.bad{color:var(--bad);border-color:var(--pill-bad-bd)}
   .kb-cfgcol{flex:1;min-width:220px}
@@ -2237,6 +2263,109 @@ html[data-theme="dark"] #etb-view{
     return groups;
   }
 
+  /* ---- Done-column window: a per-viewer DISPLAY filter --------------------------------------------------
+     A finished tile's age runs from enteredCol, which dropTile stamps every time a tile changes column — so a
+     tile already carries the day it reached the last column, and nothing new has to be recorded. The window
+     only decides what is DRAWN: boardSummary below still counts every closed tile, and gate dates and
+     metrics read the board itself, never this. */
+  function normDoneWindow(w) {
+    if (w === 'all' || w === 'none') return w;
+    var n = Number(w);
+    return (w !== null && w !== '' && isFinite(n) && n > 0) ? Math.floor(n) : 'all';
+  }
+  function doneTileAge(tile, todayIso) {
+    var t = _kIsoDay(todayIso), e = _kIsoDay(tile && tile.enteredCol);
+    if (t == null || e == null) return null;
+    return Math.max(0, t - e);
+  }
+  /* doneSplit(board, window, todayIso) -> { total, shown, byLane: { laneId: { shown:[], older:[] } } }
+     "Last 14 days" keeps a tile finished 14 days ago and drops one finished 15 days ago. A tile that cannot be
+     dated is always shown under a day window: hiding something whose age is unknown would make it vanish for
+     a reason nobody could see. 'none' is the count-only setting, so it shows nothing at all. Parked tiles are
+     excluded exactly as boardSummary excludes them. */
+  function doneSplit(board, win, todayIso) {
+    win = normDoneWindow(win);
+    var cols = (board && board.columns) || [];
+    var lastId = cols.length ? cols[cols.length - 1].id : null;
+    var out = { total: 0, shown: 0, byLane: {} };
+    if (lastId == null) return out;
+    var tiles = (board && board.tiles) || [];
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      if (t.col !== lastId || tileInBacklog(t)) continue;
+      var lane = out.byLane[t.lane] || (out.byLane[t.lane] = { shown: [], older: [] });
+      out.total++;
+      var age = doneTileAge(t, todayIso);
+      var show = (win === 'all') || (win !== 'none' && (age == null || age <= win));
+      if (show) { lane.shown.push(t); out.shown++; } else lane.older.push(t);
+    }
+    return out;
+  }
+  /* newest-finished first; undated tiles last; otherwise the board's own order (a stable sort) */
+  function doneByRecency(tiles, todayIso) {
+    return (tiles || []).map(function (t, i) { return { t: t, i: i, a: doneTileAge(t, todayIso) }; })
+      .sort(function (x, y) {
+        if (x.a == null && y.a == null) return x.i - y.i;
+        if (x.a == null) return 1;
+        if (y.a == null) return -1;
+        return (x.a - y.a) || (x.i - y.i);
+      }).map(function (r) { return r.t; });
+  }
+
+  /* ---- The Done-column choice follows the PERSON: who is viewing, and squaring this device with the broker --
+     The apps share an origin with the Hub, so the Hub's sign-in (localStorage 'hub_session_v1') names the
+     viewer. hubSessionEmail applies the Hub's own test — it parses, carries an email, and has not expired —
+     and anything else means nobody is signed in, never a guess. Lower-cased: the broker keys people by
+     lower-cased email, and a capital letter must not split one person into two. */
+  function hubSessionEmail(raw, nowMs) {
+    var s;
+    try { s = (typeof raw === 'string') ? JSON.parse(raw) : raw; } catch (e) { return null; }
+    if (!s || typeof s !== 'object' || typeof s.email !== 'string') return null;
+    var em = s.email.trim().toLowerCase();
+    if (em.indexOf('@') < 1) return null;
+    if (typeof s.expiresAt !== 'number' || !(s.expiresAt > nowMs)) return null;
+    return em;
+  }
+  /* doneVal(p) -> one board's choice as it is STORED, or null for the default (all · cards). The default is
+     never stored — the "empty == default" rule the Hub's boardPrefs follows — so a board someone reset reads
+     exactly like a board nobody touched, on every device. */
+  function doneVal(p) {
+    var win = normDoneWindow(p && p.win), style = (p && p.style === 'compact') ? 'compact' : 'cards';
+    return (win === 'all' && style === 'cards') ? null : { win: win, style: style };
+  }
+  /* reconcileDone(server, account, anon) -> { prefs, push }
+       server  : this person's choices as the broker holds them, { boardId: {win, style} } ({} when none)
+       account : this device's copy for this person, { prefs, pending: [boardId] }. Null — or marked
+                 { first: true } when the person changed something before the broker ever answered — the
+                 FIRST time the person is seen signed in on this device.
+       anon    : this browser's signed-out choices. Read only that first time, so choices made here before
+                 sync existed are carried up to the person — for boards the broker has nothing for.
+       prefs   : what this device now shows for the person (defaults absent)
+       push    : what still has to be sent, { boardId: value | null } — null puts the board back to the default
+     The broker wins, except for boards this device changed and has not yet delivered (pending): those win
+     and go again. A reset is pending-null, so it is deleted rather than resurrected by a stale copy. */
+  function reconcileDone(server, account, anon) {
+    var has = Object.prototype.hasOwnProperty, prefs = {}, push = {}, k, v;
+    server = (server && typeof server === 'object') ? server : {};
+    for (k in server) if (has.call(server, k)) { v = doneVal(server[k]); if (v) prefs[k] = v; }
+    if (!account || account.first) {
+      anon = (anon && typeof anon === 'object') ? anon : {};
+      for (k in anon) if (has.call(anon, k) && !has.call(prefs, k)) {
+        v = doneVal(anon[k]); if (v) { prefs[k] = v; push[k] = v; }
+      }
+    }
+    if (account) {
+      var mine = (account.prefs && typeof account.prefs === 'object') ? account.prefs : {};
+      var pend = Array.isArray(account.pending) ? account.pending : [];
+      for (var i = 0; i < pend.length; i++) {
+        k = String(pend[i]); v = doneVal(mine[k]);
+        if (v) prefs[k] = v; else delete prefs[k];
+        push[k] = v;
+      }
+    }
+    return { prefs: prefs, push: push };
+  }
+
   function boardSummary(board, todayIso) {
     board = board || {};
     var cols = board.columns || [], tiles = board.tiles || [], lanes = board.swimlanes || [];
@@ -4168,6 +4297,8 @@ html[data-theme="dark"] #etb-view{
     milestoneKrScore: milestoneKrScore,
     tileHealth: tileHealth,
     boardSummary: boardSummary, tileInBacklog: tileInBacklog, backlogByLane: backlogByLane,
+    normDoneWindow: normDoneWindow, doneTileAge: doneTileAge, doneSplit: doneSplit, doneByRecency: doneByRecency,
+    hubSessionEmail: hubSessionEmail, doneVal: doneVal, reconcileDone: reconcileDone,
     backlogTiles: backlogTiles, activeTiles: activeTiles,
     dropTile: dropTile,
     gateDueDates: gateDueDates,
@@ -5773,6 +5904,7 @@ async function loadAll(){
      people who already own objectives here. */
   loadKbRoster();
   if(!tok()){ setMsg("Add a broker token in ⚙ to load. Showing empty scratch.", "info"); renderAll(); return; }
+  kbDonePull();   // not awaited either: the signed-in person's Done-column settings; the board redraws if they differ
   try{
     const p = await apiGet("portfolio");
     if(!p){ setMsg("No portfolio doc on the broker yet — create it from the Planning app first.", "err"); return; }
@@ -7711,6 +7843,141 @@ function kbToggleBacklog(){ kbBacklogOpen=!kbBacklogOpen;
   try{ localStorage.setItem("rd_kb_backlog", kbBacklogOpen?"1":"0"); }catch(e){}
   renderAll(); }
 let kanbanCfgOpen=null;   // which board's column/tile config panel is open
+/* ---- Done column: how long finished tiles stay drawn, and as cards or one-line rows ----------------------
+   A PER-PERSON choice, per board. It is a view and nothing else: the board is untouched, the summary's "closed"
+   still counts every finished tile, and gate dates and metrics never see it. A board nobody has set shows every
+   finished tile as a card, exactly as before.
+   Where the choice lives:
+     signed in to the Hub on this device -> the broker (/prefs/<email>, area kbDone), so it follows the person
+       to any device. This browser keeps that person's copy (rd_kb_done_acct) to draw from at once and to hold
+       changes the broker has not taken yet; RD.reconcileDone squares the two.
+     nobody signed in -> this browser only (rd_kb_done), as before. Inside a Confluence iframe the browser hides
+       the Hub's sign-in from this page, so an embedded board is always this case. */
+const KB_DONE_WINDOWS=[[3,"3 days"],[7,"7 days"],[14,"14 days"],[30,"30 days"],["all","All finished tiles"],["none","None — show the count only"]];
+const KB_HUB_SESSION="hub_session_v1";   // the Hub's sign-in, same origin as this app
+const KB_DONE_PULL_MIN_MS=5000;          // coming back to the tab re-reads the broker, at most this often
+function kbLsGet(k){ try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return (v && typeof v==="object" && !Array.isArray(v))?v:null; }catch(e){ return null; } }
+function kbLsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }   // unavailable storage: still works this session
+const kbDonePrefsAll=kbLsGet("rd_kb_done")||{};          // signed-out choices: { boardId: {win, style} }
+const kbDoneAccts=kbLsGet("rd_kb_done_acct")||{};        // per person: { email: { prefs, pending:[boardId], first? } }
+function kbViewer(){ let raw=null; try{ raw=localStorage.getItem(KB_HUB_SESSION); }catch(e){} return RD.hubSessionEmail(raw, Date.now()); }
+let kbDoneWho=kbViewer();          // who the Hub says is signed in on this device, or null
+let kbDoneSyncState="idle";        // the last exchange with the broker: "idle" | "ok" | "failed"
+let kbDoneLastPull=0, kbDoneSyncT=null, kbDoneInFlight=false;
+/* whose settings are in play: the signed-in person — but only with a broker to sync through (no token is scratch) */
+function kbDoneMe(){ return (kbDoneWho && tok()) ? kbDoneWho : null; }
+function kbDoneMap(){ const me=kbDoneMe(), a=me?kbDoneAccts[me]:null; return a ? a.prefs : kbDonePrefsAll; }
+function kbDonePrefs(boardId){ const p=kbDoneMap()[boardId]||{};
+  return { win: RD.normDoneWindow(p.win==null?"all":p.win), style: p.style==="compact"?"compact":"cards" }; }
+function kbSetDonePrefs(boardId, patch){
+  const me=kbDoneMe();
+  if(!me){
+    kbDonePrefsAll[boardId]=Object.assign({}, kbDonePrefsAll[boardId]||{}, patch);
+    kbLsSet("rd_kb_done", kbDonePrefsAll);
+    return;
+  }
+  let a=kbDoneAccts[me];
+  if(!a){   // changed before the broker ever answered: start from this browser's choices, and stay "first" so
+            // the first sync still carries them up
+    a=kbDoneAccts[me]={ prefs:{}, pending:[], first:true };
+    for(const k in kbDonePrefsAll){ const v=RD.doneVal(kbDonePrefsAll[k]); if(v) a.prefs[k]=v; }
+  }
+  const v=RD.doneVal(Object.assign({}, kbDonePrefs(boardId), patch));
+  if(v) a.prefs[boardId]=v; else delete a.prefs[boardId];
+  if(a.pending.indexOf(String(boardId))<0) a.pending.push(String(boardId));
+  kbLsSet("rd_kb_done_acct", kbDoneAccts);
+  kbDonePushSoon();
+}
+/* Read the person's settings from the broker and square them with this device's copy. Not awaited by the
+   load: the board draws from the copy at once and redraws only if something changed. */
+async function kbDonePull(){
+  const me=kbDoneMe(); if(!me) return;
+  kbDoneLastPull=Date.now();
+  let j;
+  try{
+    const r=await fetch(`${BROKER}/prefs/${encodeURIComponent(me)}`, {headers:auth()});
+    if(!r.ok) throw r;
+    j=await r.json();
+  }catch(e){ if(me===kbDoneMe()){ kbDoneSyncState="failed"; if(kbDoneMenuOpen!=null) renderAll(); } return; }
+  if(me!==kbDoneMe()) return;                          // signed out or switched person while this was in flight
+  const before=JSON.stringify(kbDoneMap()), was=kbDoneSyncState;
+  const r=RD.reconcileDone((j && j.prefs && j.prefs.kbDone)||{}, kbDoneAccts[me]||null, kbDonePrefsAll);
+  kbDoneAccts[me]={ prefs:r.prefs, pending:Object.keys(r.push) };
+  kbLsSet("rd_kb_done_acct", kbDoneAccts);
+  kbDoneSyncState="ok";
+  if(Object.keys(r.push).length) kbDonePushSoon(0);
+  if(portfolio && (JSON.stringify(kbDoneMap())!==before || (was!=="ok" && kbDoneMenuOpen!=null))) renderAll();
+}
+function kbDonePushSoon(ms){ if(kbDoneSyncT) clearTimeout(kbDoneSyncT); kbDoneSyncT=setTimeout(kbDonePush, ms==null?400:ms); }
+/* Send what this device owes the broker. One request at a time; a board changed again while its request was
+   out stays owed and goes in the next one. */
+async function kbDonePush(){
+  kbDoneSyncT=null;
+  const me=kbDoneMe(), a=me?kbDoneAccts[me]:null;
+  if(!a || !a.pending.length) return;
+  if(kbDoneInFlight){ kbDonePushSoon(); return; }
+  const sent={}; a.pending.forEach(k=>{ sent[k]=RD.doneVal(a.prefs[k]); });
+  kbDoneInFlight=true;
+  try{
+    const r=await fetch(`${BROKER}/prefs/${encodeURIComponent(me)}`, {method:"PATCH", keepalive:true,
+      headers:{...auth(),"Content-Type":"application/json"}, body:JSON.stringify({kbDone:sent})});
+    if(!r.ok) throw r;
+    const j=await r.json();
+    if(me!==kbDoneMe() || kbDoneAccts[me]!==a) return;
+    a.pending=a.pending.filter(k=>JSON.stringify(RD.doneVal(a.prefs[k]))!==JSON.stringify(sent[k]));
+    const before=JSON.stringify(a.prefs), was=kbDoneSyncState;
+    if(!a.first){   // the reply is the broker's whole copy: take it (what is still owed wins), as a pull would
+      a.prefs=RD.reconcileDone((j && j.prefs && j.prefs.kbDone)||{}, a, null).prefs;
+    }
+    kbLsSet("rd_kb_done_acct", kbDoneAccts);
+    kbDoneSyncState="ok";
+    if(a.first) kbDonePull();                          // finish the first sync: carry up this browser's choices
+    else if(a.pending.length) kbDonePushSoon();
+    if(portfolio && (JSON.stringify(a.prefs)!==before || (was!=="ok" && kbDoneMenuOpen!=null))) renderAll();
+  }catch(e){
+    if(me===kbDoneMe()){ kbDoneSyncState="failed"; if(kbDoneMenuOpen!=null) renderAll(); }
+  }finally{ kbDoneInFlight=false; }
+}
+/* Coming back to the tab: the Hub may have signed someone in or out meanwhile, and another device may have
+   changed a setting. Leaving it: send anything still owed now rather than after the debounce. */
+function kbDoneWake(){
+  const who=kbViewer();
+  if(who!==kbDoneWho){ kbDoneWho=who; kbDoneSyncState="idle"; kbDoneLastPull=0; if(portfolio) renderAll(); }
+  if(kbDoneMe() && Date.now()-kbDoneLastPull>=KB_DONE_PULL_MIN_MS) kbDonePull();
+}
+window.addEventListener("focus", kbDoneWake);
+window.addEventListener("storage", e=>{ if(e.key===KB_HUB_SESSION) kbDoneWake(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible") kbDoneWake();
+  else if(kbDoneSyncT){ clearTimeout(kbDoneSyncT); kbDonePush(); }
+});
+function kbDoneNote(){
+  if(!kbDoneMe()) return "Saved in this browser only. Open this board from the Hub to keep it on every device.";
+  if(kbDoneSyncState==="failed") return "Saved on this device — couldn’t reach the server yet, so it will retry.";
+  return "Just for you — follows you to any device where you’re signed in to the Hub.";
+}
+function kbDoneLabel(p){ return (p.win==="all"?"all":p.win==="none"?"count only":"last "+p.win+" days")+(p.style==="compact"?" · compact":""); }
+let kbDoneMenuOpen=null;          // board whose Done-column menu is open
+const kbDoneExpanded=new Set();   // "board:lane" whose older finished tiles are opened — this session only, never saved
+function kbDoneMenuHtml(board, dp){
+  const lastCol=board.columns[board.columns.length-1];
+  const winOpts=KB_DONE_WINDOWS.map(([v,l])=>{ const on=String(dp.win)===String(v);
+    return `<label class="kb-dm-opt${on?" on":""}"><input type="radio" name="kbdw-${esc(board.id)}" data-kbdonewin="${v}"${on?" checked":""}> ${esc(l)}</label>`; }).join("");
+  const styOpts=[["cards","Cards"],["compact","Compact rows"]].map(([v,l])=>{ const on=dp.style===v;
+    return `<label class="${on?"on":""}"><input type="radio" name="kbds-${esc(board.id)}" data-kbdonestyle="${v}"${on?" checked":""}>${l}</label>`; }).join("");
+  return `<div class="kb-donemenu" role="dialog" aria-label="Finished tiles in ${esc(lastCol?lastCol.name:"the last column")}">`+
+    `<button class="kb-dm-x" data-kbdoneclose="1" aria-label="Close">✕</button>`+
+    `<div class="kb-dm-sec"><div class="kb-dm-h">Show finished tiles from the last</div>${winOpts}</div>`+
+    `<div class="kb-dm-sec"><div class="kb-dm-h">Show them as</div><div class="kb-dm-seg" role="radiogroup" aria-label="Show finished tiles as">${styOpts}</div></div>`+
+    `<div class="kb-dm-f" data-kbdonenote="${kbDoneMe()?(kbDoneSyncState==="failed"?"failed":"synced"):"local"}">${esc(kbDoneNote())} Hidden tiles still count in “closed”.</div></div>`;
+}
+/* An open menu closes on any click outside it. Clicks inside — including the radios, whose change re-renders the
+   menu so the click lands on a detached node — still find the menu through closest(). */
+document.addEventListener("click", e=>{
+  if(kbDoneMenuOpen==null) return;
+  const t=e.target; if(t && t.closest && (t.closest(".kb-donemenu") || t.closest("[data-kbdonemenu]"))) return;
+  kbDoneMenuOpen=null; renderAll();
+});
 let _kbDrag=null;         // tile being dragged, for the drag-and-drop reorder
 /* Tile editor, shared by editing and adding. A tile carries more than a name — its swimlane and its
    column both change what the board computes, so both paths offer them rather than prompting for a name
@@ -7884,24 +8151,51 @@ function renderKanban(host){
   const laneById={}; (board.swimlanes||[]).forEach(l=>laneById[l.id]=l);
   const sum=RD.boardSummary(board, today);
 
-  const head=`<tr><th class="kb-corner">Swimlane \\ Stage</th>`+board.columns.map(c=>
-    `<th class="kb-colh"><span class="kb-colname">${esc(c.name)}</span><span class="kb-colcnt">${sum.perColumn[c.id]||0}</span></th>`).join("")+`</tr>`;
+  /* The Done column draws what THIS viewer chose (kbDonePrefs); the summary further down still counts all of it.
+     A board left at "all · cards" keeps today's order exactly — tiles sort newest-first only once someone opts in. */
+  const dp=kbDonePrefs(board.id), dsplit=RD.doneSplit(board, dp.win, today), dFiltered=(dp.win!=="all");
+  const dSort=(dFiltered || dp.style==="compact");
+  const head=`<tr><th class="kb-corner">Swimlane \\ Stage</th>`+board.columns.map(c=>{
+    const isDone=(c.id===lastColId);
+    const cnt=(isDone && dFiltered)?`${dsplit.shown} of ${dsplit.total}`:(sum.perColumn[c.id]||0);
+    const btn=isDone?`<button class="kb-donebtn" data-kbdonemenu="${board.id}" aria-haspopup="dialog" aria-expanded="${kbDoneMenuOpen===board.id}" title="How long finished tiles stay on this board — just for you">${esc(kbDoneLabel(dp))} ▾</button>`:"";
+    return `<th class="kb-colh"><span class="kb-colname">${esc(c.name)}</span><span class="kb-colcnt">${cnt}</span>${btn}</th>`; }).join("")+`</tr>`;
   const body=(board.swimlanes||[]).map(lane=>{
     const rule=`<div class="kb-rule">${lane.maxDaysPerCol?`max <b>${lane.maxDaysPerCol}d</b>/col`:"no col limit"}${lane.deadline?` \u00b7 due <b>${esc(lane.deadline)}</b>`:""}</div>`;
+    const cardHtml=t=>{
+      const closed=(t.col===lastColId);
+      /* a finished tile says how long ago it finished, so a window that hides older ones is legible */
+      const age=closed?RD.doneTileAge(t, today):null;
+      const h=closed?{status:"closed",daysInCol:0,note:(age==null?"done":age===0?"done today":`done ${age}d ago`)}:RD.tileHealth(t, laneById[t.lane], today);
+      const cls=closed?"closed":h.status;
+      /* The edit button is NOT draggable: a pointerdown on it would otherwise start a tile drag and the
+         click would never land. Its own draggable="false" stops the drag from claiming the press. */
+      return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}">`+
+        `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
+        kbAvatarHtml(t)+
+        `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
+        `<div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
+    };
+    /* A compact row is still a .kb-tile, so dragging it back out of Done and editing it work exactly as for a card. */
+    const rowHtml=t=>{ const age=RD.doneTileAge(t, today);
+      return `<div class="kb-tile kb-drow closed" draggable="true" data-kbtile="${t.id}">`+
+        `<span class="kb-dck" aria-hidden="true">\u2713</span><span class="kb-dnm">${esc(t.name||"(tile)")}</span>`+
+        `<span class="kb-dage">${age==null?"":age+"d"}</span>`+
+        `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button></div>`; };
     const cells=board.columns.map(c=>{
-      const tiles=(board.tiles||[]).filter(t=>t.lane===lane.id && t.col===c.id);
-      const tileHtml=tiles.map(t=>{
-        const closed=(t.col===lastColId);
-        const h=closed?{status:"closed",daysInCol:0,note:"done"}:RD.tileHealth(t, laneById[t.lane], today);
-        const cls=closed?"closed":h.status;
-        /* The edit button is NOT draggable: a pointerdown on it would otherwise start a tile drag and the
-           click would never land. Its own draggable="false" stops the drag from claiming the press. */
-        return `<div class="kb-tile ${cls}" draggable="true" data-kbtile="${t.id}">`+
-          `<button class="kb-tedit" draggable="false" data-kbtiledit="${t.id}" title="Edit tile" aria-label="Edit tile ${esc(t.name||"")}">\u270e</button>`+
-          kbAvatarHtml(t)+
-          `<div class="kb-tname">${esc(t.name||"(tile)")}</div>`+
-          `<div class="kb-tmeta"><span class="kb-tdays">${closed?"\u2713":h.daysInCol+"d"}</span><span>${esc(h.note||"")}</span></div></div>`;
-      }).join("");
+      let tileHtml;
+      if(c.id===lastColId){
+        const g=dsplit.byLane[lane.id]||{shown:[],older:[]};
+        const key=board.id+":"+lane.id, open=kbDoneExpanded.has(key);
+        const draw=(dp.style==="compact")?rowHtml:cardHtml;
+        const shown=dSort?RD.doneByRecency(g.shown, today):g.shown;
+        const older=open?(dSort?RD.doneByRecency(g.older, today):g.older):[];
+        const stubTxt=open?(dp.win==="none"?"hide":"hide older"):(dp.win==="none"?`${g.older.length} done`:`+${g.older.length} older`);
+        tileHtml=shown.map(draw).join("")+older.map(draw).join("")+
+          (g.older.length?`<button class="kb-older" data-kbdoneolder="${esc(key)}" aria-expanded="${open}">${stubTxt}</button>`:"");
+      } else {
+        tileHtml=(board.tiles||[]).filter(t=>t.lane===lane.id && t.col===c.id).map(cardHtml).join("");
+      }
       return `<td class="kb-cell" data-kbcell="${lane.id}:${c.id}">${tileHtml}</td>`;
     }).join("");
     return `<tr><td class="kb-laneh"><div class="kb-lanename">${esc(lane.name)}</div>${rule}`+
@@ -7946,7 +8240,8 @@ function renderKanban(host){
   })();
   const bar=`<div class="kb-bar"><div class="kb-tabs">${tabs}</div><div class="kb-baracts"><button class="ghost mini" data-kbaddtile="${bid}">+ tile</button><button class="ghost mini" data-kbcfg="${bid}">configure</button><button class="ghost mini btn-ico danger" data-kbdelboard="${bid}" title="delete board">\u2715</button></div></div>`;
   const cfg=(kanbanCfgOpen===bid)?kanbanConfigHtml(board):"";
-  const grid=`<div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  /* the menu sits OUTSIDE .kb-wrap, whose overflow would otherwise clip it */
+  const grid=`<div class="kb-gridwrap"><div class="kb-wrap"><table class="kb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>${kbDoneMenuOpen===board.id?kbDoneMenuHtml(board, dp):""}</div>`;
 
   host.innerHTML=`<div class="panel">${panelHead("SG","Stage-gates",sum.total,acts)}<div class="item-list${listOpen("SG")}"><div class="kb-root">${bar}${cfg}${grid}${summary}${backlog}<p class="kb-legend">drag a tile between columns to advance its stage, or between swimlanes to change its rules.</p></div></div></div>`;
   wireKanban(host);
@@ -7972,6 +8267,18 @@ function wireKanban(host){
     kbTileAdd(b.dataset.kbaddtile, b.dataset.kblane, b.dataset.kbcol));
   const blt=host.querySelector("[data-kbbltoggle]");
   if(blt) blt.onclick=kbToggleBacklog;
+  /* Done column: the menu changes only this viewer's view of this board, so nothing here persists the document. */
+  host.querySelectorAll("[data-kbdonemenu]").forEach(b=>b.onclick=e=>{ e.stopPropagation();
+    kbDoneMenuOpen=(kbDoneMenuOpen===b.dataset.kbdonemenu)?null:b.dataset.kbdonemenu; renderAll(); });
+  host.querySelectorAll("[data-kbdoneclose]").forEach(b=>b.onclick=()=>{ kbDoneMenuOpen=null; renderAll(); });
+  host.querySelectorAll("[data-kbdonewin]").forEach(r=>r.onchange=()=>{ const bid=activeBoardId(); if(!bid) return;
+    kbSetDonePrefs(bid, {win:RD.normDoneWindow(r.dataset.kbdonewin)}); renderAll(); });
+  host.querySelectorAll("[data-kbdonestyle]").forEach(r=>r.onchange=()=>{ const bid=activeBoardId(); if(!bid) return;
+    kbSetDonePrefs(bid, {style:(r.dataset.kbdonestyle==="compact")?"compact":"cards"}); renderAll(); });
+  host.querySelectorAll("[data-kbdoneolder]").forEach(b=>b.onclick=()=>{ const k=b.dataset.kbdoneolder;
+    if(kbDoneExpanded.has(k)) kbDoneExpanded.delete(k); else kbDoneExpanded.add(k); renderAll(); });
+  const _dm=host.querySelector(".kb-donemenu");
+  if(_dm) _dm.addEventListener("keydown", e=>{ if(e.key==="Escape"){ kbDoneMenuOpen=null; renderAll(); } });
   host.querySelectorAll("[data-kbboardname]").forEach(el=>el.onchange=()=>{ boardById(el.dataset.kbboardname).name=el.value; renderAll(); });
   host.querySelectorAll("[data-kbcolname]").forEach(el=>el.onchange=()=>{ const board=boardById(kanbanCfgOpen); const c=board.columns.find(x=>x.id===el.dataset.kbcolname); if(c){ c.name=el.value; renderAll(); } });
   host.querySelectorAll("[data-kbcoldel]").forEach(b=>b.onclick=()=>{ const board=boardById(kanbanCfgOpen); if(board.columns.length<=1)return; board.columns=board.columns.filter(x=>x.id!==b.dataset.kbcoldel); board.tiles=(board.tiles||[]).filter(t=>t.col!==b.dataset.kbcoldel); renderAll(); });

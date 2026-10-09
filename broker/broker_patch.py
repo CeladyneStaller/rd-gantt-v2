@@ -30,6 +30,7 @@ external lock.
 import hashlib
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -37,7 +38,7 @@ import urllib.request
 from collections import defaultdict
 from typing import Any, Dict, Optional, Tuple
 
-from fastapi import APIRouter, Header, HTTPException, Response
+from fastapi import APIRouter, Body, Header, HTTPException, Response
 from pydantic import BaseModel
 
 state_router = APIRouter()
@@ -317,6 +318,154 @@ def get_analysis(response: Response):
         _analysis_cache["payload"] = payload
     response.headers["X-Analysis-Age"] = "0"
     return payload
+
+
+# ---------------------------------------------------------------------------
+# GET   /prefs/{email}  -> { email, prefs: { <area>: { <key>: value } }, version }
+# PATCH /prefs/{email}  body { <area>: { <key>: value | null } }  -> the same, after the merge
+#
+# Per-person VIEW settings, so a choice follows the person to any device they are signed in on. The first
+# area is "kbDone": per kanban board, how long finished tiles stay drawn and whether as cards or rows.
+# One bin, PREFS_BIN, holds everyone:
+#     { "version": n, "updatedAt": t, "doc": { "users": { "<email>": { "<area>": { "<key>": value } } } } }
+#
+# Its own bin, not the users bin: the Hub saves the WHOLE users record from a copy it loaded earlier, so
+# anything a second writer put there is erased by the Hub's next save. Here the broker is the only writer,
+# so the authoritative-cache reasoning at the top of this file holds and reads are memory reads.
+#
+# PATCH merges on the server: a client sends only what changed, so two devices changing different boards
+# both land with no If-Match retry loop, and for the same board the later write wins — right for a view
+# setting. null deletes: a default is never stored, so "reset" and "never touched" read the same.
+#
+# Generic over <area> on purpose, so the next per-person setting needs no broker deploy — and BOUNDED instead
+# (shapes, sizes, counts), so a buggy client cannot grow the bin without limit.
+#
+# The email is the one the app read from the Hub's sign-in on that device: honor-system, like every other
+# route on this router. Nothing here is document data; a forged email changes only how someone else's
+# Done column is drawn.
+# ---------------------------------------------------------------------------
+PREFS_BIN = os.environ.get("PREFS_BIN")
+PREFS_MAX_USERS = 200
+PREFS_MAX_AREAS = 16
+PREFS_MAX_KEYS = 500                 # per area
+PREFS_MAX_VALUE_BYTES = 1024
+PREFS_MAX_USER_BYTES = 16 * 1024
+_PREFS_AREA_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,31}$")
+_PREFS_EMAIL_RE = re.compile(r"^[^@\s/]+@[^@\s/]+\.[^@\s/]+$")
+_PREFS: Dict[str, Any] = {"w": None}     # the cached wrapper — authoritative, because we are the only writer
+_PREFS_LOCK = threading.RLock()
+
+
+def _prefs_email(raw: str) -> str:
+    e = (raw or "").strip().lower()
+    if len(e) > 254 or not _PREFS_EMAIL_RE.match(e):
+        raise HTTPException(status_code=400, detail="not an email address")
+    return e
+
+
+def _prefs_bin_required() -> None:
+    if not PREFS_BIN:
+        raise HTTPException(status_code=503, detail="PREFS_BIN is not configured")
+
+
+def _prefs_load() -> Dict[str, Any]:
+    """The wrapper, from memory after the first read. A fresh bin (seeded {} or a version-0 wrapper) reads as
+    version 0 with nobody in it. A failed read is neither cached nor mistaken for "empty": that would hand
+    every device a blank slate, and the next write would erase everyone's settings."""
+    w = _PREFS["w"]
+    if w is not None:
+        return w
+    with _PREFS_LOCK:
+        if _PREFS["w"] is not None:
+            return _PREFS["w"]
+        resp = _jsonbin_get(PREFS_BIN)
+        if not isinstance(resp, dict) or "record" not in resp:
+            raise HTTPException(status_code=502, detail="prefs bin unavailable")
+        rec = resp["record"]
+        if not (isinstance(rec, dict) and isinstance(rec.get("version"), int) and isinstance(rec.get("doc"), dict)):
+            rec = {"version": 0, "updatedAt": None, "doc": {}}
+        _PREFS["w"] = rec
+        return rec
+
+
+def _prefs_users(w: Dict[str, Any]) -> Dict[str, Any]:
+    users = w["doc"].get("users")
+    return users if isinstance(users, dict) else {}
+
+
+def _prefs_clean(body: Any) -> Dict[str, Dict[str, Any]]:
+    """Validate a PATCH body: { area: { key: value | null } }. Shapes only — what a value MEANS is the app's
+    business (it normalises whatever it reads back), so a new area needs no change here."""
+    if not isinstance(body, dict) or not body or len(body) > PREFS_MAX_AREAS:
+        raise HTTPException(status_code=400, detail="expected { area: { key: value | null } }")
+    out: Dict[str, Dict[str, Any]] = {}
+    for area, kv in body.items():
+        if not isinstance(area, str) or not _PREFS_AREA_RE.match(area):
+            raise HTTPException(status_code=400, detail=f"bad area name: {str(area)[:40]!r}")
+        if not isinstance(kv, dict) or len(kv) > PREFS_MAX_KEYS:
+            raise HTTPException(status_code=400, detail=f"{area}: expected an object of key -> value")
+        for k, v in kv.items():
+            if not k or len(k) > 128:
+                raise HTTPException(status_code=400, detail=f"{area}: bad key")
+            if v is not None and len(json.dumps(v, separators=(",", ":"))) > PREFS_MAX_VALUE_BYTES:
+                raise HTTPException(status_code=413, detail=f"{area}.{k}: value too large")
+        out[area] = dict(kv)
+    return out
+
+
+@state_router.get("/prefs/{email}")
+def get_prefs(email: str):
+    """One person's settings. Someone with nothing saved gets {} (200, not 404): "nothing saved" is the
+    normal state, and a 404 must keep meaning "this broker has no /prefs" so an old deploy reads as a failure."""
+    e = _prefs_email(email)
+    _prefs_bin_required()
+    w = _prefs_load()
+    entry = _prefs_users(w).get(e)
+    return {"email": e, "prefs": entry if isinstance(entry, dict) else {}, "version": w["version"]}
+
+
+@state_router.patch("/prefs/{email}")
+def patch_prefs(email: str, body: Any = Body(...)):
+    e = _prefs_email(email)
+    patch = _prefs_clean(body)
+    _prefs_bin_required()
+    with _PREFS_LOCK:
+        w = _prefs_load()
+        users = _prefs_users(w)
+        cur = users.get(e) if isinstance(users.get(e), dict) else {}
+        # Copy-on-write: the cached wrapper is shared with lock-free readers, so nothing in it is mutated.
+        nxt = {a: (dict(b) if isinstance(b, dict) else b) for a, b in cur.items()}
+        for area, kv in patch.items():
+            bucket = dict(nxt[area]) if isinstance(nxt.get(area), dict) else {}
+            for k, v in kv.items():
+                if v is None:
+                    bucket.pop(k, None)
+                else:
+                    bucket[k] = v
+            if bucket:
+                nxt[area] = bucket
+            else:
+                nxt.pop(area, None)
+        if nxt == cur:                           # a resend of what already landed: answer, don't write
+            return {"email": e, "prefs": cur, "version": w["version"]}
+        if (len(nxt) > PREFS_MAX_AREAS
+                or any(isinstance(b, dict) and len(b) > PREFS_MAX_KEYS for b in nxt.values())
+                or len(json.dumps(nxt, separators=(",", ":"))) > PREFS_MAX_USER_BYTES):
+            raise HTTPException(status_code=413, detail="too many settings for one person")
+        if nxt and e not in users and len(users) >= PREFS_MAX_USERS:
+            raise HTTPException(status_code=413, detail="the prefs bin is full")
+        new_users = dict(users)
+        if nxt:
+            new_users[e] = nxt
+        else:
+            new_users.pop(e, None)
+        new_w = {"version": w["version"] + 1, "updatedAt": time.time(), "doc": {**w["doc"], "users": new_users}}
+        try:
+            _jsonbin_put(PREFS_BIN, new_w)
+        except Exception as ex:                  # HTTPException, so CORS headers reach the browser with it
+            raise HTTPException(status_code=502, detail="prefs bin write failed") from ex
+        _PREFS["w"] = new_w                      # our write is now the truth (refresh, don't invalidate)
+    return {"email": e, "prefs": nxt, "version": new_w["version"]}
 
 
 # ---------------------------------------------------------------------------
@@ -619,4 +768,20 @@ if __name__ == "__main__":
     assert _rdcore_candidates(), "candidate list must never be empty"
     ok("candidate list is non-empty without any stub")
 
-    print("\nbroker_patch self-check OK — concurrency, cache, per-doc locks, rdcore serving")
+    # --- /prefs: per-person view settings ---------------------------------------
+    globals()["PREFS_BIN"] = "bin_prefs"
+    _bins["bin_prefs"] = {}                                   # a fresh bin, seeded {}
+    _PREFS["w"] = None
+    assert get_prefs("Corey@X.com")["prefs"] == {}, "nobody saved yet -> {}"
+    p1 = patch_prefs("corey@x.com", {"kbDone": {"B1": {"win": 14, "style": "compact"}}})
+    p2 = patch_prefs("COREY@x.com", {"kbDone": {"B2": {"win": 3, "style": "cards"}}})
+    assert set(p2["prefs"]["kbDone"]) == {"B1", "B2"}, "patches merge per key, and the email is case-folded"
+    puts = _puts["n"]
+    patch_prefs("corey@x.com", {"kbDone": {"B2": {"win": 3, "style": "cards"}}})
+    assert _puts["n"] == puts, "re-sending what already landed writes nothing"
+    patch_prefs("corey@x.com", {"kbDone": {"B1": None, "B2": None}})
+    assert get_prefs("corey@x.com")["prefs"] == {} and "corey@x.com" not in _bins["bin_prefs"]["doc"]["users"], \
+        "null deletes, and an emptied person leaves no record"
+    ok("/prefs: merge per key, case-folded email, null deletes, no-op resend writes nothing")
+
+    print("\nbroker_patch self-check OK — concurrency, cache, per-doc locks, rdcore serving, prefs")
