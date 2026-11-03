@@ -597,7 +597,8 @@ def main():
                                       headers={"Authorization": f"Bearer {args.token}", "User-Agent": ua})
         with urllib.request.urlopen(vreq) as r:
             etag = json.loads(r.read())["etag"]
-        body = json.dumps({"doc": doc}).encode()
+        # "client": "ops" — the broker refuses a PUT /state from a client it does not list (426).
+        body = json.dumps({"doc": doc, "client": "ops"}).encode()
         preq = urllib.request.Request(f"{args.broker}/state/{doc_id}", data=body, method="PUT",
                                       headers={"Authorization": f"Bearer {args.token}", "Content-Type": "application/json",
                                                "If-Match": etag, "User-Agent": ua})

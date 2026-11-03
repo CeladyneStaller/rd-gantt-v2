@@ -1,0 +1,290 @@
+<div class="cw" data-theme="{{theme}}">
+<sc-if value="{{ui.anyMenu}}" hint-placeholder-val="{{false}}"><button class="scrim" type="button" aria-label="Close menu" onClick="{{ui.closeMenus}}"></button></sc-if>
+<div class="app">
+  <aside class="side" aria-label="Navigation">
+    <a class="brand spc-brand" href="{{sh.hub}}" title="Back to all apps" aria-label="Back to all apps">
+      <span class="brand-mark"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"></path></svg></span>
+      <span class="brand-name"><b>Celadyne</b><span class="sub"><!--@if deploy-->Prototype with sample data<!--@else-->R&amp;D suite<!--@endif--></span></span>
+    </a>
+    <nav aria-label="Apps" class="side-sec" style="gap: 2px">
+      <a class="nav" href="Mine-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5l1.5-3h4"></path><path d="M6 5h12l2 8v6H4v-6z"></path></svg>My Projects</a>
+      <a class="nav" href="Plan-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h9M8 12h11M6 18h7"></path></svg>Planning</a>
+      <a class="nav" href="Main.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle></svg>Execution</a>
+      <a class="nav" href="Sales-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"></path></svg>Sales</a>
+      <a class="nav on" href="#main" aria-current="page"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 4-8 4-8-4z"></path><path d="M4 12l8 4 8-4"></path><path d="M4 16l8 4 8-4"></path></svg>Product spec</a>
+    </nav>
+    <nav aria-label="Products" class="side-sec spc-tree">
+      <sc-for list="{{sh.tree}}" as="g" hint-placeholder-count="2">
+        <div class="{{g.cls}}">{{g.name}}</div>
+        <sc-for list="{{g.products}}" as="p" hint-placeholder-count="2">
+          <div class="spc-prow">
+            <button class="btn xs ic q spc-chev" type="button" aria-expanded="{{p.open}}" aria-label="{{p.toggleLabel}}" title="{{p.toggleLabel}}" onClick="{{p.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{p.chev}}"><path d="M6 9l6 6 6-6"></path></svg></button>
+            <button class="{{p.cls}}" type="button" onClick="{{p.pick}}"><span class="ellip">{{p.name}}</span></button>
+          </div>
+          <sc-if value="{{p.open}}" hint-placeholder-val="{{true}}">
+            <sc-for list="{{p.models}}" as="m" hint-placeholder-count="1">
+              <button class="{{m.cls}}" type="button" aria-current="{{m.cur}}" title="{{m.title}}" onClick="{{m.pick}}"><span class="{{m.dotCls}}"></span><span class="ellip">{{m.name}}</span><span class="s">{{m.meta}}</span></button>
+            </sc-for>
+            <sc-if value="{{p.noModels}}" hint-placeholder-val="{{false}}"><div class="sub spc-nomodels">No models yet</div></sc-if>
+          </sc-if>
+        </sc-for>
+        <sc-if value="{{g.noProducts}}" hint-placeholder-val="{{false}}"><div class="sub spc-nomodels">No products yet</div></sc-if>
+      </sc-for>
+      <sc-if value="{{sh.treeEmpty}}" hint-placeholder-val="{{false}}"><div class="sub spc-nomodels">{{sh.treeEmptyText}}</div></sc-if>
+    </nav>
+    <!--@slot side-->
+    <div class="me">
+      <div class="avatar">{{sh.me.initials}}</div>
+      <div class="col g2" style="line-height: 1.2"><span style="font-weight: 500">{{sh.me.name}}</span><span class="sub">{{sh.me.role}}</span></div>
+    </div>
+  </aside>
+
+  <div class="main" id="main">
+    <header class="top">
+      <nav aria-label="Breadcrumb" class="crumb">
+        <span>{{sh.divName}}</span>
+        <sc-if value="{{sh.hasProduct}}" hint-placeholder-val="{{true}}"><span class="sep" aria-hidden="true">/</span><span>{{sh.productName}}</span></sc-if>
+        <sc-if value="{{sh.hasModelCrumb}}" hint-placeholder-val="{{true}}"><span class="sep" aria-hidden="true">/</span><span>{{sh.modelName}}</span></sc-if>
+      </nav>
+      <div class="row push g12">
+        <!--@slot top-->
+        <sc-if value="{{sh.roOn}}" hint-placeholder-val="{{false}}"><span class="st tx-warn"><span class="dot t-warn"></span>Read-only</span></sc-if>
+        <!--@if live--><sc-if value="{{sh.loaded}}" hint-placeholder-val="{{true}}"><!--@endif--><span class="saveind {{ui.saveTone}}"><sc-if value="{{ui.saving}}" hint-placeholder-val="{{false}}"><span class="spin"></span></sc-if><sc-if value="{{!ui.saving}}" hint-placeholder-val="{{true}}"><span class="dot"></span></sc-if>{{ui.saveText}}</span>
+        <sc-if value="{{sh.canSave}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" title="Save now" onClick="{{ui.saveNow}}">Save</button></sc-if><!--@if live--></sc-if><!--@endif-->
+        <button class="btn ic q" type="button" aria-label="Settings" title="Settings" onClick="{{sh.openSettings}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
+      </div>
+    </header>
+    <sc-if value="{{sh.banner}}" hint-placeholder-val="{{false}}">
+      <div class="{{sh.banner.cls}}" role="status"><span class="grow">{{sh.banner.text}}</span><button class="btn xs ic q" type="button" aria-label="Dismiss message" title="Dismiss" onClick="{{sh.banner.dismiss}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+    </sc-if>
+    <!--@slot banner-->
+    <main class="page">
+      <sc-if value="{{sh.hasModel}}" hint-placeholder-val="{{true}}">
+        <section aria-label="Model" class="col g16">
+          <div class="row top g12 wrap">
+            <div class="col g2 grow">
+              <h1 class="h1">{{sh.head.name}}</h1>
+              <div class="row wrap sub spc-meta">
+                <span class="tid">{{sh.head.id}}</span>
+                <span>{{sh.head.productText}}</span>
+                <sc-if value="{{sh.head.hasApp}}" hint-placeholder-val="{{true}}"><span>{{sh.head.appText}}</span></sc-if>
+                <sc-if value="{{sh.head.hasMaturity}}" hint-placeholder-val="{{true}}"><span class="tag" title="Maturity">{{sh.head.maturity}}</span></sc-if>
+              </div>
+              <sc-if value="{{sh.head.hasNotes}}" hint-placeholder-val="{{false}}"><div class="muted spc-notes">{{sh.head.notes}}</div></sc-if>
+            </div>
+            <sc-if value="{{sh.head.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{sh.head.editDetails}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit spec details</button></sc-if>
+          </div>
+          <section class="panel" aria-label="Conformance">
+            <div class="spc-conf">
+              <div class="spc-big">
+                <span class="spc-num">{{sh.head.score}}</span>
+                <div class="col g2">
+                  <span class="{{sh.head.tone}}"><span class="dot"></span>{{sh.head.band}}</span>
+                  <span class="sub">{{sh.head.scoreSub}}</span>
+                  <span class="track spc-bar" aria-hidden="true"><span class="{{sh.head.barCls}}" style="{{sh.head.barStyle}}"></span></span>
+                </div>
+              </div>
+              <sc-if value="{{sh.head.hasSignals}}" hint-placeholder-val="{{true}}">
+                <div class="spc-signals" role="group" aria-label="Specification conformance">
+                  <div class="row wrap spc-sighead"><span class="h3">Specification conformance</span>
+                    <span class="row wrap g12 push sub spc-legend"><span class="st t-ok"><span class="dot"></span>Meets</span><span class="st t-warn"><span class="dot"></span>Marginal</span><span class="st t-bad"><span class="dot"></span>Off target</span><span class="st t-none"><span class="dot"></span>No data</span></span>
+                  </div>
+                  <div class="spc-siggrid">
+                    <sc-for list="{{sh.head.signals}}" as="x" hint-placeholder-count="4">
+                      <span class="ellip spc-siglbl" title="{{x.title}}"><span class="tid">{{x.label}}</span> {{x.name}}</span>
+                      <span class="track"><span class="{{x.fillCls}}" style="{{x.fillStyle}}"></span></span>
+                      <span class="{{x.cls}} spc-sigval"><span class="dot"></span>{{x.score}}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <div class="facts spc-facts">
+              <sc-for list="{{sh.head.facts}}" as="f" hint-placeholder-count="4"><div class="fact"><span class="sub">{{f.label}}</span><span class="fv">{{f.value}}</span><span class="sub">{{f.sub}}</span></div></sc-for>
+            </div>
+          </section>
+        </section>
+        <!--@slot head-->
+        <!--@slot main-->
+      </sc-if>
+      <sc-if value="{{sh.noModel}}" hint-placeholder-val="{{false}}">
+        <div class="panel"><div class="empty spc-empty"><span>{{sh.emptyText}}</span><sc-if value="{{sh.hasEmptyAct}}" hint-placeholder-val="{{false}}"><button class="btn sm" type="button" onClick="{{sh.emptyAct}}">{{sh.emptyActLabel}}</button></sc-if><a class="btn sm q" href="Plan-A.dc.html">Open Planning</a></div></div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+
+<sc-if value="{{ui.sheetOpen}}" hint-placeholder-val="{{false}}">
+  <button class="sheet-scrim" type="button" aria-label="Close panel" onClick="{{ui.dismissAll}}"></button>
+  <aside class="{{ui.sheetCls}}" role="dialog" aria-modal="true" aria-label="Editor" onKeyDown="{{ui.sheetKey}}">
+    <sc-if value="{{sh.settings}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <div class="sh-title"><h2>Settings</h2><span class="sub">Sync, appearance and this division’s document.<!--@if !live--> The broker is simulated in this prototype.<!--@endif--></span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+<!--@if live-->
+        <section class="sh-sec" aria-label="Broker">
+          <h3>Broker</h3>
+          <div class="hint">The token lives in this browser only. The division comes from ?division=… or your last session. An SSO embed can pass ?token=…, which is stored and removed from the address.</div>
+          <span class="{{sh.settings.brokerTone}}"><span class="dot"></span>{{sh.settings.brokerState}}</span>
+          <div class="row wrap g12">
+            <label class="fld grow">Broker token<input class="in" type="password" autoComplete="off" placeholder="{{sh.settings.tokenPh}}" value="{{sh.settings.tokenDraft}}" onChange="{{sh.settings.onToken}}" onKeyDown="{{sh.settings.onTokenKey}}"></label>
+            <div class="row g4 spc-endrow"><button class="btn" type="button" onClick="{{sh.settings.saveToken}}">Save token</button></div>
+          </div>
+          <div class="hint">{{sh.settings.tokenHint}}</div>
+          <div class="row wrap g12"><button class="btn sm" type="button" onClick="{{sh.settings.reload}}">Load from the broker</button><span class="sub">Reloads the portfolio and every product division’s specification document. Other editors’ changes also arrive on their own within 25 s.</span></div>
+          <div class="hint">Changes save automatically 0.7 s after you stop editing, at most 2.5 s after the first change, one write at a time.</div>
+        </section>
+<!--@else-->
+        <section class="sh-sec">
+          <h3>Sync</h3>
+          <div class="hint">The broker is built in; the token lives in this browser only. The division comes from ?division=DIV-FC or your last session. An SSO embed can pass ?token=…, which removes itself from the address. With no token, this document is kept locally in the browser.</div>
+          <span class="{{sh.settings.tokenTone}}"><span class="dot"></span>{{sh.settings.tokenState}}</span>
+          <div class="row wrap g12">
+            <label class="fld grow">Broker token<input class="in" type="password" autoComplete="off" placeholder="Paste token" value="{{sh.settings.tokenDraft}}" onChange="{{sh.settings.onToken}}" onKeyDown="{{sh.settings.onTokenKey}}"></label>
+            <div class="row g4 spc-endrow"><button class="btn" type="button" onClick="{{sh.settings.saveToken}}">Save token</button></div>
+          </div>
+          <div class="hint">Saving reloads the portfolio and this division’s document. An empty token means working locally.</div>
+        </section>
+<!--@endif-->
+        <section class="sh-sec">
+          <h3>Appearance</h3>
+          <div class="seg" role="group" aria-label="Theme"><sc-for list="{{sh.settings.themes}}" as="x" hint-placeholder-count="3"><button type="button" aria-pressed="{{x.on}}" onClick="{{x.pick}}">{{x.label}}</button></sc-for></div>
+          <div class="hint">Theme is saved in this browser only, and shared across the R&amp;D suite. Match system follows your computer’s light or dark setting.</div>
+        </section>
+        <section class="sh-sec">
+          <h3>Product families</h3>
+          <div class="hint">Products and models are authored in the Planning app; this list is read-only. Product-level KPIs are shared across a product’s models and can be linked from any specification or component.</div>
+          <sc-if value="{{sh.settings.hasFams}}" hint-placeholder-val="{{true}}">
+            <div class="tbox"><sc-for list="{{sh.settings.fams}}" as="x" hint-placeholder-count="2"><div class="li"><span class="strong grow">{{x.name}}</span><span class="tid">{{x.id}}</span><span class="sub">{{x.meta}}</span></div></sc-for></div>
+          </sc-if>
+          <sc-if value="{{!sh.settings.hasFams}}" hint-placeholder-val="{{false}}"><div class="sub">{{sh.settings.famEmpty}}</div></sc-if>
+        </section>
+        <section class="sh-sec">
+          <h3>Document</h3>
+          <div class="hint">Specifications are stored on the broker per division<!--@if !live--> (locally in this browser when no token is set)<!--@endif-->. Export to back up; import to load a saved specification document.</div>
+          <div class="row g12"><button class="btn sm" type="button" onClick="{{sh.settings.exportJson}}">Export JSON</button><sc-if value="{{!sh.settings.roOn}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{sh.settings.importJson}}">Import JSON</button></sc-if></div>
+        </section>
+        <section class="sh-sec" aria-label="Hub sign-in">
+          <h3>Hub sign-in</h3>
+          <label class="fld">Signed in as<select class="sel" value="{{sh.settings.hub.value}}" disabled="{{sh.settings.hub.fixed}}" onChange="{{sh.settings.hub.pick}}"><sc-for list="{{sh.settings.hub.opts}}" as="o" hint-placeholder-count="5"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          <div class="hint">{{sh.settings.hub.hint}}<!--@if live--> Product spec doesn’t check the sign-in: anyone with the broker token can edit, as today.<!--@else--> Product spec is open to everyone signed in, as today.<!--@endif--></div>
+        </section>
+        <section class="sh-sec">
+          <h3>Access</h3>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.roOn}}" onChange="{{sh.settings.toggleRo}}">Preview the read-only view</label>
+          <div class="hint">Read-only is what ?readonly gives a viewer: everything shows, nothing can be changed or saved. There is no sign-in; access depends only on the broker token.</div>
+        </section>
+        <section class="sh-sec">
+          <h3>Link with parameters</h3>
+          <div class="grid2">
+            <label class="fld">Division<select class="sel" value="{{sh.settings.linkDiv}}" onChange="{{sh.settings.onLinkDiv}}"><sc-for list="{{sh.settings.linkDivs}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+            <label class="fld">Product<select class="sel" value="{{sh.settings.linkProd}}" onChange="{{sh.settings.onLinkProd}}"><sc-for list="{{sh.settings.linkProds}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+            <label class="fld">Token<input class="in" autoComplete="off" placeholder="Optional" value="{{sh.settings.linkToken}}" onChange="{{sh.settings.onLinkToken}}"></label>
+            <label class="check spc-endrow"><input class="cb" type="checkbox" checked="{{sh.settings.linkRo}}" onChange="{{sh.settings.onLinkRo}}">Read-only</label>
+          </div>
+          <div class="note spc-url"><span class="grow spc-code">{{sh.settings.url}}</span></div>
+          <div class="row wrap g12"><button class="btn sm" type="button" onClick="{{sh.settings.openLink}}">Open with these parameters</button><button class="btn sm q" type="button" onClick="{{sh.settings.copyUrl}}">Copy link</button></div>
+          <div class="hint">A business division redirects to the first product division. A product outside the division is ignored. A token is stored and removed from the address. There is no model parameter.</div>
+        </section>
+        <!--@if !live--><section class="sh-sec">
+          <h3>Simulate the broker</h3>
+          <div class="row wrap g12"><button class="btn sm" type="button" onClick="{{sh.settings.poll}}">Check for changes now</button><span class="sub">The app checks every 25 s. {{sh.settings.lastPoll}}</span></div>
+          <sc-if value="{{sh.settings.canConflict}}" hint-placeholder-val="{{true}}"><div class="row wrap g12"><button class="btn sm" type="button" onClick="{{sh.settings.conflict}}">Simulate a save conflict</button><span class="sub">A teammate saved this division first (412): your last change is lost.</span></div></sc-if>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.offline}}" onChange="{{sh.settings.toggleOffline}}">Lose the connection (saves fail until it returns)</label>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.refDown}}" onChange="{{sh.settings.toggleRefDown}}">Other divisions’ SPEC bins can’t be reached</label>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.portConflict}}" onChange="{{sh.settings.togglePortConflict}}">Next portfolio write meets a concurrent change (412, merged)</label>
+          <div class="row wrap g12"><button class="btn sm" type="button" onClick="{{sh.settings.slowLoad}}">Load other divisions slowly</button><sc-if value="{{sh.settings.loading}}" hint-placeholder-val="{{false}}"><span class="st t-info"><span class="spin"></span>Loading other divisions’ documents…</span></sc-if></div>
+          <div class="hint">Changes save automatically 0.7 s after you stop editing, at most 2.5 s after the first change, one write at a time.</div>
+        </section><!--@endif-->
+        <!--@slot settings-->
+        <!--@if !live--><section class="sh-sec">
+          <h3>Sample data</h3>
+          <div class="row"><button class="btn sm" type="button" onClick="{{sh.settings.reset}}">Restore the sample data</button></div>
+        </section><!--@endif-->
+      </div>
+    </sc-if>
+
+    <sc-if value="{{sh.modelSheet}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <div class="sh-title"><h2>Model spec details</h2><span class="sub">{{sh.modelSheet.name}}</span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sh.modelSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <section class="sh-sec">
+          <div class="kv"><span class="k">Model</span><span><span class="strong">{{sh.modelSheet.name}}</span> <span class="tid">{{sh.modelSheet.id}}</span></span><span class="k">Product family</span><span>{{sh.modelSheet.product}}</span></div>
+          <div class="hint">Models and product families are authored in the Planning app.</div>
+        </section>
+        <section class="sh-sec">
+          <label class="fld">Target application<input class="in" placeholder="e.g. Heavy-duty truck range extender" value="{{sh.modelSheet.application}}" onChange="{{sh.modelSheet.onApplication}}" onKeyDown="{{sh.modelSheet.onKey}}" autoFocus=""></label>
+          <label class="fld">Maturity<input class="in" placeholder="e.g. Concept, Prototype, Pilot, Production" value="{{sh.modelSheet.maturity}}" onChange="{{sh.modelSheet.onMaturity}}" onKeyDown="{{sh.modelSheet.onKey}}"></label>
+          <div class="row wrap g4" role="group" aria-label="Maturity suggestions"><span class="sub">Suggestions</span><sc-for list="{{sh.modelSheet.suggestions}}" as="x" hint-placeholder-count="5"><button class="chip" type="button" aria-pressed="{{x.on}}" onClick="{{x.pick}}">{{x.label}}</button></sc-for></div>
+          <label class="fld">Notes<textarea class="ta" rows="2" placeholder="Optional" value="{{sh.modelSheet.notes}}" onChange="{{sh.modelSheet.onNotes}}"></textarea></label>
+        </section>
+      </div>
+      <div class="sh-foot">
+        <button class="btn pri" type="button" onClick="{{sh.modelSheet.save}}">Save spec details</button>
+        <button class="btn q" type="button" onClick="{{sh.modelSheet.cancel}}">Cancel</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{sh.exportSheet}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <div class="sh-title"><h2>{{sh.exportSheet.title}}</h2><span class="sub">{{sh.exportSheet.sub}}</span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeAllSheets}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <div class="hint">{{sh.exportSheet.counts}} The file holds no portfolio data: products, models, product KPIs and composition live in the portfolio.</div>
+        <label class="fld">product-spec.json<textarea class="ta spc-json" rows="18" readOnly value="{{sh.exportSheet.json}}"></textarea></label>
+      </div>
+      <div class="sh-foot">
+        <button class="btn pri" type="button" onClick="{{sh.exportSheet.copy}}">Copy JSON</button>
+        <button class="btn q" type="button" onClick="{{sh.exportSheet.close}}">Done</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{sh.importSheet}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <div class="sh-title"><h2>{{sh.importSheet.title}}</h2><span class="sub">{{sh.importSheet.sub}}</span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeAllSheets}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <div class="hint">Paste a product-spec.json export. Importing replaces the whole division document, then saves it to the broker. Links in older formats are converted and colliding ids repaired, as on load.</div>
+        <label class="fld">Document JSON<textarea class="ta spc-json" rows="16" placeholder="{ &quot;keyResults&quot;: [], &quot;stageGates&quot;: [], &quot;kpis&quot;: [], &quot;kpiUpdates&quot;: [], &quot;modelSpec&quot;: {} }" value="{{sh.importSheet.text}}" onChange="{{sh.importSheet.onText}}"></textarea></label>
+        <div class="row"><button class="btn sm q" type="button" onClick="{{sh.importSheet.loadCurrent}}">Start from the current document</button></div>
+      </div>
+      <div class="sh-foot">
+        <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert" style="flex-basis: 100%">{{ui.sheetErr}}</div></sc-if>
+        <button class="btn pri" type="button" onClick="{{sh.importSheet.run}}">Import</button>
+        <button class="btn q" type="button" onClick="{{sh.importSheet.close}}">Cancel</button>
+      </div>
+    </sc-if>
+    <!--@slot sheets-->
+  </aside>
+</sc-if>
+
+<sc-if value="{{ui.hasDlg}}" hint-placeholder-val="{{false}}">
+  <div class="dlg-scrim" aria-hidden="true"></div>
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-label="{{ui.dlg.title}}">
+    <h2>{{ui.dlg.title}}</h2>
+    <sc-if value="{{ui.dlg.hasBody}}" hint-placeholder-val="{{true}}"><div class="muted">{{ui.dlg.body}}</div></sc-if>
+    <sc-if value="{{ui.dlg.isAsk}}" hint-placeholder-val="{{false}}">
+      <label class="fld">{{ui.dlg.label}}<input class="in" value="{{ui.dlg.value}}" placeholder="{{ui.dlg.placeholder}}" onChange="{{ui.dlg.onValue}}" onKeyDown="{{ui.dlg.onKey}}" autoFocus=""></label>
+      <sc-if value="{{ui.dlg.hasErr}}" hint-placeholder-val="{{false}}"><div class="err">{{ui.dlg.err}}</div></sc-if>
+    </sc-if>
+    <div class="acts">
+      <button class="btn" type="button" onClick="{{ui.dlg.cancelFn}}">{{ui.dlg.cancel}}</button>
+      <button class="{{ui.dlg.okCls}}" type="button" onClick="{{ui.dlg.okFn}}">{{ui.dlg.ok}}</button>
+    </div>
+  </div>
+</sc-if>
+
+<div class="toasts" role="status" aria-live="polite">
+  <sc-for list="{{ui.toasts}}" as="t" hint-placeholder-count="0">
+    <div class="{{t.cls}}"><span>{{t.text}}</span><button class="x" type="button" aria-label="Dismiss" title="Dismiss" onClick="{{t.drop}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+  </sc-for>
+</div>
+</div>

@@ -2,7 +2,7 @@
 Option 3 keeps a SECOND rdcore.js in the broker's deploy root. build.py makes that copy in the same pass that
 reads the engine, so it cannot be forgotten. Written against Corey's real layout:
 
-    rd-gantt-v2/build.py, rdcore.js, *_app.template.html
+    rd-gantt-v2/build.py, rdcore.js, calm/       <- the apps are built from calm/
     rd-gantt-v2/Broker/broker_patch.py     <- Railway deploys THIS as its own root (/app)
     rd-gantt-v2/Broker/rdcore.js           <- the copy the Hub actually loads
 """
@@ -14,6 +14,9 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# A copy of this harness also sits in broker/; build.py, rdcore.js and calm/ are one level up from there.
+if not os.path.exists(os.path.join(HERE, "build.py")) and os.path.exists(os.path.join(os.path.dirname(HERE), "build.py")):
+    HERE = os.path.dirname(HERE)
 out, fails = [], 0
 
 
@@ -24,15 +27,21 @@ def ok(c, msg):
         fails += 1
 
 
+# what a build needs from calm/: everything but its tests and its build outputs
+CALM_SKIP = shutil.ignore_patterns("out", "deploy", "live", "test", "engine", "audit", "__pycache__")
+
+
 def build_tree(broker_dirname="Broker", crlf=False):
-    """A minimal checkout: build.py + rdcore.js + templates, optionally with a broker subfolder."""
+    """A minimal checkout: build.py + rdcore.js + calm/, optionally with a broker subfolder."""
     root = tempfile.mkdtemp()
-    for f in ("build.py", "rdcore.js", "planning_app.template.html",
-              "execution_app.template.html", "sales_app.template.html", "product_designer.template.html"):
+    for f in ("build.py", "rdcore.js"):
         src = os.path.join(HERE, f)
         if not os.path.exists(src):
             return None
         shutil.copy2(src, os.path.join(root, f))
+    if not os.path.isdir(os.path.join(HERE, "calm")):
+        return None
+    shutil.copytree(os.path.join(HERE, "calm"), os.path.join(root, "calm"), ignore=CALM_SKIP)
     if crlf:                                    # a Windows checkout: engine stored CRLF
         p = os.path.join(root, "rdcore.js")
         data = open(p, "rb").read().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")

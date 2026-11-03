@@ -1,0 +1,44 @@
+/* sspec: product specifications + the shared metric table. Tokens only. */
+.sspec-coll{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.sspec-coll svg{color:var(--muted);transition:transform .15s ease}
+.sspec-coll .cnt{margin-left:2px}
+.sspec-list{display:flex;flex-direction:column;gap:12px;padding:14px 16px 16px}
+.sspec-card{border:1px solid var(--line-2);border-radius:10px;background:var(--surface);display:flex;flex-direction:column;min-width:0}
+.sspec-card.hot{box-shadow:inset 0 3px 0 0 var(--accent)}
+.sspec-head{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 10px}
+.sspec-head .handle{margin-top:3px}
+.sspec-tag{margin-top:3px;min-width:22px}
+.sspec-stmt{font-size:15px;font-weight:600;line-height:1.35}
+.sspec-score{font-size:15px;font-weight:600;margin-top:2px}
+.sspec-acts{flex:none}
+.sspec-pad{padding:0 14px 12px}
+.sspec-prog{display:flex;align-items:center;gap:12px;padding:0 14px 12px}
+.sspec-prog .track{min-width:120px}
+.sspec-subs{display:flex;flex-direction:column;margin:0 14px 12px;border:1px solid var(--line-2);border-radius:8px}
+.sspec-subrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 12px;border-top:1px solid var(--line-3);font-size:13.5px}
+.sspec-subrow:first-child{border-top:0}
+.sspec-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:0 14px 10px;font-size:13.5px}
+.sspec-note{white-space:pre-wrap;font-size:13px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px}
+.sspec-note-card{margin:0 14px 12px}
+.sspec-mt .tbl td{vertical-align:top}
+.sspec-mt .tbl th{white-space:nowrap}
+.sspec-mcell{min-width:180px}
+.sspec-mname{font-weight:500;text-align:left}
+.sspec-badges{margin-top:4px}
+.sspec-badges .tag{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.sspec-read{width:92px}
+.sspec-menuwrap{display:inline-block}
+.sspec-mt .tbl tr.sspec-drop td{box-shadow:inset 0 2px 0 0 var(--accent)}
+.sspec-note-tr td{padding-top:0;border-top:0}
+.sspec-mt-empty{border-top:0;font-size:13.5px}
+.sspec-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sspec-pct{min-width:44px;text-align:right}
+.sspec-ferr{flex-basis:100%}
+.sspec-gh{padding-left:2px}
+.sspec-cand{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}
+.sspec-cand:hover{border-color:var(--field-hover);background:var(--surface-3)}
+.sspec-cand.on{border-color:var(--accent);background:var(--accent-wash)}
+.sspec-cand>.sub:last-child{white-space:nowrap}
+.sspec-radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--field-hover);flex:none;background:var(--surface)}
+.sspec-cand.on .sspec-radio{border:5px solid var(--accent)}
+.sspec-subname{text-align:left;font-weight:500}

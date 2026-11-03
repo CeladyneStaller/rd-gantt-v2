@@ -1,0 +1,134 @@
+<sc-if value="{{kb.on}}" hint-placeholder-val="{{false}}">
+<section class="panel" aria-label="Kanban" data-k="kb-panel">
+  <div class="ph">
+    <h2 class="h2">Kanban</h2>
+    <span class="cnt">{{kb.count}}</span>
+  </div>
+  <div class="sec">
+<section class="kb-root" aria-label="Kanban boards" data-k="kb">
+  <sc-if value="{{kb.noBoards}}" hint-placeholder-val="{{false}}">
+    <div class="kb-empty">
+      <div class="muted">No boards yet. A Kanban board is a stage-gate sequence (columns) that parallel workstreams (tiles) move through.</div>
+      <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><div><button class="btn sm pri" type="button" onClick="{{kb.addBoard}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add board</button></div></sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{kb.hasBoard}}" hint-placeholder-val="{{true}}">
+    <div class="kb-bar">
+      <div class="seg" role="group" aria-label="Boards">
+        <sc-for list="{{kb.boards}}" as="b" hint-placeholder-count="2"><button type="button" aria-pressed="{{b.on}}" onClick="{{b.pick}}">{{b.name}}</button></sc-for>
+      </div>
+      <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" onClick="{{kb.addBoard}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add board</button></sc-if>
+      <div class="kb-acts">
+        <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}">
+          <button class="btn sm" type="button" aria-label="Add tile" title="Add a tile to the backlog" onClick="{{kb.addTile}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add tile</button>
+          <button class="btn sm" type="button" onClick="{{kb.configure}}">Configure</button>
+          <button class="btn sm q ic" type="button" aria-label="Delete board" title="Delete board" onClick="{{kb.delBoard}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+        </sc-if>
+      </div>
+    </div>
+
+    <div class="kb-sum" role="group" aria-label="Board summary">
+      <sc-for list="{{kb.sum}}" as="x" hint-placeholder-count="4"><span class="{{x.cls}}"><span class="dot"></span>{{x.text}}</span></sc-for>
+      <span class="sub">{{kb.total}}</span>
+      <sc-if value="{{kb.hasBacklogSum}}" hint-placeholder-val="{{false}}"><span class="sub">{{kb.backlogSum}}</span></sc-if>
+    </div>
+    <sc-if value="{{kb.hasGsum}}" hint-placeholder-val="{{true}}">
+      <div class="kb-gsum" role="group" aria-label="Stage-gates on this board">
+        <sc-for list="{{kb.gsum}}" as="x" hint-placeholder-count="3">
+          <span class="kb-g"><span class="strong">{{x.name}}</span><span class="{{x.cls}}"><span class="dot"></span>{{x.word}}</span><span class="sub">{{x.text}}</span></span>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div class="kb-gwrap">
+      <div class="kb-scroll">
+        <div class="kb-grid" style="{{kb.gridStyle}}">
+          <div class="kb-ch kb-corner">Swimlane</div>
+          <sc-for list="{{kb.heads}}" as="h" hint-placeholder-count="4">
+            <div class="{{h.cls}}">
+              <span class="kb-chn">{{h.name}}</span><span class="cnt">{{h.count}}</span>
+              <sc-if value="{{h.isDone}}" hint-placeholder-val="{{false}}">
+                <button class="btn xs q kb-dbtn" type="button" aria-haspopup="menu" aria-expanded="{{kb.done.open}}" title="How long finished tiles stay on this board, just for you" onClick="{{kb.done.toggle}}">{{kb.done.label}}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-for list="{{kb.lanes}}" as="l" hint-placeholder-count="2">
+            <div class="kb-ln">
+              <span class="strong">{{l.name}}</span>
+              <span class="sub">{{l.rule}}</span>
+              <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><button class="btn xs q kb-lnadd" type="button" aria-label="{{l.addLabel}}" title="{{l.addLabel}}" onClick="{{l.add}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add tile</button></sc-if>
+            </div>
+            <sc-for list="{{l.cells}}" as="c" hint-placeholder-count="4">
+              <div class="{{c.cls}}" data-k="{{c.k}}" onDragOver="{{c.over}}" onDrop="{{c.drop}}">
+                <sc-for list="{{c.tiles}}" as="t" hint-placeholder-count="1">
+                  <sc-if value="{{t.row}}" hint-placeholder-val="{{false}}">
+                    <div class="{{t.cls}}" data-k="{{t.k}}" draggable="{{t.drag}}" onDragStart="{{t.start}}" onDragEnd="{{kb.dragEnd}}">
+                      <svg class="kb-ckok" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+                      <button class="kb-tn" type="button" autoFocus="{{t.focus}}" onClick="{{t.open}}">{{t.name}}</button>
+                      <span class="sub kb-when">{{t.when}}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{t.card}}" hint-placeholder-val="{{true}}">
+                    <div class="{{t.cls}}" data-k="{{t.k}}" draggable="{{t.drag}}" onDragStart="{{t.start}}" onDragEnd="{{kb.dragEnd}}">
+                      <div class="kb-th"><button class="kb-tn" type="button" autoFocus="{{t.focus}}" onClick="{{t.open}}">{{t.name}}</button><span class="{{t.avCls}}" role="img" aria-label="{{t.avTitle}}" title="{{t.avTitle}}">{{t.av}}</span></div>
+                      <div class="kb-tm"><span class="{{t.stCls}}"><span class="dot"></span>{{t.st}}</span><sc-if value="{{t.hasDays}}" hint-placeholder-val="{{true}}"><span class="sub">{{t.days}}</span></sc-if></div>
+                      <sc-if value="{{t.hasNote}}" hint-placeholder-val="{{false}}"><span class="{{t.noteCls}}">{{t.note}}</span></sc-if>
+                      <sc-if value="{{t.hasGate}}" hint-placeholder-val="{{false}}"><span class="{{t.gateCls}}">{{t.gate}}</span></sc-if>
+                      <sc-if value="{{t.hasLate}}" hint-placeholder-val="{{false}}"><span class="small tx-warn">{{t.late}}</span></sc-if>
+                    </div>
+                  </sc-if>
+                </sc-for>
+                <sc-if value="{{c.hasOlder}}" hint-placeholder-val="{{false}}"><button class="kb-older" type="button" aria-expanded="{{c.olderOpen}}" onClick="{{c.toggleOlder}}">{{c.olderText}}</button></sc-if>
+              </div>
+            </sc-for>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{kb.done.open}}" hint-placeholder-val="{{false}}">
+        <div class="above kb-dmwrap">
+          <div class="menu kb-dm" role="menu" aria-label="{{kb.done.aria}}" onKeyDown="{{kb.done.onKey}}">
+            <div class="kb-dmh"><span class="mh">Show finished tiles from the last</span><button class="btn xs q ic" type="button" aria-label="Close" title="Close" onClick="{{kb.done.close}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+            <sc-for list="{{kb.done.wins}}" as="w" hint-placeholder-count="6"><button class="mi" type="button" role="menuitemradio" aria-checked="{{w.on}}" onClick="{{w.pick}}"><span class="kb-mck"><sc-if value="{{w.on}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></span>{{w.label}}</button></sc-for>
+            <div class="msep"></div>
+            <div class="mh">Show them as</div>
+            <sc-for list="{{kb.done.styles}}" as="w" hint-placeholder-count="2"><button class="mi" type="button" role="menuitemradio" aria-checked="{{w.on}}" onClick="{{w.pick}}"><span class="kb-mck"><sc-if value="{{w.on}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></span>{{w.label}}</button></sc-for>
+            <div class="msep"></div>
+            <div class="kb-dmnote">{{kb.done.note}}</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><div class="kb-legend sub">Drag a tile between columns to advance its stage, or between swimlanes to change its rules. You can also open a tile and pick its stage.</div></sc-if>
+
+    <div class="kb-bl" data-k="kb-backlog">
+      <div class="kb-blhead">
+        <button class="kb-bltog" type="button" aria-expanded="{{kb.bl.open}}" title="{{kb.bl.togTitle}}" onClick="{{kb.bl.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="{{kb.bl.chev}}"><path d="M9 6l6 6-6 6"></path></svg><span class="strong">Backlog</span><span class="cnt">{{kb.bl.count}}</span></button>
+        <span class="sub">{{kb.bl.note}}</span>
+        <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><button class="btn xs q push" type="button" aria-label="Add tile to the backlog" title="Add tile to the backlog" onClick="{{kb.bl.add}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add tile</button></sc-if>
+      </div>
+      <sc-if value="{{kb.bl.open}}" hint-placeholder-val="{{true}}">
+        <sc-for list="{{kb.bl.groups}}" as="g" hint-placeholder-count="2">
+          <div class="kb-blrow">
+            <div class="kb-bllane">
+              <span class="strong">{{g.name}}</span>
+              <span class="sub">{{g.lim}}</span>
+              <sc-if value="{{kb.edit}}" hint-placeholder-val="{{true}}"><button class="btn xs q" type="button" aria-label="{{g.addLabel}}" title="{{g.addLabel}}" onClick="{{g.add}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add tile</button></sc-if>
+            </div>
+            <div class="{{g.cls}}" data-k="{{g.k}}" onDragOver="{{g.over}}" onDrop="{{g.drop}}">
+              <sc-for list="{{g.tiles}}" as="t" hint-placeholder-count="1">
+                <div class="{{t.cls}}" data-k="{{t.k}}" draggable="{{t.drag}}" onDragStart="{{t.start}}" onDragEnd="{{kb.dragEnd}}">
+                  <div class="kb-th"><button class="kb-tn" type="button" autoFocus="{{t.focus}}" onClick="{{t.open}}">{{t.name}}</button><span class="{{t.avCls}}" role="img" aria-label="{{t.avTitle}}" title="{{t.avTitle}}">{{t.av}}</span></div>
+                  <span class="{{t.stCls}}"><span class="dot"></span>{{t.st}}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{g.empty}}" hint-placeholder-val="{{false}}"><span class="sub">{{g.emptyText}}</span></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </sc-if>
+    </div>
+  </sc-if>
+</section>
+  </div>
+</section>
+</sc-if>

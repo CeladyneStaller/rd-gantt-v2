@@ -13,10 +13,21 @@ Concurrency is optimistic (If-Match). Clients poll the version endpoint only and
 pull the full doc on change; after a PUT they record the returned version and
 ignore that echo so autosave cannot self-trigger.
 
+Every DATA route on this router (/state/*, /roster, /analysis, /prefs/*) requires
+`Authorization: Bearer <BROKER_TOKEN>` — the same rule broker.py applies to its own
+routes. /rdcore.js and /rdcore/version stay open. PUT /state also requires a current
+front-end: the body carries "client" next to "doc", and anything not listed in
+RD_ALLOWED_CLIENTS gets 426, so a tab still running a replaced app stops saving.
+
+A JSONBin failure is never read as "document missing": only JSONBin's own 404 means
+missing. Any other error, a timeout or a dropped connection answers 502 and is not
+cached, and a PUT whose read-before-write fails writes nothing.
+
 This file is additive and self-contained. To deploy:
   1. include the router:  app.include_router(state_router)
-  2. set env vars: JSONBIN_MASTER_KEY, UNIFIED_DIVISIONS, and one <DOC>_BIN per doc
+  2. set env vars: BROKER_TOKEN, JSONBIN_MASTER_KEY, UNIFIED_DIVISIONS, and one <DOC>_BIN per doc
      (PORTFOLIO_BIN, GANTT_VIEW_BIN, EXEC_DIV_FC_BIN, ... — create_bins.py prints them).
+     Optional: RD_ALLOWED_CLIENTS (default "calm-1,ops").
 
 The JSONBin read/write is implemented below (urllib, no extra dependency). The
 version is a monotonically increasing integer kept inside each bin; the etag is its
@@ -28,9 +39,12 @@ external lock.
 """
 
 import hashlib
+import hmac
 import json
+import logging
 import os
 import re
+import socket
 import threading
 import time
 import urllib.error
@@ -38,10 +52,82 @@ import urllib.request
 from collections import defaultdict
 from typing import Any, Dict, Optional, Tuple
 
-from fastapi import APIRouter, Body, Header, HTTPException, Response
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-state_router = APIRouter()
+_log = logging.getLogger("uvicorn.error")
+
+
+class _CorsSafeRoute(APIRoute):
+    """Answer an unexpected exception with a JSON 500 RESPONSE instead of letting it escape the route.
+
+    An exception that escapes is answered by Starlette's ServerErrorMiddleware, which sits OUTSIDE
+    CORSMiddleware: that 500 carries no Access-Control-Allow-Origin, so the browser reports a bare "CORS
+    error" and the real status never reaches the page. A response returned here travels back through
+    CORSMiddleware like any other. HTTPException and validation errors pass through untouched — FastAPI's
+    own handlers, which sit inside CORS, already turn those into responses."""
+
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+        label = f"{','.join(sorted(self.methods or []))} {self.path}"
+
+        async def guarded(request):
+            try:
+                return await handler(request)
+            except (StarletteHTTPException, RequestValidationError):
+                raise
+            except Exception:  # noqa: BLE001 — logged in full server-side; the browser gets a readable 500
+                _log.exception("broker: unhandled error in %s", label)
+                return JSONResponse(status_code=500, content={"detail": "internal broker error (see the server log)"})
+
+        return guarded
+
+
+state_router = APIRouter(route_class=_CorsSafeRoute)
+
+
+# ---- auth: the broker token on every data route ------------------------------
+# The same rule as broker.py's require_auth. It lives here too because broker.py imports this module (so
+# this one cannot import broker.py). Read per request, compared in constant time, 401 when missing or wrong,
+# and 500 when BROKER_TOKEN itself is unset: fail CLOSED — a deploy that forgot the variable serves nothing,
+# not everything. Attached per route as dependencies=[Depends(require_token)]; GET /rdcore.js and
+# GET /rdcore/version are deliberately open (the engine is not data).
+def require_token(authorization: str = Header(default="")) -> None:
+    token = (os.environ.get("BROKER_TOKEN") or "").strip()
+    if not token:
+        raise HTTPException(status_code=500, detail="broker token not configured")
+    parts = (authorization or "").split(" ", 1)
+    supplied = parts[1] if len(parts) == 2 and parts[0] == "Bearer" else ""
+    # Compared as bytes: compare_digest raises TypeError on a non-ASCII str, and a header can carry any
+    # latin-1 byte — that would be an unhandled 500 rather than a 401.
+    if not hmac.compare_digest(supplied.encode("utf-8"), token.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+
+# ---- client gate: only current front-ends may write a /state document ---------
+# The Calm pages send "client": "calm-1" in every PUT /state body; ops scripts send "ops". A tab still
+# running a replaced app sends no client at all, and must stop saving rather than write its older model of
+# a document over the new one. Missing, unknown or non-string -> 426 with a message the page can show.
+# RD_ALLOWED_CLIENTS (comma-separated) is read per request; unset or blank means the default.
+_DEFAULT_ALLOWED_CLIENTS = "calm-1,ops"
+_CLIENT_OUT_OF_DATE = {"reason": "client out of date",
+                       "message": "This page is out of date. Reload it to keep working."}
+
+
+def _allowed_clients() -> frozenset:
+    raw = os.environ.get("RD_ALLOWED_CLIENTS") or ""
+    if not raw.strip():
+        raw = _DEFAULT_ALLOWED_CLIENTS
+    return frozenset(c.strip() for c in raw.split(",") if c.strip())
+
+
+def _require_current_client(client: Any) -> None:
+    if not isinstance(client, str) or client not in _allowed_clients():
+        raise HTTPException(status_code=426, detail=dict(_CLIENT_OUT_OF_DATE))
 
 # ---- concurrency + cache ---------------------------------------------------
 # Locks are PER DOC, mirroring the per-bin lock Store already uses in broker.py.
@@ -60,9 +146,11 @@ state_router = APIRouter()
 # that bin (PINs, leadOf, configuredTiles), so the broker is NOT its only writer
 # and caching it would serve stale rosters. /roster reads through every time.
 #
-# Only positive lookups are cached. A miss may be a genuinely absent doc or a
-# transient JSONBin failure, and the two are indistinguishable here — caching the
-# negative would risk pinning a blip as "this document does not exist" forever.
+# Only positive lookups are cached. A JSONBin FAILURE is not a lookup result at all:
+# it raises (502 to the caller) and leaves the cache untouched, so the next call
+# retries. It must never read as "missing" — a client told "missing" seeds a blank
+# document, and its next PUT would write that blank over the real one. A genuine miss
+# (JSONBin's 404, or a fresh bin holding no wrapper) is not cached either.
 #
 # The cache lives in process memory, so a redeploy clears it. That is also the
 # escape hatch if a bin is ever changed out-of-band during a migration: restart.
@@ -115,31 +203,76 @@ def _env_name(doc_id: str) -> str:
 BIN_FOR: Dict[str, Optional[str]] = {d: os.environ.get(_env_name(d)) for d in _DOC_IDS}
 
 
+class JSONBinError(Exception):
+    """JSONBin gave no usable answer: an HTTP error other than a read's 404, a timeout, a refused or dropped
+    connection, or a body that is not JSON. Deliberately NOT the same thing as "missing". The message names
+    the failure only — never a URL, bin id or key."""
+
+
+def _jsonbin_cause(e: BaseException) -> str:
+    """A short, secret-free description of a failed JSONBin call, for logs and 502 details."""
+    if isinstance(e, JSONBinError):
+        return str(e)
+    if isinstance(e, urllib.error.HTTPError):
+        return f"JSONBin HTTP {e.code}"
+    reason = e.reason if isinstance(e, urllib.error.URLError) else e
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return "JSONBin timed out"
+    return f"JSONBin unreachable ({type(reason).__name__})"
+
+
 def _jsonbin_get(bin_id: str) -> Optional[Dict[str, Any]]:
+    """The bin's parsed JSON, or None when JSONBin answers 404 — the ONLY answer that means "missing".
+
+    Every other failure raises JSONBinError: a 5xx, a 429 rate limit, a 401/403 (key or quota), a timeout, a
+    refused or dropped connection, a non-JSON body (e.g. a Cloudflare HTML page). Each of those used to come
+    back as None and so read as "this document does not exist"."""
     req = urllib.request.Request(f"{_JSONBIN}/{bin_id}/latest",
                                  headers={"X-Master-Key": _KEY or "", "User-Agent": _UA})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError:
-        return None
+            body = resp.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise JSONBinError(_jsonbin_cause(e)) from e
+    except Exception as e:  # noqa: BLE001 — URLError, socket timeout, reset mid-read, TLS failure, ...
+        raise JSONBinError(_jsonbin_cause(e)) from e
+    try:
+        return json.loads(body)
+    except ValueError as e:
+        raise JSONBinError("JSONBin sent a body that is not JSON") from e
 
 
 def _jsonbin_put(bin_id: str, payload: Dict[str, Any]) -> None:
     # The update PUT carries ONLY content-type + key — never X-Bin-Private (that
     # would spawn a new bin). JSONBin update versioning is off by default, so this
-    # overwrites the bin in place.
+    # overwrites the bin in place. Any failure raises JSONBinError.
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         f"{_JSONBIN}/{bin_id}", data=data, method="PUT",
         headers={"Content-Type": "application/json", "X-Master-Key": _KEY or "", "User-Agent": _UA},
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        resp.read()
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+    except Exception as e:  # noqa: BLE001
+        raise JSONBinError(_jsonbin_cause(e)) from e
 
 
-def _load_raw(doc_id: str) -> Optional[Dict[str, Any]]:
-    """Return the stored wrapper for a doc, or None if the bin is unset/empty/new.
+def _storage_502(doc_id: str, e: BaseException, reason: str, message: str) -> HTTPException:
+    # HTTPException, not a bare raise: it is answered inside CORSMiddleware, so the browser can read it.
+    _log.warning("broker: %s for doc '%s': %s", reason, doc_id, _jsonbin_cause(e))
+    return HTTPException(status_code=502, detail={"reason": reason, "doc": doc_id,
+                                                  "cause": _jsonbin_cause(e), "message": message})
+
+
+def _load_raw(doc_id: str, for_write: bool = False) -> Optional[Dict[str, Any]]:
+    """Return the stored wrapper for a doc, or None when it genuinely does not exist yet: no bin configured,
+    JSONBin answers 404, or the bin holds no wrapper (fresh and never written).
+
+    A JSONBin failure raises a 502 HTTPException and caches nothing — see the cache note above. With
+    for_write, the 502 says the save was refused (the caller is a PUT about to compare versions).
 
     Served from _CACHE when present — see the cache note above for why that is
     safe. The fast path takes no lock: wrappers are swapped whole on write, so a
@@ -155,12 +288,22 @@ def _load_raw(doc_id: str) -> Optional[Dict[str, Any]]:
         cached = _CACHE.get(doc_id)      # double-checked: another thread may have filled it
         if cached is not None:
             return cached
-        resp = _jsonbin_get(bin_id)
-        if not resp:
-            return None                  # miss/failure: uncached, so it retries next call
+        try:
+            resp = _jsonbin_get(bin_id)
+            if resp is not None and not (isinstance(resp, dict) and "record" in resp):
+                raise JSONBinError("JSONBin answered without a record")
+        except Exception as e:  # noqa: BLE001 — anything but a clean answer or a 404 is a failure
+            raise _storage_502(
+                doc_id, e, "storage unavailable",
+                "Could not read the saved copy of this document, so nothing was saved. Try again in a moment."
+                if for_write else
+                "Could not load this document from storage. Nothing was changed; try again in a moment.",
+            ) from e
+        if resp is None:
+            return None                  # JSONBin 404: genuinely missing; uncached, so it retries next call
         record = resp.get("record")      # JSONBin returns the stored payload under "record"
         if not (isinstance(record, dict) and "version" in record):
-            return None
+            return None                  # a fresh bin with no wrapper yet: reads as version 0
         _CACHE[doc_id] = record
         return record
 
@@ -175,7 +318,14 @@ def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
             detail=(f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)} "
                     f"(and add the division to UNIFIED_DIVISIONS)"),
         )
-    _jsonbin_put(bin_id, wrapped)
+    try:
+        _jsonbin_put(bin_id, wrapped)
+    except Exception as e:  # noqa: BLE001
+        # The cache keeps the last write JSONBin CONFIRMED, so readers are still served and the client's
+        # retry (same etag) goes through. If this write did land despite the error, that retry rewrites the
+        # same version number with the client's current doc.
+        raise _storage_502(doc_id, e, "storage write failed",
+                           "Storage did not confirm the save. Try again in a moment.") from e
     # Our write is now the truth; refresh the cache rather than invalidating it,
     # so the next reader is served from memory instead of re-fetching what we
     # just sent.
@@ -198,11 +348,14 @@ def _version_payload(doc_id: str, wrapped: Dict[str, Any]) -> Dict[str, Any]:
 
 class StatePut(BaseModel):
     doc: Any  # the full document payload (portfolio / exec-<div> / gantt-view)
+    # Which front-end is writing ("calm-1", "ops"). Typed loosely on purpose: anything that is not an allowed
+    # string is "out of date" (426), never a 422. Checked, not stored.
+    client: Any = None
 
 
 # ---- routes ----------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# GET /roster -> [{email, orgRole, leadOf, disabled}]
+# GET /roster -> {users: [{email, name, orgRole, leadOf, leadUnits, leadDivisions, disabled}]}
 #
 # The users bin also holds pinHash / salt / iterations for every user. Those are
 # PIN credentials: the keyspace is tiny, so anyone holding hash+salt recovers the
@@ -210,8 +363,8 @@ class StatePut(BaseModel):
 # browser, and filtering client-side would not help -- by then they have already
 # crossed the wire.
 #
-# So this endpoint is a strict WHITELIST, not a blacklist: it names the four
-# fields it emits and drops everything else. A new secret added to the users bin
+# So this endpoint is a strict WHITELIST, not a blacklist: it names every field
+# it emits (ROSTER_FIELDS) and drops everything else. A new secret added to the users bin
 # tomorrow is excluded by default rather than leaking until someone notices.
 # assignedObjectives is deliberately NOT exposed -- the planning app owns
 # objective ownership in its own portfolio doc, and mirroring that relationship
@@ -219,13 +372,15 @@ class StatePut(BaseModel):
 #
 # Read-only by design: there is no write path to the users bin in this broker.
 # ---------------------------------------------------------------------------
-ROSTER_FIELDS = ("email", "orgRole", "leadOf", "leadUnits", "leadDivisions", "disabled")
+ROSTER_FIELDS = ("email", "name", "orgRole", "leadOf", "leadUnits", "leadDivisions", "disabled")
 USERS_BIN = os.environ.get("USERS_BIN")
 ANALYSIS_INDEX_BIN = os.environ.get("ANALYSIS_INDEX_BIN")
 
 def _project_user(u: Dict[str, Any]) -> Dict[str, Any]:
     out = {
         "email": u.get("email"),
+        # Display name, when the users bin has one (a string); None otherwise, so pages fall back to the email.
+        "name": u.get("name") if isinstance(u.get("name"), str) else None,
         "orgRole": u.get("orgRole"),
         # Legacy tracker-id list. The Hub no longer reads it and it does not
         # resolve to division ids; kept only so existing consumers do not break.
@@ -241,14 +396,17 @@ def _project_user(u: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-@state_router.get("/roster")
+@state_router.get("/roster", dependencies=[Depends(require_token)])
 def get_roster():
     """Users for the objective-owner picker. Never emits credential material."""
     if not USERS_BIN:
         raise HTTPException(status_code=503, detail="USERS_BIN is not configured")
-    raw = _jsonbin_get(USERS_BIN)
+    try:
+        raw = _jsonbin_get(USERS_BIN)
+    except Exception as e:  # noqa: BLE001 — a failed read is a 502, never an empty roster
+        raise HTTPException(status_code=502, detail=f"users bin unavailable ({_jsonbin_cause(e)})") from e
     if raw is None:
-        raise HTTPException(status_code=502, detail="users bin unavailable")
+        raise HTTPException(status_code=502, detail="users bin unavailable (JSONBin 404: check USERS_BIN)")
     users = (raw.get("record") or raw).get("users") or []
     return {"users": [_project_user(u) for u in users if u.get("email")]}
 
@@ -274,7 +432,8 @@ _analysis_lock = threading.Lock()
 
 
 def _analysis_fetch() -> Optional[Dict[str, Any]]:
-    """Read the index bin, unwrapping JSONBin's {record, metadata} envelope."""
+    """Read the index bin, unwrapping JSONBin's {record, metadata} envelope. None on a 404; raises on a
+    JSONBin failure (the route treats both as "unreachable", and caches neither)."""
     raw = _jsonbin_get(ANALYSIS_INDEX_BIN)
     if raw is None:
         return None
@@ -282,7 +441,7 @@ def _analysis_fetch() -> Optional[Dict[str, Any]]:
     return record if isinstance(record, dict) else (raw if isinstance(raw, dict) else None)
 
 
-@state_router.get("/analysis")
+@state_router.get("/analysis", dependencies=[Depends(require_token)])
 def get_analysis(response: Response):
     """The analysis index, for the execution app's 'Connect data' picker.
 
@@ -300,7 +459,11 @@ def get_analysis(response: Response):
             response.headers["X-Analysis-Age"] = str(int(age))
             return cached
 
-    payload = _analysis_fetch()
+    cause = None
+    try:
+        payload = _analysis_fetch()
+    except Exception as e:  # noqa: BLE001 — a JSONBin error or timeout is "unreachable", never an empty index
+        payload, cause = None, _jsonbin_cause(e)
     if payload is None:
         # Serve a stale copy rather than nothing if the portal is briefly unreachable;
         # the age header tells the client how old it is.
@@ -311,7 +474,7 @@ def get_analysis(response: Response):
             response.headers["X-Analysis-Age"] = str(int(stale_age))
             response.headers["X-Analysis-Stale"] = "1"
             return stale
-        raise HTTPException(status_code=502, detail="analysis index unavailable")
+        raise HTTPException(status_code=502, detail="analysis index unavailable" + (f" ({cause})" if cause else ""))
 
     with _analysis_lock:
         _analysis_cache["at"] = now
@@ -340,9 +503,10 @@ def get_analysis(response: Response):
 # Generic over <area> on purpose, so the next per-person setting needs no broker deploy — and BOUNDED instead
 # (shapes, sizes, counts), so a buggy client cannot grow the bin without limit.
 #
-# The email is the one the app read from the Hub's sign-in on that device: honor-system, like every other
-# route on this router. Nothing here is document data; a forged email changes only how someone else's
-# Done column is drawn.
+# The broker token gates the route (like every data route on this router), but the token proves only that
+# the caller is one of our pages, not which person: the email is the one the app read from the Hub's sign-in
+# on that device, honor-system. Nothing here is document data; a forged email changes only how someone
+# else's Done column is drawn.
 # ---------------------------------------------------------------------------
 PREFS_BIN = os.environ.get("PREFS_BIN")
 PREFS_MAX_USERS = 200
@@ -378,7 +542,10 @@ def _prefs_load() -> Dict[str, Any]:
     with _PREFS_LOCK:
         if _PREFS["w"] is not None:
             return _PREFS["w"]
-        resp = _jsonbin_get(PREFS_BIN)
+        try:
+            resp = _jsonbin_get(PREFS_BIN)
+        except Exception as e:  # noqa: BLE001 — failed read: 502, not cached, never "nobody has settings"
+            raise HTTPException(status_code=502, detail=f"prefs bin unavailable ({_jsonbin_cause(e)})") from e
         if not isinstance(resp, dict) or "record" not in resp:
             raise HTTPException(status_code=502, detail="prefs bin unavailable")
         rec = resp["record"]
@@ -413,7 +580,7 @@ def _prefs_clean(body: Any) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-@state_router.get("/prefs/{email}")
+@state_router.get("/prefs/{email}", dependencies=[Depends(require_token)])
 def get_prefs(email: str):
     """One person's settings. Someone with nothing saved gets {} (200, not 404): "nothing saved" is the
     normal state, and a 404 must keep meaning "this broker has no /prefs" so an old deploy reads as a failure."""
@@ -424,7 +591,7 @@ def get_prefs(email: str):
     return {"email": e, "prefs": entry if isinstance(entry, dict) else {}, "version": w["version"]}
 
 
-@state_router.patch("/prefs/{email}")
+@state_router.patch("/prefs/{email}", dependencies=[Depends(require_token)])
 def patch_prefs(email: str, body: Any = Body(...)):
     e = _prefs_email(email)
     patch = _prefs_clean(body)
@@ -568,27 +735,27 @@ def get_rdcore_version():
     return {"etag": etag}
 
 
-@state_router.get("/state/{doc_id}/version")
+@state_router.get("/state/{doc_id}/version", dependencies=[Depends(require_token)])
 def get_version(doc_id: str):
     """Cheap polling endpoint — and now cheap on the JSONBin side too, not just in
     response size. This is the call the Hub makes most, so it must not fetch."""
-    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network
+    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network; JSONBin failure: 502
     if wrapped is None:
         # A not-yet-created doc reports version 0 so a fresh client can seed it.
         return {"version": 0, "etag": _etag_for(0, doc_id), "updatedAt": None}
     return _version_payload(doc_id, wrapped)
 
 
-@state_router.get("/state/{doc_id}")
+@state_router.get("/state/{doc_id}", dependencies=[Depends(require_token)])
 def get_state(doc_id: str, response: Response):
-    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network
+    wrapped = _load_raw(doc_id)          # cache hit: no lock, no network; JSONBin failure: 502
     if wrapped is None:
         raise HTTPException(status_code=404, detail="document not found")
     response.headers["ETag"] = _etag_for(wrapped["version"], doc_id)
     return {**_version_payload(doc_id, wrapped), "doc": wrapped["doc"]}
 
 
-@state_router.put("/state/{doc_id}")
+@state_router.put("/state/{doc_id}", dependencies=[Depends(require_token)])
 def put_state(
     doc_id: str,
     body: StatePut,
@@ -600,18 +767,22 @@ def put_state(
     - First write of a brand-new doc: send If-Match: "0" (or the etag of version 0).
     - 412 on mismatch -> client re-pulls, re-applies, retries once.
 
+    Order of refusals: token (401, a dependency) -> client (426) -> If-Match present (428) ->
+    read-before-write (502 if JSONBin fails: nothing is written) -> version (412).
+
     The lock is held across the read-modify-write, including the JSONBin PUT —
     that IS the serialization guarantee, and it is why the Procfile pins
     --workers 1. It is now a per-doc lock, so writers to different documents no
     longer queue behind each other, and no reader waits on any of it.
     """
+    _require_current_client(body.client)
+    if if_match is None:
+        raise HTTPException(status_code=428, detail="If-Match header required")
+
     with _lock_for(doc_id):
-        wrapped = _load_raw(doc_id)
+        wrapped = _load_raw(doc_id, for_write=True)   # raises 502 on a JSONBin failure: never read as version 0
         current_version = wrapped["version"] if wrapped else 0
         current_etag = _etag_for(current_version, doc_id)
-
-        if if_match is None:
-            raise HTTPException(status_code=428, detail="If-Match header required")
 
         # Accept either the raw etag or the bare version number as a convenience.
         supplied = if_match.strip().strip('"')
@@ -638,13 +809,18 @@ if __name__ == "__main__":
     _bins: Dict[str, Dict[str, Any]] = {}          # bin_id -> stored payload
     _fetches = {"n": 0}
     _puts = {"n": 0}
+    _fail = {"get": False, "put": False}           # simulate a JSONBin failure (not a 404)
 
-    def _fake_get(bin_id):
+    def _fake_get(bin_id):                         # None == JSONBin 404, exactly like the real one
         _fetches["n"] += 1
+        if _fail["get"]:
+            raise JSONBinError("JSONBin HTTP 500")
         return {"record": _bins[bin_id]} if bin_id in _bins else None
 
     def _fake_put(bin_id, payload):
         _puts["n"] += 1
+        if _fail["put"]:
+            raise JSONBinError("JSONBin timed out")
         _bins[bin_id] = payload
 
     globals()["_jsonbin_get"] = _fake_get
@@ -658,7 +834,7 @@ if __name__ == "__main__":
     ok = lambda m: print("  ok   " + m)
 
     # --- write path + optimistic concurrency (unchanged behaviour) ------------
-    r = put_state("portfolio", StatePut(doc={"divisions": []}), _Resp(), if_match="0")
+    r = put_state("portfolio", StatePut(doc={"divisions": []}, client="calm-1"), _Resp(), if_match="0")
     assert r["version"] == 1, r
     v = get_version("portfolio")
     assert v["version"] == 1, v
@@ -666,19 +842,19 @@ if __name__ == "__main__":
 
     rejected = False
     try:
-        put_state("portfolio", StatePut(doc={"divisions": [1]}), _Resp(), if_match="0")
+        put_state("portfolio", StatePut(doc={"divisions": [1]}, client="calm-1"), _Resp(), if_match="0")
     except HTTPException as e:
         rejected = e.status_code == 412
     assert rejected, "stale write should 412"
     ok("stale write rejected (412)")
 
-    r2 = put_state("portfolio", StatePut(doc={"divisions": [1]}), _Resp(), if_match=v["etag"])
+    r2 = put_state("portfolio", StatePut(doc={"divisions": [1]}, client="calm-1"), _Resp(), if_match=v["etag"])
     assert r2["version"] == 2, r2
     ok("correct write accepted")
 
     missing = 428
     try:
-        put_state("portfolio", StatePut(doc={}), _Resp(), if_match=None)
+        put_state("portfolio", StatePut(doc={}, client="calm-1"), _Resp(), if_match=None)
     except HTTPException as e:
         missing = e.status_code
     assert missing == 428, "missing If-Match should 428"
@@ -704,12 +880,12 @@ if __name__ == "__main__":
     ok("cold read fetches once, then serves from cache")
 
     # Reads reflect our own writes immediately (cache refreshed, not invalidated).
-    put_state("EXEC-DIV-FC", StatePut(doc={"keyResults": ["kr1"]}), _Resp(), if_match="7")
+    put_state("EXEC-DIV-FC", StatePut(doc={"keyResults": ["kr1"]}, client="calm-1"), _Resp(), if_match="7")
     assert get_state("EXEC-DIV-FC", _Resp())["doc"] == {"keyResults": ["kr1"]}
     assert get_version("EXEC-DIV-FC")["version"] == 8
     ok("write refreshes cache (read-after-write is current)")
 
-    # A miss is NOT cached: a transient failure must not pin "does not exist".
+    # A miss (JSONBin 404) is NOT cached: the doc may be created at any moment.
     before = _fetches["n"]
     assert get_version("SPEC-DIV-FC")["version"] == 0   # unconfigured -> no bin id, no fetch
     assert _fetches["n"] == before, "unconfigured doc should not fetch at all"
@@ -717,7 +893,49 @@ if __name__ == "__main__":
     assert get_version("SPEC-DIV-FC")["version"] == 0
     assert get_version("SPEC-DIV-FC")["version"] == 0
     assert _fetches["n"] == before + 2, "misses must retry, not cache the negative"
-    ok("misses are not cached (transient failure can't pin absence)")
+    ok("misses are not cached (a 404 is retried, never pinned)")
+
+    # --- a JSONBin FAILURE is not "missing": 502, uncached, and a PUT writes nothing ---
+    _CACHE.pop("EXEC-DIV-FC", None)                     # cold, so the next read goes to JSONBin
+    _fail["get"] = True
+    for call in (lambda: get_version("EXEC-DIV-FC"), lambda: get_state("EXEC-DIV-FC", _Resp())):
+        try:
+            call()
+            raise AssertionError("a failed JSONBin read must raise, not answer")
+        except HTTPException as e:
+            assert e.status_code == 502, f"failed read must be 502, got {e.status_code}"
+    puts, held = _puts["n"], json.dumps(_bins["bin_fc"], sort_keys=True)
+    try:
+        put_state("EXEC-DIV-FC", StatePut(doc={}, client="calm-1"), _Resp(), if_match="0")
+        raise AssertionError("a PUT whose read fails must be refused")
+    except HTTPException as e:
+        assert e.status_code == 502, e.status_code
+    assert _puts["n"] == puts and json.dumps(_bins["bin_fc"], sort_keys=True) == held, \
+        "a refused PUT must not write: a blank doc over the real one is the bug this prevents"
+    assert "EXEC-DIV-FC" not in _CACHE, "a failed read must not be cached"
+    _fail["get"] = False
+    assert get_version("EXEC-DIV-FC")["version"] == 8, "once JSONBin answers, the real version is read"
+    ok("JSONBin failure -> 502 (not 404/version 0), uncached; a PUT whose read fails writes nothing")
+
+    _fail["put"] = True
+    try:
+        put_state("EXEC-DIV-FC", StatePut(doc={"keyResults": []}, client="calm-1"), _Resp(), if_match="8")
+        raise AssertionError("a failed JSONBin write must raise")
+    except HTTPException as e:
+        assert e.status_code == 502, e.status_code
+    _fail["put"] = False
+    assert get_version("EXEC-DIV-FC")["version"] == 8, "a failed write must not advance the cached version"
+    ok("JSONBin write failure -> 502, cache keeps the last confirmed write")
+
+    # --- the client gate: only current front-ends may write --------------------
+    for bad in (None, "", "rd-gantt", 1):
+        try:
+            put_state("portfolio", StatePut(doc={}, client=bad), _Resp(), if_match="2")
+            raise AssertionError(f"client {bad!r} must be refused")
+        except HTTPException as e:
+            assert e.status_code == 426 and e.detail["reason"] == "client out of date", (bad, e.status_code)
+    assert put_state("portfolio", StatePut(doc={"d": 1}, client="ops"), _Resp(), if_match="2")["version"] == 3
+    ok("client gate: missing/unknown -> 426, 'ops' writes")
 
     # --- per-doc locks --------------------------------------------------------
     assert _lock_for("portfolio") is _lock_for("portfolio"), "same doc -> same lock"
@@ -784,4 +1002,5 @@ if __name__ == "__main__":
         "null deletes, and an emptied person leaves no record"
     ok("/prefs: merge per key, case-folded email, null deletes, no-op resend writes nothing")
 
-    print("\nbroker_patch self-check OK — concurrency, cache, per-doc locks, rdcore serving, prefs")
+    print("\nbroker_patch self-check OK — concurrency, cache, JSONBin failures, client gate, per-doc locks, "
+          "rdcore serving, prefs")

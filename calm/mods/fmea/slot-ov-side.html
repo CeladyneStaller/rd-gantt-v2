@@ -1,0 +1,18 @@
+<section class="panel" aria-labelledby="fmea-ov-h" data-k="fmea-ov">
+  <div class="ph">
+    <h2 class="h3" id="fmea-ov-h">Open high risks</h2>
+    <div class="act"><button class="btn q sm" type="button" onClick="{{fmea.ov.go}}">Review risks</button></div>
+  </div>
+  <div class="pb col g10 fmea-ovb">
+    <div class="row g12"><span class="{{fmea.ov.cntCls}}">{{fmea.ov.count}}</span><span class="{{fmea.ov.stCls}}"><span class="dot"></span>{{fmea.ov.word}}</span></div>
+    <div class="sub">{{fmea.ov.sub}}</div>
+    <sc-if value="{{fmea.ov.hasItems}}" hint-placeholder-val="{{true}}">
+      <div class="col g2">
+        <sc-for list="{{fmea.ov.items}}" as="oi" hint-placeholder-count="2">
+          <button class="fmea-ovi" type="button" title="Show this problem in the risk register" onClick="{{oi.go}}"><sc-if value="{{oi.hasGate}}" hint-placeholder-val="{{true}}"><span class="tag">{{oi.gate}}</span></sc-if><span class="grow clamp2">{{oi.text}}</span><span class="fmea-ovr">{{oi.rpn}}</span></button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{fmea.ov.hasMore}}" hint-placeholder-val="{{false}}"><div class="sub">{{fmea.ov.more}}</div></sc-if>
+  </div>
+</section>

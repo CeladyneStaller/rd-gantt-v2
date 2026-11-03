@@ -1,0 +1,112 @@
+<sc-if value="{{pull.build}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>{{pull.build.title}}</h2><span class="sub">{{pull.build.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body pull-bbody" data-k="pull-builder">
+    <div class="pull-pv" aria-live="polite" data-k="pull-preview">
+      <div class="pull-tiles">
+        <sc-for list="{{pull.build.tiles}}" as="pl_v" hint-placeholder-count="2">
+          <div class="pull-tile" data-k="{{pl_v.k}}" title="{{pl_v.sentence}}">
+            <span class="pull-tl">{{pl_v.label}}</span>
+            <span class="{{pl_v.valCls}}">{{pl_v.value}}</span>
+            <span class="pull-tsc"><span class="{{pl_v.stCls}}"><span class="dot"></span>{{pl_v.stWord}}</span><sc-if value="{{pl_v.hasScore}}" hint-placeholder-val="{{true}}"><span class="sub">Score <span class="{{pl_v.scoreCls}}">{{pl_v.score}}</span></span></sc-if></span>
+            <span class="sub">Target {{pl_v.target}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span class="sub pull-pline">{{pull.build.pulledLine}}</span>
+    </div>
+    <sc-if value="{{pull.build.canPosted}}" hint-placeholder-val="{{true}}">
+      <div class="fld pull-rsrc" data-k="readings-source"><span class="lab">Readings</span><div class="seg" role="group" aria-label="Readings"><button type="button" aria-pressed="false" onClick="{{pull.build.posted}}">Posted here</button><button type="button" aria-pressed="true">Pulled from other work</button></div></div>
+    </sc-if>
+    <div class="pull-cols">
+      <div class="pull-left">
+        <section class="pull-part" aria-label="What to pull">
+          <h3 class="h3">What to pull</h3>
+          <label class="fld"><span class="lab">Pull each</span><select class="sel pull-each" value="{{pull.build.eachSel.v}}" onChange="{{pull.build.eachSel.on}}"><sc-for list="{{pull.build.eachSel.opts}}" as="pl_o" hint-placeholder-count="7"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          <div class="fld">
+            <span class="lab">Read its</span>
+            <div class="pull-mss" role="radiogroup" aria-label="Read its"><sc-for list="{{pull.build.measures}}" as="pl_m" hint-placeholder-count="4"><button class="{{pl_m.cls}}" type="button" role="radio" aria-checked="{{pl_m.on}}" onClick="{{pl_m.pick}}"><span class="pull-radio"></span><span class="col g2"><span class="strong">{{pl_m.label}}</span><span class="sub">{{pl_m.desc}}</span></span></button></sc-for></div>
+          </div>
+          <sc-if value="{{pull.build.isState}}" hint-placeholder-val="{{false}}">
+            <div class="fld">
+              <span class="lab">Counting</span>
+              <div class="row wrap" role="group" aria-label="Counting"><sc-for list="{{pull.build.states}}" as="pl_t" hint-placeholder-count="3"><button class="{{pl_t.cls}}" type="button" aria-pressed="{{pl_t.on}}" onClick="{{pl_t.toggle}}">{{pl_t.label}}</button></sc-for></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{pull.build.showWindow}}" hint-placeholder-val="{{false}}">
+            <label class="fld"><span class="lab">Window</span><select class="sel pull-each" value="{{pull.build.win.v}}" onChange="{{pull.build.win.on}}"><sc-for list="{{pull.build.win.opts}}" as="pl_o" hint-placeholder-count="4"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          </sc-if>
+        </section>
+        <section class="pull-part" aria-label="{{pull.build.statHead}}" data-k="pull-stats">
+          <h3 class="h3">{{pull.build.statHead}}</h3>
+          <div class="pull-chips" role="group" aria-label="{{pull.build.statHead}}"><sc-for list="{{pull.build.statChips}}" as="pl_c" hint-placeholder-count="8"><button class="{{pl_c.cls}}" type="button" title="{{pl_c.title}}" aria-pressed="{{pl_c.on}}" onClick="{{pl_c.toggle}}">{{pl_c.label}}</button></sc-for></div>
+          <sc-if value="{{pull.build.hasThreshold}}" hint-placeholder-val="{{false}}">
+            <div class="pull-thr">
+              <label class="fld"><span class="lab">Threshold</span><span class="pull-inu"><input class="in num" type="text" inputMode="decimal" value="{{pull.build.threshold}}" onChange="{{pull.build.onThreshold}}" placeholder="e.g. 10"><sc-if value="{{pull.build.hasThresholdUnit}}" hint-placeholder-val="{{true}}"><span class="sub">{{pull.build.thresholdUnit}}</span></sc-if></span></label>
+              <span class="hint">{{pull.build.thrHint}}</span>
+            </div>
+          </sc-if>
+          <span class="hint">{{pull.build.statHint}}</span>
+        </section>
+      </div>
+      <div class="pull-right">
+        <h3 class="h3">Which work</h3>
+        <div class="pull-sels">
+          <label class="fld pull-wide"><span class="lab">Division</span><select class="sel" value="{{pull.build.div.v}}" onChange="{{pull.build.div.on}}"><sc-for list="{{pull.build.div.opts}}" as="pl_o" hint-placeholder-count="3"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for><sc-for list="{{pull.build.div.groups}}" as="pl_g" hint-placeholder-count="2"><optgroup label="{{pl_g.label}}"><sc-for list="{{pl_g.opts}}" as="pl_d" hint-placeholder-count="3"><option value="{{pl_d.v}}" label="{{pl_d.label}}"></option></sc-for></optgroup></sc-for></select></label>
+          <label class="fld"><span class="lab">Quarter</span><select class="sel" value="{{pull.build.quarter.v}}" onChange="{{pull.build.quarter.on}}"><sc-for list="{{pull.build.quarter.opts}}" as="pl_o" hint-placeholder-count="4"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          <label class="fld"><span class="lab">Owner</span><select class="sel" value="{{pull.build.owner.v}}" onChange="{{pull.build.owner.on}}"><sc-for list="{{pull.build.owner.opts}}" as="pl_o" hint-placeholder-count="3"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          <label class="fld pull-wide"><span class="lab">Project</span><select class="sel" value="{{pull.build.proj.v}}" onChange="{{pull.build.proj.on}}"><sc-for list="{{pull.build.proj.opts}}" as="pl_o" hint-placeholder-count="3"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          <sc-if value="{{pull.build.hasNarrow}}" hint-placeholder-val="{{true}}">
+            <label class="fld pull-wide"><span class="lab">{{pull.build.narrowLabel}}</span><select class="sel" value="{{pull.build.narrow.v}}" onChange="{{pull.build.narrow.on}}"><sc-for list="{{pull.build.narrow.opts}}" as="pl_o" hint-placeholder-count="3"><option value="{{pl_o.v}}" label="{{pl_o.label}}"></option></sc-for></select></label>
+          </sc-if>
+        </div>
+        <label class="check"><input class="cb" type="checkbox" checked="{{pull.build.follow}}" onChange="{{pull.build.onFollow}}">New work that matches joins on its own</label>
+        <div class="pull-list" data-k="pull-items">
+          <div class="row wrap"><span class="strong">{{pull.build.listHead}}</span><sc-if value="{{pull.build.hasHandOut}}" hint-placeholder-val="{{false}}"><span class="sub push">{{pull.build.handOut}}</span></sc-if></div>
+          <sc-for list="{{pull.build.groups}}" as="pl_g" hint-placeholder-count="2">
+            <div class="pull-grp">
+              <div class="pull-gh"><span class="strong">{{pl_g.name}}</span><span class="sub">{{pl_g.sub}}</span></div>
+              <sc-for list="{{pl_g.items}}" as="pl_i" hint-placeholder-count="3">
+                <label class="{{pl_i.cls}}" data-k="{{pl_i.k}}"><input class="cb" type="checkbox" checked="{{pl_i.on}}" disabled="{{!pl_i.canToggle}}" aria-label="{{pl_i.cbAria}}" onChange="{{pl_i.toggle}}"><span class="pull-in">{{pl_i.name}}</span><sc-if value="{{pl_i.hasText}}" hint-placeholder-val="{{true}}"><span class="sub pull-ix">{{pl_i.text}}</span></sc-if><span class="pull-iv">{{pl_i.val}}</span></label>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{pull.build.noItems}}" hint-placeholder-val="{{false}}"><div class="sub">{{pull.build.noItemsText}}</div></sc-if>
+        </div>
+      </div>
+    </div>
+    <section class="pull-part" aria-label="{{pull.build.tgHead}}" data-k="pull-targets">
+      <h3 class="h3">{{pull.build.tgHead}}</h3>
+      <div class="pull-tgs" role="table" aria-label="{{pull.build.tgHead}}">
+        <div class="pull-tgr pull-tgh" role="row"><span role="columnheader">Statistic</span><span role="columnheader">Name</span><span role="columnheader">Score as</span><span role="columnheader">Target</span><span role="columnheader">Unit</span></div>
+        <sc-for list="{{pull.build.tgRows}}" as="pl_r" hint-placeholder-count="2">
+          <div class="pull-tgr" role="row" data-k="{{pl_r.k}}">
+            <span class="strong pull-tgl" role="cell">{{pl_r.label}}</span>
+            <span role="cell"><input class="in" type="text" aria-label="{{pl_r.nameAria}}" value="{{pl_r.name}}" placeholder="{{pl_r.namePh}}" onChange="{{pl_r.onName}}"></span>
+            <span role="cell"><select class="sel" aria-label="{{pl_r.dirAria}}" value="{{pl_r.dir}}" onChange="{{pl_r.onDir}}"><option value="up" label="At least"></option><option value="down" label="At most"></option></select></span>
+            <span role="cell"><input class="in num" type="text" inputMode="decimal" aria-label="{{pl_r.tgtAria}}" value="{{pl_r.target}}" placeholder="None" onChange="{{pl_r.onTarget}}"></span>
+            <span role="cell"><input class="in" type="text" aria-label="{{pl_r.unitAria}}" value="{{pl_r.unit}}" placeholder="{{pl_r.unitPh}}" onChange="{{pl_r.onUnit}}"></span>
+          </div>
+        </sc-for>
+      </div>
+      <span class="hint">{{pull.build.scoreHint}}</span>
+    </section>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><span class="err" role="alert">{{ui.sheetErr}}</span></sc-if>
+    <span class="push"></span>
+    <button class="btn" type="button" onClick="{{ui.closeSheet}}">Cancel</button>
+    <button class="btn pri" type="button" onClick="{{pull.build.save}}">{{pull.build.saveLabel}}</button>
+  </div>
+</sc-if>
+<sc-if value="{{pull.failed}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{pull.failed.title}}</h2></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body" data-k="pull-failed"><div class="err" role="alert">{{pull.failed.text}}</div></div>
+  <div class="sh-foot"><span class="push"></span><button class="btn" type="button" onClick="{{ui.closeSheet}}">Close</button></div>
+</sc-if>

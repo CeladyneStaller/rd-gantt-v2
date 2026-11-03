@@ -1,0 +1,839 @@
+{
+  "keyResults": [
+    {
+      "id": "KR-BD-2026Q4-01-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "statement": "Sign three pilot agreements",
+      "trackingType": "milestone",
+      "creditMode": "binary",
+      "steps": [
+        {
+          "id": "ST-1",
+          "name": "Teton Valley Utility signed",
+          "weight": null,
+          "due": "2026-10-15",
+          "completion": 100
+        },
+        {
+          "id": "ST-2",
+          "name": "Second utility signed",
+          "weight": null,
+          "due": "2026-11-20",
+          "completion": 0
+        },
+        {
+          "id": "ST-3",
+          "name": "Third utility signed",
+          "weight": null,
+          "due": "2026-12-18",
+          "completion": 0
+        }
+      ]
+    },
+    {
+      "id": "KR-BD-2026Q4-01-2",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "statement": "Grow qualified pipeline to $4.5 M",
+      "trackingType": "kpi"
+    }
+  ],
+  "kpis": [
+    {
+      "id": "KPI-BD-2026Q4-01-2-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-BD-2026Q4-01-2",
+      "name": "Qualified pipeline value",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 4.5,
+      "unit": "$M",
+      "order": 0
+    },
+    {
+      "id": "KPI-BD-2026Q4-01-3-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-BD-2026Q4-01-2",
+      "name": "Pilot sites with a study plan",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 3,
+      "unit": "sites",
+      "groupId": null,
+      "isDefiner": true,
+      "order": 0
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-PV-1",
+      "kpiId": "KPI-BD-2026Q4-01-2-1",
+      "value": 3.1,
+      "timestamp": 1790960400000,
+      "note": "",
+      "by": "sam@celadyne.com"
+    },
+    {
+      "id": "UPD-PV-2",
+      "kpiId": "KPI-BD-2026Q4-01-2-1",
+      "value": 3.6,
+      "timestamp": 1791651600000,
+      "note": "",
+      "by": "sam@celadyne.com"
+    },
+    {
+      "id": "UPD-BD-SITE-1",
+      "kpiId": "KPI-BD-2026Q4-01-3-1",
+      "value": 1,
+      "timestamp": 1791565200000,
+      "note": "Teton Valley Utility study plan agreed"
+    }
+  ],
+  "stageGateSets": [
+    {
+      "id": "SGSET-BD-2026Q4-01-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "name": "Pilot readiness",
+      "order": 0,
+      "chained": true
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-BD-2026Q4-01-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "setId": "SGSET-BD-2026Q4-01-1",
+      "name": "Standard pilot term sheet approved",
+      "intention": "Legal and finance sign the template.",
+      "plannedDate": 2473,
+      "actualDate": 2472,
+      "status": "hit",
+      "completionMethod": "manual",
+      "overrideJustification": "Approved by legal on Oct 8.",
+      "order": 0
+    },
+    {
+      "id": "SG-BD-2026Q4-01-2",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "setId": "SGSET-BD-2026Q4-01-1",
+      "name": "Interconnection study scoped",
+      "intention": "Each pilot site has a study plan with the utility.",
+      "plannedDate": 2501,
+      "actualDate": null,
+      "status": "pending",
+      "order": 1
+    }
+  ],
+  "stageGateEdges": [],
+  "tasks": [
+    {
+      "id": "TSK-BD-2026Q4-01-1",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "name": "Send the Cascade Public Power proposal draft",
+      "plannedStart": 2474,
+      "plannedEnd": 2482,
+      "percentComplete": 50,
+      "actualStart": 2474,
+      "actualEnd": null
+    },
+    {
+      "id": "TSK-BD-2026Q4-01-2",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "name": "Book the Ironwood Industrial site visit",
+      "plannedStart": 2476,
+      "plannedEnd": 2479,
+      "percentComplete": 0,
+      "actualStart": null,
+      "actualEnd": null
+    },
+    {
+      "id": "TSK-BD-2027Q1-01-2",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "name": "Shortlist the regional hydrogen-hub applicants",
+      "plannedStart": 2455,
+      "plannedEnd": 2473,
+      "percentComplete": 25,
+      "actualStart": 2457,
+      "actualEnd": null
+    }
+  ],
+  "boards": [
+    {
+      "id": "BRD-BD-PIPE",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "name": "Pilot pipeline",
+      "columns": [
+        {
+          "id": "col-pr",
+          "name": "Prospect",
+          "gate_id": "BRD-BD-PIPE/col-pr"
+        },
+        {
+          "id": "col-di",
+          "name": "Discovery",
+          "gate_id": "BRD-BD-PIPE/col-di"
+        },
+        {
+          "id": "col-po",
+          "name": "Proposal",
+          "gate_id": "BRD-BD-PIPE/col-po"
+        },
+        {
+          "id": "col-cl",
+          "name": "Closed",
+          "gate_id": "BRD-BD-PIPE/col-cl"
+        }
+      ],
+      "swimlanes": [
+        {
+          "id": "lane-ut",
+          "name": "Utilities",
+          "maxDaysPerCol": 14,
+          "deadline": "2026-12-18"
+        },
+        {
+          "id": "lane-ig",
+          "name": "Industrial gas",
+          "maxDaysPerCol": 21,
+          "deadline": ""
+        },
+        {
+          "id": "lane-mo",
+          "name": "Mobility",
+          "maxDaysPerCol": 14,
+          "deadline": ""
+        }
+      ],
+      "tiles": [
+        {
+          "id": "tile-snake",
+          "name": "Snake River Electric",
+          "lane": "lane-ut",
+          "col": "col-pr",
+          "startDate": "2026-10-10",
+          "enteredCol": "2026-10-10",
+          "gatePassed": {},
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-cascade",
+          "name": "Cascade Public Power",
+          "lane": "lane-ut",
+          "col": "col-di",
+          "startDate": "2026-09-21",
+          "enteredCol": "2026-10-04",
+          "gatePassed": {
+            "col-pr": "2026-10-04"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-desert",
+          "name": "High Desert Co-op",
+          "lane": "lane-ut",
+          "col": "col-po",
+          "startDate": "2026-09-02",
+          "enteredCol": "2026-10-01",
+          "gatePassed": {
+            "col-pr": "2026-09-16",
+            "col-di": "2026-10-01"
+          },
+          "assignee": "corey@celadyne.com"
+        },
+        {
+          "id": "tile-northgate",
+          "name": "Northgate Gases",
+          "lane": "lane-ig",
+          "col": "col-di",
+          "startDate": "2026-09-15",
+          "enteredCol": "2026-10-01",
+          "gatePassed": {
+            "col-pr": "2026-10-01"
+          },
+          "assignee": "ken@celadyne.com"
+        },
+        {
+          "id": "tile-ironwood",
+          "name": "Ironwood Industrial",
+          "lane": "lane-ig",
+          "col": "col-po",
+          "startDate": "2026-08-25",
+          "enteredCol": "2026-09-20",
+          "gatePassed": {
+            "col-pr": "2026-09-05",
+            "col-di": "2026-09-20"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-treasure",
+          "name": "Treasure Valley Transit",
+          "lane": "lane-mo",
+          "col": "col-pr",
+          "startDate": "2026-10-11",
+          "enteredCol": "2026-10-11",
+          "gatePassed": {}
+        },
+        {
+          "id": "tile-clearwater",
+          "name": "Clearwater Port Authority",
+          "lane": "lane-mo",
+          "col": "col-di",
+          "startDate": "2026-09-14",
+          "enteredCol": "2026-09-28",
+          "gatePassed": {
+            "col-pr": "2026-09-28"
+          },
+          "assignee": "ken@celadyne.com"
+        },
+        {
+          "id": "tile-airport",
+          "name": "Boise Airport ground fleet",
+          "lane": "lane-mo",
+          "col": "col-po",
+          "startDate": "2026-09-01",
+          "enteredCol": "2026-10-06",
+          "gatePassed": {
+            "col-pr": "2026-09-19",
+            "col-di": "2026-10-06"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-teton",
+          "name": "Teton Valley Utility",
+          "lane": "lane-ut",
+          "col": "col-cl",
+          "startDate": "2026-08-03",
+          "enteredCol": "2026-10-09",
+          "gatePassed": {
+            "col-pr": "2026-08-14",
+            "col-di": "2026-08-28",
+            "col-po": "2026-10-09"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-sawtooth",
+          "name": "Sawtooth Energy",
+          "lane": "lane-ut",
+          "col": "col-cl",
+          "startDate": "2026-07-20",
+          "enteredCol": "2026-10-02",
+          "gatePassed": {
+            "col-pr": "2026-07-30",
+            "col-di": "2026-08-21",
+            "col-po": "2026-10-02"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-owyhee",
+          "name": "Owyhee Rural Electric",
+          "lane": "lane-ut",
+          "col": "col-cl",
+          "startDate": "2026-07-06",
+          "enteredCol": "2026-09-17",
+          "gatePassed": {
+            "col-pr": "2026-07-15",
+            "col-di": "2026-08-10",
+            "col-po": "2026-09-17"
+          },
+          "assignee": "ken@celadyne.com"
+        },
+        {
+          "id": "tile-gemstate",
+          "name": "Gem State Power",
+          "lane": "lane-ut",
+          "col": "col-cl",
+          "startDate": "2026-06-22",
+          "enteredCol": "2026-08-27",
+          "gatePassed": {
+            "col-pr": "2026-07-01",
+            "col-di": "2026-07-24",
+            "col-po": "2026-08-27"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-summit",
+          "name": "Summit Specialty Gas",
+          "lane": "lane-ig",
+          "col": "col-cl",
+          "startDate": "2026-08-10",
+          "enteredCol": "2026-10-08",
+          "gatePassed": {
+            "col-pr": "2026-08-24",
+            "col-di": "2026-09-11",
+            "col-po": "2026-10-08"
+          },
+          "assignee": "ken@celadyne.com"
+        },
+        {
+          "id": "tile-pacific",
+          "name": "Pacific Industrial Gases",
+          "lane": "lane-ig",
+          "col": "col-cl",
+          "startDate": "2026-07-27",
+          "enteredCol": "2026-09-24",
+          "gatePassed": {
+            "col-pr": "2026-08-07",
+            "col-di": "2026-08-31",
+            "col-po": "2026-09-24"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-freight",
+          "name": "Boise Freight Depot",
+          "lane": "lane-mo",
+          "col": "col-cl",
+          "startDate": "2026-08-17",
+          "enteredCol": "2026-10-05",
+          "gatePassed": {
+            "col-pr": "2026-08-26",
+            "col-di": "2026-09-15",
+            "col-po": "2026-10-05"
+          },
+          "assignee": "ken@celadyne.com"
+        },
+        {
+          "id": "tile-magic",
+          "name": "Magic Valley Fleet",
+          "lane": "lane-mo",
+          "col": "col-cl",
+          "startDate": "2026-07-13",
+          "enteredCol": "2026-09-10",
+          "gatePassed": {
+            "col-pr": "2026-07-24",
+            "col-di": "2026-08-12",
+            "col-po": "2026-09-10"
+          },
+          "assignee": "sam@celadyne.com"
+        },
+        {
+          "id": "tile-bonneville",
+          "name": "Bonneville Rural Electric",
+          "lane": "lane-ut",
+          "col": null,
+          "startDate": null,
+          "enteredCol": null,
+          "gatePassed": {}
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "rid": "RISK-BD-2026Q4-01-1",
+      "problem": "Utility interconnection studies run long",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "gateId": "SG-BD-2026Q4-01-2",
+      "status": "open",
+      "knowns": [
+        {
+          "kid": "k_mv6va4g0_12r",
+          "text": "Teton Valley’s interconnection queue is about nine months."
+        },
+        {
+          "kid": "k_mv6va4g0_2ei",
+          "text": "Cascade Public Power has not scoped a study yet."
+        }
+      ],
+      "modes": [
+        {
+          "mid": "m_mv6va4g0_3xu",
+          "mode": "Studies are not scoped before the term sheets expire",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_mv6va4g0_4r6",
+              "effect": "A signed pilot cannot energize in Q1",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_mv6va4g0_51h",
+                  "cause": "Utility engineering staff are booked through December",
+                  "severity": 7,
+                  "occurrence": 8,
+                  "detection": 4,
+                  "mitigation": "Offer to fund a third-party study for the second and third pilots.",
+                  "status": "open"
+                },
+                {
+                  "cid": "c_mv6va4g0_6v6",
+                  "cause": "The site needs a transformer upgrade",
+                  "severity": 8,
+                  "occurrence": 3,
+                  "detection": 5,
+                  "mitigation": "Ask each utility for a hosting-capacity map before signing.",
+                  "status": "mitigating"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "mid": "m_mv6va4g0_78y",
+          "mode": "Pilot capacity is cut to fit the feeder",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_mv6va4g0_8m",
+              "effect": "Signed pilot capacity falls short of 3 MW",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_mv6va4g0_94",
+                  "cause": "Ironwood’s feeder hosting limit is under 1 MW",
+                  "severity": 6,
+                  "occurrence": 4,
+                  "detection": 3,
+                  "mitigation": "",
+                  "status": "open"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "planVersions": [],
+  "catchupPlans": [
+    {
+      "id": "catchup:OBJ-BD-2026Q4-01",
+      "objectiveId": "OBJ-BD-2026Q4-01",
+      "enactedDay": 2466,
+      "gates": [
+        {
+          "gateId": "SG-BD-2026Q4-01-2",
+          "originalDate": 2494,
+          "newDate": 2501,
+          "version": 1
+        }
+      ]
+    }
+  ],
+  "objectiveState": [],
+  "gateMode": {
+    "OBJ-BD-2026Q4-01": "kanban"
+  },
+  "chainGatesByDate": {},
+  "etbTrees": {
+    "OBJ-BD-2026Q4-01": {
+      "schema_version": "1.0",
+      "tree_id": "tree_bd_pilot_2026",
+      "title": "Which pilot offer converts",
+      "project_id": "OBJ-BD-2026Q4-01",
+      "root_experiment_id": "exp_001",
+      "terminal_types": {
+        "target_achieved": {
+          "label": "Target achieved",
+          "kind": "success"
+        },
+        "conduct_fmea": {
+          "label": "Conduct FMEA",
+          "kind": "pause"
+        },
+        "halt": {
+          "label": "Halt",
+          "kind": "stop"
+        }
+      },
+      "metadata": {
+        "created_date": "2026-09-28",
+        "modified_date": "2026-10-10"
+      },
+      "experiments": {
+        "exp_001": {
+          "hypothesis": "A standard 250 kW pilot term sheet signs within 45 days of the proposal.",
+          "toggle": "Offer: standard terms",
+          "hypothesis_verdict": "confirmed",
+          "test": "Send the approved term sheet; track days from proposal to signature.",
+          "status": "complete",
+          "owner": "SR",
+          "planned_date": "2026-09-01",
+          "completed_date": "2026-10-08",
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_001_1",
+              "name": "Days from proposal to signature",
+              "unit": "days",
+              "critical_value": "45",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_001a",
+              "label": "Signed on standard terms",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Standard terms work for a small municipal utility. Test shared savings next.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_002"
+              ],
+              "terminal": null
+            },
+            {
+              "id": "res_001b",
+              "label": "Stalled in legal review",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "The term sheet needs rework before the next pitch.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "halt",
+                "label": "Halt",
+                "note": null
+              }
+            }
+          ],
+          "actual_outcome": {
+            "result_id": "res_001a",
+            "recorded_date": "2026-10-08",
+            "recorded_by": "Sam Rivera",
+            "note": null,
+            "conclusion": null,
+            "next_experiment_ids": [],
+            "terminal": null,
+            "key_read_values": {
+              "kr_001_1": 38
+            }
+          },
+          "audit_log": [],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_001",
+          "code": "EXP-1",
+          "name": "Standard pilot term sheet with Teton Valley Utility"
+        },
+        "exp_002": {
+          "hypothesis": "A shared-savings pilot gets a verbal yes within 30 days and lifts the qualified pipeline past $4.5 M.",
+          "toggle": "Offer: shared savings vs fixed fee",
+          "hypothesis_verdict": null,
+          "test": "Pitch shared savings in the proposal draft; log the days to a verbal yes.",
+          "status": "in_progress",
+          "owner": "SR",
+          "planned_date": "2026-10-10",
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_002_1",
+              "name": "Qualified pipeline value",
+              "unit": "$M",
+              "critical_value": "4.5",
+              "critical_value_hi": "",
+              "direction": ">=",
+              "source_kpi_gid": "KPI-BD-2026Q4-01-2-1"
+            },
+            {
+              "id": "kr_002_2",
+              "name": "Days to a verbal yes",
+              "unit": "days",
+              "critical_value": "30",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_002a",
+              "label": "Shared savings converts",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Lead with shared savings for the next utility.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_003"
+              ],
+              "terminal": null
+            },
+            {
+              "id": "res_002b",
+              "label": "Price objection",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Shared savings stalls on price. Fall back to the standard term sheet with Cascade.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_004"
+              ],
+              "terminal": null
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_002",
+          "code": "EXP-2",
+          "name": "Shared-savings offer to Cascade Public Power"
+        },
+        "exp_003": {
+          "hypothesis": "An industrial host accepts the same shared-savings terms.",
+          "toggle": "Customer type: utility vs industrial host",
+          "hypothesis_verdict": null,
+          "test": "Site visit, then the shared-savings proposal.",
+          "status": "planned",
+          "owner": "SR",
+          "planned_date": null,
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_003_1",
+              "name": "Days to a verbal yes",
+              "unit": "days",
+              "critical_value": "30",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_003a",
+              "label": "Second pilot signed",
+              "criteria": [
+                {
+                  "key_read_id": "kr_003_1",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Shared savings is the default offer.",
+              "accomplishments": [
+                {
+                  "id": "acc_1",
+                  "type": "stage_gate",
+                  "label": "Interconnection study scoped",
+                  "gate_id": "SG-BD-2026Q4-01-2",
+                  "note": null
+                }
+              ],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "target_achieved",
+                "label": "Target achieved",
+                "note": null
+              }
+            },
+            {
+              "id": "res_003b",
+              "label": "Declined",
+              "criteria": [
+                {
+                  "key_read_id": "kr_003_1",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Industrial hosts need a different offer.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "halt",
+                "label": "Halt",
+                "note": null
+              }
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_003",
+          "code": "EXP-3",
+          "name": "Offer shared savings to Ironwood Industrial"
+        },
+        "exp_004": {
+          "hypothesis": "A standard 250 kW pilot term sheet signs within 45 days of the proposal.",
+          "toggle": "Offer: standard terms",
+          "hypothesis_verdict": null,
+          "test": "Send the standard term sheet to Cascade Public Power; track days from proposal to signature.",
+          "status": "planned",
+          "owner": "SR",
+          "planned_date": null,
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_001_1",
+              "name": "Days from proposal to signature",
+              "unit": "days",
+              "critical_value": "45",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "exp_004_r1",
+              "source_result_id": "res_001a",
+              "label": "Signed on standard terms",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Standard terms work for a small municipal utility. Test shared savings next.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": null
+            },
+            {
+              "id": "exp_004_r2",
+              "source_result_id": "res_001b",
+              "label": "Stalled in legal review",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "The term sheet needs rework before the next pitch.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "halt",
+                "label": "Halt",
+                "note": null
+              }
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": "exp_001",
+          "overrides": {
+            "test": true
+          },
+          "id": "exp_004",
+          "code": "EXP-1·R1",
+          "name": "Standard pilot term sheet with Teton Valley Utility (repeat)"
+        }
+      }
+    }
+  }
+}

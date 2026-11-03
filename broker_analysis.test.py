@@ -135,10 +135,42 @@ try:
 except HTTPException as e:
     ok(e.status_code == 502, "an unreachable portal with no cached copy returns 502")
 
+# ---- a JSONBin ERROR (5xx, timeout) is "unreachable" too — never an empty index, never cached ----
+def stub_raise(exc):
+    def _get(bin_id):
+        calls["n"] += 1
+        raise exc
+    bp._jsonbin_get = _get
+
+
+reset()
+stub_raise(bp.JSONBinError("JSONBin timed out"))
+try:
+    call()
+    ok(False, "a JSONBin timeout with nothing cached raises")
+except HTTPException as e:
+    ok(e.status_code == 502, "a JSONBin timeout with no cached copy returns 502, not a crash")
+ok(bp._analysis_cache["payload"] is None, "...and the failure caches nothing")
+
+reset()
+stub({"record": INDEX})
+call()
+stub_raise(bp.JSONBinError("JSONBin HTTP 500"))
+bp._analysis_cache["at"] -= (bp._ANALYSIS_TTL_S + 1)
+try:
+    body4, resp4 = call()
+except HTTPException:
+    body4, resp4 = None, Response()
+ok(body4 == INDEX and resp4.headers.get("X-Analysis-Stale") == "1",
+   "a JSONBin 500 once the TTL has passed serves the last good index, flagged stale")
+
 # ---- the route is registered on the router --------------------------------
 paths = {getattr(r, "path", None) for r in bp.state_router.routes}
 ok("/analysis" in paths, "GET /analysis is registered on the state router")
 ok("/roster" in paths, "...alongside /roster, its uncached structural twin")
+route = next(r for r in bp.state_router.routes if getattr(r, "path", None) == "/analysis")
+ok(any(getattr(d, "dependency", None) is bp.require_token for d in route.dependencies),
+   "GET /analysis requires the broker token (test_auth_gate.py drives that over HTTP)")
 
 for line in out:
     if line.startswith("FAIL"):

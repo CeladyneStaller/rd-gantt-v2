@@ -1,0 +1,61 @@
+<div class="{{res.cls}}" data-k="{{res.key}}">
+  <div class="row top etb-res-top">
+    <input class="etb-radio" type="radio" name="{{res.radioName}}" aria-label="Mark as the observed result" title="Mark as the observed result" checked="{{res.observed}}" disabled="{{$RO}}" onChange="{{res.pick}}">
+    <label class="fld grow"><span class="lab">Result</span><input class="in sm" value="{{res.label.v}}" disabled="{{$RO}}" onChange="{{res.label.set}}" onBlur="{{res.label.commit}}" onKeyDown="{{res.label.key}}"></label>
+    <sc-if value="{{res.observed}}" hint-placeholder-val="{{false}}"><span class="st t-info etb-obsmark"><span class="dot"></span>Observed</span></sc-if>
+    <sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic etb-rm" type="button" aria-label="Remove result" title="Remove result" onClick="{{res.remove}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button></sc-if>
+  </div>
+  <div class="etb-part">
+    <div class="etb-lab">Criteria</div>
+    <sc-if value="{{res.noKrs}}" hint-placeholder-val="{{false}}"><div class="hint">Add key reads above, then mark each one hit or missed here.</div></sc-if>
+    <sc-for list="{{res.hm}}" as="h" hint-placeholder-count="2">
+      <div class="row etb-hm" data-k="{{h.key}}">
+        <div class="col g2 grow"><span>{{h.name}}</span><span class="sub">{{h.tgt}}</span></div>
+        <select class="sel sm etb-hmsel" aria-label="Hit or miss" value="{{h.sel.v}}" disabled="{{$RO}}" onChange="{{h.sel.on}}"><sc-for list="{{h.sel.opts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+      </div>
+    </sc-for>
+    <sc-for list="{{res.manual}}" as="m" hint-placeholder-count="0">
+      <div class="row etb-crit" data-k="{{m.key}}">
+        <select class="sel sm grow" aria-label="Criterion key read" value="{{m.kr.v}}" disabled="{{$RO}}" onChange="{{m.kr.on}}"><sc-for list="{{m.kr.opts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+        <select class="sel sm etb-op" aria-label="Comparison" value="{{m.op.v}}" disabled="{{$RO}}" onChange="{{m.op.on}}"><sc-for list="{{m.op.opts}}" as="o" hint-placeholder-count="5"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+        <input class="in sm etb-val" aria-label="Criterion value" placeholder="{{m.ph}}" value="{{m.val.v}}" disabled="{{$RO}}" onChange="{{m.val.set}}" onBlur="{{m.val.commit}}" onKeyDown="{{m.val.key}}">
+        <sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic" type="button" aria-label="Remove criterion" title="Remove criterion" onClick="{{m.rm}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+      </div>
+    </sc-for>
+    <sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><div class="row"><button class="btn xs" type="button" onClick="{{res.addCrit}}">Add criterion</button></div></sc-if>
+  </div>
+  <div class="etb-part">
+    <sc-if value="{{res.conclEdit}}" hint-placeholder-val="{{true}}">
+      <label class="fld"><span class="lab">Conclusion</span><textarea class="ta etb-ta" value="{{res.concl.v}}" disabled="{{$RO}}" onChange="{{res.concl.set}}" onBlur="{{res.concl.commit}}" onKeyDown="{{res.concl.key}}"></textarea></label>
+    </sc-if>
+    <sc-if value="{{res.conclRo}}" hint-placeholder-val="{{false}}">
+      <div class="etb-lab">Conclusion</div>
+      <div class="row top"><div class="grow">{{res.conclText}}</div><sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><button class="btn xs" type="button" onClick="{{res.amend}}">Amend</button></sc-if></div>
+    </sc-if>
+    <sc-if value="{{res.amending}}" hint-placeholder-val="{{false}}">
+      <div class="col g10 etb-amend">
+        <label class="fld"><span class="lab">Conclusion (amending)</span><textarea class="ta etb-ta" value="{{res.amendText}}" onChange="{{res.setAmendText}}" autoFocus=""></textarea></label>
+        <label class="fld"><span class="lab">Reason for the amendment</span><input class="in sm" value="{{res.amendReason}}" placeholder="Required, recorded in the audit log" onChange="{{res.setAmendReason}}"></label>
+        <sc-if value="{{res.hasAmendErr}}" hint-placeholder-val="{{false}}"><div class="err">{{res.amendErr}}</div></sc-if>
+        <div class="row"><button class="btn sm pri" type="button" onClick="{{res.saveAmend}}">Save amendment</button><button class="btn sm q" type="button" onClick="{{res.cancelAmend}}">Cancel</button></div>
+      </div>
+    </sc-if>
+  </div>
+  <div class="etb-part">
+    <div class="etb-lab">Accomplishments</div>
+    <sc-if value="{{res.noAcc}}" hint-placeholder-val="{{true}}"><div class="hint">Flag a stage-gate this result would clear.</div></sc-if>
+    <sc-for list="{{res.acc}}" as="a" hint-placeholder-count="0">
+      <div class="row etb-accrow" data-k="{{a.key}}">
+        <span class="{{a.flagCls}}"><span class="dot"></span>{{a.flag}}</span>
+        <select class="sel sm grow" aria-label="Stage-gate this result clears" value="{{a.sel.v}}" disabled="{{$RO}}" onChange="{{a.sel.on}}"><sc-for list="{{a.sel.opts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+        <sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic" type="button" aria-label="Remove stage-gate flag" title="Remove stage-gate flag" onClick="{{a.rm}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+      </div>
+      <sc-if value="{{a.legacy}}" hint-placeholder-val="{{false}}"><div class="hint">{{a.legacyText}}</div></sc-if>
+    </sc-for>
+    <sc-if value="{{!$RO}}" hint-placeholder-val="{{true}}"><div class="row"><button class="btn xs" type="button" onClick="{{res.addAcc}}">Add stage-gate</button></div></sc-if>
+  </div>
+  <div class="row etb-part">
+    <label class="fld grow"><span class="lab">Leads to</span><select class="sel sm" value="{{res.lead.v}}" disabled="{{$RO}}" onChange="{{res.lead.on}}"><sc-for list="{{res.lead.opts}}" as="o" hint-placeholder-count="4"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+    <sc-if value="{{res.hasNext}}" hint-placeholder-val="{{false}}"><button class="btn xs etb-open" type="button" onClick="{{res.openNext}}">Open {{res.nextCode}}</button></sc-if>
+  </div>
+</div>

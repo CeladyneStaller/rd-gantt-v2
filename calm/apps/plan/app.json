@@ -1,0 +1,24 @@
+{
+  "app": "plan",
+  "out": "Plan-A.dc.html",
+  "title": "Planning, calm workspace",
+  "preview": {
+    "width": 1440,
+    "height": 1100
+  },
+  "shell": "apps/plan/shell.html",
+  "css": [
+    "apps/plan/shell.css"
+  ],
+  "js": [
+    "apps/plan/shell.js"
+  ],
+  "mods": [
+    "pov",
+    "pst",
+    "ped",
+    "pgt",
+    "pms"
+  ],
+  "flags": []
+}

@@ -1,0 +1,44 @@
+<section class="{{initm.panelCls}}" aria-labelledby="initm-h" data-k="initm">
+  <div class="ph initm-ph">
+    <h2 id="initm-h" class="h2"><button class="initm-tog" type="button" aria-expanded="{{initm.open}}" onClick="{{initm.toggle}}" title="{{initm.toggleAria}}"><svg class="{{initm.chevCls}}" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>Initiative metrics</button></h2>
+    <span class="cnt">{{initm.count}}</span>
+    <span class="sub">{{initm.divName}}</span>
+  </div>
+  <div class="sub initm-hint">Defined in Planning. Link to them from a key result or stage-gate.</div>
+  <sc-if value="{{initm.open}}" hint-placeholder-val="{{false}}">
+    <div class="sec">
+      <sc-if value="{{initm.none}}" hint-placeholder-val="{{false}}"><div class="empty">This division has no initiatives yet. Initiatives are planned in the <a href="Plan-A.dc.html">Planning app</a>.</div></sc-if>
+      <sc-for list="{{initm.blocks}}" as="b" hint-placeholder-count="2">
+        <div class="initm-ini" data-k="{{b.id}}" aria-label="{{b.name}}">
+          <div class="row wrap g12">
+            <h3 class="h3">{{b.name}}</h3>
+            <sc-if value="{{b.mine}}" hint-placeholder-val="{{false}}"><span class="tag">This objective's initiative</span></sc-if>
+            <span class="sub">{{b.countText}}</span>
+          </div>
+          <sc-if value="{{b.useKpi}}" hint-placeholder-val="{{true}}">
+<!--@include mods/kpi/part-table.html KT=b.kt-->
+          </sc-if>
+          <sc-if value="{{b.useFallback}}" hint-placeholder-val="{{false}}">
+            <div class="tbox">
+              <table class="tbl">
+                <thead><tr><th>KPI</th><th>Target</th><th>Current</th><th class="r">Score</th><th class="r">Links</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{b.rows}}" as="r" hint-placeholder-count="2">
+                    <tr>
+                      <td><span class="row wrap g4"><span>{{r.name}}</span><sc-if value="{{r.local}}" hint-placeholder-val="{{false}}"><span class="tag" title="Defined locally in this division. Move it to the portfolio from the Planning app.">Local</span></sc-if></span></td>
+                      <td class="num">{{r.target}}</td>
+                      <td class="num">{{r.current}}</td>
+                      <td class="r"><span class="{{r.scoreCls}}"><span class="dot"></span>{{r.score}}</span><sc-if value="{{r.partial}}" hint-placeholder-val="{{false}}"><div class="small muted">Partial, {{r.math}}</div></sc-if></td>
+                      <td class="r muted">{{r.links}}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+          <sc-if value="{{b.empty}}" hint-placeholder-val="{{false}}"><div class="sub">No targets yet. Add initiative targets in the <a href="Plan-A.dc.html">Planning app</a>.</div></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</section>

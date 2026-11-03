@@ -1,0 +1,2101 @@
+{
+  "keyResults": [
+    {
+      "id": "KR-EL-2026Q4-01-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "statement": "Demonstrate cell-to-cell uniformity across the 10-cell build",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-2026Q4-01-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "statement": "Validate the accelerated stress-test protocol v2",
+      "trackingType": "percentage",
+      "progress": 84
+    },
+    {
+      "id": "KR-EL-2026Q4-01-3",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "statement": "Hold H₂-in-O₂ crossover under 1% at 30 bar",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-2026Q4-02-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "statement": "Freeze the porous transport layer spec",
+      "trackingType": "percentage",
+      "progress": 60
+    },
+    {
+      "id": "KR-EL-2026Q4-02-2",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "statement": "Qualify the second-source bipolar plate",
+      "trackingType": "milestone",
+      "creditMode": "partial",
+      "steps": [
+        {
+          "id": "ST-1",
+          "name": "Samples received and inspected",
+          "weight": 20,
+          "due": "2026-10-09",
+          "completion": 100
+        },
+        {
+          "id": "ST-2",
+          "name": "Contact resistance screening",
+          "weight": 40,
+          "due": "2026-10-30",
+          "completion": 60
+        },
+        {
+          "id": "ST-3",
+          "name": "500 h corrosion soak",
+          "weight": null,
+          "due": "2026-11-13",
+          "completion": 0
+        }
+      ]
+    }
+  ],
+  "kpis": [
+    {
+      "id": "KPI-EL-2026Q4-01-1-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-2026Q4-01-1",
+      "name": "Cell voltage at 2 A/cm²",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 10,
+      "direction": "down",
+      "target": 1.85,
+      "unit": "V",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-1-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-2026Q4-01-1",
+      "name": "High-frequency resistance",
+      "targetType": "statistical",
+      "statistic": "median",
+      "readCount": 10,
+      "direction": "down",
+      "target": 60,
+      "unit": "mΩ·cm²",
+      "order": 1
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-3-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-2026Q4-01-3",
+      "name": "H₂ in O₂ crossover",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 1,
+      "unit": "%",
+      "order": 0,
+      "linkParent": "KPI-EL-1-1-4-1",
+      "linkType": "contribute",
+      "linkPriority": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-4-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-01-1",
+      "name": "Leak test at 30 bar",
+      "targetType": "binary",
+      "direction": null,
+      "target": null,
+      "unit": "",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-5-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-01-2",
+      "name": "Voltage decay rate",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 6,
+      "direction": "down",
+      "target": 10,
+      "unit": "µV/h",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-5-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-01-2",
+      "name": "H₂ in O₂ after 500 h",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 1,
+      "unit": "%",
+      "order": 1
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-6-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-01-3",
+      "name": "Voltage decay rate, 1,000 h",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 6,
+      "direction": "down",
+      "target": 10,
+      "unit": "µV/h",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-01-7-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-01-4",
+      "name": "Membrane thinning",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 8,
+      "unit": "%",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-02-3-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "hostType": "stageGate",
+      "hostId": "SG-EL-2026Q4-02-2",
+      "name": "Interfacial contact resistance",
+      "targetType": "demonstration",
+      "direction": "range",
+      "target": {
+        "lo": 6,
+        "hi": 10
+      },
+      "rangeSpec": {
+        "mode": "minmax"
+      },
+      "unit": "mΩ·cm²",
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2026Q4-02-T-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "hostType": "task",
+      "hostId": "TSK-EL-2026Q4-02-1",
+      "name": "Quotes received",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 3,
+      "unit": "quotes",
+      "order": 0
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-V-1",
+      "kpiId": "KPI-EL-2026Q4-01-1-1",
+      "value": 1.81,
+      "timestamp": 1791558000000,
+      "note": "analysis: polcurve/V @ 2 A/cm²",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1009-1500-polcurve-c01",
+        "bin_id": "67040190c4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C01",
+        "bucket": "polcurve",
+        "key": "V @ 2 A/cm²",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-09T15:00:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "polcurve.py"
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-V-2",
+      "kpiId": "KPI-EL-2026Q4-01-1-1",
+      "value": 1.83,
+      "timestamp": 1791644400000,
+      "note": "analysis: polcurve/V @ 2 A/cm²",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1010-1500-polcurve-c02",
+        "bin_id": "67043f6ec4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C02",
+        "bucket": "polcurve",
+        "key": "V @ 2 A/cm²",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-10T15:00:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "polcurve.py"
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-V-3",
+      "kpiId": "KPI-EL-2026Q4-01-1-1",
+      "value": 1.82,
+      "timestamp": 1791730800000,
+      "note": "analysis: polcurve/V @ 2 A/cm²",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1011-1500-polcurve-c03",
+        "bin_id": "67047d4cc4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C03",
+        "bucket": "polcurve",
+        "key": "V @ 2 A/cm²",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-11T15:00:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "polcurve.py"
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-V-4",
+      "kpiId": "KPI-EL-2026Q4-01-1-1",
+      "value": 1.84,
+      "timestamp": 1791900000000,
+      "note": "analysis: polcurve/V @ 2 A/cm²",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1013-1400-polcurve-c04",
+        "bin_id": "6704bb2ac4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C04",
+        "bucket": "polcurve",
+        "key": "V @ 2 A/cm²",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-13T14:00:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "polcurve.py"
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-0a",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 92,
+      "timestamp": 1790262000000,
+      "note": "build 1",
+      "batch": "b_build1",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-0924-1500-eis-b1c01",
+        "bin_id": "66f2b8e0a1c4d93b7e1f2a07",
+        "sample": "TS10-B1-C01",
+        "bucket": "eis",
+        "key": "HFR",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-09-24T15:00:00Z",
+        "imported_t": "2026-09-25T09:00:00Z",
+        "scale": 1000,
+        "value_raw": 0.092
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-0b",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 95,
+      "timestamp": 1790348400000,
+      "note": "build 1",
+      "batch": "b_build1",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-1",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 74,
+      "timestamp": 1791558300000,
+      "note": "analysis: eis/HFR",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1009-1505-eis-c01",
+        "bin_id": "6704207fc4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C01",
+        "bucket": "eis",
+        "key": "HFR",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-09T15:05:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "eis_fit.py",
+        "scale": 1000,
+        "value_raw": 0.074
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-2",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 81,
+      "timestamp": 1791644700000,
+      "note": "analysis: eis/HFR",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1010-1505-eis-c02",
+        "bin_id": "67045e5dc4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C02",
+        "bucket": "eis",
+        "key": "HFR",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-10T15:05:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "eis_fit.py",
+        "scale": 1000,
+        "value_raw": 0.081
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-3",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 79,
+      "timestamp": 1791731100000,
+      "note": "analysis: eis/HFR",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1011-1505-eis-c03",
+        "bin_id": "67049c3bc4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C03",
+        "bucket": "eis",
+        "key": "HFR",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-11T15:05:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "eis_fit.py",
+        "scale": 1000,
+        "value_raw": 0.079
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-H-4",
+      "kpiId": "KPI-EL-2026Q4-01-1-2",
+      "value": 86,
+      "timestamp": 1791817500000,
+      "note": "analysis: eis/HFR",
+      "batch": "b_build2",
+      "src": {
+        "portal": "analysis",
+        "job_id": "job-1012-1505-eis-c04",
+        "bin_id": "6704da19c4b0d93b7e1f20a5",
+        "sample": "TS10-B2-C04",
+        "bucket": "eis",
+        "key": "HFR",
+        "step": "",
+        "cond": {
+          "T_C": 80,
+          "P_value": 30,
+          "P_unit": "barg"
+        },
+        "run_t": "2026-10-12T15:05:00Z",
+        "imported_t": "2026-10-13T14:30:00Z",
+        "script": "eis_fit.py",
+        "scale": 1000,
+        "value_raw": 0.086
+      },
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-X-1",
+      "kpiId": "KPI-EL-2026Q4-01-3-1",
+      "value": 0.62,
+      "timestamp": 1791482400000,
+      "note": "",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-LK-1",
+      "kpiId": "KPI-EL-2026Q4-01-4-1",
+      "value": 1,
+      "timestamp": 1790798400000,
+      "note": "",
+      "by": "priya@celadyne.com"
+    },
+    {
+      "id": "UPD-DEC-1",
+      "kpiId": "KPI-EL-2026Q4-01-5-1",
+      "value": 8.1,
+      "timestamp": 1791298800000,
+      "note": "",
+      "batch": "b_dec1",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-DEC-2",
+      "kpiId": "KPI-EL-2026Q4-01-5-1",
+      "value": 9,
+      "timestamp": 1791471600000,
+      "note": "",
+      "batch": "b_dec1",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-DEC-3",
+      "kpiId": "KPI-EL-2026Q4-01-5-1",
+      "value": 8.2,
+      "timestamp": 1791644400000,
+      "note": "",
+      "batch": "b_dec1",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-XO-1",
+      "kpiId": "KPI-EL-2026Q4-01-5-2",
+      "value": 0.71,
+      "timestamp": 1791658800000,
+      "note": "",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-ICR-1",
+      "kpiId": "KPI-EL-2026Q4-02-3-1",
+      "value": 12.5,
+      "timestamp": 1791313200000,
+      "note": "",
+      "by": "priya@celadyne.com"
+    },
+    {
+      "id": "UPD-Q-1",
+      "kpiId": "KPI-EL-2026Q4-02-T-1",
+      "value": 2,
+      "timestamp": 1791399600000,
+      "note": "",
+      "by": "priya@celadyne.com"
+    }
+  ],
+  "stageGateSets": [
+    {
+      "id": "SGSET-EL-2026Q4-01-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "name": "Durability",
+      "order": 0,
+      "chained": true
+    },
+    {
+      "id": "SGSET-EL-2026Q4-01-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "name": "Teardown and analysis",
+      "order": 1,
+      "chained": false
+    },
+    {
+      "id": "SGSET-EL-2026Q4-02-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "name": "Component lock",
+      "order": 0,
+      "chained": true
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-EL-2026Q4-01-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "setId": "SGSET-EL-2026Q4-01-1",
+      "name": "Build and leak-test the stack",
+      "intention": "Prove the stack holds 30 bar before any durability hours are spent on it.",
+      "gate_id": "",
+      "plannedDate": 2466,
+      "actualDate": 2464,
+      "status": "hit",
+      "completionMethod": "auto",
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q4-01-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "setId": "SGSET-EL-2026Q4-01-1",
+      "name": "Durability screen, 500 h",
+      "intention": "Show the decay rate stays under 10 µV/h with crossover in spec.",
+      "gate_id": "DUR-500",
+      "plannedDate": 2508,
+      "actualDate": null,
+      "status": "active",
+      "baselineDate": 2508,
+      "locked": true,
+      "order": 1
+    },
+    {
+      "id": "SG-EL-2026Q4-01-3",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "setId": "SGSET-EL-2026Q4-01-1",
+      "name": "1,000 h endurance hold",
+      "intention": "Hold the decay rate for a full 1,000 hours.",
+      "gate_id": "",
+      "plannedDate": 2543,
+      "actualDate": null,
+      "status": "pending",
+      "order": 2
+    },
+    {
+      "id": "SG-EL-2026Q4-01-4",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "setId": "SGSET-EL-2026Q4-01-2",
+      "name": "Post-test teardown and SEM",
+      "intention": "Look for membrane thinning and catalyst migration.",
+      "gate_id": "",
+      "plannedDate": 2529,
+      "actualDate": null,
+      "status": "pending",
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q4-01-5",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "setId": "SGSET-EL-2026Q4-01-2",
+      "name": "Failure-mode review",
+      "intention": "Close out the FMEA with teardown evidence.",
+      "gate_id": "",
+      "plannedDate": 2540,
+      "actualDate": null,
+      "status": "pending",
+      "order": 1
+    },
+    {
+      "id": "SG-EL-2026Q4-02-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "setId": "SGSET-EL-2026Q4-02-1",
+      "name": "PTL spec review",
+      "intention": "Agree the PTL porosity and thickness window with the supplier.",
+      "gate_id": "",
+      "plannedDate": 2474,
+      "actualDate": 2473,
+      "status": "hit",
+      "completionMethod": "manual",
+      "overrideJustification": "Signed off in the Oct 9 design review; supplier data accepted in lieu of our own porosity scan.",
+      "order": 0
+    },
+    {
+      "id": "SG-EL-2026Q4-02-2",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "setId": "SGSET-EL-2026Q4-02-1",
+      "name": "Second-source bipolar plate trial",
+      "intention": "Contact resistance inside the 6 to 10 mΩ·cm² window.",
+      "gate_id": "",
+      "plannedDate": 2472,
+      "actualDate": null,
+      "status": "active",
+      "order": 1
+    },
+    {
+      "id": "SG-EL-2026Q4-02-3",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "setId": "SGSET-EL-2026Q4-02-1",
+      "name": "Design freeze sign-off",
+      "intention": "Every component locked and released to purchasing.",
+      "gate_id": "FREEZE",
+      "plannedDate": 2515,
+      "actualDate": null,
+      "status": "pending",
+      "order": 2
+    }
+  ],
+  "stageGateEdges": [
+    {
+      "fromGate": "SG-EL-2026Q4-01-2",
+      "toGate": "SG-EL-2026Q4-01-4",
+      "lagDays": 5
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TSK-EL-2026Q4-01-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "name": "Order spare titanium PTLs",
+      "plannedStart": 2469,
+      "plannedEnd": 2480,
+      "percentComplete": 100,
+      "actualStart": 2469,
+      "actualEnd": 2476
+    },
+    {
+      "id": "TSK-EL-2026Q4-01-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "name": "Calibrate the H₂-in-O₂ sensor",
+      "plannedStart": 2476,
+      "plannedEnd": 2501,
+      "percentComplete": 40,
+      "actualStart": 2476,
+      "actualEnd": null
+    },
+    {
+      "id": "TSK-EL-2026Q4-01-3",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "name": "Book SEM time for teardown",
+      "plannedStart": 2511,
+      "plannedEnd": 2522,
+      "percentComplete": 0,
+      "actualStart": null,
+      "actualEnd": null
+    },
+    {
+      "id": "TSK-EL-2026Q4-02-1",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "name": "Collect second-source bipolar plate quotes",
+      "plannedStart": 2465,
+      "plannedEnd": 2487,
+      "percentComplete": 50,
+      "actualStart": 2466,
+      "actualEnd": null
+    }
+  ],
+  "boards": [
+    {
+      "id": "BRD-EL-LOCK",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "name": "Component lock",
+      "columns": [
+        {
+          "id": "col-sd",
+          "name": "Spec drafted",
+          "gate_id": "BRD-EL-LOCK/col-sd"
+        },
+        {
+          "id": "col-st",
+          "name": "Samples in test",
+          "gate_id": "BRD-EL-LOCK/col-st"
+        },
+        {
+          "id": "col-ql",
+          "name": "Qualified",
+          "gate_id": "BRD-EL-LOCK/col-ql"
+        },
+        {
+          "id": "col-rl",
+          "name": "Released",
+          "gate_id": "BRD-EL-LOCK/col-rl"
+        }
+      ],
+      "swimlanes": [
+        {
+          "id": "lane-hw",
+          "name": "Stack hardware",
+          "maxDaysPerCol": 21,
+          "deadline": "2026-11-20"
+        },
+        {
+          "id": "lane-sg",
+          "name": "Soft goods",
+          "maxDaysPerCol": 14,
+          "deadline": "2026-11-20"
+        }
+      ],
+      "tiles": [
+        {
+          "id": "tile-ptl",
+          "name": "Porous transport layer",
+          "lane": "lane-hw",
+          "col": "col-rl",
+          "startDate": "2026-08-20",
+          "enteredCol": "2026-10-09",
+          "gatePassed": {
+            "col-sd": "2026-09-01",
+            "col-st": "2026-09-22",
+            "col-ql": "2026-10-09"
+          },
+          "assignee": "priya@celadyne.com"
+        },
+        {
+          "id": "tile-cc",
+          "name": "Current collectors",
+          "lane": "lane-hw",
+          "col": "col-rl",
+          "startDate": "2026-08-17",
+          "enteredCol": "2026-09-30",
+          "gatePassed": {
+            "col-sd": "2026-08-28",
+            "col-st": "2026-09-14",
+            "col-ql": "2026-09-30"
+          },
+          "assignee": "toru@celadyne.com"
+        },
+        {
+          "id": "tile-bpp",
+          "name": "Bipolar plate, second source",
+          "lane": "lane-hw",
+          "col": "col-st",
+          "startDate": "2026-09-10",
+          "enteredCol": "2026-09-24",
+          "gatePassed": {
+            "col-sd": "2026-09-24"
+          },
+          "assignee": "toru@celadyne.com"
+        },
+        {
+          "id": "tile-endp",
+          "name": "End plates and compression",
+          "lane": "lane-hw",
+          "col": "col-sd",
+          "startDate": "2026-10-05",
+          "enteredCol": "2026-10-05",
+          "gatePassed": {},
+          "assignee": "toru@celadyne.com"
+        },
+        {
+          "id": "tile-mea",
+          "name": "Membrane electrode assembly",
+          "lane": "lane-sg",
+          "col": "col-ql",
+          "startDate": "2026-09-01",
+          "enteredCol": "2026-10-07",
+          "gatePassed": {
+            "col-sd": "2026-09-08",
+            "col-st": "2026-10-07"
+          },
+          "assignee": "priya@celadyne.com"
+        },
+        {
+          "id": "tile-gasket",
+          "name": "Gaskets",
+          "lane": "lane-sg",
+          "col": "col-st",
+          "startDate": "2026-09-15",
+          "enteredCol": "2026-09-29",
+          "gatePassed": {
+            "col-sd": "2026-09-29"
+          },
+          "assignee": "toru@celadyne.com"
+        },
+        {
+          "id": "tile-rods",
+          "name": "Stack tie rods",
+          "lane": null,
+          "col": null,
+          "startDate": null,
+          "enteredCol": null,
+          "gatePassed": {}
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "rid": "r_el_seal",
+      "problem": "Seal creep at 80 °C lets hydrogen into the oxygen loop",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "gateId": "SG-EL-2026Q4-01-2",
+      "status": "mitigating",
+      "knowns": [
+        {
+          "kid": "k_el_seal_1",
+          "text": "Gasket thickness varied by up to 0.06 mm across the stack at build."
+        },
+        {
+          "kid": "k_el_seal_2",
+          "text": "PTFE coupons lost about 12% compression set after 200 h at 80 °C."
+        }
+      ],
+      "modes": [
+        {
+          "mid": "m_el_seal_1",
+          "mode": "Gasket relaxes and loses seal compression",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_el_seal_1",
+              "effect": "H₂ in O₂ climbs past the 1% safety limit",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_el_seal_1",
+                  "cause": "PTFE creeps above 70 °C under the 30 N·m clamp load",
+                  "severity": 9,
+                  "occurrence": 6,
+                  "detection": 4,
+                  "mitigation": "Trial EPDM gaskets on cells 6 to 8 and re-torque at 100 h.",
+                  "status": "open",
+                  "experiments": [
+                    {
+                      "xid": "fx_seal01",
+                      "code": "EXP-1",
+                      "hypothesis": "PTFE gaskets lose compression above 70 °C; EPDM holds it.",
+                      "toggle": "Gasket material, PTFE or EPDM",
+                      "test": "Compress coupons to the stack clamp load, hold 200 h at 80 °C, then measure compression set and helium leak rate.",
+                      "samples": [
+                        "PTFE-1",
+                        "PTFE-2",
+                        "EPDM-1",
+                        "EPDM-2"
+                      ],
+                      "key_reads": [
+                        {
+                          "krid": "k_cset",
+                          "name": "Compression set",
+                          "unit": "%"
+                        },
+                        {
+                          "krid": "k_leak",
+                          "name": "Leak rate",
+                          "unit": "sccm"
+                        }
+                      ],
+                      "values": {
+                        "PTFE-1": {
+                          "k_cset": "12.4",
+                          "k_leak": "0.8"
+                        },
+                        "PTFE-2": {
+                          "k_cset": "11.9",
+                          "k_leak": "0.6"
+                        },
+                        "EPDM-1": {
+                          "k_cset": "4.1",
+                          "k_leak": "0.1"
+                        },
+                        "EPDM-2": {
+                          "k_cset": "4.6"
+                        }
+                      },
+                      "notes": "The EPDM-2 leak check is booked for Oct 15.",
+                      "verdict": "confirmed",
+                      "conclusion": "PTFE lost about 12% compression set; EPDM held under 5%. Cells 6 to 8 move to EPDM for the rebuild."
+                    }
+                  ]
+                },
+                {
+                  "cid": "c_el_seal_2",
+                  "cause": "Gasket thickness varies by up to 0.06 mm across the stack",
+                  "severity": 8,
+                  "occurrence": 4,
+                  "detection": 6,
+                  "mitigation": "Measure every gasket before the rebuild.",
+                  "status": "mitigating"
+                }
+              ],
+              "experiments": [
+                {
+                  "xid": "fx_seal03",
+                  "code": "EXP-3",
+                  "hypothesis": "A 0.2% offset on the H₂-in-O₂ sensor would hide the early climb.",
+                  "toggle": "Sensor as installed or freshly calibrated",
+                  "test": "Feed 1.0% H₂-in-O₂ calibration gas before and after calibrating the sensor.",
+                  "samples": [
+                    "As installed",
+                    "Calibrated"
+                  ],
+                  "key_reads": [
+                    {
+                      "krid": "k_cal",
+                      "name": "Reading at 1.0% gas",
+                      "unit": "%"
+                    }
+                  ],
+                  "values": {
+                    "As installed": {
+                      "k_cal": "0.78"
+                    }
+                  },
+                  "notes": "Calibration is booked with the sensor task.",
+                  "verdict": "",
+                  "conclusion": ""
+                }
+              ]
+            },
+            {
+              "eid": "e_el_seal_2",
+              "effect": "The stack trips the crossover alarm during the 500 h screen",
+              "status": "mitigating",
+              "causes": [
+                {
+                  "cid": "c_el_seal_3",
+                  "cause": "Crossover sensor drift hides a slow leak",
+                  "severity": 7,
+                  "occurrence": 3,
+                  "detection": 7,
+                  "mitigation": "Calibrate the H₂-in-O₂ sensor before hour 0.",
+                  "status": "mitigating"
+                }
+              ]
+            }
+          ],
+          "experiments": [
+            {
+              "xid": "fx_seal02",
+              "code": "EXP-2",
+              "hypothesis": "Thermal cycling between 20 and 80 °C, not steady heat, drives the creep.",
+              "toggle": "Steady 80 °C against 20 to 80 °C cycling",
+              "test": "Two coupon sets for 100 h each; measure compression set every 25 h.",
+              "samples": [],
+              "key_reads": [],
+              "values": {},
+              "notes": "",
+              "verdict": "",
+              "conclusion": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rid": "r_el_cell7",
+      "problem": "Cell 7 runs 40 mV above the stack average",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "gateId": "SG-EL-2026Q4-01-5",
+      "status": "open",
+      "knowns": [
+        {
+          "kid": "k_el_c7_1",
+          "text": "Cell 7 sat 40 mV above the stack average at first light."
+        },
+        {
+          "kid": "k_el_c7_2",
+          "text": "Cell 7 HFR reads about 9 mΩ·cm² above cells 6 and 8."
+        }
+      ],
+      "modes": [
+        {
+          "mid": "m_el_c7_1",
+          "mode": "Cell 7 voltage keeps rising under load",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_el_c7_1",
+              "effect": "The stack misses the 10 µV/h decay target at 500 h",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_el_c7_1",
+                  "cause": "Poor PTL-to-catalyst contact under a thin gasket",
+                  "severity": 7,
+                  "occurrence": 5,
+                  "detection": 3,
+                  "mitigation": "Fit a measured gasket on cell 7 at the rebuild.",
+                  "status": "open"
+                },
+                {
+                  "cid": "c_el_c7_2",
+                  "cause": "Membrane pinched during assembly",
+                  "severity": 9,
+                  "occurrence": 2,
+                  "detection": 6,
+                  "mitigation": "Single-cell leak check of cell 7.",
+                  "status": "resolved",
+                  "experiments": [
+                    {
+                      "xid": "fx_c7_02",
+                      "code": "EXP-2",
+                      "hypothesis": "The cell 7 membrane was pinched during assembly.",
+                      "toggle": "None, a single-cell check",
+                      "test": "Isolate cell 7 and measure hydrogen crossover current at 30 bar.",
+                      "samples": [
+                        "Cell 7"
+                      ],
+                      "key_reads": [
+                        {
+                          "krid": "k_xo",
+                          "name": "Crossover current",
+                          "unit": "mA/cm²"
+                        }
+                      ],
+                      "values": {
+                        "Cell 7": {
+                          "k_xo": "1.1"
+                        }
+                      },
+                      "notes": "Within the 1.0 to 1.3 mA/cm² band of the other cells.",
+                      "verdict": "refuted",
+                      "conclusion": "No sign of membrane damage on cell 7."
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "experiments": [
+            {
+              "xid": "fx_c7_01",
+              "code": "EXP-1",
+              "hypothesis": "Cell 7 has higher contact resistance than its neighbours.",
+              "toggle": "Cell position in the stack",
+              "test": "Map HFR at 1 kHz on cells 6, 7 and 8 at 1 A/cm².",
+              "samples": [
+                "Cell 6",
+                "Cell 7",
+                "Cell 8"
+              ],
+              "key_reads": [
+                {
+                  "krid": "k_hfr",
+                  "name": "HFR",
+                  "unit": "mΩ·cm²"
+                }
+              ],
+              "values": {
+                "Cell 6": {
+                  "k_hfr": "74"
+                },
+                "Cell 7": {
+                  "k_hfr": "83"
+                },
+                "Cell 8": {
+                  "k_hfr": "75"
+                }
+              },
+              "notes": "",
+              "verdict": "inconclusive",
+              "conclusion": "Cell 7 reads 9 mΩ·cm² higher, but build 1 had a similar spread. Repeat after the rebuild."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rid": "r_el_ptl",
+      "problem": "Single-source titanium PTL supply",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "gateId": null,
+      "status": "resolved",
+      "knowns": [
+        {
+          "kid": "k_el_ptl_1",
+          "text": "Spare PTLs were ordered Oct 5 and arrived Oct 12."
+        }
+      ],
+      "modes": [
+        {
+          "mid": "m_el_ptl_1",
+          "mode": "Spare PTLs arrive too late for the rebuild",
+          "status": "resolved",
+          "effects": [
+            {
+              "eid": "e_el_ptl_1",
+              "effect": "The 1,000 h hold slips past the quarter",
+              "status": "resolved",
+              "causes": [
+                {
+                  "cid": "c_el_ptl_1",
+                  "cause": "Supplier lead time stretched to 10 weeks",
+                  "severity": 6,
+                  "occurrence": 4,
+                  "detection": 2,
+                  "mitigation": "Spares ordered now; a second source is qualified under the cost-down work.",
+                  "status": "resolved"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rid": "r_el_leak",
+      "problem": "Stack leaks at the 30 bar pressure hold",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "gateId": "SG-EL-2026Q4-01-1",
+      "status": "open",
+      "knowns": [],
+      "modes": [
+        {
+          "mid": "m_el_leak_1",
+          "mode": "Manifold O-ring extrudes at 30 bar",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_el_leak_1",
+              "effect": "The pressure hold fails and the build is torn down",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_el_leak_1",
+                  "cause": "O-ring groove depth out of tolerance",
+                  "severity": 8,
+                  "occurrence": 3,
+                  "detection": 3,
+                  "mitigation": "Check groove depth on both end plates before assembly.",
+                  "status": "open"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "planVersions": [
+    {
+      "id": "PV-OBJ-EL-2026Q4-01-1",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "v": 1,
+      "committedDay": 2462,
+      "reason": "plan as first committed",
+      "snapshot": {
+        "sets": [
+          {
+            "id": "SGSET-EL-2026Q4-01-1",
+            "name": "Durability",
+            "order": 0
+          },
+          {
+            "id": "SGSET-EL-2026Q4-01-2",
+            "name": "Teardown and analysis",
+            "order": 1
+          }
+        ],
+        "gates": [
+          {
+            "id": "SG-EL-2026Q4-01-1",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "Build and leak-test the stack",
+            "plannedDate": 2466,
+            "actualDate": null,
+            "order": 0,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-4-1",
+                "name": "Leak test at 30 bar",
+                "direction": "",
+                "target": null,
+                "unit": ""
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-4",
+            "setId": "SGSET-EL-2026Q4-01-2",
+            "name": "Post-test teardown and SEM",
+            "plannedDate": 2529,
+            "actualDate": null,
+            "order": 0,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-7-1",
+                "name": "Membrane thinning",
+                "direction": "down",
+                "target": 8,
+                "unit": "%"
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-2",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "Durability screen, 500 h",
+            "plannedDate": 2501,
+            "actualDate": null,
+            "order": 1,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-5-1",
+                "name": "Voltage decay rate",
+                "direction": "down",
+                "target": 10,
+                "unit": "µV/h"
+              },
+              {
+                "kpiId": "KPI-EL-2026Q4-01-5-2",
+                "name": "H₂ in O₂ after 500 h",
+                "direction": "down",
+                "target": 1,
+                "unit": "%"
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-3",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "1,000 h endurance hold",
+            "plannedDate": 2536,
+            "actualDate": null,
+            "order": 2,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-6-1",
+                "name": "Voltage decay rate, 1,000 h",
+                "direction": "down",
+                "target": 10,
+                "unit": "µV/h"
+              }
+            ]
+          }
+        ],
+        "finishDay": 2543
+      }
+    },
+    {
+      "id": "PV-OBJ-EL-2026Q4-01-2",
+      "objectiveId": "OBJ-EL-2026Q4-01",
+      "v": 2,
+      "committedDay": 2470,
+      "reason": "The leak-test rebuild pushed the 500 h screen a week; added a failure-mode review before close-out.",
+      "snapshot": {
+        "sets": [
+          {
+            "id": "SGSET-EL-2026Q4-01-1",
+            "name": "Durability",
+            "order": 0
+          },
+          {
+            "id": "SGSET-EL-2026Q4-01-2",
+            "name": "Teardown and analysis",
+            "order": 1
+          }
+        ],
+        "gates": [
+          {
+            "id": "SG-EL-2026Q4-01-1",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "Build and leak-test the stack",
+            "plannedDate": 2466,
+            "actualDate": 2464,
+            "order": 0,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-4-1",
+                "name": "Leak test at 30 bar",
+                "direction": "",
+                "target": null,
+                "unit": ""
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-4",
+            "setId": "SGSET-EL-2026Q4-01-2",
+            "name": "Post-test teardown and SEM",
+            "plannedDate": 2529,
+            "actualDate": null,
+            "order": 0,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-7-1",
+                "name": "Membrane thinning",
+                "direction": "down",
+                "target": 8,
+                "unit": "%"
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-2",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "Durability screen, 500 h",
+            "plannedDate": 2508,
+            "actualDate": null,
+            "order": 1,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-5-1",
+                "name": "Voltage decay rate",
+                "direction": "down",
+                "target": 10,
+                "unit": "µV/h"
+              },
+              {
+                "kpiId": "KPI-EL-2026Q4-01-5-2",
+                "name": "H₂ in O₂ after 500 h",
+                "direction": "down",
+                "target": 1,
+                "unit": "%"
+              }
+            ]
+          },
+          {
+            "id": "SG-EL-2026Q4-01-5",
+            "setId": "SGSET-EL-2026Q4-01-2",
+            "name": "Failure-mode review",
+            "plannedDate": 2540,
+            "actualDate": null,
+            "order": 1,
+            "kpis": []
+          },
+          {
+            "id": "SG-EL-2026Q4-01-3",
+            "setId": "SGSET-EL-2026Q4-01-1",
+            "name": "1,000 h endurance hold",
+            "plannedDate": 2543,
+            "actualDate": null,
+            "order": 2,
+            "kpis": [
+              {
+                "kpiId": "KPI-EL-2026Q4-01-6-1",
+                "name": "Voltage decay rate, 1,000 h",
+                "direction": "down",
+                "target": 10,
+                "unit": "µV/h"
+              }
+            ]
+          }
+        ],
+        "finishDay": 2543
+      }
+    }
+  ],
+  "catchupPlans": [
+    {
+      "id": "catchup:OBJ-EL-2026Q4-02",
+      "objectiveId": "OBJ-EL-2026Q4-02",
+      "enactedDay": 2456,
+      "gates": [
+        {
+          "gateId": "SG-EL-2026Q4-02-3",
+          "originalDate": 2508,
+          "newDate": 2515,
+          "version": 1
+        }
+      ]
+    }
+  ],
+  "objectiveState": [],
+  "gateMode": {},
+  "chainGatesByDate": {},
+  "etbTrees": {
+    "OBJ-EL-2026Q4-01": {
+      "schema": 2,
+      "trees": [
+        {
+          "schema_version": "1.0",
+          "tree_id": "tree_el_cell7_2026",
+          "tid": "t_cell7",
+          "name": "Cell 7 voltage outlier",
+          "title": "Cell 7 voltage outlier",
+          "project_id": "OBJ-EL-2026Q4-01",
+          "root_experiment_id": "exp_001",
+          "terminal_types": {
+            "target_achieved": {
+              "label": "Target achieved",
+              "kind": "success"
+            },
+            "conduct_fmea": {
+              "label": "Conduct FMEA",
+              "kind": "pause"
+            },
+            "halt": {
+              "label": "Halt",
+              "kind": "stop"
+            }
+          },
+          "metadata": {
+            "created_date": "2026-10-01",
+            "modified_date": "2026-10-12"
+          },
+          "experiments": {
+            "exp_001": {
+              "hypothesis": "Cell 7 sits more than 15 mV above the stack mean at 2 A/cm².",
+              "toggle": "Nothing varied: first-light baseline",
+              "hypothesis_verdict": "confirmed",
+              "test": "Polarization curve on the 10-cell build with per-cell voltage taps, three sweeps.",
+              "status": "complete",
+              "owner": "TH",
+              "planned_date": "2026-09-30",
+              "completed_date": "2026-10-02",
+              "notes": "Cells 6 and 8 also read high, by less.",
+              "key_reads": [
+                {
+                  "id": "kr_001_1",
+                  "name": "Cell 7 deviation from stack mean",
+                  "unit": "mV",
+                  "critical_value": "15",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_001a",
+                  "label": "Outlier confirmed",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "Cell 7 is a real outlier. Check compression on cells 6 to 8 first.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [
+                    "exp_002"
+                  ],
+                  "terminal": null
+                },
+                {
+                  "id": "res_001b",
+                  "label": "Within normal spread",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "No outlier; the first-light reading was noise.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_001c",
+                  "label": "Voltage tap fault",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "op": ">",
+                      "value": "80"
+                    }
+                  ],
+                  "conclusion": "A deviation this large is the tap, not the cell. Fix the wiring first.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "halt",
+                    "label": "Halt",
+                    "note": null
+                  }
+                }
+              ],
+              "actual_outcome": {
+                "result_id": "res_001a",
+                "recorded_date": "2026-10-02",
+                "recorded_by": "Toru Hayashi",
+                "note": null,
+                "conclusion": null,
+                "next_experiment_ids": [],
+                "terminal": null,
+                "key_read_values": {
+                  "kr_001_1": 41
+                }
+              },
+              "audit_log": [
+                {
+                  "timestamp": "2026-10-03T08:40:00.000Z",
+                  "user": "Toru Hayashi",
+                  "field": "possible_results.res_001a.conclusion",
+                  "action": "amend",
+                  "from": "Cell 7 is a real outlier.",
+                  "to": "Cell 7 is a real outlier. Check compression on cells 6 to 8 first.",
+                  "reason": "Added the next check agreed in the build review."
+                }
+              ],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_001",
+              "code": "EXP-1",
+              "name": "Map cell voltages at first light"
+            },
+            "exp_002": {
+              "hypothesis": "Thicker gaskets on cells 6 to 8 under-compress the PTL, which raises contact resistance and the cell 7 voltage.",
+              "toggle": "Gasket set: matched vs as-built",
+              "hypothesis_verdict": null,
+              "test": "Measure every gasket, rebuild with a matched set, rerun the 2 A/cm² hold and log per-cell voltage.",
+              "status": "in_progress",
+              "owner": "TH",
+              "planned_date": "2026-10-06",
+              "completed_date": null,
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_002_1",
+                  "name": "Cell voltage at 2 A/cm²",
+                  "unit": "V",
+                  "critical_value": "1.85",
+                  "critical_value_hi": "",
+                  "direction": "<=",
+                  "source_kpi_gid": "KPI-EL-2026Q4-01-1-1"
+                },
+                {
+                  "id": "kr_002_2",
+                  "name": "Cell 7 deviation from stack mean",
+                  "unit": "mV",
+                  "critical_value": "15",
+                  "critical_value_hi": "",
+                  "direction": "<=",
+                  "statistic": "average",
+                  "readCount": 3
+                },
+                {
+                  "id": "kr_002_3",
+                  "name": "Gasket thickness spread",
+                  "unit": "mm",
+                  "critical_value": "0.02",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_002a",
+                  "label": "Compression was the cause",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_2",
+                      "status": "hit"
+                    },
+                    {
+                      "key_read_id": "kr_002_3",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Matched gaskets fix the outlier; lock the gasket tolerance.",
+                  "accomplishments": [
+                    {
+                      "id": "acc_1",
+                      "type": "stage_gate",
+                      "label": "Durability screen, 500 h",
+                      "gate_id": "SG-EL-2026Q4-01-2",
+                      "note": null
+                    }
+                  ],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_002b",
+                  "label": "Cell 7 MEA is the problem",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_2",
+                      "status": "miss"
+                    },
+                    {
+                      "key_read_id": "kr_002_3",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Compression is fine; the MEA itself is off.",
+                  "accomplishments": [
+                    {
+                      "id": "acc_1",
+                      "type": "stage_gate",
+                      "label": "SG-2: uniformity proven",
+                      "gate_id": null,
+                      "note": null
+                    }
+                  ],
+                  "next_experiment_ids": [
+                    "exp_003"
+                  ],
+                  "terminal": null
+                },
+                {
+                  "id": "res_002c",
+                  "label": "Both still out of spec",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_2",
+                      "status": "miss"
+                    },
+                    {
+                      "key_read_id": "kr_002_3",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "More than one failure mode. Take it to the FMEA.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "conduct_fmea",
+                    "label": "Conduct FMEA",
+                    "note": null
+                  }
+                }
+              ],
+              "actual_outcome": null,
+              "audit_log": [],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_002",
+              "code": "EXP-2",
+              "name": "Gasket compression check on cells 6 to 8",
+              "key_read_readings": {
+                "kr_002_2": [
+                  12
+                ]
+              }
+            },
+            "exp_003": {
+              "hypothesis": "A replacement MEA from a different lot brings cell 7 within 15 mV of the mean.",
+              "toggle": "MEA lot",
+              "hypothesis_verdict": null,
+              "test": "Swap the cell 7 MEA for one from lot 2611, rerun the 2 A/cm² hold.",
+              "status": "planned",
+              "owner": "TH",
+              "planned_date": "2026-10-27",
+              "completed_date": null,
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_003_1",
+                  "name": "Cell 7 deviation from stack mean",
+                  "unit": "mV",
+                  "critical_value": "15",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                },
+                {
+                  "id": "kr_003_2",
+                  "name": "Cell 7 voltage at 2 A/cm²",
+                  "unit": "V",
+                  "critical_value": "1.78",
+                  "critical_value_hi": "1.85",
+                  "direction": "range"
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_003a",
+                  "label": "Deviation gone",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_003_1",
+                      "status": "hit"
+                    },
+                    {
+                      "key_read_id": "kr_003_2",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Bad MEA lot. Quarantine lot 2604.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_003b",
+                  "label": "Deviation persists",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_003_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "Not the MEA. Re-map the stack after the swap before changing hardware.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [
+                    "exp_004"
+                  ],
+                  "terminal": null
+                }
+              ],
+              "actual_outcome": null,
+              "audit_log": [],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_003",
+              "code": "EXP-3",
+              "name": "Swap the cell 7 MEA and retest"
+            },
+            "exp_004": {
+              "hypothesis": "Cell 7 sits more than 15 mV above the stack mean at 2 A/cm².",
+              "toggle": "Nothing varied: first-light baseline",
+              "hypothesis_verdict": null,
+              "test": "Repeat the first-light polarization curve after the MEA swap, three sweeps, with the taps re-seated.",
+              "status": "planned",
+              "owner": "TH",
+              "planned_date": null,
+              "completed_date": null,
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_001_1",
+                  "name": "Cell 7 deviation from stack mean",
+                  "unit": "mV",
+                  "critical_value": "15",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "exp_004_r1",
+                  "source_result_id": "res_001a",
+                  "label": "Outlier confirmed",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "Cell 7 is a real outlier. Check compression on cells 6 to 8 first.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": null
+                },
+                {
+                  "id": "exp_004_r2",
+                  "source_result_id": "res_001b",
+                  "label": "Within normal spread",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "No outlier; the first-light reading was noise.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": null
+                },
+                {
+                  "id": "exp_004_r3",
+                  "source_result_id": "res_001c",
+                  "label": "Voltage tap fault",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "op": ">",
+                      "value": "80"
+                    }
+                  ],
+                  "conclusion": "A deviation this large is the tap, not the cell. Fix the wiring first.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": null
+                }
+              ],
+              "actual_outcome": null,
+              "audit_log": [],
+              "repeat_of": "exp_001",
+              "overrides": {
+                "test": true
+              },
+              "id": "exp_004",
+              "code": "EXP-1·R1",
+              "name": "Map cell voltages at first light (repeat)"
+            }
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "tree_id": "tree_el_xover_2026",
+          "tid": "t_xover",
+          "name": "Crossover margin at 30 bar",
+          "title": "Crossover margin at 30 bar",
+          "project_id": "OBJ-EL-2026Q4-01",
+          "root_experiment_id": "exp_001",
+          "terminal_types": {
+            "target_achieved": {
+              "label": "Target achieved",
+              "kind": "success"
+            },
+            "conduct_fmea": {
+              "label": "Conduct FMEA",
+              "kind": "pause"
+            },
+            "halt": {
+              "label": "Halt",
+              "kind": "stop"
+            }
+          },
+          "metadata": {
+            "created_date": "2026-10-05",
+            "modified_date": "2026-10-12"
+          },
+          "experiments": {
+            "exp_001": {
+              "hypothesis": "H₂ in O₂ stays under 1% at 30 bar on the first build.",
+              "toggle": "Nothing varied: first build at 30 bar",
+              "hypothesis_verdict": null,
+              "test": "Gas chromatograph on the anode outlet at 30 bar.",
+              "status": "complete",
+              "owner": "PN",
+              "planned_date": "2026-10-06",
+              "completed_date": "2026-10-08",
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_001_1",
+                  "name": "H₂ in O₂, first build",
+                  "unit": "%",
+                  "critical_value": "1",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_001a",
+                  "label": "Margin holds",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Crossover is not a risk for the durability campaign.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_001b",
+                  "label": "Over the limit",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_001_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "The membrane is too thin for 30 bar.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "halt",
+                    "label": "Halt",
+                    "note": null
+                  }
+                }
+              ],
+              "actual_outcome": {
+                "result_id": "inconclusive",
+                "recorded_date": "2026-10-08",
+                "recorded_by": "Priya Natarajan",
+                "note": "The gas chromatograph drifted 0.3% during the run.",
+                "conclusion": "Recalibrate the GC and repeat before deciding.",
+                "next_experiment_ids": [
+                  "exp_002"
+                ],
+                "terminal": null,
+                "key_read_values": {
+                  "kr_001_1": 0.62
+                }
+              },
+              "audit_log": [],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_001",
+              "code": "EXP-1",
+              "name": "Crossover at 30 bar, first build"
+            },
+            "exp_002": {
+              "hypothesis": "H₂ in O₂ stays under 1% at 30 bar, fresh and after a 100 h hold.",
+              "toggle": "Hold time at 30 bar",
+              "hypothesis_verdict": null,
+              "test": "Recalibrated gas chromatograph on the anode outlet at 30 bar, at start and after a 100 h hold.",
+              "status": "in_progress",
+              "owner": "PN",
+              "planned_date": "2026-10-09",
+              "completed_date": null,
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_002_1",
+                  "name": "H₂ in O₂ crossover",
+                  "unit": "%",
+                  "critical_value": "1",
+                  "critical_value_hi": "",
+                  "direction": "<=",
+                  "source_kpi_gid": "KPI-EL-2026Q4-01-3-1"
+                },
+                {
+                  "id": "kr_002_2",
+                  "name": "Crossover after a 100 h hold",
+                  "unit": "%",
+                  "critical_value": "1",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_002a",
+                  "label": "Margin holds",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_1",
+                      "status": "hit"
+                    },
+                    {
+                      "key_read_id": "kr_002_2",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Crossover is not a risk for the durability campaign.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_002b",
+                  "label": "Margin erodes over the hold",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_1",
+                      "status": "hit"
+                    },
+                    {
+                      "key_read_id": "kr_002_2",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "Fresh is fine but it creeps. Try a recombination layer.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [
+                    "exp_003"
+                  ],
+                  "terminal": null
+                },
+                {
+                  "id": "res_002c",
+                  "label": "Over the limit when fresh",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_002_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "The membrane is too thin for 30 bar.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "halt",
+                    "label": "Halt",
+                    "note": null
+                  }
+                }
+              ],
+              "actual_outcome": null,
+              "audit_log": [],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_002",
+              "code": "EXP-2",
+              "name": "Crossover at 30 bar after recalibrating the GC",
+              "key_read_readings": {
+                "kr_002_2": [
+                  0.74
+                ]
+              }
+            },
+            "exp_003": {
+              "hypothesis": "A Pt recombination interlayer keeps crossover under 1% through the hold.",
+              "toggle": "Recombination layer: none vs Pt interlayer",
+              "hypothesis_verdict": null,
+              "test": "Repeat the 100 h hold at 30 bar with the interlayer MEA.",
+              "status": "planned",
+              "owner": "PN",
+              "planned_date": null,
+              "completed_date": null,
+              "notes": "",
+              "key_reads": [
+                {
+                  "id": "kr_003_1",
+                  "name": "Crossover after a 100 h hold",
+                  "unit": "%",
+                  "critical_value": "1",
+                  "critical_value_hi": "",
+                  "direction": "<="
+                }
+              ],
+              "possible_results": [
+                {
+                  "id": "res_003a",
+                  "label": "Back under 1%",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_003_1",
+                      "status": "hit"
+                    }
+                  ],
+                  "conclusion": "Adopt the interlayer for the durability build.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "target_achieved",
+                    "label": "Target achieved",
+                    "note": null
+                  }
+                },
+                {
+                  "id": "res_003b",
+                  "label": "Still over 1%",
+                  "criteria": [
+                    {
+                      "key_read_id": "kr_003_1",
+                      "status": "miss"
+                    }
+                  ],
+                  "conclusion": "Crossover needs a design change. Take it to the FMEA.",
+                  "accomplishments": [],
+                  "next_experiment_ids": [],
+                  "terminal": {
+                    "type": "conduct_fmea",
+                    "label": "Conduct FMEA",
+                    "note": null
+                  }
+                }
+              ],
+              "actual_outcome": null,
+              "audit_log": [],
+              "repeat_of": null,
+              "overrides": {},
+              "id": "exp_003",
+              "code": "EXP-3",
+              "name": "Add a recombination layer and repeat the hold"
+            }
+          }
+        }
+      ],
+      "activeTid": "t_cell7"
+    }
+  }
+}

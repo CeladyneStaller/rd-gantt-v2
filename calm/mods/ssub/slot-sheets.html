@@ -1,0 +1,46 @@
+<sc-if value="{{ssub.add}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>Add sub-product</h2><span class="sub">Plug a specific model of another product into this one</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <sc-if value="{{ssub.add.none}}" hint-placeholder-val="{{false}}"><div class="note">{{ssub.add.noneText}}</div></sc-if>
+    <sc-if value="{{ssub.add.has}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <h3>Product</h3>
+        <div class="hint">Any product in the portfolio. Models that would duplicate a sub-product or form a cycle are left out.</div>
+        <sc-for list="{{ssub.add.groups}}" as="g" hint-placeholder-count="2">
+          <div class="ssub-pg" role="radiogroup" aria-label="{{g.name}}">
+            <div class="row g4 ssub-pgh"><span class="grp ssub-grp">{{g.name}}</span><sc-if value="{{g.here}}" hint-placeholder-val="{{false}}"><span class="tag">This division</span></sc-if></div>
+            <sc-for list="{{g.prods}}" as="p" hint-placeholder-count="2">
+              <button class="ssub-opt" type="button" role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}"><span class="ssub-radio" aria-hidden="true"></span>{{p.name}}</button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </section>
+      <section class="sh-sec">
+        <h3>Model</h3>
+        <sc-if value="{{ssub.add.noModels}}" hint-placeholder-val="{{false}}"><div class="sub">No models of this product can be added.</div></sc-if>
+        <div class="ssub-pg" role="radiogroup" aria-label="Model">
+          <sc-for list="{{ssub.add.models}}" as="m" hint-placeholder-count="1">
+            <button class="ssub-opt" type="button" role="radio" aria-checked="{{m.on}}" onClick="{{m.pick}}"><span class="ssub-radio" aria-hidden="true"></span>{{m.name}}<span class="tid ssub-oid">{{m.id}}</span></button>
+          </sc-for>
+        </div>
+      </section>
+      <section class="sh-sec">
+        <h3>Imports</h3>
+        <div class="{{ssub.add.previewCls}}"><sc-if value="{{ssub.add.loading}}" hint-placeholder-val="{{false}}"><span class="spin ssub-inl" aria-hidden="true"></span></sc-if>{{ssub.add.preview}}</div>
+        <div class="hint">Its specifications import as specification links. They show on this model for reference and don’t count toward its conformance. Specifications added to that model later are imported automatically.</div>
+      </section>
+    </sc-if>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ssub.add.has}}" hint-placeholder-val="{{true}}">
+      <button class="btn pri" type="button" disabled="{{ssub.add.addOff}}" onClick="{{ssub.add.add}}">Add sub-product</button>
+      <button class="btn q" type="button" onClick="{{ui.closeSheet}}">Cancel</button>
+    </sc-if>
+    <sc-if value="{{ssub.add.none}}" hint-placeholder-val="{{false}}"><button class="btn" type="button" onClick="{{ui.closeSheet}}">Close</button></sc-if>
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><span class="err" role="alert">{{ui.sheetErr}}</span></sc-if>
+  </div>
+</sc-if>

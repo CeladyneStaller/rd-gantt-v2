@@ -1,0 +1,256 @@
+<!-- ======================= experiment editor (today's side drawer) ======================= -->
+<sc-if value="{{etb.exp}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{etb.exp.title}}</h2>
+      <sc-if value="{{etb.exp.ok}}" hint-placeholder-val="{{true}}"><div class="row wrap g12"><span class="sub">{{etb.exp.sub}}</span><span class="{{etb.exp.statusCls}}"><span class="dot"></span>{{etb.exp.statusW}}</span><sc-if value="{{etb.exp.hasReach}}" hint-placeholder-val="{{true}}"><span class="sub">{{etb.exp.reachW}}</span></sc-if></div></sc-if>
+    </div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <sc-if value="{{etb.exp.missing}}" hint-placeholder-val="{{false}}"><div class="sh-body"><div class="note">This experiment no longer exists in the logic tree.</div></div></sc-if>
+  <sc-if value="{{etb.exp.ok}}" hint-placeholder-val="{{true}}">
+    <div class="sh-body">
+      <sc-if value="{{etb.exp.ro}}" hint-placeholder-val="{{false}}"><div class="note t-info">Read-only view. Nothing here can be changed.</div></sc-if>
+      <sc-if value="{{etb.exp.full}}" hint-placeholder-val="{{true}}">
+      <sc-if value="{{etb.exp.isRepeat}}" hint-placeholder-val="{{false}}">
+        <div class="note etb-repeat">
+          <div class="col g10 grow">
+            <span>{{etb.exp.repeatText}}</span>
+            <sc-for list="{{etb.exp.overrides}}" as="o" hint-placeholder-count="0"><div class="row wrap"><span class="st t-warn"><span class="dot"></span>{{o.label}} is overridden here</span><sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn xs" type="button" onClick="{{o.relink}}">Link {{o.label}} again</button></sc-if></div></sc-for>
+            <div class="row wrap">
+              <sc-if value="{{etb.exp.hasSrc}}" hint-placeholder-val="{{true}}"><button class="btn xs" type="button" onClick="{{etb.exp.openSrc}}">Open the source</button></sc-if>
+              <sc-if value="{{etb.exp.canRelinkAll}}" hint-placeholder-val="{{false}}"><button class="btn xs" type="button" onClick="{{etb.exp.relinkAll}}">Link every field again</button></sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <section class="sh-sec">
+        <div class="grid2">
+          <label class="fld"><span class="lab">Code</span><input class="in" value="{{etb.exp.code.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.code.set}}" onBlur="{{etb.exp.code.commit}}" onKeyDown="{{etb.exp.code.key}}"></label>
+          <label class="fld"><span class="lab">Status</span><select class="sel" value="{{etb.exp.status.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.status.on}}"><sc-for list="{{etb.exp.status.opts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+        </div>
+        <label class="fld"><span class="lab">Name</span><input class="in" value="{{etb.exp.name.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.name.set}}" onBlur="{{etb.exp.name.commit}}" onKeyDown="{{etb.exp.name.key}}"></label>
+        <label class="fld"><span class="lab">Hypothesis<sc-if value="{{etb.exp.mk.hypothesis.show}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.mk.hypothesis.cls}}">{{etb.exp.mk.hypothesis.text}}</span></sc-if></span><textarea class="ta etb-ta" value="{{etb.exp.hyp.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.hyp.set}}" onBlur="{{etb.exp.hyp.commit}}" onKeyDown="{{etb.exp.hyp.key}}"></textarea></label>
+        <label class="fld"><span class="lab">Toggle<sc-if value="{{etb.exp.mk.toggle.show}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.mk.toggle.cls}}">{{etb.exp.mk.toggle.text}}</span></sc-if></span><input class="in" value="{{etb.exp.toggle.v}}" placeholder="The variable being altered in this experiment" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.toggle.set}}" onBlur="{{etb.exp.toggle.commit}}" onKeyDown="{{etb.exp.toggle.key}}"><span class="hint">What you're varying. A thinking aid, not a control.</span></label>
+        <label class="fld"><span class="lab">Experiment<sc-if value="{{etb.exp.mk.test.show}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.mk.test.cls}}">{{etb.exp.mk.test.text}}</span></sc-if></span><textarea class="ta etb-ta" value="{{etb.exp.test.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.test.set}}" onBlur="{{etb.exp.test.commit}}" onKeyDown="{{etb.exp.test.key}}"></textarea></label>
+      </section>
+
+      <section class="sh-sec" aria-label="Key reads">
+        <div class="row"><h3 class="h3">Key reads</h3><sc-if value="{{etb.exp.mk.key_reads.show}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.mk.key_reads.cls}}">{{etb.exp.mk.key_reads.text}}</span></sc-if></div>
+        <sc-if value="{{etb.exp.noKrs}}" hint-placeholder-val="{{false}}"><div class="hint">The readouts this experiment measures. Set each one's pass target; result criteria point at these.</div></sc-if>
+        <sc-for list="{{etb.exp.krs}}" as="k" hint-placeholder-count="2">
+          <div class="etb-kr" data-k="{{k.key}}" aria-label="{{k.aria}}">
+            <div class="row top">
+              <sc-if value="{{k.custom}}" hint-placeholder-val="{{true}}">
+                <label class="fld grow"><span class="lab">Key read</span><input class="in sm" value="{{k.name.v}}" placeholder="e.g. Cell voltage at 2 A/cm²" disabled="{{etb.exp.ro}}" onChange="{{k.name.set}}" onBlur="{{k.name.commit}}" onKeyDown="{{k.name.key}}"></label>
+                <label class="fld etb-unit"><span class="lab">Unit</span><input class="in sm" value="{{k.unit.v}}" placeholder="unit" disabled="{{etb.exp.ro}}" onChange="{{k.unit.set}}" onBlur="{{k.unit.commit}}" onKeyDown="{{k.unit.key}}"></label>
+              </sc-if>
+              <sc-if value="{{k.linked}}" hint-placeholder-val="{{false}}">
+                <div class="col g4 grow"><span class="strong">{{k.nameText}}</span><div class="row wrap g4"><span class="{{k.tagCls}}" title="{{k.tagTitle}}">{{k.tag}}</span><sc-if value="{{k.hasBadge}}" hint-placeholder-val="{{false}}"><span class="tag" title="{{k.badgeTitle}}">{{k.badge}}</span></sc-if><span class="sub">{{k.unitText}}</span></div></div>
+              </sc-if>
+              <sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic etb-rm" type="button" aria-label="Remove key read" title="Remove key read" onClick="{{k.remove}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button></sc-if>
+            </div>
+            <div class="row wrap etb-pass">
+              <span class="sub">Pass when</span>
+              <select class="sel sm etb-op" aria-label="Pass condition" value="{{k.dir.v}}" disabled="{{etb.exp.ro}}" onChange="{{k.dir.on}}"><sc-for list="{{k.dir.opts}}" as="o" hint-placeholder-count="5"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+              <input class="in sm etb-critin" aria-label="Critical value" placeholder="{{k.critPh}}" value="{{k.crit.v}}" disabled="{{etb.exp.ro}}" onChange="{{k.crit.set}}" onBlur="{{k.crit.commit}}" onKeyDown="{{k.crit.key}}">
+<!--@if !sales-->
+              <sc-if value="{{k.isRange}}" hint-placeholder-val="{{false}}"><span class="sub">to</span><input class="in sm etb-critin" aria-label="High bound" placeholder="{{k.hiPh}}" value="{{k.hi.v}}" disabled="{{etb.exp.ro}}" onChange="{{k.hi.set}}" onBlur="{{k.hi.commit}}" onKeyDown="{{k.hi.key}}"></sc-if>
+<!--@endif-->
+            </div>
+<!--@if !sales-->
+            <div class="row wrap etb-statrow">
+              <span class="sub">Statistic</span>
+              <sc-if value="{{k.statRo}}" hint-placeholder-val="{{false}}"><span class="tag">{{k.statText}}</span><span class="hint">{{k.statNote}}</span></sc-if>
+              <sc-if value="{{!k.statRo}}" hint-placeholder-val="{{true}}">
+                <select class="sel sm" aria-label="Statistic" value="{{k.statSel.v}}" disabled="{{etb.exp.ro}}" onChange="{{k.statSel.on}}"><sc-for list="{{k.statSel.opts}}" as="o" hint-placeholder-count="8"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select>
+                <sc-if value="{{k.hasCount}}" hint-placeholder-val="{{false}}"><span class="sub">over</span><input class="in sm etb-count" aria-label="Expected reads" placeholder="reads" value="{{k.count.v}}" disabled="{{etb.exp.ro}}" onChange="{{k.count.set}}" onBlur="{{k.count.commit}}" onKeyDown="{{k.count.key}}"><span class="sub">reads</span></sc-if>
+              </sc-if>
+            </div>
+            <sc-if value="{{k.hasObs}}" hint-placeholder-val="{{false}}">
+              <div class="row wrap {{k.obsCls}}"><span>{{k.obsText}}</span><sc-if value="{{k.hasChip}}" hint-placeholder-val="{{false}}"><span class="tag" title="{{k.chipTitle}}">{{k.chip}}</span></sc-if><sc-if value="{{k.hasVerdict}}" hint-placeholder-val="{{false}}"><span class="{{k.verdictCls}}"><span class="dot"></span>{{k.verdict}}</span></sc-if></div>
+            </sc-if>
+<!--@endif-->
+          </div>
+        </sc-for>
+        <sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}"><div class="row"><button class="btn xs" type="button" onClick="{{etb.exp.addKr}}">Add key read</button><button class="btn xs" type="button" aria-expanded="{{etb.exp.pickOpen}}" onClick="{{etb.exp.linkKpi}}">Link a KPI</button></div></sc-if>
+        <sc-if value="{{etb.exp.pickOpen}}" hint-placeholder-val="{{false}}">
+          <div class="etb-pick" role="group" aria-label="Link a key read to a KPI">
+            <div class="row top"><div class="col g2 grow"><span class="strong">Link a key read to a KPI</span><span class="hint">The key read takes the KPI's name and unit, and readings you enter for it post to that KPI.</span></div><button class="btn xs q" type="button" onClick="{{etb.exp.pick.close}}">Cancel</button></div>
+            <sc-if value="{{etb.exp.pick.empty}}" hint-placeholder-val="{{false}}"><div class="note">No KPIs on this objective yet. Add KPIs to a key result or stage-gate first, then link them here.</div></sc-if>
+            <sc-for list="{{etb.exp.pick.groups}}" as="g" hint-placeholder-count="2">
+              <div class="col g4" data-k="{{g.key}}">
+                <span class="etb-lab">{{g.label}}</span>
+                <sc-for list="{{g.rows}}" as="p" hint-placeholder-count="2">
+                  <button class="etb-pickrow" type="button" onClick="{{p.pick}}"><span class="row wrap g4"><span class="strong">{{p.name}}</span><sc-if value="{{p.hasUnit}}" hint-placeholder-val="{{true}}"><span class="sub">{{p.unit}}</span></sc-if></span><span class="sub">{{p.label}}</span></button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+
+      </sc-if>
+      <section class="sh-sec" aria-label="Possible results">
+        <sc-if value="{{etb.exp.full}}" hint-placeholder-val="{{true}}"><div class="row"><h3 class="h3">Possible results</h3><sc-if value="{{etb.exp.mk.possible_results.show}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.mk.possible_results.cls}}">{{etb.exp.mk.possible_results.text}}</span></sc-if></div></sc-if>
+        <sc-if value="{{etb.exp.noResults}}" hint-placeholder-val="{{false}}"><div class="hint">No possible results yet. Add the outcomes you expect, each with its criteria and next step.</div></sc-if>
+        <sc-for list="{{etb.exp.results}}" as="res" hint-placeholder-count="2"><!--@include mods/etb/part-result.html RO=etb.exp.ro--></sc-for>
+        <sc-if value="{{etb.exp.full}}" hint-placeholder-val="{{true}}"><sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}"><div class="row"><button class="btn xs" type="button" onClick="{{etb.exp.addResult}}">Add result</button></div></sc-if></sc-if>
+      </section>
+
+      <sc-if value="{{etb.exp.full}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec" aria-label="Unanticipated outcome">
+        <h3 class="h3">Or an unanticipated outcome</h3>
+        <sc-for list="{{etb.exp.sentinels}}" as="s" hint-placeholder-count="2">
+          <div class="{{s.cls}}" data-k="{{s.key}}">
+            <label class="check"><input class="etb-radio" type="radio" name="{{s.radioName}}" checked="{{s.on}}" disabled="{{etb.exp.ro}}" onChange="{{s.pick}}">{{s.label}}</label>
+            <sc-if value="{{s.on}}" hint-placeholder-val="{{false}}">
+              <label class="fld"><span class="lab">What happened (note)</span><textarea class="ta etb-ta" value="{{s.note.v}}" disabled="{{etb.exp.ro}}" onChange="{{s.note.set}}" onBlur="{{s.note.commit}}" onKeyDown="{{s.note.key}}"></textarea></label>
+              <label class="fld"><span class="lab">Conclusion</span><textarea class="ta etb-ta" value="{{s.concl.v}}" disabled="{{etb.exp.ro}}" onChange="{{s.concl.set}}" onBlur="{{s.concl.commit}}" onKeyDown="{{s.concl.key}}"></textarea></label>
+              <label class="fld"><span class="lab">Leads to</span><select class="sel sm" value="{{s.lead.v}}" disabled="{{etb.exp.ro}}" onChange="{{s.lead.on}}"><sc-for list="{{s.lead.opts}}" as="o" hint-placeholder-count="4"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{etb.exp.canClear}}" hint-placeholder-val="{{false}}"><div class="row"><button class="btn xs" type="button" onClick="{{etb.exp.clearObserved}}">Clear the recorded outcome</button></div></sc-if>
+      </section>
+
+      <section class="sh-sec">
+        <label class="fld"><span class="lab">Notes</span><textarea class="ta etb-ta" value="{{etb.exp.notes.v}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.notes.set}}" onBlur="{{etb.exp.notes.commit}}" onKeyDown="{{etb.exp.notes.key}}"></textarea></label>
+      </section>
+
+      <sc-if value="{{etb.exp.hasAudit}}" hint-placeholder-val="{{false}}">
+        <section class="sh-sec" aria-label="Audit log">
+          <h3 class="h3">Audit log</h3>
+          <div class="col g4">
+            <sc-for list="{{etb.exp.audit}}" as="a" hint-placeholder-count="1">
+              <div class="etb-audit"><div class="row wrap g12"><span class="sub">{{a.when}}</span><span class="strong">{{a.user}}</span><span>{{a.action}}</span><span class="tid">{{a.field}}</span></div><sc-if value="{{a.hasReason}}" hint-placeholder-val="{{false}}"><div class="sub">{{a.reason}}</div></sc-if></div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}">
+        <section class="sh-sec"><div class="row"><button class="btn sm danger" type="button" onClick="{{etb.exp.del}}">Delete experiment</button></div></section>
+      </sc-if>
+
+      <section class="sh-sec">
+        <div class="row"><button class="etb-disc" type="button" aria-expanded="{{etb.exp.raw.open}}" onClick="{{etb.exp.raw.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>{{etb.exp.raw.label}}</button></div>
+        <sc-if value="{{etb.exp.raw.open}}" hint-placeholder-val="{{false}}">
+          <label class="fld"><span class="lab">This experiment as JSON</span><textarea class="ta etb-json" spellCheck="false" value="{{etb.exp.raw.text}}" disabled="{{etb.exp.ro}}" onChange="{{etb.exp.raw.set}}"></textarea></label>
+          <div class="row">
+            <sc-if value="{{etb.exp.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm pri" type="button" onClick="{{etb.exp.raw.apply}}">Apply</button></sc-if>
+            <sc-if value="{{etb.exp.raw.hasMsg}}" hint-placeholder-val="{{false}}"><span class="{{etb.exp.raw.msgCls}}">{{etb.exp.raw.msg}}</span></sc-if>
+          </div>
+        </sc-if>
+      </section>
+      </sc-if>
+    </div>
+<!--@if !sales-->
+    <sc-if value="{{etb.exp.only}}" hint-placeholder-val="{{false}}"><div class="sh-foot"><button class="btn" type="button" onClick="{{etb.exp.showAll}}">Open the whole experiment</button><button class="btn pri push" type="button" onClick="{{ui.closeSheet}}">Done</button></div></sc-if>
+<!--@endif-->
+  </sc-if>
+</sc-if>
+
+<!-- ======================= read-only detail for a concluded experiment ======================= -->
+<sc-if value="{{etb.det}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{etb.det.title}}</h2>
+      <sc-if value="{{etb.det.ok}}" hint-placeholder-val="{{true}}"><div class="row wrap g12"><span class="{{etb.det.statusCls}}"><span class="dot"></span>{{etb.det.statusW}}</span><sc-if value="{{etb.det.hasReach}}" hint-placeholder-val="{{true}}"><span class="sub">{{etb.det.reachW}}</span></sc-if><sc-if value="{{etb.det.hasVerdict}}" hint-placeholder-val="{{false}}"><span class="tag">{{etb.det.verdict}}</span></sc-if></div></sc-if>
+    </div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <sc-if value="{{etb.det.missing}}" hint-placeholder-val="{{false}}"><div class="sh-body"><div class="note">This experiment no longer exists in the logic tree.</div></div></sc-if>
+  <sc-if value="{{etb.det.ok}}" hint-placeholder-val="{{true}}">
+    <div class="sh-body">
+      <section class="sh-sec">
+        <h3>Experiment details</h3>
+        <div class="kv">
+          <sc-if value="{{etb.det.hasHyp}}" hint-placeholder-val="{{true}}"><span class="k">Hypothesis</span><span>{{etb.det.hyp}}</span></sc-if>
+          <sc-if value="{{etb.det.hasToggle}}" hint-placeholder-val="{{true}}"><span class="k">Toggle</span><span>{{etb.det.toggle}}</span></sc-if>
+          <sc-if value="{{etb.det.hasTest}}" hint-placeholder-val="{{true}}"><span class="k">Experiment</span><span>{{etb.det.test}}</span></sc-if>
+        </div>
+        <sc-if value="{{etb.det.hasKrs}}" hint-placeholder-val="{{true}}">
+          <div class="etb-lab">Key reads</div>
+          <sc-for list="{{etb.det.krs}}" as="k" hint-placeholder-count="2"><div class="row wrap"><span>{{k.name}}</span><span class="sub">{{k.crit}}</span></div></sc-for>
+        </sc-if>
+      </section>
+      <sc-if value="{{etb.det.hasOutcome}}" hint-placeholder-val="{{true}}">
+        <section class="sh-sec">
+          <h3>Result</h3>
+          <div class="kv"><sc-for list="{{etb.det.lines}}" as="l" hint-placeholder-count="2"><span class="k">{{l.k}}</span><span>{{l.v}}</span></sc-for></div>
+          <div class="row wrap g4"><span class="sub">Next step</span>
+            <sc-if value="{{etb.det.next.isTerm}}" hint-placeholder-val="{{false}}"><span class="{{etb.det.next.termCls}}"><span class="dot"></span>{{etb.det.next.termText}}</span></sc-if>
+            <sc-if value="{{etb.det.next.isExp}}" hint-placeholder-val="{{true}}"><span><span class="strong">{{etb.det.next.code}}</span> {{etb.det.next.name}}</span></sc-if>
+            <sc-if value="{{etb.det.next.isNone}}" hint-placeholder-val="{{false}}"><span class="st t-bad"><span class="dot"></span>No next step</span></sc-if>
+          </div>
+        </section>
+      </sc-if>
+      <sc-if value="{{etb.det.hasResults}}" hint-placeholder-val="{{true}}">
+        <section class="sh-sec">
+          <h3>Possible results</h3>
+          <sc-for list="{{etb.det.results}}" as="r" hint-placeholder-count="2">
+            <div class="{{r.cls}}">
+              <div class="row wrap"><span class="strong">{{r.label}}</span><sc-if value="{{r.observed}}" hint-placeholder-val="{{false}}"><span class="st t-info"><span class="dot"></span>Observed</span></sc-if></div>
+              <sc-for list="{{r.crit}}" as="c" hint-placeholder-count="1"><div class="sub">{{c.text}}</div></sc-for>
+              <sc-if value="{{r.hasConcl}}" hint-placeholder-val="{{false}}"><div><span class="faint">Conclusion</span> {{r.concl}}</div></sc-if>
+              <div class="row wrap g4 sub">
+                <sc-if value="{{r.next.isTerm}}" hint-placeholder-val="{{false}}"><span class="{{r.next.termCls}}"><span class="dot"></span>{{r.next.termText}}</span></sc-if>
+                <sc-if value="{{r.next.isExp}}" hint-placeholder-val="{{true}}"><span>Next: <span class="strong">{{r.next.code}}</span></span></sc-if>
+                <sc-if value="{{r.next.isNone}}" hint-placeholder-val="{{false}}"><span class="tx-bad">No next step</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+      </sc-if>
+    </div>
+    <div class="sh-foot"><span class="sub">Read-only view</span><button class="btn pri push" type="button" onClick="{{etb.det.edit}}">{{etb.det.editLabel}}</button></div>
+  </sc-if>
+</sc-if>
+
+
+<!-- ======================= validation issues ======================= -->
+<sc-if value="{{etb.iss}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{etb.iss.title}}</h2><span class="sub">{{etb.iss.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <sc-if value="{{etb.iss.empty}}" hint-placeholder-val="{{false}}"><div class="note t-ok">No validation issues. The tree is clean.</div></sc-if>
+    <sc-for list="{{etb.iss.groups}}" as="g" hint-placeholder-count="2">
+      <section class="sh-sec">
+        <h3>{{g.title}}</h3>
+        <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2">
+          <div class="{{r.cls}}">
+            <span class="{{r.iconCls}}"><span class="dot"></span>{{r.icon}}</span>
+            <div class="col g2 grow"><span>{{r.text}}</span><div class="row wrap g12"><span class="sub">{{r.rule}}</span><sc-if value="{{r.hasRef}}" hint-placeholder-val="{{true}}"><button class="lnk small" type="button" onClick="{{r.open}}">Open {{r.ref}}</button></sc-if></div></div>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- ======================= logic tree settings ======================= -->
+<sc-if value="{{etb.set}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>Logic tree settings</h2><span class="sub">{{etb.set.treeName}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <section class="sh-sec">
+      <h3>Storage</h3>
+      <div class="muted">{{etb.set.stored}}</div>
+    </section>
+    <section class="sh-sec">
+      <h3>Your name</h3>
+      <label class="fld"><span class="lab">Your name (for the audit log)</span><input class="in" value="{{etb.set.name}}" placeholder="Initials or name" onChange="{{etb.set.setName}}" onKeyDown="{{etb.set.nameKey}}"><span class="hint">Recorded as “recorded by” on outcomes and as the user in the audit log. Starts as the signed-in person.</span></label>
+      <div class="row"><button class="btn sm pri" type="button" onClick="{{etb.set.save}}">Save name</button></div>
+    </section>
+    <sc-if value="{{etb.set.canClear}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <h3 class="tx-bad">Danger zone</h3>
+        <div class="muted">Clear all data deletes every experiment in this logic tree and leaves a blank tree. It is saved right away. Other logic trees on this objective are not touched.</div>
+        <div class="row"><button class="btn sm danger" type="button" onClick="{{etb.set.clearAll}}">Clear all data</button></div>
+      </section>
+    </sc-if>
+  </div>
+</sc-if>

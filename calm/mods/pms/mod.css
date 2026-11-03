@@ -1,0 +1,80 @@
+/* P-gantt: the Milestones tab and the milestone report. Tokens only, except the print block at
+   the end, which pins the report to light paper whatever the screen theme is. */
+.pms-tbl{font-size:13.5px}
+.pms-tbl td{padding:8px 12px}
+.pms-tbl th:first-child,.pms-tbl td:first-child{padding-left:20px}
+.pms-tbl th:last-child,.pms-tbl td:last-child{padding-right:16px}
+.pms-row{cursor:pointer}
+.pms-row.paused td{opacity:.62}
+.pms-row.paused td:last-child{opacity:1}
+.pms-num{font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+.pms-mcell{min-width:220px}
+.pms-name{display:inline-flex;align-items:center;gap:9px;max-width:100%;text-align:left}
+.pms-nmt{min-width:0}
+.pms-dim{color:var(--ink-2)}
+.pms-dia{display:inline-block;width:8px;height:8px;flex:none;border-radius:1px;transform:rotate(45deg);background:var(--none)}
+.pms-dia.t-ok{background:var(--ok)}
+.pms-dia.t-warn{background:var(--warn)}
+.pms-dia.t-bad{background:var(--bad)}
+.pms-eff{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.pms-ok{color:var(--ok)}
+.pms-slip{font-size:12.5px;font-weight:600}
+.pms-paused{color:var(--warn-ink)}
+.pms-hollow{background:transparent!important;border:1.5px dashed var(--warn)}
+.pms-acts{display:inline-flex;align-items:center;justify-content:flex-end;gap:2px}
+.pms-rep{gap:2px;padding:0 6px}
+.pms-menu{top:30px;min-width:220px}
+.pms-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pms-grp td{background:var(--surface-2);border-top:1px solid var(--line-2)}
+.pms-gbtn{display:inline-flex;align-items:center;gap:6px;padding:2px 6px 2px 2px;border:0;border-radius:6px;background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.pms-gbtn:hover{background:var(--press)}
+.pms-chev{color:var(--faint);transition:transform .15s ease}
+.pms-chev.shut{transform:rotate(-90deg)}
+
+/* report: a document inside the sheet (the wrapper only catches Escape; it adds no box) */
+.pms-sheet{display:contents}
+.pms-body{background:var(--surface-2)}
+.pms-doc{display:flex;flex-direction:column;gap:22px;padding:28px 30px 32px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-1)}
+.pms-dhead{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:flex-start;padding-bottom:18px;border-bottom:2px solid var(--ink)}
+.pms-lbl{font-size:12px;font-weight:600;color:var(--muted)}
+.pms-proj{font-size:20px;font-weight:600;letter-spacing:-.01em}
+input.pms-proj{height:40px;width:100%;font-size:18px;font-weight:600}
+.pms-tagrow{gap:8px 10px}
+.pms-msname{font-size:15px;font-weight:600}
+.pms-metas{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:12px 18px;min-width:280px}
+.pms-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pms-val{font-weight:500}
+.pms-sec{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pms-sec>h3{font-size:14px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--line-2)}
+.pms-txt{color:var(--ink)}
+.pms-pre{white-space:pre-wrap}
+.pms-two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px}
+.pms-finding{display:flex;gap:10px;align-items:flex-start}
+.pms-fn{flex:none;width:24px;padding-top:7px;font-size:12.5px;font-weight:700;color:var(--faint)}
+.pms-fta{flex:1;min-height:52px}
+.pms-mt td,.pms-at td{vertical-align:middle}
+.pms-meas{width:150px}
+.pms-full{width:100%}
+.pms-sigs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;padding-top:26px}
+.pms-sigc{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted)}
+.pms-sig{height:34px;border-bottom:1px solid var(--ink)}
+@media (max-width: 760px){ .pms-two{grid-template-columns:minmax(0,1fr)} .pms-sigs{grid-template-columns:minmax(0,1fr)} }
+@media (prefers-reduced-motion: reduce){ .pms-chev{transition:none} }
+
+/* Print / save as PDF: only the report prints, always on light paper. The light values below are
+   the kit's light tokens, restated for print only so a dark-mode screen still prints light. */
+@media print {
+  .cw.cw:has(.pms-doc){
+    --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#FFFFFF; --surface-3:#FFFFFF; --line:#C9D0D9; --line-2:#DDE2E8; --line-3:#E8ECF1;
+    --field:#C9D0D9; --ink:#17202C; --ink-2:#3A4656; --muted:#5B6878; --faint:#8C97A5; --ghost:#B9C2CE;
+    --ok:#12784A; --ok-ink:#0E6640; --warn:#C98A16; --warn-ink:#8A5D07; --bad:#B4352A; --bad-ink:#9A2C22; --none:#C7CFD9;
+    background:#FFFFFF; color:#17202C; color-scheme:light;
+  }
+  .cw:has(.pms-doc) .app,.cw:has(.pms-doc) .sheet-scrim,.cw:has(.pms-doc) .scrim,.cw:has(.pms-doc) .toasts,.cw:has(.pms-doc) .dlg,.cw:has(.pms-doc) .dlg-scrim{display:none!important}
+  .cw:has(.pms-doc) .sheet{position:static;width:auto;border:0;box-shadow:none;background:#FFFFFF}
+  .cw:has(.pms-doc) .sh-head,.cw:has(.pms-doc) .sh-foot,.cw .pms-ronote{display:none!important}
+  .cw:has(.pms-doc) .sh-body{overflow:visible;padding:0;background:#FFFFFF}
+  .cw .pms-doc{border:0;box-shadow:none;padding:0}
+  .cw .pms-doc .in,.cw .pms-doc .ta{border-color:transparent;padding-left:0;background:transparent;box-shadow:none;resize:none}
+  .cw .pms-doc ::placeholder{color:transparent}
+}

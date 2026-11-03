@@ -1,0 +1,11 @@
+{
+  "app": "spec",
+  "out": "Spec-A.dc.html",
+  "title": "Product spec, calm workspace",
+  "preview": { "width": 1440, "height": 1200 },
+  "shell": "apps/spec/shell.html",
+  "css": ["apps/spec/shell.css"],
+  "js": ["apps/spec/shell.js"],
+  "mods": ["sspec", "scomp", "ssub"],
+  "flags": []
+}

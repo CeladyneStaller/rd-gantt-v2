@@ -1,0 +1,37 @@
+{
+  "name": "sample",
+  "description": "The Calm sample dataset (calm/data/sample.js plus every seed) as broker documents. Regenerate: node test/live/export_sample.js",
+  "source": "out/Main.dc.html",
+  "generatedAt": "2026-10-14T22:35:05.095Z",
+  "unifiedDivisions": [
+    "DIV-FC",
+    "DIV-EL"
+  ],
+  "bizDivisions": [
+    "DIV-BD",
+    "DIV-PT"
+  ],
+  "stateVersion": 1,
+  "missingState": "fresh",
+  "bins": {
+    "users": {
+      "env": "USERS_BIN",
+      "file": "bins/users.json"
+    },
+    "analysis": {
+      "env": "ANALYSIS_INDEX_BIN",
+      "file": "bins/analysis-index.json"
+    },
+    "prefs": {
+      "env": "PREFS_BIN",
+      "file": "bins/prefs.json"
+    }
+  },
+  "signIn": {
+    "cto": "corey@celadyne.com",
+    "lead": "toru@celadyne.com",
+    "ic": "maya@celadyne.com",
+    "ceo": "dana@celadyne.com"
+  },
+  "today": "2026-10-13"
+}

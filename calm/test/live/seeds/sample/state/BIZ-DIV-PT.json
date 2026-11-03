@@ -1,0 +1,77 @@
+{
+  "keyResults": [
+    {
+      "id": "KR-BD-2027Q1-01-1",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "statement": "Qualify ten hydrogen-hub leads",
+      "trackingType": "kpi"
+    }
+  ],
+  "kpis": [
+    {
+      "id": "KPI-BD-2027Q1-01-1-1",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "hostType": "keyResult",
+      "hostId": "KR-BD-2027Q1-01-1",
+      "name": "Qualified hub leads",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 10,
+      "unit": "leads",
+      "order": 0
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-HL-1",
+      "kpiId": "KPI-BD-2027Q1-01-1-1",
+      "value": 4,
+      "timestamp": 1790096400000,
+      "note": "Logged before the objective moved to Business Development"
+    }
+  ],
+  "stageGateSets": [
+    {
+      "id": "SGSET-BD-2027Q1-01-1",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "name": "Hub outreach",
+      "order": 0,
+      "chained": true
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-BD-2027Q1-01-1",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "setId": "SGSET-BD-2027Q1-01-1",
+      "name": "Hub partner shortlist agreed",
+      "intention": "Five hub applicants agree to a joint pilot proposal.",
+      "gate_id": "",
+      "plannedDate": 2585,
+      "actualDate": null,
+      "status": "pending",
+      "order": 0
+    }
+  ],
+  "stageGateEdges": [],
+  "tasks": [
+    {
+      "id": "TSK-BD-2027Q1-01-1",
+      "objectiveId": "OBJ-BD-2027Q1-01",
+      "name": "Map the regional hydrogen-hub applicants",
+      "plannedStart": 2560,
+      "plannedEnd": 2578,
+      "percentComplete": 0,
+      "actualStart": null,
+      "actualEnd": null
+    }
+  ],
+  "boards": [],
+  "risks": [],
+  "planVersions": [],
+  "catchupPlans": [],
+  "objectiveState": [],
+  "gateMode": {},
+  "chainGatesByDate": {},
+  "etbTrees": {}
+}

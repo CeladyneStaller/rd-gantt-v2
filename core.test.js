@@ -299,9 +299,16 @@ function isNull(x, msg) { count++; if (x !== null) { fails++; console.error('FAI
   ok(Math.abs(C.rollupCompany(portfolio, exec) - dMean) > 1, 'company != mean of division scores (d2 property)');
   // empty bound -> null
   isNull(C.score('division', 'D', portfolio, exec, 'Q9'), 'empty quarter -> null');
-  // bands
-  eq(C.band(95), 'on-track', 'band on-track'); eq(C.band(75), 'at-risk', 'band at-risk');
-  eq(C.band(40), 'off-track', 'band off-track'); eq(C.band(null), 'no-band', 'band none');
+  // Bands. Pin the EXACT boundaries rather than interior samples: 95 / 75 / 40 land in the same bands
+  // under both the old 90/70 thresholds and the current 80/65 ones, so sample values cannot catch a
+  // threshold moving. The edge pairs below can.
+  eq(C.band(80), 'on-track', 'band 80 -> on-track (boundary is inclusive)');
+  eq(C.band(79.9), 'at-risk', 'band 79.9 -> at-risk (just under the on-track line)');
+  eq(C.band(65), 'at-risk', 'band 65 -> at-risk (boundary is inclusive)');
+  eq(C.band(64.9), 'off-track', 'band 64.9 -> off-track (just under the at-risk line)');
+  eq(C.band(100), 'on-track', 'band 100 -> on-track');
+  eq(C.band(0), 'off-track', 'band 0 -> off-track');
+  eq(C.band(null), 'no-band', 'band none');
 })();
 
 /* ---- classification: lattice, resolution, validation --------------------- */

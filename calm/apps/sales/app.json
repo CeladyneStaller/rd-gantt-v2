@@ -1,0 +1,27 @@
+{
+  "app": "sales",
+  "out": "Sales-A.dc.html",
+  "title": "Sales, calm workspace",
+  "preview": {
+    "width": 1440,
+    "height": 1200
+  },
+  "shell": "apps/exec/shell.html",
+  "css": [
+    "apps/exec/shell.css"
+  ],
+  "js": [
+    "apps/exec/shell.js"
+  ],
+  "mods": [
+    "kpi",
+    "pull",
+    "kr",
+    "gates",
+    "kb",
+    "fmea",
+    "initm",
+    "review"
+  ],
+  "flags": []
+}

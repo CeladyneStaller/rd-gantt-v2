@@ -1,0 +1,772 @@
+{
+  "schema": 2,
+  "runs": [
+    {
+      "job_id": "job-1009-1500-polcurve-c01",
+      "sample_name": "TS10-B2-C01",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-09T15:00:00Z",
+      "bin_id": "67040190c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.66,
+            "V @ 2 A/cm²": 1.81
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1009-1505-eis-c01",
+      "sample_name": "TS10-B2-C01",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-09T15:05:00Z",
+      "bin_id": "6704207fc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.074
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1010-1500-polcurve-c02",
+      "sample_name": "TS10-B2-C02",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-10T15:00:00Z",
+      "bin_id": "67043f6ec4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.67,
+            "V @ 2 A/cm²": 1.83
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1010-1505-eis-c02",
+      "sample_name": "TS10-B2-C02",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-10T15:05:00Z",
+      "bin_id": "67045e5dc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.081
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1011-1500-polcurve-c03",
+      "sample_name": "TS10-B2-C03",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-11T15:00:00Z",
+      "bin_id": "67047d4cc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.66,
+            "V @ 2 A/cm²": 1.82
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1011-1505-eis-c03",
+      "sample_name": "TS10-B2-C03",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-11T15:05:00Z",
+      "bin_id": "67049c3bc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.079
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1400-polcurve-c04",
+      "sample_name": "TS10-B2-C04",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-13T14:00:00Z",
+      "bin_id": "6704bb2ac4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.68,
+            "V @ 2 A/cm²": 1.84
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1012-1505-eis-c04",
+      "sample_name": "TS10-B2-C04",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-12T15:05:00Z",
+      "bin_id": "6704da19c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.086
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1440-polcurve-c05",
+      "sample_name": "TS10-B2-C05",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-13T14:40:00Z",
+      "bin_id": "6704f908c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.65,
+            "V @ 2 A/cm²": 1.8
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1445-eis-c05",
+      "sample_name": "TS10-B2-C05",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-13T14:45:00Z",
+      "bin_id": "670517f7c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.071
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1520-polcurve-c06",
+      "sample_name": "TS10-B2-C06",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-13T15:20:00Z",
+      "bin_id": "670536e6c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "OCV": 1.43,
+            "V @ 1 A/cm²": 1.69,
+            "V @ 2 A/cm²": 1.85
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1525-eis-c06",
+      "sample_name": "TS10-B2-C06",
+      "script": "eis_fit.py",
+      "timestamp": "2026-10-13T15:25:00Z",
+      "bin_id": "670555d5c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "HFR": 0.077
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1006-1500-durability-h1",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-06T15:00:00Z",
+      "bin_id": "670574c4c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "100 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 8.1,
+            "V @ 2 A/cm²": 1.84
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1008-1500-durability-h2",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-08T15:00:00Z",
+      "bin_id": "670593b3c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "200 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 9,
+            "V @ 2 A/cm²": 1.842
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1010-1500-durability-h3",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-10T15:00:00Z",
+      "bin_id": "6705b2a2c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "300 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 8.2,
+            "V @ 2 A/cm²": 1.844
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1011-1500-durability-h4",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-11T15:00:00Z",
+      "bin_id": "6705d191c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "400 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 8.6,
+            "V @ 2 A/cm²": 1.846
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1012-1500-durability-h5",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-12T15:00:00Z",
+      "bin_id": "6705f080c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "450 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 8.9,
+            "V @ 2 A/cm²": 1.848
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1200-durability-h6",
+      "sample_name": "TS10-B2-STACK",
+      "script": "durability.py",
+      "timestamp": "2026-10-13T12:00:00Z",
+      "bin_id": "67060f6fc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "500 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "Voltage decay rate": 9.3,
+            "V @ 2 A/cm²": 1.85
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1008-1800-crossover-x1",
+      "sample_name": "TS10-B2-STACK",
+      "script": "crossover.py",
+      "timestamp": "2026-10-08T18:00:00Z",
+      "bin_id": "67062e5ec4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "crossover",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "|j_xover|": 1.6,
+            "H₂ in O₂": 0.62
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1010-1900-crossover-x2",
+      "sample_name": "TS10-B2-STACK",
+      "script": "crossover.py",
+      "timestamp": "2026-10-10T19:00:00Z",
+      "bin_id": "67064d4dc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "crossover",
+          "step": "500 h",
+          "Conditions": {
+            "T_C": 80,
+            "P_value": 30,
+            "P_unit": "barg"
+          },
+          "key_values": {
+            "|j_xover|": 1.9,
+            "H₂ in O₂": 0.71
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-0930-conductivity-r7a",
+      "sample_name": "HP6-12-R07-A",
+      "script": "conductivity.py",
+      "timestamp": "2026-10-13T09:30:00Z",
+      "bin_id": "67066c3cc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 95
+          },
+          "key_values": {
+            "Proton conductivity": 95.2,
+            "HFR": 0.042
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1010-conductivity-r7b",
+      "sample_name": "HP6-12-R07-B",
+      "script": "conductivity.py",
+      "timestamp": "2026-10-13T10:10:00Z",
+      "bin_id": "67068b2bc4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "eis",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 95
+          },
+          "key_values": {
+            "Proton conductivity": 94.8,
+            "HFR": 0.043
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1012-1600-thickness-r7",
+      "sample_name": "HP6-12-R07",
+      "script": "thickness_map.py",
+      "timestamp": "2026-10-12T16:00:00Z",
+      "bin_id": "6706aa1ac4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "thickness",
+          "step": "",
+          "Conditions": {},
+          "key_values": {
+            "Thickness variation (2σ)": 1.2,
+            "Mean thickness": 12.1
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1013-1100-polcurve-ssc",
+      "sample_name": "MEA-SSC-0413",
+      "script": "polcurve.py",
+      "timestamp": "2026-10-13T11:00:00Z",
+      "bin_id": "6706c909c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 20,
+            "P_value": 150,
+            "P_unit": "kPa"
+          },
+          "key_values": {
+            "OCV": 0.95,
+            "V @ 1 A/cm²": 0.61,
+            "j @ 0.6 V": 0.24,
+            "HFR": 0.061
+          }
+        },
+        {
+          "Analysis": "polcurve",
+          "step": "",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 30,
+            "P_value": 150,
+            "P_unit": "kPa"
+          },
+          "key_values": {
+            "OCV": 0.96,
+            "V @ 1 A/cm²": 0.63,
+            "j @ 0.6 V": 0.31,
+            "HFR": 0.055
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-0930-1300-ecsa-bol",
+      "sample_name": "MEA-AST-0398",
+      "script": "ecsa.py",
+      "timestamp": "2026-09-30T13:00:00Z",
+      "bin_id": "6706e7f8c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 52.1
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "job-1009-1300-ecsa-ast",
+      "sample_name": "MEA-AST-0398",
+      "script": "ecsa.py",
+      "timestamp": "2026-10-09T13:00:00Z",
+      "bin_id": "670706e7c4b0d93b7e1f20a5",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "30k cycles",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 38.4
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0101",
+      "sample_name": "HP6-AST-01",
+      "script": "CV and EIS, beginning of life",
+      "timestamp": "2026-10-06T14:00:00Z",
+      "bin_id": "bin-j-ast-0101",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 54.1
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.051
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0201",
+      "sample_name": "HP6-AST-02",
+      "script": "CV and EIS, beginning of life",
+      "timestamp": "2026-10-06T16:00:00Z",
+      "bin_id": "bin-j-ast-0201",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 52.8
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.053
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0301",
+      "sample_name": "HP6-AST-03",
+      "script": "CV and EIS, beginning of life",
+      "timestamp": "2026-10-07T09:00:00Z",
+      "bin_id": "bin-j-ast-0301",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 53.6
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "BOL",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.052
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0102",
+      "sample_name": "HP6-AST-01",
+      "script": "CV and EIS after 30k AST cycles",
+      "timestamp": "2026-10-11T10:00:00Z",
+      "bin_id": "bin-j-ast-0102",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 31.2
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.066
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0202",
+      "sample_name": "HP6-AST-02",
+      "script": "CV and EIS after 30k AST cycles",
+      "timestamp": "2026-10-11T15:30:00Z",
+      "bin_id": "bin-j-ast-0202",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 29.8
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.071
+          }
+        }
+      ]
+    },
+    {
+      "job_id": "j-ast-0302",
+      "sample_name": "HP6-AST-03",
+      "script": "CV and EIS after 30k AST cycles",
+      "timestamp": "2026-10-12T11:00:00Z",
+      "bin_id": "bin-j-ast-0302",
+      "Data": [
+        {
+          "Analysis": "ecsa",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "Average ECSA": 33.9
+          }
+        },
+        {
+          "Analysis": "eis",
+          "step": "30k",
+          "Conditions": {
+            "T_C": 80,
+            "RH_pct": 100
+          },
+          "key_values": {
+            "HFR": 0.064
+          }
+        }
+      ]
+    }
+  ]
+}

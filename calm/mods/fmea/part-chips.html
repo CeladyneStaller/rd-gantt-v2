@@ -1,0 +1,8 @@
+<sc-if value="{{$XS.hasXs}}" hint-placeholder-val="{{false}}">
+  <div class="fmea-xs">
+    <sc-for list="{{$XS.xs}}" as="fx" hint-placeholder-count="1">
+      <sc-if value="{{fx.canOpen}}" hint-placeholder-val="{{true}}"><button class="{{fx.cls}}" type="button" title="{{fx.title}}" onClick="{{fx.open}}"><span class="dot"></span><b>{{fx.code}}</b><span>{{fx.word}}</span></button></sc-if>
+      <sc-if value="{{!fx.canOpen}}" hint-placeholder-val="{{false}}"><span class="{{fx.cls}}" title="{{fx.title}}"><span class="dot"></span><b>{{fx.code}}</b><span>{{fx.word}}</span></span></sc-if>
+    </sc-for>
+  </div>
+</sc-if>

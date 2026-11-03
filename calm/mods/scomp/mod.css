@@ -1,0 +1,20 @@
+/* scomp: components panel (tokens only, so dark mode follows) */
+.scomp-h{display:flex;align-items:center;margin:0}
+.scomp-tgl{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.scomp-tgl svg{color:var(--faint);transition:transform .15s ease}
+.scomp-tgl[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.scomp-tgl:hover{color:var(--accent-ink)}
+.scomp-card{display:flex;flex-direction:column;gap:10px;padding:14px 20px 16px;border-top:1px solid var(--line-2);min-width:0}
+.scomp-head{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.scomp-head .handle{margin-top:1px}
+.scomp-tag{padding-top:3px;min-width:22px}
+.scomp-name{font-weight:600;font-size:15px;line-height:1.35;min-width:0}
+.scomp-meta:empty{display:none}
+.scomp-score{display:inline-flex;align-items:center;gap:8px;padding-top:2px;white-space:nowrap}
+.scomp-num{font-weight:600;min-width:22px;text-align:right}
+.scomp-acts{flex:none}
+.scomp-menu{top:30px;min-width:200px}
+.scomp-pad{min-width:0}
+.scomp-line{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.scomp-note{white-space:pre-wrap;font-size:13px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px}
+.scomp-ferr{flex-basis:100%}

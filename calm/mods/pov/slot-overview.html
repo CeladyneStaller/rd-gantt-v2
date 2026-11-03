@@ -1,0 +1,155 @@
+<section class="panel pov-hero" aria-label="Company score">
+  <div class="{{pov.company.scoreCls}}">{{pov.company.score}}</div>
+  <div class="col g2">
+    <span class="h2">Company</span>
+    <span class="sub">Mean of division scores</span>
+  </div>
+  <span class="{{pov.company.stCls}}"><span class="dot"></span>{{pov.company.word}}</span>
+</section>
+
+<sc-if value="{{pov.noDivs}}" hint-placeholder-val="{{false}}">
+  <div class="panel"><div class="empty">No divisions yet. Add one in the Structure tab to begin.</div></div>
+</sc-if>
+<sc-if value="{{pov.noMatch}}" hint-placeholder-val="{{false}}">
+  <div class="note t-warn">{{pov.noMatchText}}</div>
+</sc-if>
+
+<sc-for list="{{pov.units}}" as="u" hint-placeholder-count="2">
+  <section class="pov-unit" aria-label="{{u.name}}">
+    <div class="pov-unit-head">
+      <h2 class="h2">{{u.name}}</h2>
+      <sc-if value="{{u.hasScore}}" hint-placeholder-val="{{true}}"><span class="{{u.scoreCls}}">{{u.score}}</span><span class="{{u.stCls}}"><span class="dot"></span>{{u.word}}</span><span class="sub">Unit score, a flat mean of its objectives</span></sc-if>
+    </div>
+    <div class="pov-cards">
+      <sc-for list="{{u.divs}}" as="d" hint-placeholder-count="2">
+        <div class="panel pov-card" role="button" tabIndex="0" aria-label="{{d.aria}}" data-k="{{d.id}}" onClick="{{d.open}}" onKeyDown="{{d.key}}">
+          <div class="row top">
+            <div class="col g2 grow"><span class="h3">{{d.name}}</span><span class="row g12"><span class="tid">{{d.id}}</span><span class="sub">{{d.kind}}</span></span></div>
+            <div class="col g2 pov-card-score"><span class="{{d.scoreCls}}">{{d.score}}</span><span class="sub">overall</span></div>
+          </div>
+          <span class="{{d.stCls}}"><span class="dot"></span>{{d.word}}</span>
+          <sc-if value="{{d.hasQs}}" hint-placeholder-val="{{true}}">
+            <div class="row wrap pov-qs" aria-label="Per quarter"><sc-for list="{{d.qs}}" as="q" hint-placeholder-count="2"><span class="pov-q"><span class="sub">{{q.q}}</span> <span class="{{q.cls}}">{{q.score}}</span></span></sc-for></div>
+          </sc-if>
+          <sc-if value="{{d.noQs}}" hint-placeholder-val="{{false}}"><span class="sub">No quarters set on its objectives</span></sc-if>
+          <div class="row wrap pov-mix" aria-label="Objectives by status"><sc-for list="{{d.mix}}" as="x" hint-placeholder-count="4"><span class="{{x.cls}}" title="{{x.label}}" aria-label="{{x.label}}"><span class="dot"></span>{{x.n}}</span></sc-for></div>
+          <div class="col g2"><span class="sub">{{d.meta}}</span><span class="{{d.slipCls}}">{{d.slip}}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</sc-for>
+
+<section class="pov-active" aria-label="Active this quarter">
+  <div class="row wrap g12"><h2 class="h2">Active this quarter</h2><span class="sub">{{pov.qNow}}: objectives in their planned window or quarter, and milestones due this quarter</span></div>
+  <sc-if value="{{pov.noActive}}" hint-placeholder-val="{{false}}"><div class="panel"><div class="empty">No active objectives or milestones this quarter.</div></div></sc-if>
+  <sc-for list="{{pov.groups}}" as="g" hint-placeholder-count="2">
+    <div class="pov-div" data-k="{{g.id}}">
+      <div class="pov-div-lab"><span class="h3">{{g.name}}</span><span class="pov-rule"></span></div>
+      <sc-for list="{{g.blocks}}" as="b" hint-placeholder-count="2">
+        <div class="pov-block">
+          <div class="pov-plab"><span class="strong">{{b.label}}</span><sc-if value="{{b.borrowed}}" hint-placeholder-val="{{false}}"><span class="sub">Owned by another division</span></sc-if></div>
+          <sc-if value="{{b.hasModels}}" hint-placeholder-val="{{false}}">
+            <div class="pov-kid">Models</div>
+            <div class="pov-tiles">
+              <sc-for list="{{b.models}}" as="m" hint-placeholder-count="1">
+                <div class="pov-tile" role="button" tabIndex="0" aria-label="{{m.aria}}" onClick="{{m.open}}" onKeyDown="{{m.key}}">
+                  <span class="{{m.barCls}}"></span>
+                  <div class="row top">
+                    <div class="col g2 grow"><span class="sub">{{m.prod}}</span><span class="strong">{{m.name}}</span><sc-if value="{{m.hasMaturity}}" hint-placeholder-val="{{false}}"><span class="tag pov-mat">{{m.maturity}}</span></sc-if></div>
+                    <div class="col g2 pov-card-score"><span class="{{m.confCls}}">{{m.conf}}</span><span class="sub">conformance</span></div>
+                  </div>
+                  <div class="pov-kid">Product specs</div>
+                  <sc-if value="{{m.noSpecs}}" hint-placeholder-val="{{false}}"><span class="sub">No specs yet</span></sc-if>
+                  <div class="pov-kt">
+                    <sc-for list="{{m.specs}}" as="x" hint-placeholder-count="2"><div class="pov-kr"><span class="{{x.dotCls}}"></span><span class="ellip" title="{{x.name}}">{{x.name}}</span><span class="{{x.scoreCls}}">{{x.score}}</span></div></sc-for>
+                  </div>
+                  <span class="sub">{{m.parts}}</span>
+                  <div class="row wrap pov-qs"><span class="sub">Objective rollup</span><span class="{{m.rollCls}}">{{m.rollup}}</span><sc-for list="{{m.qs}}" as="q" hint-placeholder-count="1"><span class="pov-q"><span class="sub">{{q.q}}</span> <span class="{{q.cls}}">{{q.score}}</span></span></sc-for></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{b.hasObjs}}" hint-placeholder-val="{{false}}">
+            <div class="pov-kid">Objectives</div>
+            <div class="pov-tiles">
+              <sc-for list="{{b.objs}}" as="o" hint-placeholder-count="2">
+                <div class="pov-tile" role="button" tabIndex="0" aria-label="{{o.aria}}" data-k="{{o.id}}" onClick="{{o.open}}" onKeyDown="{{o.key}}">
+                  <span class="{{o.barCls}}"></span>
+                  <div class="row top">
+                    <div class="col g2 grow"><span class="strong clamp2" title="{{o.name}}">{{o.name}}</span>
+                      <span class="row wrap" style="gap: 2px 8px"><span class="{{o.subCls}}">{{o.sub}}</span><sc-if value="{{o.hasSlip}}" hint-placeholder-val="{{false}}"><span class="pill t-bad">{{o.slip}}</span></sc-if></span></div>
+                    <span class="{{o.scoreCls}}">{{o.score}}</span>
+                  </div>
+                  <div class="row wrap g12"><sc-if value="{{o.hasEnd}}" hint-placeholder-val="{{false}}"><span class="{{o.endCls}}"><span class="dot"></span>{{o.endText}}</span></sc-if><span class="{{o.stCls}}"><span class="dot"></span>{{o.word}}</span></div>
+                  <sc-if value="{{o.hasKrs}}" hint-placeholder-val="{{false}}">
+                    <div class="pov-kt">
+                      <div class="pov-kh"><span></span><span>Key result</span><span>Target</span><span>Now</span></div>
+                      <sc-for list="{{o.krs}}" as="x" hint-placeholder-count="2"><div class="pov-kr4"><span class="{{x.dotCls}}"></span><span class="ellip" title="{{x.name}}">{{x.name}}</span><span class="pov-ktgt">{{x.tgt}}</span><span class="{{x.curCls}}">{{x.cur}}</span></div></sc-for>
+                    </div>
+                  </sc-if>
+                  <div class="row g12"><span class="track sm grow"><span class="{{o.fillCls}}" style="{{o.fill}}"></span></span><span class="sub num">{{o.pct}}</span></div>
+                  <sc-if value="{{o.hasGates}}" hint-placeholder-val="{{false}}">
+                    <div class="col g2">
+                      <div class="row g12"><span class="sub">{{o.gates}}</span><sc-if value="{{o.hasBehind}}" hint-placeholder-val="{{false}}"><span class="st t-bad"><span class="dot"></span>{{o.behind}}</span></sc-if></div>
+                      <sc-for list="{{o.lanes}}" as="l" hint-placeholder-count="1">
+                        <div class="pov-lane"><sc-if value="{{l.hasLabel}}" hint-placeholder-val="{{false}}"><span class="pov-ws" title="{{l.title}}">{{l.label}}</span></sc-if><sc-for list="{{l.dots}}" as="gd" hint-placeholder-count="3"><span class="{{gd.cls}}" title="{{gd.title}}" aria-label="{{gd.title}}"><sc-if value="{{gd.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>{{gd.inner}}</span></sc-for></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{b.hasMss}}" hint-placeholder-val="{{false}}">
+            <div class="pov-kid">Milestones</div>
+            <div class="pov-tiles">
+              <sc-for list="{{b.mss}}" as="m" hint-placeholder-count="1">
+                <div class="pov-tile pov-mtile" role="button" tabIndex="0" aria-label="{{m.aria}}" data-k="{{m.id}}" onClick="{{m.open}}" onKeyDown="{{m.key}}">
+                  <span class="{{m.barCls}}"></span>
+                  <div class="row top">
+                    <div class="col g2 grow"><span class="strong clamp2" title="{{m.name}}">{{m.name}}</span>
+                      <span class="row wrap" style="gap: 2px 8px"><span class="sub">{{m.sub}}</span><sc-if value="{{m.hasSlip}}" hint-placeholder-val="{{false}}"><span class="pill t-bad">{{m.slip}}</span></sc-if></span></div>
+                    <span class="{{m.scoreCls}}">{{m.score}}</span>
+                  </div>
+                  <span class="{{m.stCls}}"><span class="dot"></span>{{m.word}}</span>
+                  <sc-if value="{{m.hasKpis}}" hint-placeholder-val="{{false}}">
+                    <div class="pov-kt">
+                      <div class="pov-kh"><span></span><span>KPI</span><span>Target</span><span>Now</span></div>
+                      <sc-for list="{{m.kpis}}" as="x" hint-placeholder-count="1"><div class="pov-kr4"><span class="{{x.dotCls}}"></span><span class="ellip" title="{{x.name}}">{{x.name}}</span><span class="pov-ktgt">{{x.tgt}}</span><span class="{{x.curCls}}">{{x.cur}}</span></div></sc-for>
+                    </div>
+                  </sc-if>
+                  <div class="row g12"><span class="track sm grow"><span class="{{m.fillCls}}" style="{{m.fill}}"></span></span><span class="sub num">{{m.pct}}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{!b.hasModels}}" hint-placeholder-val="{{false}}"><sc-if value="{{!b.hasObjs}}" hint-placeholder-val="{{false}}"><sc-if value="{{!b.hasMss}}" hint-placeholder-val="{{false}}"><div class="sub">Nothing active for this product this quarter.</div></sc-if></sc-if></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+</section>
+
+<section class="panel" aria-label="Scores by product and model">
+  <div class="ph"><h2 class="h2">Scores by product and model</h2></div>
+  <sc-if value="{{pov.slices.none}}" hint-placeholder-val="{{false}}"><div class="empty sec">No products yet. Add products and models in the Structure tab to see their scores.</div></sc-if>
+  <sc-if value="{{pov.slices.has}}" hint-placeholder-val="{{true}}">
+    <div class="pov-slices">
+      <table class="tbl">
+        <thead><tr><th>Product or model</th><th class="r">Spec conformance</th><th class="r">Overall</th><sc-for list="{{pov.slices.heads}}" as="h" hint-placeholder-count="3"><th class="r">{{h.q}}</th></sc-for></tr></thead>
+        <tbody>
+          <sc-for list="{{pov.slices.rows}}" as="r" hint-placeholder-count="3">
+            <tr data-k="{{r.id}}">
+              <td><sc-if value="{{r.isProd}}" hint-placeholder-val="{{true}}"><span class="strong">{{r.name}}</span> <span class="tid">{{r.id}}</span></sc-if><sc-if value="{{!r.isProd}}" hint-placeholder-val="{{false}}"><span class="pov-sind">{{r.name}}</span> <span class="tid">{{r.id}}</span> <sc-if value="{{r.hasMaturity}}" hint-placeholder-val="{{false}}"><span class="tag">{{r.maturity}}</span></sc-if></sc-if></td>
+              <td class="r"><span class="{{r.conf.cls}}">{{r.conf.v}}</span></td>
+              <td class="r"><span class="{{r.overall.cls}}">{{r.overall.v}}</span></td>
+              <sc-for list="{{r.qs}}" as="c" hint-placeholder-count="3"><td class="r"><span class="{{c.cls}}">{{c.v}}</span></td></sc-for>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+    <div class="pb hint sec">Overall takes every objective classified to the item, across all its quarters; a quarter column fills only where the item has objectives that quarter. Spec conformance is the model's conformance from Product spec; a product's is the mean of its models.</div>
+  </sc-if>
+</section>

@@ -1,0 +1,14 @@
+/* pst: Structure tables and the grouped tree (tokens only) */
+.pst-tbl td{padding-top:8px;padding-bottom:8px}
+.pst-tbl th.pst-act,.pst-tbl td.pst-act{width:44px;text-align:right;padding-left:4px;padding-right:12px}
+.pst-tbl tr.pst-prow td{background:var(--surface)}
+.pst-tbl tr.pst-crow td{border-top-color:var(--line-3)}
+.pst-ind{padding-left:34px}
+.pst-dim td{opacity:.6}
+.pst-menu{top:30px;min-width:220px}
+.pst-tree{display:flex;flex-direction:column}
+.pst-grp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:42px;padding-right:16px;border-top:1px solid var(--line-2);background:var(--surface-2)}
+.pst-glab{min-width:0}
+.pst-orow{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px 6px 0;border-top:1px solid var(--line-3)}
+.pst-orow .dot{margin-left:30px}
+.pst-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

@@ -1,0 +1,101 @@
+<sc-if value="{{review.has}}" hint-placeholder-val="{{true}}">
+<section class="panel review" aria-labelledby="review-h" data-k="review">
+  <div class="review-head"><h2 class="h2" id="review-h">Review</h2><span class="sub">{{review.summary}}</span></div>
+  <div class="review-sum">
+    <div class="review-ctl">
+      <sc-for list="{{review.chips}}" as="rvc" hint-placeholder-count="5">
+        <button type="button" class="{{rvc.cls}}" aria-pressed="{{rvc.pressed}}" title="{{rvc.title}}" onClick="{{rvc.pick}}"><span class="{{rvc.dot}}"></span>{{rvc.label}}<b>{{rvc.count}}</b></button>
+      </sc-for>
+      <div class="seg review-show" role="group" aria-label="Show"><button type="button" aria-pressed="{{review.allPressed}}" onClick="{{review.showAll}}">{{review.allLabel}}</button><button type="button" aria-pressed="{{review.needPressed}}" onClick="{{review.showNeed}}">{{review.needLabel}}</button></div>
+    </div>
+    <div class="review-ctl2">
+      <label class="search review-search"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path></svg><input type="search" placeholder="Filter rows by name" aria-label="Filter rows by name" value="{{review.q}}" onChange="{{review.onQ}}" onKeyDown="{{review.onQKey}}"></label>
+      <sc-if value="{{review.filtered}}" hint-placeholder-val="{{false}}"><span class="sub" role="status">{{review.showing}}</span><button type="button" class="lnk" onClick="{{review.clear}}">Clear filters</button></sc-if>
+      <div class="review-gb">
+        <span class="sub">Group by</span>
+        <div class="seg" role="group" aria-label="Group rows by"><button type="button" aria-pressed="{{review.gbType}}" onClick="{{review.byType}}">Type</button><button type="button" aria-pressed="{{review.gbStatus}}" onClick="{{review.byStatus}}">Status</button><button type="button" aria-pressed="{{review.gbDue}}" onClick="{{review.byDue}}">Due date</button></div>
+        <sc-if value="{{review.canToggleAll}}" hint-placeholder-val="{{true}}"><button type="button" class="btn sm" onClick="{{review.toggleAll}}">{{review.expandLabel}}</button></sc-if>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{review.showTypeBars}}" hint-placeholder-val="{{false}}">
+    <div class="review-tbars" data-k="review-types">
+      <sc-for list="{{review.typeBars}}" as="rvt" hint-placeholder-count="3">
+        <span class="review-tlab">{{rvt.label}}</span>
+        <div class="review-bar" role="group" aria-label="{{rvt.aria}}"><sc-for list="{{rvt.bar}}" as="rvb" hint-placeholder-count="3"><button type="button" class="{{rvb.cls}}" style="{{rvb.style}}" title="{{rvb.title}}" aria-label="{{rvb.title}}" aria-pressed="{{rvb.pressed}}" onClick="{{rvb.pick}}">{{rvb.count}}</button></sc-for></div>
+        <span class="review-tnum">{{rvt.count}}</span>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div class="review-scroll">
+    <div class="review-grid" role="table" aria-label="Key results, stage-gates, kanban tiles and risks of this objective">
+      <div class="review-tr review-th" role="row"><div role="columnheader">Item</div><div role="columnheader">Status</div><div role="columnheader">Progress</div><div role="columnheader">Date</div><div role="columnheader">Note</div></div>
+      <sc-for list="{{review.groups}}" as="rvg" hint-placeholder-count="4">
+        <div class="review-grow" role="row" data-k="{{rvg.k}}"><div class="{{rvg.cls}}" role="cell">
+          <div class="review-gline">
+            <button type="button" class="{{rvg.btnCls}}" aria-expanded="{{rvg.open}}" title="{{rvg.toggleLabel}}" onClick="{{rvg.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg><sc-if value="{{rvg.hasDot}}" hint-placeholder-val="{{false}}"><span class="{{rvg.dot}}"></span></sc-if><span>{{rvg.label}}</span><span class="cnt">{{rvg.count}}</span></button>
+            <sc-if value="{{rvg.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{rvg.sub}}</span></sc-if>
+            <sc-if value="{{rvg.hasExtra}}" hint-placeholder-val="{{false}}"><span class="{{rvg.extraCls}}"><span class="dot"></span>{{rvg.extra}}</span></sc-if>
+          </div>
+          <sc-if value="{{rvg.hasBar}}" hint-placeholder-val="{{true}}">
+            <div class="review-bar" role="group" aria-label="{{rvg.barAria}}"><sc-for list="{{rvg.bar}}" as="rvb" hint-placeholder-count="3"><button type="button" class="{{rvb.cls}}" style="{{rvb.style}}" title="{{rvb.title}}" aria-label="{{rvb.title}}" aria-pressed="{{rvb.pressed}}" onClick="{{rvb.pick}}">{{rvb.count}}</button></sc-for></div>
+          </sc-if>
+        </div></div>
+        <sc-if value="{{rvg.open}}" hint-placeholder-val="{{true}}">
+          <sc-for list="{{rvg.rows}}" as="rvr" hint-placeholder-count="4">
+            <sc-if value="{{rvr.isSub}}" hint-placeholder-val="{{false}}">
+              <div class="review-srow" role="row" data-k="{{rvr.k}}"><div class="review-sub" role="cell">
+                <button type="button" class="{{rvr.subBtnCls}}" aria-expanded="{{rvr.subOpen}}" title="{{rvr.subToggleLabel}}" onClick="{{rvr.subToggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg><span class="review-slab">{{rvr.subLabel}}</span><sc-if value="{{rvr.hasSubName}}" hint-placeholder-val="{{false}}"><span class="review-sname">{{rvr.subName}}</span></sc-if><span class="cnt">{{rvr.subCount}}</span></button>
+                <sc-if value="{{rvr.hasSubMeta}}" hint-placeholder-val="{{true}}"><span class="sub">{{rvr.subMeta}}</span></sc-if>
+                <span class="review-scnts" role="img" aria-label="{{rvr.subCountsAria}}"><sc-for list="{{rvr.subCounts}}" as="rvs" hint-placeholder-count="2"><span class="{{rvs.cls}}" title="{{rvs.title}}"><span class="{{rvs.dot}}"></span>{{rvs.n}}</span></sc-for></span>
+              </div></div>
+            </sc-if>
+            <sc-if value="{{rvr.isEmpty}}" hint-placeholder-val="{{false}}"><div class="review-emptyrow" role="row"><span role="cell">{{rvr.emptyText}}</span><sc-if value="{{rvr.hasAct}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" onClick="{{rvr.act}}">{{rvr.actLabel}}</button></sc-if></div></sc-if>
+            <sc-if value="{{rvr.isRow}}" hint-placeholder-val="{{true}}">
+              <div class="{{rvr.cls}}" role="row" data-k="{{rvr.k}}">
+                <div class="review-c1" role="cell">
+                  <sc-if value="{{rvr.hasExp}}" hint-placeholder-val="{{false}}"><button type="button" class="{{rvr.expCls}}" aria-expanded="{{rvr.expanded}}" aria-label="{{rvr.expLabel}}" title="{{rvr.expLabel}}" onClick="{{rvr.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
+                  <sc-if value="{{rvr.noExp}}" hint-placeholder-val="{{false}}"><span class="review-exp-sp" aria-hidden="true"></span></sc-if>
+                  <sc-if value="{{rvr.mkCheck}}" hint-placeholder-val="{{false}}"><span class="review-mk done" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></sc-if>
+                  <sc-if value="{{rvr.mkNum}}" hint-placeholder-val="{{false}}"><span class="{{rvr.mkCls}}" aria-hidden="true">{{rvr.mkText}}</span></sc-if>
+                  <sc-if value="{{rvr.mkTarget}}" hint-placeholder-val="{{false}}"><span class="review-mk tgt" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.5"></circle></svg></span></sc-if>
+                  <span class="review-it">
+                    <span class="review-nm"><sc-if value="{{rvr.hasLink}}" hint-placeholder-val="{{true}}"><button type="button" class="review-link" title="{{rvr.linkTitle}}" onClick="{{rvr.go}}"><sc-if value="{{rvr.hasTag}}" hint-placeholder-val="{{false}}"><span class="tag">{{rvr.tag}}</span></sc-if><sc-if value="{{rvr.hasTid}}" hint-placeholder-val="{{false}}"><span class="tid">{{rvr.tid}}</span></sc-if><span class="review-lt">{{rvr.name}}</span></button></sc-if><sc-if value="{{rvr.noLink}}" hint-placeholder-val="{{false}}"><span class="review-kname">{{rvr.name}}</span></sc-if></span>
+                    <sc-if value="{{rvr.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{rvr.sub}}</span></sc-if>
+                  </span>
+                </div>
+                <div class="review-cell" role="cell">
+                  <span class="{{rvr.stCls}}"><span class="{{rvr.stDot}}"></span>{{rvr.stWord}}</span>
+                  <sc-if value="{{rvr.hasStSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{rvr.stSub}}</span></sc-if>
+                </div>
+                <div class="review-cell" role="cell">
+                  <sc-if value="{{rvr.pgBar}}" hint-placeholder-val="{{true}}"><span class="review-pg"><span class="review-barw" role="img" aria-label="{{rvr.barAria}}"><span class="track sm"><span class="{{rvr.barCls}}" style="{{rvr.barStyle}}"></span></span><sc-if value="{{rvr.hasTick}}" hint-placeholder-val="{{false}}"><span class="review-tk" style="{{rvr.tickStyle}}"></span></sc-if></span><sc-if value="{{rvr.barValStatic}}" hint-placeholder-val="{{true}}"><b class="num">{{rvr.barVal}}</b></sc-if><sc-if value="{{rvr.valInBar}}" hint-placeholder-val="{{false}}"><button class="{{rvr.vCls}}" type="button" aria-label="{{rvr.vAria}}" aria-expanded="{{rvr.vExp}}" title="{{rvr.vTitle}}" onClick="{{rvr.vClick}}">{{rvr.vText}}</button></sc-if></span></sc-if>
+                  <sc-if value="{{rvr.pgStage}}" hint-placeholder-val="{{false}}"><span class="review-stage"><span class="review-pips" aria-hidden="true"><sc-for list="{{rvr.pips}}" as="rvp" hint-placeholder-count="4"><i class="{{rvp.cls}}"></i></sc-for></span>{{rvr.stage}}</span></sc-if>
+                  <sc-if value="{{rvr.pgGauge}}" hint-placeholder-val="{{false}}"><span class="review-gauge" role="img" aria-label="{{rvr.gAria}}"><span class="review-gax"></span><span class="review-gband" style="{{rvr.bandStyle}}"></span><sc-if value="{{rvr.hasMk}}" hint-placeholder-val="{{true}}"><span class="{{rvr.gmkCls}}" style="{{rvr.mkStyle}}"></span></sc-if><sc-for list="{{rvr.gLabels}}" as="rvl" hint-placeholder-count="2"><span class="review-glb" style="{{rvl.style}}">{{rvl.text}}</span></sc-for></span></sc-if>
+                  <sc-if value="{{rvr.pgRpn}}" hint-placeholder-val="{{false}}"><span class="review-rpn"><span>{{rvr.rpnPre}}</span><b>{{rvr.rpnVal}}</b></span></sc-if>
+                  <sc-if value="{{rvr.pgText}}" hint-placeholder-val="{{false}}"><span class="{{rvr.pgTxtCls}}">{{rvr.pgTxt}}</span></sc-if>
+                  <sc-if value="{{rvr.hasPgSub}}" hint-placeholder-val="{{true}}"><span class="{{rvr.pgSubCls}}">{{rvr.pgSub}}</span></sc-if>
+                  <sc-if value="{{rvr.valLine}}" hint-placeholder-val="{{false}}"><span class="review-vline"><button class="{{rvr.vCls}}" type="button" aria-label="{{rvr.vAria}}" aria-expanded="{{rvr.vExp}}" title="{{rvr.vTitle}}" onClick="{{rvr.vClick}}">{{rvr.vText}}</button></span></sc-if>
+                  <sc-if value="{{rvr.kpiEd}}" hint-placeholder-val="{{false}}"><!--@include mods/kpi/part-post.html KE=rvr.ed--></sc-if>
+                </div>
+                <div class="review-cell" role="cell">
+                  <span>{{rvr.date}}</span>
+                  <sc-if value="{{rvr.hasDateSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{rvr.dateSub}}</span></sc-if>
+                </div>
+                <div class="review-note" role="cell">{{rvr.note}}</div>
+              </div>
+              <sc-if value="{{rvr.drawer}}" hint-placeholder-val="{{false}}">
+                <div class="{{rvr.drawerCls}}" role="row" data-k="{{rvr.drawerK}}"><div class="review-dcell" role="cell"><!--@include mods/kpi/part-drawer.html KD=rvr.drawer--></div></div>
+              </sc-if>
+            </sc-if>
+          </sc-for>
+        </sc-if>
+      </sc-for>
+    </div>
+  </div>
+  <sc-if value="{{review.noRows}}" hint-placeholder-val="{{false}}"><div class="review-none"><span>Nothing matches these filters.</span><button type="button" class="btn sm" onClick="{{review.clear}}">Clear filters</button></div></sc-if>
+  <div class="review-foot">{{review.footnote}}</div>
+</section>
+</sc-if>

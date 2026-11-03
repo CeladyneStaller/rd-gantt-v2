@@ -1,0 +1,129 @@
+<section class="panel kr-panel" aria-label="Key results" data-k="kr-panel">
+  <div class="ph">
+    <h2 class="h2">Key results</h2>
+    <span class="cnt">{{kr.count}}</span>
+    <sc-if value="{{kr.canEdit}}" hint-placeholder-val="{{true}}">
+      <div class="act"><button class="btn sm" type="button" onClick="{{kr.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add key result</button></div>
+    </sc-if>
+  </div>
+  <sc-if value="{{kr.none}}" hint-placeholder-val="{{false}}">
+    <div class="empty kr-empty"><span>{{kr.emptyText}}</span><span class="faint">{{kr.emptyHint}}</span></div>
+  </sc-if>
+  <sc-for list="{{kr.rows}}" as="krw" hint-placeholder-count="3">
+    <div class="{{krw.itemCls}}" data-k="{{krw.k}}">
+      <div class="kr-row">
+        <button class="kr-main" type="button" aria-expanded="{{krw.exp}}" autoFocus="{{krw.focus}}" onClick="{{krw.toggle}}">
+          <svg class="{{krw.chevCls}}" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          <span class="kr-txt">
+            <span class="kr-st"><span class="tid kr-tag">{{krw.tag}}</span>{{krw.statement}}</span>
+            <span class="kr-meta"><span>{{krw.typeLabel}}</span><sc-if value="{{krw.hasDetail}}" hint-placeholder-val="{{true}}"><span>{{krw.detail}}</span></sc-if></span>
+          </span>
+        </button>
+        <div class="kr-pace">
+          <span class="{{krw.paceCls}}"><span class="dot"></span>{{krw.paceWord}}</span>
+          <sc-if value="{{krw.partial}}" hint-placeholder-val="{{false}}"><span class="kr-pt"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor"></path></svg>Partial check-in</span></sc-if>
+        </div>
+        <div class="kr-att">
+          <div class="kr-bar" title="{{krw.scoreTitle}}">
+            <span class="track kr-track"><span class="{{krw.fillCls}}" style="{{krw.fillStyle}}"></span><sc-if value="{{krw.hasHatch}}" hint-placeholder-val="{{false}}"><span class="{{krw.hatchCls}}" style="{{krw.hatchStyle}}"></span></sc-if><sc-if value="{{krw.hasTick}}" hint-placeholder-val="{{true}}"><span class="tick" style="{{krw.tickStyle}}"></span></sc-if></span>
+            <span class="kr-score">{{krw.score}}</span>
+          </div>
+          <sc-if value="{{krw.hasCap}}" hint-placeholder-val="{{true}}"><div class="kr-cap"><span class="{{krw.capCls}}">{{krw.capText}}</span><sc-if value="{{krw.hasEl}}" hint-placeholder-val="{{true}}"><span class="faint">{{krw.elText}}</span></sc-if></div></sc-if>
+          <sc-if value="{{krw.hasPt}}" hint-placeholder-val="{{false}}"><div class="kr-cap kr-ptc"><span>{{krw.ptRaw}}</span><span class="faint">{{krw.ptSamples}}</span></div></sc-if>
+        </div>
+        <div class="kr-act">
+          <sc-if value="{{krw.hasMenu}}" hint-placeholder-val="{{true}}">
+            <div class="{{krw.aboveCls}}">
+              <button class="btn xs ic q" type="button" aria-label="{{krw.menuLabel}}" title="{{krw.menuLabel}}" aria-haspopup="menu" aria-expanded="{{krw.menuOpen}}" onClick="{{krw.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+              <sc-if value="{{krw.menuOpen}}" hint-placeholder-val="{{false}}">
+                <div class="menu r" role="menu" aria-label="{{krw.menuLabel}}" style="top: 30px">
+                  <button class="mi" type="button" role="menuitem" onClick="{{krw.edit}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit key result</button>
+                  <button class="mi" type="button" role="menuitem" onClick="{{krw.dup}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg>Duplicate</button>
+                  <sc-if value="{{krw.hasAddKpi}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{krw.addKpi}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add KPI</button><button class="mi" type="button" role="menuitem" onClick="{{krw.linkKpi}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Link a metric</button></sc-if>
+<!--@if exec-->
+                  <sc-if value="{{krw.hasConnect}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{krw.connect}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>Connect data</button></sc-if>
+<!--@endif-->
+                  <div class="msep"></div>
+                  <button class="mi bad" type="button" role="menuitem" onClick="{{krw.del}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg>Delete key result</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{krw.exp}}" hint-placeholder-val="{{false}}">
+        <div class="kr-body">
+          <sc-if value="{{krw.isPct}}" hint-placeholder-val="{{false}}">
+            <div class="kr-pct">
+              <sc-if value="{{krw.canEdit}}" hint-placeholder-val="{{true}}"><label class="kr-pct-l">Progress<input type="range" min="0" max="100" step="1" value="{{krw.pct}}" onChange="{{krw.onPct}}" aria-label="{{krw.pctAria}}"></label></sc-if>
+              <span class="fv">{{krw.pctLabel}}</span>
+              <span class="sub">{{krw.pctHint}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{krw.isMs}}" hint-placeholder-val="{{false}}">
+            <div class="kr-ms">
+              <div class="kr-ms-head"><span class="strong">{{krw.ms.modeWord}}</span><span class="sub">{{krw.ms.modeHint}}</span><sc-if value="{{krw.ms.hasHint}}" hint-placeholder-val="{{true}}"><span class="faint small">{{krw.ms.hint}}</span></sc-if></div>
+              <sc-if value="{{krw.ms.none}}" hint-placeholder-val="{{false}}">
+                <div class="note"><span>No steps yet.</span><sc-if value="{{krw.ms.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk" type="button" onClick="{{krw.ms.edit}}">Add steps in the key result</button></sc-if></div>
+              </sc-if>
+              <sc-if value="{{krw.ms.has}}" hint-placeholder-val="{{true}}">
+                <div class="tbox">
+                  <table class="tbl kr-mst">
+                    <thead><tr><th>Status</th><th>Step</th><th class="r">Weight</th><th>Due</th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{krw.ms.rows}}" as="mst" hint-placeholder-count="3">
+                        <tr>
+                          <td class="kr-mst-s">
+                            <sc-if value="{{mst.binary}}" hint-placeholder-val="{{true}}"><label class="check"><input class="cb" type="checkbox" checked="{{mst.done}}" disabled="{{mst.off}}" onChange="{{mst.onCheck}}" aria-label="{{mst.checkLabel}}"><span class="sub">Done</span></label></sc-if>
+                            <sc-if value="{{mst.partial}}" hint-placeholder-val="{{false}}">
+                              <sc-if value="{{mst.editing}}" hint-placeholder-val="{{false}}"><input class="in sm num kr-cell" inputMode="decimal" value="{{mst.cellVal}}" onChange="{{mst.onCell}}" onKeyDown="{{mst.onCellKey}}" onBlur="{{mst.onCellBlur}}" aria-label="{{mst.cellLabel}}" autoFocus=""></sc-if>
+                              <sc-if value="{{mst.notEditing}}" hint-placeholder-val="{{true}}">
+                                <sc-if value="{{mst.canCell}}" hint-placeholder-val="{{true}}"><button class="kr-cellbtn" type="button" title="Change completion" aria-label="{{mst.cellLabel}}" onClick="{{mst.startCell}}">{{mst.pct}}</button></sc-if>
+                                <sc-if value="{{mst.off}}" hint-placeholder-val="{{false}}"><span>{{mst.pct}}</span></sc-if>
+                              </sc-if>
+                            </sc-if>
+                          </td>
+                          <td><span class="kr-mst-n">{{mst.name}}</span><sc-if value="{{mst.partial}}" hint-placeholder-val="{{false}}"><span class="tag kr-contrib" title="What this step adds to the score now">adds {{mst.contrib}}</span></sc-if></td>
+                          <td class="r num">{{mst.weight}}<sc-if value="{{mst.auto}}" hint-placeholder-val="{{false}}"><span class="faint small"> auto</span></sc-if></td>
+                          <td class="num">{{mst.due}}<sc-if value="{{mst.overdue}}" hint-placeholder-val="{{false}}"><span class="st t-bad kr-od"><span class="dot"></span>Overdue</span></sc-if></td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                  <div class="kr-ms-foot"><span class="sub">Sum of weights</span><span class="strong num">{{krw.ms.sum}}</span></div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{krw.isSub}}" hint-placeholder-val="{{false}}">
+            <div class="kr-subs">
+              <sc-if value="{{krw.hasSubs}}" hint-placeholder-val="{{true}}">
+                <div class="tbox">
+                  <table class="tbl">
+                    <thead><tr><th>Sub-key result</th><th class="r">Weight</th><th>Tracking</th><th>Measured</th><th class="r">Score</th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{krw.subs}}" as="sbr" hint-placeholder-count="2">
+                        <tr><td>{{sbr.name}}</td><td class="r num">{{sbr.weight}}</td><td>{{sbr.meta}}</td><td>{{sbr.measured}}</td><td class="r"><span class="{{sbr.scoreCls}}" title="{{sbr.scoreTitle}}" aria-label="{{sbr.scoreTitle}}"><span class="dot"></span>{{sbr.score}}</span></td></tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </sc-if>
+              <sc-if value="{{krw.noSubs}}" hint-placeholder-val="{{false}}"><div class="note">No sub-key results. Edit the key result to add them.</div></sc-if>
+              <div class="sub">Scores as the weighted mean of its sub-key results. This is a legacy tracking type; edit the key result to change them.</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{krw.showKpis}}" hint-placeholder-val="{{false}}">
+            <div class="kr-kpis">
+              <sc-if value="{{krw.hasKpiNote}}" hint-placeholder-val="{{false}}"><div class="note">{{krw.kpiNote}}</div></sc-if>
+              <!--@include mods/kpi/part-table.html KT=krw.kt-->
+            </div>
+          </sc-if>
+          <sc-if value="{{krw.canEdit}}" hint-placeholder-val="{{true}}">
+            <div class="kr-foot"><button class="btn xs q" type="button" onClick="{{krw.edit}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit key result</button></div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-for>
+</section>

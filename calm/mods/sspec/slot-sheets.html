@@ -1,0 +1,269 @@
+<sc-if value="{{sspec.specSheet}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{sspec.specSheet.title}}</h2><span class="sub">{{sspec.specSheet.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sspec.specSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <section class="sh-sec">
+      <label class="fld">Specification<input class="in" value="{{sspec.specSheet.statement}}" placeholder="e.g. Peak power density ≥ 1.2 W/cm²" onChange="{{sspec.specSheet.onStatement}}" onKeyDown="{{sspec.specSheet.onKey}}" autoFocus=""></label>
+      <div class="fld"><span class="lab">Tracking type</span>
+        <div class="seg" role="group" aria-label="Tracking type"><sc-for list="{{sspec.specSheet.tracks}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+      </div>
+    </section>
+    <sc-if value="{{sspec.specSheet.isPct}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <label class="fld">Progress<div class="row g12"><input type="range" min="0" max="100" step="1" class="grow" aria-label="Progress" value="{{sspec.specSheet.progress}}" onChange="{{sspec.specSheet.onProgress}}"><span class="strong num sspec-pct">{{sspec.specSheet.progressText}}</span></div></label>
+        <div class="hint">The specification scores its progress directly.</div>
+      </section>
+    </sc-if>
+    <sc-if value="{{sspec.specSheet.isKpi}}" hint-placeholder-val="{{false}}">
+      <section class="sh-sec">
+        <h3>Primary metric</h3>
+        <div class="hint">{{sspec.specSheet.kpiHint}}</div>
+        <sc-if value="{{sspec.specSheet.hasLinkedNote}}" hint-placeholder-val="{{false}}"><div class="note t-info">{{sspec.specSheet.linkedNote}}</div></sc-if>
+        <div class="fld"><span class="lab">Target type</span>
+          <div class="seg" role="group" aria-label="Target type"><sc-for list="{{sspec.specSheet.types}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+        </div>
+        <sc-if value="{{sspec.specSheet.isStat}}" hint-placeholder-val="{{false}}">
+          <div class="grid2">
+            <label class="fld">Read count<input class="in num" inputMode="numeric" placeholder="e.g. 10" value="{{sspec.specSheet.readCount}}" onChange="{{sspec.specSheet.onReadCount}}" onKeyDown="{{sspec.specSheet.onKey}}"></label>
+            <label class="fld">Statistic<select class="sel" value="{{sspec.specSheet.statistic}}" onChange="{{sspec.specSheet.onStatistic}}"><sc-for list="{{sspec.specSheet.stats}}" as="o" hint-placeholder-count="7"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          </div>
+        </sc-if>
+        <sc-if value="{{sspec.specSheet.notBin}}" hint-placeholder-val="{{true}}">
+          <div class="fld"><span class="lab">Direction</span>
+            <div class="seg" role="group" aria-label="Direction"><sc-for list="{{sspec.specSheet.dirs}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+          </div>
+          <div class="grid3">
+            <sc-if value="{{sspec.specSheet.showTarget}}" hint-placeholder-val="{{true}}"><label class="fld">Target<input class="in num" inputMode="decimal" placeholder="e.g. 1.2" value="{{sspec.specSheet.target}}" onChange="{{sspec.specSheet.onTarget}}" onKeyDown="{{sspec.specSheet.onKey}}"></label></sc-if>
+            <sc-if value="{{sspec.specSheet.showRange}}" hint-placeholder-val="{{false}}">
+              <label class="fld">Range low<input class="in num" inputMode="decimal" placeholder="e.g. 2" value="{{sspec.specSheet.lo}}" onChange="{{sspec.specSheet.onLo}}" onKeyDown="{{sspec.specSheet.onKey}}"></label>
+              <label class="fld">Range high<input class="in num" inputMode="decimal" placeholder="e.g. 4" value="{{sspec.specSheet.hi}}" onChange="{{sspec.specSheet.onHi}}" onKeyDown="{{sspec.specSheet.onKey}}"></label>
+            </sc-if>
+            <label class="fld">Unit<input class="in" placeholder="e.g. W/cm²" value="{{sspec.specSheet.unit}}" onChange="{{sspec.specSheet.onUnit}}" onKeyDown="{{sspec.specSheet.onKey}}"></label>
+          </div>
+        </sc-if>
+        <sc-if value="{{sspec.specSheet.isBin}}" hint-placeholder-val="{{false}}"><div class="hint">A binary metric passes when its reading is 1 (met) and fails at 0 (not met). It has no direction, target or unit.</div></sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{sspec.specSheet.isSub}}" hint-placeholder-val="{{false}}">
+      <section class="sh-sec">
+        <div class="row"><h3 class="grow">Sub-specifications</h3><span class="sub">{{sspec.specSheet.subScore}}</span><button class="btn sm" type="button" onClick="{{sspec.specSheet.addSub}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add sub-spec</button></div>
+        <sc-if value="{{sspec.specSheet.noSubs}}" hint-placeholder-val="{{false}}"><div class="sub">None yet. Add a weighted sub-specification.</div></sc-if>
+        <sc-if value="{{sspec.specSheet.hasSubs}}" hint-placeholder-val="{{true}}">
+          <div class="tbox">
+            <sc-for list="{{sspec.specSheet.subs}}" as="x" hint-placeholder-count="2">
+              <div class="li"><div class="col g2 grow"><button class="lnk ink" type="button" title="Edit sub-specification" aria-label="{{x.editLabel}}" onClick="{{x.edit}}">{{x.name}}</button><span class="sub">{{x.meta}}</span></div><button class="btn xs q" type="button" aria-label="{{x.removeLabel}}" onClick="{{x.remove}}">Remove</button></div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div class="hint">The specification scores the weighted mean of its sub-specifications; one without a score is skipped.</div>
+      </section>
+    </sc-if>
+    <section class="sh-sec">
+      <label class="fld">Notes<textarea class="ta" rows="3" placeholder="Context, rationale, open questions" value="{{sspec.specSheet.notes}}" onChange="{{sspec.specSheet.onNotes}}"></textarea></label>
+    </section>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err sspec-ferr" role="alert">{{ui.sheetErr}}</div></sc-if>
+    <button class="btn pri" type="button" onClick="{{sspec.specSheet.save}}">{{sspec.specSheet.saveLabel}}</button>
+    <button class="btn q" type="button" onClick="{{sspec.specSheet.cancel}}">Cancel</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{sspec.subSheet}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+    <div class="sh-title"><h2>{{sspec.subSheet.title}}</h2><span class="sub">{{sspec.subSheet.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sspec.subSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <section class="sh-sec">
+      <div class="fld"><span class="lab">Tracking type</span>
+        <div class="seg" role="group" aria-label="Sub-spec tracking type"><sc-for list="{{sspec.subSheet.types}}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+      </div>
+      <div class="grid2">
+        <label class="fld">Sub-spec name<input class="in" placeholder="e.g. Achieve power density" value="{{sspec.subSheet.name}}" onChange="{{sspec.subSheet.onName}}" onKeyDown="{{sspec.subSheet.onKey}}" autoFocus=""></label>
+        <label class="fld">Weight<input class="in num" inputMode="decimal" placeholder="1" value="{{sspec.subSheet.weight}}" onChange="{{sspec.subSheet.onWeight}}" onKeyDown="{{sspec.subSheet.onKey}}"></label>
+      </div>
+    </section>
+    <sc-if value="{{sspec.subSheet.isPct}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <label class="fld">Initial progress<div class="row g12"><input type="range" min="0" max="100" step="1" class="grow" aria-label="Initial progress" value="{{sspec.subSheet.progress}}" onChange="{{sspec.subSheet.onProgress}}"><span class="strong num sspec-pct">{{sspec.subSheet.progressText}}</span></div></label>
+      </section>
+    </sc-if>
+    <sc-if value="{{sspec.subSheet.showKpi}}" hint-placeholder-val="{{false}}">
+      <section class="sh-sec">
+        <sc-if value="{{sspec.subSheet.isStat}}" hint-placeholder-val="{{false}}">
+          <div class="grid2">
+            <label class="fld">Read count<input class="in num" inputMode="numeric" placeholder="e.g. 10" value="{{sspec.subSheet.readCount}}" onChange="{{sspec.subSheet.onReadCount}}" onKeyDown="{{sspec.subSheet.onKey}}"></label>
+            <label class="fld">Statistic<select class="sel" value="{{sspec.subSheet.statistic}}" onChange="{{sspec.subSheet.onStatistic}}"><sc-for list="{{sspec.subSheet.stats}}" as="o" hint-placeholder-count="7"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          </div>
+        </sc-if>
+        <div class="fld"><span class="lab">Direction</span>
+          <div class="seg" role="group" aria-label="Sub-spec direction"><sc-for list="{{sspec.subSheet.dirs}}" as="t" hint-placeholder-count="2"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+        </div>
+        <div class="grid2">
+          <label class="fld">Target<input class="in num" inputMode="decimal" placeholder="e.g. 1.2" value="{{sspec.subSheet.target}}" onChange="{{sspec.subSheet.onTarget}}" onKeyDown="{{sspec.subSheet.onKey}}"></label>
+          <label class="fld">Unit<input class="in" placeholder="e.g. W/cm²" value="{{sspec.subSheet.unit}}" onChange="{{sspec.subSheet.onUnit}}" onKeyDown="{{sspec.subSheet.onKey}}"></label>
+        </div>
+        <sc-if value="{{sspec.subSheet.isDemo}}" hint-placeholder-val="{{false}}">
+          <label class="fld">Current measurement<input class="in num" inputMode="decimal" placeholder="Latest measured value" value="{{sspec.subSheet.current}}" onChange="{{sspec.subSheet.onCurrent}}" onKeyDown="{{sspec.subSheet.onKey}}"></label>
+        </sc-if>
+        <sc-if value="{{sspec.subSheet.isStat}}" hint-placeholder-val="{{false}}">
+          <label class="fld"><span class="lab">Readings<span class="hint">Newest first. Separate with commas, spaces or new lines.</span></span><textarea class="ta" rows="2" placeholder="e.g. 1.22, 1.18, 1.25" value="{{sspec.subSheet.readings}}" onChange="{{sspec.subSheet.onReadings}}"></textarea></label>
+          <div class="sub" aria-live="polite">{{sspec.subSheet.preview}}</div>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{sspec.subSheet.isBin}}" hint-placeholder-val="{{false}}">
+      <section class="sh-sec">
+        <div class="fld"><span class="lab">Status</span>
+          <div class="seg" role="group" aria-label="Status"><sc-for list="{{sspec.subSheet.mets}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+        </div>
+      </section>
+    </sc-if>
+    <div class="hint">Saved into the specification you are editing. Nothing is stored until you save the specification.</div>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err sspec-ferr" role="alert">{{ui.sheetErr}}</div></sc-if>
+    <button class="btn pri" type="button" onClick="{{sspec.subSheet.save}}">Save sub-spec</button>
+    <button class="btn q" type="button" onClick="{{sspec.subSheet.cancel}}">Cancel</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{sspec.metricSheet}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>{{sspec.metricSheet.title}}</h2><span class="sub">{{sspec.metricSheet.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sspec.metricSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <section class="sh-sec">
+      <label class="fld">Name<input class="in" placeholder="{{sspec.metricSheet.namePh}}" value="{{sspec.metricSheet.name}}" onChange="{{sspec.metricSheet.onName}}" onKeyDown="{{sspec.metricSheet.onKey}}" autoFocus=""></label>
+      <div class="fld"><span class="lab">Target type</span>
+        <div class="seg" role="group" aria-label="Metric target type"><sc-for list="{{sspec.metricSheet.types}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+      </div>
+      <sc-if value="{{sspec.metricSheet.isStat}}" hint-placeholder-val="{{false}}">
+        <div class="grid2">
+          <label class="fld">Read count<input class="in num" inputMode="numeric" placeholder="e.g. 10" value="{{sspec.metricSheet.readCount}}" onChange="{{sspec.metricSheet.onReadCount}}" onKeyDown="{{sspec.metricSheet.onKey}}"></label>
+          <label class="fld">Statistic<select class="sel" value="{{sspec.metricSheet.statistic}}" onChange="{{sspec.metricSheet.onStatistic}}"><sc-for list="{{sspec.metricSheet.stats}}" as="o" hint-placeholder-count="7"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+        </div>
+      </sc-if>
+      <sc-if value="{{sspec.metricSheet.notBin}}" hint-placeholder-val="{{true}}">
+        <div class="fld"><span class="lab">Direction</span>
+          <div class="seg" role="group" aria-label="Metric direction"><sc-for list="{{sspec.metricSheet.dirs}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+        </div>
+        <div class="grid3">
+          <sc-if value="{{sspec.metricSheet.showTarget}}" hint-placeholder-val="{{true}}"><label class="fld">Target<input class="in num" inputMode="decimal" placeholder="e.g. 0.25" value="{{sspec.metricSheet.target}}" onChange="{{sspec.metricSheet.onTarget}}" onKeyDown="{{sspec.metricSheet.onKey}}"></label></sc-if>
+          <sc-if value="{{sspec.metricSheet.showRange}}" hint-placeholder-val="{{false}}">
+            <label class="fld">Range low<input class="in num" inputMode="decimal" placeholder="e.g. 2" value="{{sspec.metricSheet.lo}}" onChange="{{sspec.metricSheet.onLo}}" onKeyDown="{{sspec.metricSheet.onKey}}"></label>
+            <label class="fld">Range high<input class="in num" inputMode="decimal" placeholder="e.g. 4" value="{{sspec.metricSheet.hi}}" onChange="{{sspec.metricSheet.onHi}}" onKeyDown="{{sspec.metricSheet.onKey}}"></label>
+          </sc-if>
+          <label class="fld">Unit<input class="in" placeholder="e.g. mg/cm²" value="{{sspec.metricSheet.unit}}" onChange="{{sspec.metricSheet.onUnit}}" onKeyDown="{{sspec.metricSheet.onKey}}"></label>
+        </div>
+      </sc-if>
+      <sc-if value="{{sspec.metricSheet.isBin}}" hint-placeholder-val="{{false}}"><div class="hint">A binary metric passes when its reading is 1 (met) and fails at 0 (not met).</div></sc-if>
+    </section>
+    <sc-if value="{{sspec.metricSheet.isComp}}" hint-placeholder-val="{{false}}">
+      <section class="sh-sec">
+        <label class="fld">Gates a product specification (optional)<select class="sel" value="{{sspec.metricSheet.gates}}" onChange="{{sspec.metricSheet.onGates}}"><sc-for list="{{sspec.metricSheet.gateOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+        <div class="hint">A gating spec measures the same requirement a different way. It shows as a gate on that product specification, keeps its own target and readings, and does not count in that specification’s score.</div>
+        <label class="fld">Notes<textarea class="ta" rows="3" placeholder="Context, rationale, open questions" value="{{sspec.metricSheet.notes}}" onChange="{{sspec.metricSheet.onNotes}}"></textarea></label>
+      </section>
+    </sc-if>
+    <div class="hint">{{sspec.metricSheet.readHint}}</div>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err sspec-ferr" role="alert">{{ui.sheetErr}}</div></sc-if>
+    <button class="btn pri" type="button" onClick="{{sspec.metricSheet.save}}">{{sspec.metricSheet.saveLabel}}</button>
+    <button class="btn q" type="button" onClick="{{sspec.metricSheet.cancel}}">Cancel</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{sspec.linkSheet}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>{{sspec.linkSheet.title}}</h2><span class="sub">{{sspec.linkSheet.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sspec.linkSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <sc-if value="{{sspec.linkSheet.noCands}}" hint-placeholder-val="{{false}}"><div class="note">{{sspec.linkSheet.emptyText}}</div></sc-if>
+    <sc-if value="{{sspec.linkSheet.hasCands}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <h3>Link to a product, specification, or another product’s KPI</h3>
+        <div class="col g10" role="radiogroup" aria-label="Metric to link to">
+          <sc-for list="{{sspec.linkSheet.groups}}" as="g" hint-placeholder-count="2">
+            <div class="col g2">
+              <div class="mh sspec-gh">{{g.label}}</div>
+              <sc-for list="{{g.items}}" as="c" hint-placeholder-count="2">
+                <button class="{{c.cls}}" type="button" role="radio" aria-checked="{{c.on}}" onClick="{{c.pick}}"><span class="sspec-radio" aria-hidden="true"></span><span class="col g2 grow"><span class="strong">{{c.name}}</span><sc-if value="{{c.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{c.sub}}</span></sc-if></span><sc-if value="{{c.defText}}" hint-placeholder-val="{{false}}"><span class="sub">{{c.defText}}</span></sc-if></button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section class="sh-sec">
+        <div class="fld"><span class="lab">Relationship</span>
+          <div class="seg" role="group" aria-label="Relationship"><sc-for list="{{sspec.linkSheet.rels}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+        </div>
+        <div class="hint">{{sspec.linkSheet.relHelp}}</div>
+        <sc-if value="{{sspec.linkSheet.hasWarn}}" hint-placeholder-val="{{false}}"><div class="note t-warn" role="status">{{sspec.linkSheet.warn}}</div></sc-if>
+      </section>
+    </sc-if>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err sspec-ferr" role="alert">{{ui.sheetErr}}</div></sc-if>
+    <sc-if value="{{sspec.linkSheet.hasCands}}" hint-placeholder-val="{{true}}"><button class="btn pri" type="button" onClick="{{sspec.linkSheet.save}}">Link</button></sc-if>
+    <button class="btn q" type="button" onClick="{{sspec.linkSheet.cancel}}">Cancel</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{sspec.overrideSheet}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>{{sspec.overrideSheet.title}}</h2><span class="sub">{{sspec.overrideSheet.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{sspec.overrideSheet.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <section class="sh-sec">
+      <h3>Inherited</h3>
+      <div class="kv">
+        <span class="k">Metric</span><span class="strong">{{sspec.overrideSheet.inhName}}</span>
+        <span class="k">Direction</span><span>{{sspec.overrideSheet.inhDir}}</span>
+        <span class="k">Unit</span><span>{{sspec.overrideSheet.inhUnit}}</span>
+        <span class="k">From</span><span>{{sspec.overrideSheet.inhFrom}}</span>
+        <span class="k">Inherited target</span><span class="num">{{sspec.overrideSheet.inhTarget}}</span>
+      </div>
+    </section>
+    <section class="sh-sec">
+      <div class="fld"><span class="lab">Relationship</span>
+        <div class="seg" role="group" aria-label="Relationship"><sc-for list="{{sspec.overrideSheet.rels}}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for></div>
+      </div>
+      <div class="hint">{{sspec.overrideSheet.relHelp}}</div>
+      <div class="grid3">
+        <label class="fld">Priority<input class="in num" inputMode="numeric" value="{{sspec.overrideSheet.priority}}" onChange="{{sspec.overrideSheet.onPriority}}" onKeyDown="{{sspec.overrideSheet.onKey}}"></label>
+      </div>
+      <div class="hint">When several linked readings compete, the higher priority wins.</div>
+    </section>
+    <section class="sh-sec">
+      <sc-if value="{{sspec.overrideSheet.isDirect}}" hint-placeholder-val="{{false}}"><div class="note">A direct link mirrors the parent’s target and value exactly, so there is no override here.</div></sc-if>
+      <sc-if value="{{sspec.overrideSheet.isPlain}}" hint-placeholder-val="{{true}}">
+        <div class="grid2"><label class="fld">Override target<input class="in num" inputMode="decimal" placeholder="{{sspec.overrideSheet.targetPh}}" value="{{sspec.overrideSheet.target}}" onChange="{{sspec.overrideSheet.onTarget}}" onKeyDown="{{sspec.overrideSheet.onKey}}"></label></div>
+        <div class="hint">Leave it blank to inherit the parent’s target.</div>
+      </sc-if>
+      <sc-if value="{{sspec.overrideSheet.isRange}}" hint-placeholder-val="{{false}}">
+        <div class="grid2">
+          <label class="fld">Override low<input class="in num" inputMode="decimal" value="{{sspec.overrideSheet.lo}}" onChange="{{sspec.overrideSheet.onLo}}" onKeyDown="{{sspec.overrideSheet.onKey}}"></label>
+          <label class="fld">Override high<input class="in num" inputMode="decimal" value="{{sspec.overrideSheet.hi}}" onChange="{{sspec.overrideSheet.onHi}}" onKeyDown="{{sspec.overrideSheet.onKey}}"></label>
+        </div>
+        <div class="hint">Fill both to override the range; leave both blank to inherit it.</div>
+      </sc-if>
+    </section>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err sspec-ferr" role="alert">{{ui.sheetErr}}</div></sc-if>
+    <button class="btn pri" type="button" onClick="{{sspec.overrideSheet.save}}">Save link</button>
+    <button class="btn q" type="button" onClick="{{sspec.overrideSheet.cancel}}">Cancel</button>
+  </div>
+</sc-if>

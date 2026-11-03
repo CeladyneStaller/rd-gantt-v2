@@ -1,0 +1,133 @@
+{
+  "users": [
+    {
+      "email": "corey@celadyne.com",
+      "name": "Corey Staller",
+      "role": "admin",
+      "orgRole": "cto",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-corey-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-corey",
+      "iterations": 1
+    },
+    {
+      "email": "toru@celadyne.com",
+      "name": "Toru Hayashi",
+      "role": "user",
+      "orgRole": "lead",
+      "leadOf": [
+        "DIV-EL"
+      ],
+      "leadUnits": [],
+      "leadDivisions": [
+        "DIV-EL"
+      ],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-toru-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-toru",
+      "iterations": 1
+    },
+    {
+      "email": "erin@celadyne.com",
+      "name": "Erin Walsh",
+      "role": "user",
+      "orgRole": "lead",
+      "leadOf": [
+        "DIV-FC"
+      ],
+      "leadUnits": [],
+      "leadDivisions": [
+        "DIV-FC"
+      ],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-erin-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-erin",
+      "iterations": 1
+    },
+    {
+      "email": "maya@celadyne.com",
+      "name": "Maya Okafor",
+      "role": "user",
+      "orgRole": "ic",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-maya-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-maya",
+      "iterations": 1
+    },
+    {
+      "email": "sam@celadyne.com",
+      "name": "Sam Rivera",
+      "role": "user",
+      "orgRole": "lead",
+      "leadOf": [
+        "DIV-BD"
+      ],
+      "leadUnits": [],
+      "leadDivisions": [
+        "DIV-BD"
+      ],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-sam-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-sam",
+      "iterations": 1
+    },
+    {
+      "email": "priya@celadyne.com",
+      "name": "Priya Natarajan",
+      "role": "user",
+      "orgRole": "ic",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-priya-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-priya",
+      "iterations": 1
+    },
+    {
+      "email": "ken@celadyne.com",
+      "name": "Ken Albright",
+      "role": "user",
+      "orgRole": "ic",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-ken-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-ken",
+      "iterations": 1
+    },
+    {
+      "email": "dana@celadyne.com",
+      "name": "Dana Whitcomb",
+      "role": "admin",
+      "orgRole": "ceo",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": false,
+      "pinHash": "FAKE-TEST-PINHASH-dana-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-dana",
+      "iterations": 1
+    },
+    {
+      "email": "lena@celadyne.com",
+      "name": "Lena Fischer",
+      "role": "user",
+      "orgRole": "ic",
+      "leadOf": [],
+      "leadUnits": [],
+      "leadDivisions": [],
+      "disabled": true,
+      "pinHash": "FAKE-TEST-PINHASH-lena-not-a-real-credential",
+      "salt": "FAKE-TEST-SALT-lena",
+      "iterations": 1
+    }
+  ]
+}

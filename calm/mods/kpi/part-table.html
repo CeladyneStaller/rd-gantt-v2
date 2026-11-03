@@ -1,0 +1,92 @@
+<div class="kpi-t" data-k="kpi-t:{{$KT.key}}">
+<sc-if value="{{$KT.has}}" hint-placeholder-val="{{true}}">
+<div class="kpi-box">
+<table class="kpi-tbl">
+  <thead>
+    <tr>
+      <th scope="col">{{$KT.head.name}}</th>
+      <th scope="col">{{$KT.head.target}}</th>
+      <th scope="col">Current</th>
+      <th scope="col" class="r">Score</th>
+      <th scope="col">Status</th>
+      <sc-if value="{{$KT.showActs}}" hint-placeholder-val="{{true}}"><th scope="col" class="kpi-acts"><span class="kpi-sr">Actions</span></th></sc-if>
+    </tr>
+  </thead>
+  <tbody>
+    <sc-for list="{{$KT.rows}}" as="kpi_r" hint-placeholder-count="2">
+      <tr class="{{kpi_r.rowCls}}" data-k="{{kpi_r.dk}}">
+        <td class="kpi-name">
+          <sc-if value="{{kpi_r.nameBtn}}" hint-placeholder-val="{{true}}"><button class="lnk ink kpi-nm" type="button" title="{{kpi_r.openTitle}}" onClick="{{kpi_r.open}}">{{kpi_r.name}}</button></sc-if>
+          <sc-if value="{{!kpi_r.nameBtn}}" hint-placeholder-val="{{false}}"><span class="kpi-nm">{{kpi_r.name}}</span></sc-if>
+          <sc-if value="{{kpi_r.hasBadges}}" hint-placeholder-val="{{false}}"><span class="kpi-badges"><sc-for list="{{kpi_r.badges}}" as="kpi_b" hint-placeholder-count="1"><span class="tag" title="{{kpi_b.title}}">{{kpi_b.label}}</span></sc-for></span></sc-if>
+        </td>
+        <td class="kpi-crit"><span>{{kpi_r.crit}}</span><sc-if value="{{kpi_r.hasCritTag}}" hint-placeholder-val="{{false}}"> <span class="tag">{{kpi_r.critTag}}</span></sc-if></td>
+        <td class="kpi-cur">
+          <sc-if value="{{kpi_r.editing}}" hint-placeholder-val="{{false}}">
+            <!--@include mods/kpi/part-post.html KE=kpi_r.ed-->
+          </sc-if>
+          <sc-if value="{{kpi_r.valBtn}}" hint-placeholder-val="{{true}}"><button class="{{kpi_r.curCls}}" type="button" aria-label="{{kpi_r.valAria}}" aria-expanded="{{kpi_r.valExpanded}}" title="{{kpi_r.valTitle}}" onClick="{{kpi_r.valClick}}">{{kpi_r.valText}}</button></sc-if>
+          <sc-if value="{{kpi_r.showStatic}}" hint-placeholder-val="{{false}}"><span class="{{kpi_r.curCls}}" title="{{kpi_r.curTitle}}">{{kpi_r.cur}}</span></sc-if>
+          <sc-if value="{{kpi_r.hasSub}}" hint-placeholder-val="{{false}}"><div class="{{kpi_r.subCls}}">{{kpi_r.sub}}</div></sc-if>
+<!--@if exec-->
+          <sc-if value="{{kpi_r.chip}}" hint-placeholder-val="{{false}}"><button class="kpi-chip" type="button" aria-expanded="{{kpi_r.chipOpen}}" aria-label="{{kpi_r.chipAria}}" title="{{kpi_r.chipTitle}}" onClick="{{kpi_r.toggleProv}}"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg>Analysis</button></sc-if>
+<!--@endif-->
+        </td>
+        <td class="kpi-score">
+          <div class="kpi-sc">
+            <span class="{{kpi_r.scoreCls}}">{{kpi_r.score}}</span>
+            <sc-if value="{{kpi_r.hasScore}}" hint-placeholder-val="{{true}}"><span class="track sm kpi-bar"><span class="{{kpi_r.barCls}}" style="{{kpi_r.barFill}}"></span><sc-if value="{{kpi_r.hasHatch}}" hint-placeholder-val="{{false}}"><span class="hatch" style="{{kpi_r.hatchStyle}}"></span></sc-if></span></sc-if>
+          </div>
+          <sc-if value="{{kpi_r.partial}}" hint-placeholder-val="{{false}}"><div class="kpi-math" title="{{kpi_r.mathTitle}}">{{kpi_r.math}}</div></sc-if>
+        </td>
+        <td class="kpi-stc"><div class="kpi-stw"><span class="{{kpi_r.stCls}}"><span class="dot"></span>{{kpi_r.stWord}}</span><sc-if value="{{kpi_r.partial}}" hint-placeholder-val="{{false}}"><span class="tag">Partial</span></sc-if></div></td>
+        <sc-if value="{{$KT.showActs}}" hint-placeholder-val="{{true}}">
+          <td class="kpi-acts">
+            <sc-if value="{{kpi_r.hasMenu}}" hint-placeholder-val="{{true}}">
+              <div class="above">
+                <button class="btn xs ic q" type="button" aria-label="{{kpi_r.menuAria}}" title="{{kpi_r.menuAria}}" aria-haspopup="menu" aria-expanded="{{kpi_r.menuOpen}}" onClick="{{kpi_r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                <sc-if value="{{kpi_r.menuOpen}}" hint-placeholder-val="{{false}}">
+                  <div class="menu r kpi-menu" role="menu">
+                    <sc-for list="{{kpi_r.menu}}" as="kpi_m" hint-placeholder-count="3"><button class="{{kpi_m.cls}}" type="button" role="menuitem" onClick="{{kpi_m.fn}}">{{kpi_m.label}}</button></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </td>
+        </sc-if>
+      </tr>
+      <sc-if value="{{kpi_r.drawer}}" hint-placeholder-val="{{false}}">
+        <tr class="kpi-drow">
+          <td colSpan="{{$KT.cols}}">
+            <!--@include mods/kpi/part-drawer.html KD=kpi_r.drawer-->
+          </td>
+        </tr>
+      </sc-if>
+<!--@if exec-->
+      <sc-if value="{{kpi_r.provOpen}}" hint-placeholder-val="{{false}}">
+        <tr class="kpi-prow">
+          <td colSpan="{{$KT.cols}}">
+            <div class="kpi-prov" role="region" aria-label="{{kpi_r.prov.title}}">
+              <span class="strong small">{{kpi_r.prov.title}}</span>
+              <div class="kv"><sc-for list="{{kpi_r.prov.rows}}" as="kpi_p" hint-placeholder-count="6"><span class="k">{{kpi_p.k}}</span><span>{{kpi_p.v}}</span></sc-for></div>
+            </div>
+          </td>
+        </tr>
+      </sc-if>
+<!--@endif-->
+    </sc-for>
+  </tbody>
+</table>
+</div>
+</sc-if>
+<sc-if value="{{$KT.empty}}" hint-placeholder-val="{{false}}"><div class="kpi-empty">{{$KT.emptyText}}</div></sc-if>
+<sc-if value="{{$KT.hasFoot}}" hint-placeholder-val="{{true}}">
+  <div class="kpi-foot">
+    <sc-if value="{{$KT.canAdd}}" hint-placeholder-val="{{true}}"><button class="btn xs q" type="button" onClick="{{$KT.add}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{$KT.addLabel}}</button></sc-if>
+    <sc-if value="{{$KT.canLink}}" hint-placeholder-val="{{true}}"><button class="btn xs q" type="button" onClick="{{$KT.link}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>{{$KT.linkLabel}}</button></sc-if>
+<!--@if exec-->
+    <sc-if value="{{$KT.canConnect}}" hint-placeholder-val="{{false}}"><button class="btn xs q" type="button" onClick="{{$KT.connect}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg>Connect data</button></sc-if>
+<!--@endif-->
+  </div>
+</sc-if>
+</div>

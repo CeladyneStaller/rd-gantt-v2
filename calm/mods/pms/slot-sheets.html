@@ -1,0 +1,130 @@
+<sc-if value="{{pms.sheet}}" hint-placeholder-val="{{false}}">
+  <div class="pms-sheet" data-k="milestone-report" onKeyDown="{{pms.sheet.key}}">
+  <div class="sh-head">
+    <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{false}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+    <div class="sh-title"><h2>{{pms.sheet.title}}</h2><span class="sub">{{pms.sheet.sub}}</span></div>
+    <sc-if value="{{pms.sheet.canLock}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" aria-label="{{pms.sheet.lockAria}}" title="{{pms.sheet.lockAria}}" onClick="{{pms.sheet.toggleLock}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>{{pms.sheet.lockLabel}}</button></sc-if>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{pms.sheet.close}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body pms-body">
+    <sc-if value="{{pms.sheet.missing}}" hint-placeholder-val="{{false}}"><div class="empty">This milestone no longer exists, so its report can’t be shown.</div></sc-if>
+    <sc-if value="{{pms.sheet.ok}}" hint-placeholder-val="{{true}}">
+      <sc-if value="{{pms.sheet.roNote}}" hint-placeholder-val="{{false}}"><div class="note t-info pms-ronote">Read-only view. You can read and print this report, but editing is off.</div></sc-if>
+      <article class="pms-doc" aria-label="Milestone report document">
+        <header class="pms-dhead">
+          <div class="col g10 grow">
+            <span class="pms-lbl">Project</span>
+            <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in pms-proj" aria-label="Project" value="{{pms.sheet.project.value}}" placeholder="{{pms.sheet.project.ph}}" onChange="{{pms.sheet.project.set}}"></sc-if>
+            <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><div class="pms-proj pms-txt">{{pms.sheet.project.text}}</div></sc-if>
+            <div class="row wrap pms-tagrow"><span class="tag">{{pms.sheet.tag}}</span><span class="pms-msname">{{pms.sheet.msName}}</span><span class="{{pms.sheet.achCls}}"><span class="dot"></span>{{pms.sheet.achText}}</span></div>
+          </div>
+          <div class="pms-metas">
+            <div class="pms-meta"><span class="pms-lbl">Date achieved</span><span class="pms-val">{{pms.sheet.dateAchieved}}</span></div>
+            <div class="pms-meta"><span class="pms-lbl">Author</span>
+              <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm" aria-label="Author" value="{{pms.sheet.author.value}}" placeholder="{{pms.sheet.author.ph}}" onChange="{{pms.sheet.author.set}}"></sc-if>
+              <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span class="pms-val">{{pms.sheet.author.text}}</span></sc-if>
+            </div>
+            <div class="pms-meta"><span class="pms-lbl">Version</span>
+              <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm" aria-label="Version" value="{{pms.sheet.version.value}}" placeholder="{{pms.sheet.version.ph}}" onChange="{{pms.sheet.version.set}}"></sc-if>
+              <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span class="pms-val">{{pms.sheet.version.text}}</span></sc-if>
+            </div>
+            <div class="pms-meta"><span class="pms-lbl">TRL / MRL</span><span class="pms-val">{{pms.sheet.trlmrl}}</span></div>
+          </div>
+        </header>
+        <section class="pms-sec">
+          <h3>What was demonstrated</h3>
+          <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><textarea class="ta" rows="4" aria-label="What was demonstrated" value="{{pms.sheet.demonstrated.value}}" placeholder="{{pms.sheet.demonstrated.ph}}" onChange="{{pms.sheet.demonstrated.set}}"></textarea></sc-if>
+          <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><div class="pms-txt pms-pre">{{pms.sheet.demonstrated.text}}</div></sc-if>
+        </section>
+        <section class="pms-sec">
+          <h3>Performance vs. targets</h3>
+          <sc-if value="{{pms.sheet.hasMetrics}}" hint-placeholder-val="{{true}}">
+            <table class="tbl pms-mt">
+              <thead><tr><th>Target KPI</th><th>Target</th><th>Measured</th><th>Result</th></tr></thead>
+              <tbody>
+                <sc-for list="{{pms.sheet.metrics}}" as="m" hint-placeholder-count="2">
+                  <tr>
+                    <td><div class="col g2"><span class="strong">{{m.name}}</span><sc-if value="{{m.hasSrc}}" hint-placeholder-val="{{true}}"><span class="sub">{{m.src}}</span></sc-if></div></td>
+                    <td class="num">{{m.target}}</td>
+                    <td>
+                      <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm pms-meas" aria-label="{{m.measuredLabel}}" value="{{m.measured}}" placeholder="{{m.measuredPh}}" onChange="{{m.set}}"></sc-if>
+                      <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span class="num">{{m.measuredText}}</span></sc-if>
+                    </td>
+                    <td><span class="{{m.resultCls}}"><span class="dot"></span>{{m.result}}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div class="hint">Result comes from the latest readings against each target: met at a score of 100, partial from 70.</div>
+          </sc-if>
+          <sc-if value="{{pms.sheet.noMetrics}}" hint-placeholder-val="{{false}}"><div class="muted">No targets on this milestone yet. Add them in the milestone editor’s Targets section.</div></sc-if>
+        </section>
+        <div class="pms-two">
+          <section class="pms-sec">
+            <h3>Key findings and learnings</h3>
+            <sc-for list="{{pms.sheet.findings}}" as="f" hint-placeholder-count="4">
+              <div class="pms-finding">
+                <span class="pms-fn">{{f.n}}</span>
+                <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><textarea class="ta pms-fta" rows="2" aria-label="{{f.label}}" value="{{f.value}}" placeholder="A finding or learning from the demonstration." onChange="{{f.set}}"></textarea></sc-if>
+                <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><div class="pms-txt pms-pre">{{f.text}}</div></sc-if>
+              </div>
+            </sc-for>
+          </section>
+          <section class="pms-sec">
+            <h3>Milestone context</h3>
+            <div class="kv">
+              <span class="k">Planned date</span><span>{{pms.sheet.planned}}</span>
+              <span class="k">Actual date</span><span>{{pms.sheet.actual}}</span>
+              <span class="k">TRL achieved</span><span>{{pms.sheet.trl}}</span>
+              <span class="k">MRL achieved</span><span>{{pms.sheet.mrl}}</span>
+              <span class="k">Linked objectives</span>
+              <span class="col g2">
+                <sc-for list="{{pms.sheet.linked}}" as="o" hint-placeholder-count="1"><span>{{o.text}}<sc-if value="{{o.hasQ}}" hint-placeholder-val="{{true}}"><span class="sub"> ({{o.q}})</span></sc-if></span></sc-for>
+                <sc-if value="{{pms.sheet.noLinked}}" hint-placeholder-val="{{false}}"><span>—</span></sc-if>
+              </span>
+            </div>
+          </section>
+        </div>
+        <section class="pms-sec">
+          <h3>Actions required before the next milestone</h3>
+          <table class="tbl pms-at">
+            <thead><tr><th>Action item</th><th>Owner</th><th>Due</th></tr></thead>
+            <tbody>
+              <sc-for list="{{pms.sheet.actions}}" as="a" hint-placeholder-count="3">
+                <tr>
+                  <td>
+                    <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm pms-full" aria-label="{{a.itemLabel}}" value="{{a.item}}" placeholder="An action arising from the demonstration" onChange="{{a.setItem}}"></sc-if>
+                    <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span>{{a.itemText}}</span></sc-if>
+                  </td>
+                  <td>
+                    <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm pms-full" aria-label="{{a.ownerLabel}}" value="{{a.owner}}" placeholder="Name" onChange="{{a.setOwner}}"></sc-if>
+                    <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span>{{a.ownerText}}</span></sc-if>
+                  </td>
+                  <td>
+                    <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><input class="in sm pms-full" aria-label="{{a.dueLabel}}" value="{{a.due}}" placeholder="2026-11-30" onChange="{{a.setDue}}"></sc-if>
+                    <sc-if value="{{pms.sheet.readonly}}" hint-placeholder-val="{{false}}"><span class="num">{{a.dueText}}</span></sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </section>
+        <footer class="pms-sigs">
+          <div class="pms-sigc"><div class="pms-sig"></div><span>Technical lead</span></div>
+          <div class="pms-sigc"><div class="pms-sig"></div><span>CTO / R&amp;D director</span></div>
+          <div class="pms-sigc"><div class="pms-sig"></div><span>Reviewer / sponsor</span></div>
+        </footer>
+      </article>
+    </sc-if>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{pms.sheet.ok}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{pms.sheet.print}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V3h10v6"></path><rect x="4" y="9" width="16" height="8" rx="2"></rect><path d="M7 14h10v7H7z"></path></svg>Print or save as PDF</button></sc-if>
+    <sc-if value="{{pms.sheet.lockedNote}}" hint-placeholder-val="{{false}}"><span class="st t-warn"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Locked. Unlock to edit.</span></sc-if>
+    <span class="sub">{{pms.sheet.savedText}}</span>
+    <div class="row push">
+      <button class="btn" type="button" onClick="{{pms.sheet.close}}">Close</button>
+      <sc-if value="{{pms.sheet.editable}}" hint-placeholder-val="{{true}}"><button class="btn pri" type="button" onClick="{{pms.sheet.save}}">Save report</button></sc-if>
+    </div>
+  </div>
+  </div>
+</sc-if>

@@ -1,0 +1,98 @@
+/* FMEA risk register (X-fmea). Kit tokens only; every class starts with fmea-.
+   No opacity or overflow on anything that contains a status menu or the rescore
+   popover: both would trap the menu under the shell's click-away scrim. */
+
+/* ---------- register ---------- */
+.fmea-legend{padding:0 20px 14px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:920px}
+.fmea-prob{display:flex;flex-direction:column;gap:12px;padding:16px 20px 18px;border-top:1px solid var(--line-2);min-width:0}
+.fmea-prob.is-focus{background:var(--accent-wash);box-shadow:inset 3px 0 0 var(--accent)}
+.fmea-ph{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 18px;min-width:0}
+.fmea-ptl{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 8px;min-width:0}
+.fmea-pt{font-size:15px;font-weight:600;line-height:1.4;color:var(--ink)}
+.cw .lnk.fmea-pt{text-align:left}
+.cw .fmea-prob.is-res .fmea-pt{text-decoration:line-through;color:var(--muted)}
+.fmea-meta{gap:2px 14px}
+.fmea-note{color:var(--muted)}
+.fmea-right{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-left:auto}
+.fmea-rpn{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:13px}
+.fmea-rpnn{font-weight:600;color:var(--ink)}
+.fmea-knowns{display:flex;flex-direction:column;gap:4px;padding:10px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line-2)}
+.fmea-kl{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+.fmea-kl li{margin:2px 0}
+.fmea-sl{font-size:12.5px;font-weight:600;color:var(--muted)}
+.fmea-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* the cause table: no overflow on the wrapper so status menus can drop below it */
+.fmea-tw{border:1px solid var(--line-2);border-radius:10px;background:var(--surface)}
+.fmea-tbl{font-size:13px}
+.fmea-tbl th:first-child{border-top-left-radius:10px}
+.fmea-tbl th:last-child{border-top-right-radius:10px}
+.fmea-tbl td{vertical-align:top;padding:10px 12px}
+.fmea-tbl td.fmea-cont{border-top-color:transparent}
+.fmea-tbl tr.fmea-msep td{border-top:2px solid var(--line)}
+.fmea-tbl tr.fmea-dimrow td{color:var(--faint)}
+.fmea-tbl tr.fmea-dimrow .fmea-rpnn,.fmea-tbl tr.fmea-dimrow .fmea-mt{color:var(--faint)}
+.fmea-mc{min-width:150px}
+.fmea-mt{font-weight:500;color:var(--ink)}
+.fmea-ec{min-width:140px}
+.fmea-cc{min-width:190px}
+.fmea-ctx{color:var(--ink-2)}
+.fmea-ctx.fmea-cres{color:var(--muted)}
+.fmea-mit{padding-left:8px;border-left:2px solid var(--line);color:var(--muted);font-size:12.5px}
+.fmea-c-sod{white-space:nowrap}
+.fmea-c-act{width:44px;text-align:right}
+
+/* status: a dot and a word that opens a small menu */
+.fmea-stw{display:inline-block}
+.cw .fmea-hot{z-index:33}
+.fmea-stb{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 4px 0 8px;margin-left:-8px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.fmea-stb:hover{background:var(--hover);border-color:var(--line)}
+.fmea-stb svg{color:var(--faint)}
+.fmea-stm{top:30px;left:-8px;min-width:180px}
+.fmea-right .fmea-stm,.fmea-c-st .fmea-stm{left:auto;right:-4px}
+.fmea-more{top:30px}
+
+/* S, O, D with a rescore popover */
+.fmea-sodb,.fmea-sodt{display:inline-flex;align-items:baseline;gap:4px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fmea-sodb{padding:2px 6px;margin-left:-6px;border:1px solid transparent;border-radius:6px;background:transparent;font-family:inherit;cursor:pointer}
+.fmea-sodb:hover{background:var(--hover);border-color:var(--line)}
+.fmea-sodb .faint,.fmea-sodt .faint{font-size:11.5px;margin-left:3px}
+.fmea-sodb .faint:first-child,.fmea-sodt .faint:first-child{margin-left:0}
+.fmea-sodp{top:32px;left:-8px;width:360px}
+
+/* evidence chips (Execution) */
+.fmea-xs{display:flex;flex-wrap:wrap;gap:4px}
+.fmea-x{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink-2);font:inherit;font-size:12px;font-weight:500;white-space:nowrap}
+.fmea-x b{font-weight:600;color:var(--ink)}
+.fmea-x .dot{width:7px;height:7px}
+.cw button.fmea-x{cursor:pointer}
+.cw button.fmea-x:hover{border-color:var(--field-hover);color:var(--ink)}
+
+
+/* ---------- problem editor sheet ---------- */
+.fmea-node{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);min-width:0}
+.fmea-node.fmea-mode{border-left:3px solid var(--accent-line)}
+.fmea-node.fmea-eff{background:var(--surface-2)}
+.fmea-nh{display:flex;align-items:center;gap:8px;min-width:0}
+.fmea-nl{font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+.fmea-ct{font-size:13px;color:var(--ink-2)}
+.fmea-cm{white-space:nowrap}
+.fmea-nta{min-height:52px}
+.fmea-kids{display:flex;flex-direction:column;gap:10px}
+.fmea-sod{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end}
+.fmea-live{height:30px}
+.fmea-ev{display:flex;flex-direction:column;gap:6px}
+.fmea-xr{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:13px;min-width:0}
+
+/* ---------- evidence experiment sheet ---------- */
+.fmea-samples{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px;border:1px solid var(--field);border-radius:8px;background:var(--surface)}
+.fmea-samples:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.fmea-sch{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 4px 0 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--ink);font-size:12.5px;font-weight:500}
+.fmea-schx{display:inline-grid;place-items:center;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+.fmea-schx:hover{background:var(--press);color:var(--ink)}
+.fmea-sadd{flex:1 1 160px;min-width:0;height:26px;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:13px}
+.fmea-gw{overflow-x:auto;border:1px solid var(--line-2);border-radius:10px}
+.fmea-grid th{vertical-align:top;min-width:150px}
+.fmea-grid th.fmea-gs,.fmea-grid td.fmea-gs{min-width:110px;white-space:nowrap}
+.fmea-val{width:100%;text-align:right}
+@media (max-width: 900px){.fmea-sod{grid-template-columns:minmax(0,1fr)}}

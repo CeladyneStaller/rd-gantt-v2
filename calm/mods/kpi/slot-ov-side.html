@@ -1,0 +1,18 @@
+<section class="panel kpi-latest" aria-label="Latest readings" data-k="kpi-latest">
+  <div class="ph">
+    <h2 class="h2">Latest readings</h2>
+    <span class="cnt">{{kpi.latest.count}}</span>
+    <sc-if value="{{kpi.latest.canOpen}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{kpi.latest.open}}">{{kpi.latest.openLabel}}</button></div></sc-if>
+  </div>
+  <sc-if value="{{kpi.latest.has}}" hint-placeholder-val="{{true}}">
+    <div class="sec">
+      <sc-for list="{{kpi.latest.rows}}" as="kpi_l" hint-placeholder-count="4">
+        <button class="kpi-lr" type="button" title="{{kpi_l.aria}}" onClick="{{kpi_l.go}}">
+          <span class="row"><span class="ellip">{{kpi_l.name}}</span><span class="strong num">{{kpi_l.val}}</span></span>
+          <span class="row"><span class="sub">{{kpi_l.meta}}</span><sc-if value="{{kpi_l.hasProgress}}" hint-placeholder-val="{{false}}"><span class="sub">{{kpi_l.progress}}</span></sc-if><sc-if value="{{kpi_l.imported}}" hint-placeholder-val="{{false}}"><span class="tag">Analysis</span></sc-if></span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{kpi.latest.none}}" hint-placeholder-val="{{false}}"><div class="empty">{{kpi.latest.emptyText}}</div></sc-if>
+</section>

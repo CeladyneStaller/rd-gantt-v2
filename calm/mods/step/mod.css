@@ -1,0 +1,46 @@
+/* Current step (Experiments tab). Tokens only. */
+.step-trees{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 20px 14px}
+.step-tree{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:150px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.step-tree:hover{border-color:var(--field-hover);background:var(--hover)}
+.step-tree.on{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink)}
+.step-block{display:flex;flex-direction:column;gap:10px;padding:16px 20px;border-top:1px solid var(--line-2)}
+.step-bhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.step-wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.step-cards{flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.step-card{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-3)}
+.step-title{font-size:15px}
+.step-hyp{font-size:13.5px;color:var(--ink-2)}
+.step-tbox{overflow:visible}
+.step-tbl td{vertical-align:top}
+.step-cur{width:30%;min-width:150px}
+.step-anchor{display:flex;justify-content:flex-end}
+.step-val{display:inline-flex;justify-content:flex-end;padding:3px 6px;margin:-3px -6px;border:0;border-radius:6px;background:transparent;color:var(--ink);font:inherit;text-align:right;cursor:pointer}
+.step-val:hover{background:var(--hover);text-decoration:underline dotted;text-underline-offset:3px}
+.step-val .col{align-items:flex-end}
+.step-plainval{display:inline-flex;justify-content:flex-end;text-align:right}
+.step-plainval .col{align-items:flex-end}
+.step-in{width:100%;min-width:90px}
+.step-pop{right:0;top:32px;width:330px;gap:10px}
+.step-plist{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto;padding:2px 0;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.step-prow{gap:10px;min-height:30px;padding:2px 0}
+.step-prow.dim{opacity:.55}
+.step-strip{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-left:3px solid var(--none);border-radius:0 8px 8px 0;background:var(--surface);font-size:13px}
+.step-strip.t-ok{border-left-color:var(--ok);background:var(--ok-soft);color:var(--ok-ink)}
+.step-strip.t-warn{border-left-color:var(--warn);background:var(--warn-soft);color:var(--warn-ink)}
+.step-strip.t-info{border-left-color:var(--accent);background:var(--accent-wash);color:var(--accent-ink)}
+.step-strip .sub{color:inherit;opacity:.9}
+.step-read{gap:10px;font-size:13.5px}
+.step-graph{position:relative;flex:1 1 280px;min-width:240px;max-width:380px;min-height:120px;padding:8px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-3);overflow:auto}
+.step-gsizer{position:relative;margin:0 auto}
+.step-gempty{padding:20px;text-align:center}
+.step-lazy{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-style:dashed}
+.step-erk{gap:10px;padding:8px 0;border-bottom:1px solid var(--line-3)}
+.step-erin{width:190px}
+.step-erunit{min-width:44px}
+.step-erp{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line-2);border-radius:9px;font-size:13.5px;cursor:pointer}
+.step-erp:hover{background:var(--hover)}
+.step-erp.sent{border-style:dashed;color:var(--ink-2)}
+.step-mrow{gap:12px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-3)}
+.step-mmeta{white-space:nowrap}
+.step-ovrow{display:flex;flex-direction:column;gap:4px;width:100%;padding:12px 20px;border:0;border-top:1px solid var(--line-2);background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.step-ovrow:hover{background:var(--hover)}

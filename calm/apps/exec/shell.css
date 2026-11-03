@@ -1,0 +1,92 @@
+/* Execution / Sales shell. Tokens only (dark mode follows the kit). Shell classes use the shl- prefix. */
+/* Overview: the review table (mods/review), then Latest readings, Current step and Initiative metrics side by
+   side; opened, Initiative metrics takes a row of its own */
+.ov-stack{display:flex;flex-direction:column;gap:20px}
+.ov-three{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.ov-three>*{flex:1 1 300px;min-width:0}
+.ov-three>.initm-panel.open{flex-basis:100%}
+
+/* the header must not start its own stacking context, so its search results sit above the menu scrim */
+.cw .top{z-index:auto}
+
+/* sidebar */
+.cw a.shl-home{color:var(--ink);border-radius:8px;padding:4px 6px}
+.cw a.shl-home:hover{background:var(--hover);color:var(--ink)}
+.shl-pick{height:auto;min-height:44px;padding:6px 10px 6px 12px;justify-content:space-between;text-align:left}
+.shl-pick-t{align-items:flex-start;min-width:0;line-height:1.25}
+.shl-divmenu{left:0;right:0;top:calc(100% + 6px)}
+.shl-divmenu .mi .sub{font-size:12px}
+.shl-filters .sel{flex:1 1 0;min-width:0}
+/* Sales' All divisions (October 16): each division's name heads its objectives, a rule between divisions;
+   quarter subheadings sit closer to their rows */
+.shl-dgrp{padding:0 10px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.shl-dgrp.gap{margin-top:10px;padding-top:12px;border-top:1px solid var(--line-2)}
+.grp.shl-qsub{margin-top:2px}
+.grp.shl-qsub.gap{margin-top:8px}
+.shl-divnone{padding:0 10px 2px}
+
+/* top bar search */
+.shl-searchbox .search{width:300px}
+.shl-results{top:calc(100% + 6px);width:440px;max-width:calc(100vw - 32px)}
+.shl-res{align-items:flex-start;white-space:normal}
+.shl-res-t{min-width:0;flex:1 1 auto}
+.shl-res .sub{margin-left:0;padding-left:0}
+
+/* objective head */
+.shl-title{align-items:baseline}
+.shl-meta{gap:6px 18px;align-items:center;font-size:13px}
+.shl-meta svg{color:var(--faint)}
+.shl-ink{color:var(--ink-2)}
+.cw .shl-owner{display:inline-flex;align-items:center;font-weight:500;color:var(--ink-2)}
+.cw .shl-owner[aria-pressed="true"]{color:var(--accent-ink)}
+.shl-ended{align-items:center}
+.shl-qrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 24px;border-bottom:1px solid var(--line-2)}
+.shl-weeks{display:flex;gap:3px;flex:1 1 200px;max-width:340px}
+.shl-qc{flex:1 1 0;height:10px;border-radius:3px;background:var(--track)}
+.shl-qc.done{background:var(--accent-line)}
+.shl-qc.now{background:var(--accent)}
+.shl-wtrack{flex:1 1 200px;max-width:340px}
+.shl-qstat{margin-left:auto;font-weight:500;color:var(--ink-2)}
+.shl-score{display:flex;flex-wrap:wrap;align-items:center;gap:18px 28px;padding:18px 24px}
+.shl-big{font-size:44px;font-weight:650;letter-spacing:-.02em;line-height:1}
+.shl-pt svg{color:var(--warn-ink)}
+.shl-pace{flex:1 1 380px;min-width:0}
+.shl-today{position:relative;height:18px;font-size:12.5px}
+.shl-today span{position:absolute;top:0;white-space:nowrap;font-weight:500;color:var(--ink)}
+.shl-bar{position:relative;height:22px}
+.shl-bar .track{position:absolute;left:0;right:0;top:6px}
+.shl-tick{top:2px;bottom:2px;margin-left:-1px}
+.shl-facts{padding:14px 24px;border-top:1px solid var(--line-2)}
+.shl-fv{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:15px;white-space:nowrap}
+.shl-notes{margin:0 24px 16px;align-items:center}
+.shl-emptyacts{padding:0 20px 18px}
+
+/* sheets */
+.shl-tokenrow{align-items:flex-end}
+.shl-url{padding:10px 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface-2);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+.shl-opt{display:flex;align-items:flex-start;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.shl-opt:hover{border-color:var(--field-hover)}
+.shl-opt.on{border-color:var(--accent);background:var(--accent-wash);box-shadow:0 0 0 2px var(--accent-ring)}
+.shl-radio{width:16px;height:16px;margin-top:2px;border-radius:50%;border:2px solid var(--field);background:var(--surface);flex:none}
+.shl-opt.on .shl-radio{border:5px solid var(--accent)}
+
+/* views by direct link (October 15): "Link to this view" beside the tabs; a view page's status (read-only, or the
+   save state) and its way into the whole app sit in the bottom right corner */
+.shl-tabrow{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line)}
+.shl-tabrow .tabs{flex:1 1 auto;border-bottom:0;min-width:0}
+.shl-vlink{align-self:center}
+.shl-vlpop{right:0;top:calc(100% + 6px);width:420px;gap:14px}
+.shl-vlpop .seg{align-self:flex-start}
+.shl-vlurl{word-break:normal}
+.shl-vlurl span{display:inline-block;word-break:break-all}
+/* a view page's top label: the app's top bar, naming where the page sits, its state and the way into the app */
+.shl-vapp{font-weight:600;color:var(--ink)}
+.shl-vnow{color:var(--ink);font-weight:500}
+.cw .shl-vopen{display:inline-flex;align-items:center;gap:6px}
+.cw .shl-vopen svg{color:var(--faint)}
+
+@media (max-width: 900px){
+  .shl-qrow,.shl-score,.shl-facts{padding-left:16px;padding-right:16px}
+  .shl-notes{margin-left:16px;margin-right:16px}
+  .shl-searchbox .search{width:220px}
+}

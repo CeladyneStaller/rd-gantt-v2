@@ -19,14 +19,17 @@ Exit status alone cannot distinguish "all assertions passed" from "no assertions
 import glob, json, os, re, shutil, subprocess, sys
 
 
-# Harnesses that boot a whole built app in jsdom. Each costs seconds, not milliseconds, and together
-# they push a full sweep past a typical tool/CI command window — which led to the sweep being skipped
-# or hand-batched, the worst of both worlds. Splitting them out means BOTH halves finish comfortably
-# and the suite can still be reported in full by running the two in sequence.
+# Harnesses that boot whole apps. Each costs seconds or minutes, not milliseconds, and together they push
+# a full sweep past a typical tool/CI command window — which led to the sweep being skipped or
+# hand-batched, the worst of both worlds. Splitting them out means BOTH halves finish comfortably and the
+# suite can still be reported in full by running the two in sequence.
 SLOW = {
-    "connect_data_ui.cjs", "pd_notes.cjs", "recover_stranded.cjs", "kpi_readsfrom.cjs",
-    "etb_graph_modal.cjs", "gantt_view_toggles.cjs", "gantt_patches.cjs", "stat_recorder_ui.cjs",
-    "kanban_done_sync_ui.cjs",      # twelve app boots: six "devices" in each of two apps
+    "calm_suites.test.js",          # builds the Calm sample boards and runs every Calm suite (the apps' tests)
+}
+
+# Per-harness time limits, for the few that legitimately run past HARNESS_TIMEOUT.
+TIMEOUTS = {
+    "calm_suites.test.js": 900,     # about a minute on a laptop; generous for slow or busy machines
 }
 
 
@@ -56,7 +59,7 @@ TMP = os.environ.get("RD_TMP") or ("/tmp" if SANDBOX else HERE)
 BASE = os.path.join(OUT, "harness_counts.json")
 # matches: "352 assertions green" / "36 planning-app assertions green" / "45 assertions green"
 COUNT_RE = re.compile(r"(\d+)\s+[^\n]{0,70}?assertions?\s+green")
-ENV = dict(os.environ, RD_OUT=OUT, RD_SRC=CWD, RD_TMP=TMP)
+ENV = dict(os.environ, RD_OUT=OUT, RD_SRC=CWD, RD_TMP=TMP, RD_PYTHON=sys.executable)
 _nm = os.path.join(CWD, "node_modules")
 if os.path.isdir(_nm):
     ENV["NODE_PATH"] = _nm          # otherwise let node resolve node_modules itself
@@ -86,31 +89,18 @@ def refresh():
     return n
 
 
-def etb_plumbing():
-    """etb_phase*.test.js read this slice of the execution template; regenerate it each run."""
-    t = os.path.join(OUT, "execution_app.template.html")
-    if not os.path.exists(t):
-        t = os.path.join(CWD, "execution_app.template.html")
-    if not os.path.exists(t):
-        return
-    lines = open(t, encoding="utf-8").read().split("\n")
-    a = next((i for i, l in enumerate(lines) if "var __etbSaveTimer" in l), None)
-    b = next((i for i, l in enumerate(lines) if l.startswith("function etbSyncObjective")), None)
-    if a is not None and b is not None:
-        open(os.path.join(TMP, "etb_plumbing.js"), "w", encoding="utf-8").write("\n".join(lines[a:b]))
-
-
 def run(name):
     runner = [sys.executable] if name.endswith(".py") else ["node"]
+    limit = TIMEOUTS.get(name, HARNESS_TIMEOUT)
     # A harness that never exits used to hang the whole run with no output at all: subprocess.run had no
     # timeout and the loop prints only at the end, so a stall looked identical to slowness and took two
     # sessions to locate. A timed-out harness is a FAILURE, named, not a silent wait.
     try:
         p = subprocess.run(runner + [name], capture_output=True, text=True, cwd=CWD, env=ENV,
                            encoding="utf-8", errors="replace",   # harness output is UTF-8, not the OS default
-                           timeout=HARNESS_TIMEOUT)
+                           timeout=limit)
     except subprocess.TimeoutExpired:
-        return 1, None, f"FAIL: timed out after {HARNESS_TIMEOUT}s without exiting"
+        return 1, None, f"FAIL: timed out after {limit}s without exiting"
     out = (p.stdout or "") + (p.stderr or "")
     m = COUNT_RE.search(out)
     return p.returncode, (int(m.group(1)) if m else None), out
@@ -124,7 +114,7 @@ def main():
               "counts for the harnesses that did not run. Re-baseline with a full sweep.")
         sys.exit(2)
     base = json.load(open(BASE, encoding="utf-8")) if os.path.exists(BASE) else {}
-    copied = refresh(); etb_plumbing()
+    copied = refresh()
     all_names = sorted(os.path.basename(p) for p in _harness_paths(OUT))
     names = _select(all_names, mode)
     banner = f"harness dir : {OUT}\nrun dir     : {CWD}\nfound       : {copied} harness file(s)"

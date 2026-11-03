@@ -1,0 +1,80 @@
+<section class="panel sspec-panel" aria-labelledby="sspec-h" data-k="sspec-panel">
+  <div class="ph">
+    <h2 class="h2" id="sspec-h"><button class="sspec-coll" type="button" aria-expanded="{{sspec.open}}" onClick="{{sspec.toggleOpen}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{sspec.chevStyle}}"><path d="M6 9l6 6 6-6"></path></svg>Product specifications<span class="cnt">{{sspec.count}}</span></button></h2>
+    <span class="sub">Requirements this model must meet. Their scores make up its conformance.</span>
+    <div class="act">
+      <sc-if value="{{sspec.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{sspec.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add specification</button></sc-if>
+    </div>
+  </div>
+  <sc-if value="{{sspec.open}}" hint-placeholder-val="{{true}}">
+    <sc-if value="{{sspec.empty}}" hint-placeholder-val="{{false}}"><div class="empty sec">No specifications yet. A product specification is a requirement the product must meet; its metrics roll up to the model’s conformance score.</div></sc-if>
+    <sc-if value="{{sspec.has}}" hint-placeholder-val="{{true}}">
+      <div class="sspec-list sec">
+        <sc-for list="{{sspec.specs}}" as="s" hint-placeholder-count="4">
+          <article class="{{s.cardCls}}" aria-label="{{s.aria}}" data-k="{{s.id}}" onDragOver="{{s.dragOver}}" onDrop="{{s.drop}}">
+            <div class="sspec-head">
+              <sc-if value="{{s.canDrag}}" hint-placeholder-val="{{true}}"><span class="handle" draggable="true" aria-label="{{s.dragLabel}}" title="Drag to reorder" onDragStart="{{s.dragStart}}" onDragEnd="{{s.dragEnd}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"></circle><circle cx="15" cy="6" r="1.4"></circle><circle cx="9" cy="12" r="1.4"></circle><circle cx="15" cy="12" r="1.4"></circle><circle cx="9" cy="18" r="1.4"></circle><circle cx="15" cy="18" r="1.4"></circle></svg></span></sc-if>
+              <span class="tid sspec-tag">{{s.tag}}</span>
+              <div class="col g2 grow">
+                <sc-if value="{{s.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink sspec-stmt" type="button" title="Edit specification" aria-label="{{s.editLabel}}" onClick="{{s.edit}}">{{s.statement}}</button></sc-if>
+                <sc-if value="{{!s.canEdit}}" hint-placeholder-val="{{false}}"><span class="sspec-stmt">{{s.statement}}</span></sc-if>
+                <span class="sub">{{s.trackText}}</span>
+              </div>
+              <span class="{{s.scoreCls}}" title="{{s.scoreTitle}}"><span class="dot"></span>{{s.score}}</span>
+              <sc-if value="{{s.canEdit}}" hint-placeholder-val="{{true}}">
+                <div class="row g4 sspec-acts">
+                  <button class="btn xs q" type="button" aria-label="{{s.addKpiLabel}}" onClick="{{s.addKpi}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add KPI</button>
+                  <button class="btn xs q" type="button" aria-label="{{s.addLinkLabel}}" onClick="{{s.addLink}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Link metric</button>
+                  <div class="above">
+                    <button class="btn xs ic q" type="button" aria-label="{{s.menuLabel}}" title="More actions" aria-haspopup="menu" aria-expanded="{{s.menuOpen}}" onClick="{{s.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                    <sc-if value="{{s.menuOpen}}" hint-placeholder-val="{{false}}">
+                      <div class="menu r" role="menu" aria-label="{{s.menuLabel}}" style="top: 30px">
+                        <button class="mi" type="button" role="menuitem" onClick="{{s.edit}}">Edit specification</button>
+                        <button class="mi" type="button" role="menuitem" onClick="{{s.addKpi}}">Add KPI</button>
+                        <button class="mi" type="button" role="menuitem" onClick="{{s.addLink}}">Link a metric</button>
+                        <sc-if value="{{s.canUp}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{s.up}}">Move up</button></sc-if>
+                        <sc-if value="{{s.canDown}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{s.down}}">Move down</button></sc-if>
+                        <div class="msep"></div>
+                        <button class="mi bad" type="button" role="menuitem" onClick="{{s.del}}">Delete specification</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{s.hasProgress}}" hint-placeholder-val="{{false}}">
+              <div class="sspec-prog"><span class="sub">Progress</span><span class="track grow"><span class="{{s.progressCls}}" style="{{s.progressStyle}}"></span></span><span class="small strong num">{{s.progressText}}</span></div>
+            </sc-if>
+            <sc-if value="{{s.hasSubs}}" hint-placeholder-val="{{false}}">
+              <div class="sspec-subs">
+                <sc-for list="{{s.subs}}" as="sub" hint-placeholder-count="2">
+                  <div class="sspec-subrow"><sc-if value="{{sub.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink grow ellip sspec-subname" type="button" title="Edit sub-specification" aria-label="{{sub.editLabel}}" onClick="{{sub.edit}}">{{sub.name}}</button></sc-if><sc-if value="{{!sub.canEdit}}" hint-placeholder-val="{{false}}"><span class="grow ellip">{{sub.name}}</span></sc-if><span class="sub">{{sub.meta}}</span><span class="{{sub.scoreCls}}"><span class="dot"></span>{{sub.score}}</span></div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{s.hasMetricsNote}}" hint-placeholder-val="{{false}}"><div class="sub sspec-pad">{{s.metricsNote}}</div></sc-if>
+            <div class="sspec-pad"><!--@include mods/sspec/part-metrics.html MT=s.mt--></div>
+            <sc-if value="{{s.hasGated}}" hint-placeholder-val="{{false}}">
+              <div class="sspec-line"><span class="sub">Gated by</span>
+                <sc-for list="{{s.gated}}" as="g" hint-placeholder-count="1">
+                  <span class="row g4"><sc-if value="{{g.canOpen}}" hint-placeholder-val="{{true}}"><button class="lnk" type="button" title="{{g.title}}" onClick="{{g.open}}">{{g.name}}</button></sc-if><sc-if value="{{!g.canOpen}}" hint-placeholder-val="{{false}}"><span title="{{g.title}}">{{g.name}}</span></sc-if><span class="{{g.scoreCls}}"><span class="dot"></span>{{g.score}}</span></span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{s.hasFromSubs}}" hint-placeholder-val="{{false}}">
+              <div class="sspec-line"><span class="sub">From sub-products</span>
+                <sc-for list="{{s.fromSubs}}" as="f" hint-placeholder-count="1">
+                  <span class="row g4" title="Imported sub-product spec. Shown for reference; it does not count in this score."><span>{{f.name}}</span><span class="{{f.scoreCls}}"><span class="dot"></span>{{f.score}}</span></span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{s.hasNotes}}" hint-placeholder-val="{{false}}">
+              <div class="sspec-line"><button class="lnk muted small" type="button" aria-expanded="{{s.notesOpen}}" onClick="{{s.toggleNotes}}">{{s.notesLabel}}</button></div>
+              <sc-if value="{{s.notesOpen}}" hint-placeholder-val="{{false}}"><div class="sspec-note sspec-note-card">{{s.notes}}</div></sc-if>
+            </sc-if>
+          </article>
+        </sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+</section>

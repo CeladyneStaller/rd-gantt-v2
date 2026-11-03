@@ -1,0 +1,50 @@
+/* pov: Overview (tokens only) */
+.pov-hero{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:18px 22px}
+.pov-hero-score{font-size:44px;font-weight:650;line-height:1;letter-spacing:-.02em;min-width:64px}
+.pov-unit{display:flex;flex-direction:column;gap:12px}
+.pov-unit-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px}
+.pov-uscore{font-size:20px;font-weight:650}
+.pov-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pov-card{display:flex;flex-direction:column;gap:10px;padding:16px 18px;cursor:pointer;text-align:left}
+.pov-card:hover{border-color:var(--field-hover);box-shadow:var(--shadow-1)}
+.pov-card-score{align-items:flex-end;text-align:right}
+.pov-big{font-size:30px;font-weight:650;line-height:1;letter-spacing:-.02em}
+.pov-qs{gap:4px 12px}
+.pov-q{white-space:nowrap}
+.pov-mix{gap:4px 14px}
+.pov-active{display:flex;flex-direction:column;gap:14px}
+.pov-div{display:flex;flex-direction:column;gap:12px}
+.pov-div-lab{display:flex;align-items:center;gap:12px}
+.pov-rule{flex:1;height:1px;background:var(--line)}
+.pov-block{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-3)}
+.pov-plab{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.pov-kid{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.pov-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:10px}
+.pov-tile{position:relative;display:flex;flex-direction:column;gap:8px;padding:14px 14px 14px 18px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;overflow:hidden;min-width:0}
+.pov-tile:hover{border-color:var(--field-hover);box-shadow:var(--shadow-1)}
+.pov-bar{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--none)}
+.pov-bar.t-ok{background:var(--ok)} .pov-bar.t-warn{background:var(--warn)} .pov-bar.t-bad{background:var(--bad)}
+.pov-score{font-size:20px;font-weight:650;line-height:1.1;white-space:nowrap}
+.pov-conf{font-size:20px;font-weight:650;line-height:1.1;white-space:nowrap}
+.pov-mat{align-self:flex-start;margin-top:2px}
+.pov-kt{display:flex;flex-direction:column;gap:3px;font-size:12.5px;min-width:0}
+.pov-kh{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:8px;color:var(--faint);font-size:11.5px;font-weight:600}
+.pov-kh span:nth-child(3),.pov-kh span:nth-child(4){text-align:right}
+.pov-kr4{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.pov-kr{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.pov-ktgt{color:var(--muted);white-space:nowrap;text-align:right}
+.pov-kcur{font-weight:600;white-space:nowrap;text-align:right}
+.pov-lane{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.pov-ws{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:2px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--muted);font-size:11px;font-weight:700}
+.pov-gd{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--none);background:var(--surface);color:var(--muted);font-size:10.5px;font-weight:700;flex:none}
+.pov-gd.t-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok-ink)}
+.pov-gd.t-warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn-ink)}
+.pov-gd.t-bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad-ink)}
+.pov-gset{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:4px}
+.pov-grow{padding:6px 0;border-top:1px solid var(--line-3)}
+.pov-gdate{min-width:56px;text-align:right}
+.pov-rpn{display:inline-block;min-width:34px;padding:1px 6px;border-radius:6px;text-align:center;font-weight:600;background:var(--ok-soft);color:var(--ok-ink)}
+.pov-rpn.t-warn{background:var(--warn-soft);color:var(--warn-ink)}
+.pov-rpn.t-bad{background:var(--bad-soft);color:var(--bad-ink)}
+.pov-slices{overflow-x:auto}
+.pov-sind{padding-left:18px}

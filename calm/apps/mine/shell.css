@@ -1,0 +1,238 @@
+/* My Projects shell. Tokens only (dark mode follows the kit). Shell classes use the mine- prefix; progress cells
+   reuse the review table's (mods/review) and the KPI and Current step controls their modules' own classes. */
+.cw a.mine-home{color:var(--ink);border-radius:8px;padding:4px 6px}
+.cw a.mine-home:hover{background:var(--hover);color:var(--ink)}
+.cw .top{z-index:auto}
+.mine-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px}
+/* the title shrinks before the controls wrap: the lede takes a second line and they stay on the title's row */
+.mine-head>.col{flex:1 1 360px;min-width:0}
+.mine-head .sub{max-width:80ch}
+/* the view switch (leaders), the quarter and Group and sort, beside the title: they set what the panel and the tree show */
+.mine-scope{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.mine-scope .sel{height:32px;font-size:13px}
+
+/* Group and sort (October 22, round 6's A): a button, tinted while the arrangement isn't the default (Project,
+   Planning order), and its popover: the levels numbered outer first, then the sort, then the arrangement in words */
+.cw .mine-gsbtn{height:32px;gap:7px;font-size:13px}
+.cw .mine-gsbtn.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink)}
+.mine-gschev{color:var(--muted)}
+.mine-gsbtn.on .mine-gschev{color:var(--accent-ink)}
+.mine-gspop{top:calc(100% + 6px);right:0;width:340px;gap:14px}
+/* it takes the focus as it opens (for Escape and Tab); its controls show theirs */
+.cw .mine-gspop:focus,.cw .mine-gspop:focus-visible{outline:none}
+.mine-gsph{align-items:center;gap:8px;margin-bottom:-4px}
+.mine-gssec{display:flex;flex-direction:column;gap:6px}
+.mine-gslab{font-size:12.5px;font-weight:600;color:var(--muted)}
+.mine-gslvl{display:flex;align-items:center;gap:6px}
+.mine-gsn{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-2);font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.mine-gsn.mine-gsplus{background:transparent;border-style:dashed;color:var(--muted)}
+.mine-gssp{flex:none;width:26px}
+.mine-add{color:var(--muted)}
+.mine-gsfoot{display:flex;align-items:baseline;gap:10px;padding-top:10px;border-top:1px solid var(--line-2)}
+.mine-gsfoot .sub{font-size:12.5px;line-height:1.4}
+.mine-gsfoot .lnk{flex:none;font-size:12.5px}
+
+/* the lede's "Change divisions" (the CEO and the CTO, in Team Projects) */
+.cw .mine-lnk{font-size:inherit;margin-left:2px}
+
+/* Settings, Team Projects (the CEO and the CTO): one option per row, then the divisions when choosing */
+.mine-opt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;cursor:pointer;color:var(--ink);font-size:13.5px}
+.mine-opt:hover{background:var(--surface-3)}
+.mine-opt .cb{margin-top:2px}
+.mine-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 18px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
+.mine-picklbl{font-size:12.5px;font-weight:600;color:var(--muted)}
+.mine-picks .check input:disabled{cursor:not-allowed}
+
+/* ---- the roll-up panel (round 5, proposal E): the scorecard, then the timeline ---- */
+.mine-qrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 24px;border-bottom:1px solid var(--line-2)}
+.mine-weeks{display:flex;gap:3px;flex:0 1 340px;min-width:160px}
+.mine-qc{flex:1 1 0;height:10px;border-radius:3px;background:var(--track)}
+.mine-qc.done{background:var(--accent-line)}
+.mine-qc.now{background:var(--accent)}
+.mine-qstat{margin-left:auto;font-weight:500;color:var(--ink-2)}
+.mine-sc{display:grid;grid-template-columns:minmax(220px,auto) minmax(0,1fr);gap:18px 48px;align-items:center;padding:16px 24px 18px}
+.mine-sch{align-items:center}
+.mine-big{font-size:44px;font-weight:650;letter-spacing:-.02em;line-height:1}
+.mine-line{padding:38px 8px 0}
+.mine-plot{position:relative;height:16px}
+.mine-zones{position:absolute;left:0;right:0;top:5px;height:6px;display:flex;gap:2px}
+.mine-z{display:block;height:100%}
+.mine-z.bad{background:var(--bad-line)}
+.mine-z.warn{background:var(--warn-line)}
+.mine-z.ok{background:var(--ok-line)}
+.mine-z.first{border-top-left-radius:999px;border-bottom-left-radius:999px}
+.mine-z.last{border-top-right-radius:999px;border-bottom-right-radius:999px}
+/* the time elapsed in the quarter (it was the mean's mark until October 22): the accent, as today on the timeline */
+.mine-elapsed{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;background:var(--accent);border-radius:2px}
+.cw .mine-dot{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;padding:0;border:2px solid var(--surface);border-radius:50%;background:var(--none);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.cw .mine-dot.t-bad{background:var(--bad)}
+.cw .mine-dot.t-warn{background:var(--warn)}
+.cw .mine-dot.t-ok{background:var(--ok)}
+.cw .mine-dot:hover{transform:scale(1.15)}
+.mine-dot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mine-dlbl{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;pointer-events:none}
+.mine-dot.lane1 .mine-dlbl{bottom:calc(100% + 19px)}
+.mine-dot.lane2 .mine-dlbl{bottom:calc(100% + 34px)}
+.mine-mrow{position:relative;height:16px;margin-top:7px}
+.mine-mlbl{position:absolute;top:0;transform:translateX(-50%);font-size:12px;font-weight:600;line-height:16px;color:var(--accent-ink);white-space:nowrap}
+.mine-mlbl.at-l{transform:translateX(-2px)}
+.mine-mlbl.at-r{transform:translateX(calc(-100% + 2px))}
+.mine-zkey{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:6px}
+.mine-zk{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+.mine-zsw{display:inline-block;width:18px;height:6px;border-radius:999px}
+.mine-zsw.bad{background:var(--bad-line);box-shadow:inset 0 0 0 1px var(--bad)}
+.mine-zsw.warn{background:var(--warn-line);box-shadow:inset 0 0 0 1px var(--warn)}
+.mine-zsw.ok{background:var(--ok-line);box-shadow:inset 0 0 0 1px var(--ok)}
+.mine-cap2{display:block;margin-top:6px}
+.mine-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 0;padding:14px 24px;border-top:1px solid var(--line-2)}
+.mine-facts .fact{padding:0 18px}
+.mine-facts .fact:first-child{padding-left:0}
+.mine-fv{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:15px;white-space:nowrap}
+.cw .mine-due-go{align-self:flex-start;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;text-align:left}
+.cw .mine-due-go:hover,.cw .mine-due-go.on{color:var(--accent-ink);text-decoration:underline}
+.mine-due-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mine-alarm{margin:0 24px 16px}
+.mine-scnone{padding:16px 24px}
+.mine-etl{border-top:1px solid var(--line-2)}
+.mine-tlscroll{overflow-x:auto}
+.mine-tl{position:relative;min-width:760px;padding:30px 24px 26px}
+.mine-tlgrid{position:absolute;top:6px;bottom:4px;left:calc(24px + 340px);right:24px;pointer-events:none}
+.mine-mon{position:absolute;top:0;bottom:22px;border-left:1px solid var(--line-2)}
+.mine-mon>span{position:absolute;top:0;left:6px;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.mine-today{position:absolute;top:22px;bottom:22px;width:2px;margin-left:-1px;background:var(--accent);opacity:.9}
+.mine-today>span{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;color:var(--accent-ink);white-space:nowrap}
+.mine-tlrow{position:relative;display:grid;grid-template-columns:340px minmax(0,1fr);align-items:stretch;min-height:34px;border-top:1px solid var(--line-3)}
+.mine-tlrow.is-top{margin-top:6px;border-top:1px solid var(--line)}
+.mine-tlgrid+.mine-tlrow{margin-top:0}
+.mine-tllab{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 0;min-width:0}
+/* nested under Group by's levels (--lv, from the view model); an objective's dot lines up with its group's tag */
+.mine-tlrow .mine-tllab{padding-left:calc(var(--lv, 0) * 20px)}
+.mine-tlrow.is-obj .mine-tllab{padding-left:calc(var(--lv, 0) * 20px + var(--ob, 32px))}
+.cw .mine-tlname{display:flex;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.mine-tlname:hover .mine-tltxt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.mine-tlname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.mine-tlname .dot{flex:none}
+.mine-tlname .dot.t-done{background:var(--ok-line)}
+.mine-tlname .dot.t-cnl{background:var(--line)}
+.mine-tltxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.mine-tlrow.is-grp .mine-tltxt{font-weight:600}
+.mine-tlval{margin-left:auto;flex:none;font-weight:600;font-variant-numeric:tabular-nums}
+.mine-tlval.sub{font-weight:500}
+.mine-tltrack{position:relative;min-width:0}
+.mine-tbar{position:absolute;top:50%;height:10px;margin-top:-5px;border-radius:5px;background:var(--track);box-shadow:inset 0 0 0 1px var(--field)}
+.mine-tbar.t-ok{background:var(--ok-line);box-shadow:inset 0 0 0 1px var(--ok)}
+.mine-tbar.t-warn{background:var(--warn-line);box-shadow:inset 0 0 0 1px var(--warn)}
+.mine-tbar.t-bad{background:var(--bad-line);box-shadow:inset 0 0 0 1px var(--bad)}
+.mine-tbar.t-done{background:var(--ok-soft);box-shadow:inset 0 0 0 1px var(--ok-line)}
+.mine-tbar.t-cnl{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.mine-tbar.faint{opacity:.55}
+.mine-gt{position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 0 2px var(--surface)}
+.mine-gt.passed{background:var(--ok)}
+.mine-gt.overdue{background:var(--bad)}
+.mine-gt.open{background:var(--surface);border:2px solid var(--ink-2)}
+.mine-fc{position:absolute;top:50%;width:3px;height:20px;margin:-10px 0 0 -1.5px;border-radius:2px;background:var(--ink)}
+.mine-ms{position:absolute;top:50%;margin:-12px 0 0 -2px;color:var(--accent);line-height:0}
+.mine-ms.got{color:var(--ok)}
+.mine-ms.late{color:var(--bad)}
+.mine-slip{position:absolute;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;white-space:nowrap;line-height:1}
+.mine-slip.on-bar{padding:3px 6px;border-radius:5px;background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+.mine-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding:10px 24px 14px;border-top:1px solid var(--line-3)}
+.mine-legend>span{display:inline-flex;align-items:center;gap:7px}
+.mine-legend .mine-gt{position:static;margin:0 2px}
+.mine-lg-bar{display:inline-block;width:26px;height:10px;border-radius:5px;background:var(--warn-line);box-shadow:inset 0 0 0 1px var(--warn)}
+.mine-lg-fc{display:inline-block;width:3px;height:16px;border-radius:2px;background:var(--ink)}
+.mine-lg-ms{color:var(--accent)}
+@media (max-width: 900px){
+  .mine-sc{grid-template-columns:1fr}
+  .mine-tlrow{grid-template-columns:180px minmax(0,1fr)}
+  .mine-tlgrid{left:calc(16px + 180px);right:16px}
+  .mine-tlrow .mine-tllab{padding-left:calc(var(--lv, 0) * 10px)}
+  .mine-tlrow.is-obj .mine-tllab{padding-left:calc(var(--lv, 0) * 10px + var(--ob, 32px))}
+  .mine-qrow,.mine-sc,.mine-facts,.mine-tl,.mine-legend,.mine-scnone{padding-left:16px;padding-right:16px}
+  .mine-alarm{margin-left:16px;margin-right:16px}
+}
+
+/* toolbar: Needs a check-in, filter, expand / collapse */
+.mine-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.cw .mine-search{width:230px;height:32px}
+.mine-tools .sel{height:32px;font-size:13px}
+.mine-due b{margin-left:2px;font-weight:700;color:var(--ink)}
+.mine-due.on b{color:var(--accent-ink)}
+
+/* the tree: one grid, seven columns */
+.mine-scroll{overflow-x:auto}
+.mine-grid{min-width:1060px}
+.mine-row{display:grid;grid-template-columns:32px minmax(340px,1fr) 136px 58px 52px 112px 290px;align-items:center;border-top:1px solid var(--line-3);min-height:56px}
+.mine-row.k-hd{min-height:38px;background:var(--surface-2);border-top:0;border-bottom:1px solid var(--line-2);font-size:12.5px;font-weight:500;color:var(--muted)}
+.mine-row.k-hd+.mine-row{border-top:0}
+.mine-c{padding:8px 10px;min-width:0}
+.mine-cflag{padding:0 0 0 12px;display:flex;align-items:center}
+.mine-flag{display:inline-grid;place-items:center}
+.mine-cname{display:flex;align-items:center;gap:8px;padding-top:9px;padding-bottom:9px}
+.mine-car{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;transform:rotate(-90deg);transition:transform .15s ease}
+.mine-car.open{transform:none}
+.mine-car:hover{background:var(--hover);color:var(--ink)}
+.mine-sp{flex:none;width:24px}
+.mine-nt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mine-nm{line-height:1.3}
+.mine-nt .sub{font-size:12px;line-height:1.35}
+.mine-ic{flex:none;display:inline-grid;place-items:center;color:var(--muted)}
+.mine-cname .tid{flex:none;white-space:nowrap}
+.mine-ptag{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink)}
+.mine-row.k-proj,.mine-row.k-set{background:var(--surface-2);border-top:1px solid var(--line);min-height:66px}
+.mine-row.k-proj .mine-nm,.mine-row.k-set .mine-nm{font-size:16px;font-weight:600}
+.mine-row.k-obj{border-top:1px solid var(--line-2);min-height:62px}
+.mine-row.k-obj .mine-nm{font-size:14.5px;font-weight:600}
+.mine-row.k-grp{min-height:48px}
+.mine-gname{font-size:13px;font-weight:600;color:var(--ink-2)}
+/* a header opens its view: the name is the link (a 32 px target); the new-tab mark shows on hover and focus */
+.cw a.mine-glink{display:inline-flex;align-items:center;min-height:32px;padding:0 2px;border-radius:6px;color:var(--ink-2);text-decoration:none}
+.cw a.mine-glink:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.mine-glink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mine-glink .mine-ext{opacity:0;transition:opacity .12s ease}
+.mine-glink:hover .mine-ext,.mine-glink:focus-visible .mine-ext{opacity:1;color:var(--accent-ink)}
+.mine-row.k-item .mine-nm{font-weight:500}
+.mine-row.k-kid .mine-nm{font-size:13.5px}
+.mine-row.on{background:var(--accent-wash)}
+.mine-dt{display:flex;flex-direction:column;gap:1px;font-size:13px;color:var(--ink-2);line-height:1.3}
+.mine-dt .sub{font-size:12px}
+.mine-own{display:flex;gap:2px}
+.mine-score{font-weight:600;font-size:14px}
+.mine-cscore{text-align:right;padding-right:16px}
+.pill.mine-done{display:inline-flex;align-items:center;gap:5px;background:var(--ok-soft);color:var(--ok-ink)}
+.pill.mine-cnl{background:var(--track);color:var(--muted)}
+.mine-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* an objective's title opens Execution or Sales: the title and its subtitle are one link (a 44 px target) */
+.cw a.mine-olink{min-height:44px;justify-content:center;color:inherit;text-decoration:none;border-radius:6px}
+.cw a.mine-olink:hover{color:inherit}
+.mine-olink:hover .mine-nm{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.mine-olink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mine-ext{display:inline-block;vertical-align:-1px;margin-left:7px;color:var(--muted)}
+.mine-olink:hover .mine-ext{color:var(--accent-ink)}
+
+/* progress: the score bar, the group diagrams, and the review table's lines */
+.mine-cprog{padding-right:20px}
+.mine-dia{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mine-bar{position:relative;display:block}
+.mine-tk{margin-left:-1px}
+.mine-seg{height:16px;gap:2px}
+.mine-seg .review-seg{line-height:16px;font-size:10.5px;min-width:18px;cursor:default}
+.review-seg.mine-b-info{background:var(--accent);color:var(--pri-ink)}
+.mine-cap{font-size:12px;color:var(--muted);line-height:1.35}
+.mine-strong{font-size:13px;font-weight:600}
+.mine-ptxt{font-size:12.5px;color:var(--muted)}
+.mine-cprog .review-pg .review-val{min-width:34px;justify-content:flex-end;font-size:12.5px}
+.mine-cprog .kpi-ed .in{width:120px}
+.mine-read{display:block}
+.mine-read .step-val{font-size:12.5px}
+.mine-pop{right:auto;left:0}
+.mine-drow{padding:0 20px 12px 46px;background:var(--surface-3);border-top:1px solid var(--line-3)}
+.mine-dcell{max-width:720px}
+.mine-none{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:28px 20px;border-top:1px solid var(--line-2);color:var(--ink-2);font-size:13.5px}
+.mine-emptyacts{padding:0 20px 18px}
+.mine-tokenrow{align-items:flex-end}
+
+/* a narrow screen: the controls keep to the right edge, so the popover (hung from the button's right) stays on screen */
+@media (max-width: 760px){.cw .mine-search{width:100%}.mine-scope{justify-content:flex-end}}
+@media (prefers-reduced-motion: reduce){.mine-car,.mine-glink .mine-ext{transition:none}.cw .mine-dot:hover{transform:none}}

@@ -1,0 +1,56 @@
+<div class="tbox sspec-mt" data-k="{{$MT.key}}">
+  <sc-if value="{{$MT.has}}" hint-placeholder-val="{{true}}">
+  <table class="tbl">
+    <thead><tr><th>Metric</th><th>Target</th><th>Current</th><th class="r">Score</th><sc-if value="{{$MT.canEdit}}" hint-placeholder-val="{{true}}"><th>Post a reading</th><th class="r"><span class="sspec-sr">Actions</span></th></sc-if></tr></thead>
+    <tbody>
+      <sc-for list="{{$MT.rows}}" as="sspec_mr" hint-placeholder-count="2">
+        <tr class="{{sspec_mr.rowCls}}" data-k="{{sspec_mr.id}}" onDragOver="{{sspec_mr.dragOver}}" onDrop="{{sspec_mr.drop}}">
+          <td class="sspec-mcell">
+            <div class="row g4">
+              <sc-if value="{{sspec_mr.canDrag}}" hint-placeholder-val="{{true}}"><span class="handle" draggable="true" aria-label="{{sspec_mr.dragLabel}}" title="Drag to reorder" onDragStart="{{sspec_mr.dragStart}}" onDragEnd="{{sspec_mr.dragEnd}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"></circle><circle cx="15" cy="6" r="1.4"></circle><circle cx="9" cy="12" r="1.4"></circle><circle cx="15" cy="12" r="1.4"></circle><circle cx="9" cy="18" r="1.4"></circle><circle cx="15" cy="18" r="1.4"></circle></svg></span></sc-if>
+              <sc-if value="{{sspec_mr.canOpen}}" hint-placeholder-val="{{true}}"><button class="lnk ink sspec-mname" type="button" title="{{sspec_mr.openTitle}}" onClick="{{sspec_mr.open}}">{{sspec_mr.name}}</button></sc-if>
+              <sc-if value="{{!sspec_mr.canOpen}}" hint-placeholder-val="{{false}}"><span class="sspec-mname">{{sspec_mr.name}}</span></sc-if>
+            </div>
+            <sc-if value="{{sspec_mr.hasBadges}}" hint-placeholder-val="{{false}}">
+              <div class="row wrap g4 sspec-badges"><sc-for list="{{sspec_mr.badges}}" as="sspec_mb" hint-placeholder-count="1"><span class="tag" title="{{sspec_mb.title}}">{{sspec_mb.text}}</span></sc-for></div>
+            </sc-if>
+            <sc-if value="{{sspec_mr.hasNotes}}" hint-placeholder-val="{{false}}"><button class="lnk muted small" type="button" aria-expanded="{{sspec_mr.notesOpen}}" onClick="{{sspec_mr.toggleNotes}}">{{sspec_mr.notesLabel}}</button></sc-if>
+          </td>
+          <td><span class="num" title="{{sspec_mr.targetTitle}}">{{sspec_mr.target}}</span><sc-if value="{{sspec_mr.hasTgtNote}}" hint-placeholder-val="{{false}}"><div class="sub">{{sspec_mr.tgtNote}}</div></sc-if></td>
+          <td><span class="{{sspec_mr.currentCls}}" title="{{sspec_mr.currentTitle}}">{{sspec_mr.current}}</span><sc-if value="{{sspec_mr.hasSample}}" hint-placeholder-val="{{false}}"><div class="{{sspec_mr.sampleCls}}">{{sspec_mr.sample}}</div></sc-if></td>
+          <td class="r"><span class="{{sspec_mr.scoreCls}}" title="{{sspec_mr.scoreTitle}}"><span class="dot"></span>{{sspec_mr.score}}</span></td>
+          <sc-if value="{{$MT.canEdit}}" hint-placeholder-val="{{true}}">
+            <td>
+              <sc-if value="{{sspec_mr.notBinary}}" hint-placeholder-val="{{true}}">
+                <div class="row g4"><input class="in sm num sspec-read" inputMode="decimal" autoComplete="off" aria-label="{{sspec_mr.readLabel}}" placeholder="Value" value="{{sspec_mr.read}}" onChange="{{sspec_mr.onRead}}" onKeyDown="{{sspec_mr.onReadKey}}"><button class="btn xs" type="button" onClick="{{sspec_mr.post}}">Post</button></div>
+              </sc-if>
+              <sc-if value="{{sspec_mr.isBinary}}" hint-placeholder-val="{{false}}">
+                <div class="row g4"><button class="btn xs" type="button" aria-label="{{sspec_mr.metLabel}}" onClick="{{sspec_mr.postMet}}">Met</button><button class="btn xs" type="button" aria-label="{{sspec_mr.notMetLabel}}" onClick="{{sspec_mr.postNotMet}}">Not met</button></div>
+              </sc-if>
+            </td>
+            <td class="r">
+              <div class="above sspec-menuwrap">
+                <button class="btn xs ic q" type="button" aria-label="{{sspec_mr.menuLabel}}" title="More actions" aria-haspopup="menu" aria-expanded="{{sspec_mr.menuOpen}}" onClick="{{sspec_mr.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                <sc-if value="{{sspec_mr.menuOpen}}" hint-placeholder-val="{{false}}">
+                  <div class="menu r" role="menu" aria-label="{{sspec_mr.menuLabel}}" style="top: 30px">
+                    <button class="mi" type="button" role="menuitem" onClick="{{sspec_mr.open}}">{{sspec_mr.editLabel}}</button>
+                    <sc-if value="{{sspec_mr.isMember}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{sspec_mr.unlink}}">Unlink</button></sc-if>
+                    <sc-if value="{{sspec_mr.canUp}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{sspec_mr.up}}">Move up</button></sc-if>
+                    <sc-if value="{{sspec_mr.canDown}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{sspec_mr.down}}">Move down</button></sc-if>
+                    <div class="msep"></div>
+                    <button class="mi bad" type="button" role="menuitem" onClick="{{sspec_mr.del}}">{{sspec_mr.delLabel}}</button>
+                  </div>
+                </sc-if>
+              </div>
+            </td>
+          </sc-if>
+        </tr>
+        <sc-if value="{{sspec_mr.notesOpen}}" hint-placeholder-val="{{false}}">
+          <tr class="sspec-note-tr"><td colSpan="{{$MT.cols}}"><div class="sspec-note">{{sspec_mr.notes}}</div></td></tr>
+        </sc-if>
+      </sc-for>
+    </tbody>
+  </table>
+  </sc-if>
+  <sc-if value="{{$MT.empty}}" hint-placeholder-val="{{false}}"><div class="empty sspec-mt-empty">{{$MT.emptyText}}</div></sc-if>
+</div>

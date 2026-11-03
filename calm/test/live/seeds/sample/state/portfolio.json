@@ -1,0 +1,576 @@
+{
+  "units": [
+    {
+      "id": "UNIT-TECHNI",
+      "name": "Technical",
+      "order": 1
+    },
+    {
+      "id": "UNIT-BUSINE",
+      "name": "Business",
+      "order": 2
+    }
+  ],
+  "divisions": [
+    {
+      "id": "DIV-FC",
+      "name": "Fuel Cell",
+      "kind": "rd",
+      "unitId": "UNIT-TECHNI",
+      "order": 1
+    },
+    {
+      "id": "DIV-EL",
+      "name": "Electrolyzer",
+      "kind": "rd",
+      "unitId": "UNIT-TECHNI",
+      "order": 2
+    },
+    {
+      "id": "DIV-BD",
+      "name": "Business Development",
+      "kind": "biz",
+      "unitId": "UNIT-BUSINE",
+      "order": 3
+    },
+    {
+      "id": "DIV-PT",
+      "name": "Partnerships",
+      "kind": "biz",
+      "unitId": "UNIT-BUSINE",
+      "order": 4
+    }
+  ],
+  "products": [
+    {
+      "id": "PRD-FC-1",
+      "divisionId": "DIV-FC",
+      "name": "HP membrane",
+      "order": 1,
+      "code": "HP"
+    },
+    {
+      "id": "PRD-EL-1",
+      "divisionId": "DIV-EL",
+      "name": "Tera stack",
+      "order": 1,
+      "code": "TS"
+    },
+    {
+      "id": "PRD-EL-2",
+      "divisionId": "DIV-EL",
+      "name": "Tera system",
+      "order": 2,
+      "code": "TY"
+    }
+  ],
+  "models": [
+    {
+      "id": "MDL-FC-1-1",
+      "productId": "PRD-FC-1",
+      "name": "HP6-12",
+      "order": 1
+    },
+    {
+      "id": "MDL-EL-1-1",
+      "productId": "PRD-EL-1",
+      "name": "Tera 25-30-R5",
+      "order": 1
+    },
+    {
+      "id": "MDL-EL-2-1",
+      "productId": "PRD-EL-2",
+      "name": "Tera 250 kW skid",
+      "order": 1
+    }
+  ],
+  "composition": [
+    {
+      "id": "CMP-SG-EL-2-1-5",
+      "parent": "MDL-EL-2-1",
+      "child": "MDL-EL-1-1"
+    }
+  ],
+  "initiatives": [
+    {
+      "id": "INIT-FC-01",
+      "divisionId": "DIV-FC",
+      "name": "Roll-to-roll membrane scale-up",
+      "desc": "Move HP membranes from batch casting to a continuous coating line.",
+      "plannedStart": 2373,
+      "plannedEnd": 2646,
+      "productId": null,
+      "modelId": "MDL-FC-1-1",
+      "order": 1
+    },
+    {
+      "id": "INIT-FC-02",
+      "divisionId": "DIV-FC",
+      "name": "Low-humidity durability",
+      "desc": "Keep HP6-12 performance at 20 to 30% RH.",
+      "plannedStart": 2465,
+      "plannedEnd": 2737,
+      "productId": null,
+      "modelId": "MDL-FC-1-1",
+      "order": 2
+    },
+    {
+      "id": "INIT-EL-01",
+      "divisionId": "DIV-EL",
+      "name": "Tera component lock",
+      "desc": "Freeze every Tera 25-30-R5 component before the durability campaign.",
+      "plannedStart": 2373,
+      "plannedEnd": 2556,
+      "productId": null,
+      "modelId": "MDL-EL-1-1",
+      "order": 1
+    },
+    {
+      "id": "INIT-EL-02",
+      "divisionId": "DIV-EL",
+      "name": "Stack cost-down",
+      "desc": "Take 18% out of the stack bill of materials.",
+      "plannedStart": 2465,
+      "plannedEnd": 2737,
+      "productId": "PRD-EL-1",
+      "modelId": null,
+      "order": 2
+    },
+    {
+      "id": "INIT-BD-01",
+      "divisionId": "DIV-BD",
+      "name": "Utility pilot program",
+      "desc": "Land paid pilots with regional utilities.",
+      "plannedStart": 2465,
+      "plannedEnd": 2646,
+      "productId": null,
+      "modelId": null,
+      "order": 1
+    }
+  ],
+  "milestones": [
+    {
+      "id": "MS-FC-01-01",
+      "initiativeId": "INIT-FC-01",
+      "name": "Pilot line ready for customer audit",
+      "plannedDate": 2536,
+      "completedDate": null,
+      "trl": 5,
+      "mrl": 4,
+      "order": 1
+    },
+    {
+      "id": "MS-FC-01-02",
+      "initiativeId": "INIT-FC-01",
+      "name": "First 300 cm² MEA shipped",
+      "plannedDate": 2627,
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "order": 2
+    },
+    {
+      "id": "MS-EL-01-01",
+      "initiativeId": "INIT-EL-01",
+      "name": "10-cell stack built and leak-tested",
+      "plannedDate": 2466,
+      "completedDate": 2464,
+      "trl": 4,
+      "mrl": 3,
+      "order": 1,
+      "milestoneReport": {
+        "project": "Tera stack",
+        "author": "Toru Hayashi",
+        "version": "1.0",
+        "demonstrated": "A 10-cell short stack was assembled, torqued to 30 N·m and held 30 bar for 2 hours with no measurable leak.",
+        "kpiOverrides": {},
+        "findings": [
+          "All ten cells passed the pressure hold.",
+          "Cell 7 sat 40 mV above the stack average at first light.",
+          "Gasket thickness varied by up to 0.06 mm across the stack.",
+          ""
+        ],
+        "actions": [
+          {
+            "item": "Measure every gasket before the rebuild",
+            "owner": "Toru",
+            "due": "2026-10-16"
+          },
+          {
+            "item": "Order spare titanium PTLs",
+            "owner": "Priya",
+            "due": "2026-10-16"
+          },
+          {
+            "item": "",
+            "owner": "",
+            "due": ""
+          }
+        ],
+        "context": {},
+        "locked": true,
+        "savedAt": 1790866800000
+      }
+    },
+    {
+      "id": "MS-EL-01-02",
+      "initiativeId": "INIT-EL-01",
+      "name": "Tera design freeze",
+      "plannedDate": 2515,
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "order": 2
+    },
+    {
+      "id": "MS-EL-02-01",
+      "initiativeId": "INIT-EL-02",
+      "name": "Second-source PTL qualified",
+      "plannedDate": 2613,
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "order": 1
+    },
+    {
+      "id": "MS-BD-01-01",
+      "initiativeId": "INIT-BD-01",
+      "name": "First pilot energized",
+      "plannedDate": 2606,
+      "completedDate": null,
+      "trl": null,
+      "mrl": null,
+      "order": 1
+    }
+  ],
+  "milestoneState": [
+    {
+      "milestoneId": "MS-EL-02-01",
+      "status": "deprioritized",
+      "day": 2470,
+      "note": "Supplier slipped to Q2; kept for reference."
+    }
+  ],
+  "objectives": [
+    {
+      "id": "OBJ-FC-2026Q3-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-01",
+      "quarter": "2026Q3",
+      "statement": "Qualify HP6-12 at 80 °C",
+      "owner": [
+        "erin@celadyne.com"
+      ],
+      "plannedStart": 2378,
+      "plannedEnd": 2459,
+      "milestoneIds": [],
+      "productId": null,
+      "modelId": null,
+      "order": 1
+    },
+    {
+      "id": "OBJ-FC-2026Q4-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-01",
+      "quarter": "2026Q4",
+      "statement": "Run full roll-to-roll membrane production",
+      "owner": [
+        "erin@celadyne.com"
+      ],
+      "plannedStart": 2465,
+      "plannedEnd": 2543,
+      "milestoneIds": [
+        "MS-FC-01-01"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 2
+    },
+    {
+      "id": "OBJ-FC-2026Q4-02",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-02",
+      "quarter": "2026Q4",
+      "statement": "Root-cause AST degradation",
+      "owner": [
+        "maya@celadyne.com"
+      ],
+      "plannedStart": 2469,
+      "plannedEnd": 2536,
+      "milestoneIds": [],
+      "productId": null,
+      "modelId": null,
+      "order": 3
+    },
+    {
+      "id": "OBJ-FC-2026Q4-03",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-02",
+      "quarter": "2026Q4",
+      "statement": "Show a 20% RH polarization-curve gain",
+      "owner": [
+        "maya@celadyne.com",
+        "erin@celadyne.com"
+      ],
+      "plannedStart": 2476,
+      "plannedEnd": 2543,
+      "milestoneIds": [],
+      "productId": null,
+      "modelId": null,
+      "order": 4
+    },
+    {
+      "id": "OBJ-FC-2027Q1-01",
+      "divisionId": "DIV-FC",
+      "initiativeId": "INIT-FC-01",
+      "quarter": "2027Q1",
+      "statement": "Scale coated MEA to 300 cm²",
+      "owner": [
+        "erin@celadyne.com"
+      ],
+      "plannedStart": 2560,
+      "plannedEnd": 2641,
+      "milestoneIds": [
+        "MS-FC-01-02"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 5
+    },
+    {
+      "id": "OBJ-EL-2026Q4-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-01",
+      "quarter": "2026Q4",
+      "statement": "Qualify the 10-cell short stack for durability testing",
+      "owner": [
+        "toru@celadyne.com"
+      ],
+      "plannedStart": 2465,
+      "plannedEnd": 2543,
+      "milestoneIds": [
+        "MS-EL-01-02"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 1
+    },
+    {
+      "id": "OBJ-EL-2026Q4-02",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-01",
+      "quarter": "2026Q4",
+      "statement": "Lock Tera 25-30-R5 components",
+      "owner": [
+        "toru@celadyne.com",
+        "priya@celadyne.com"
+      ],
+      "plannedStart": 2465,
+      "plannedEnd": 2515,
+      "milestoneIds": [
+        "MS-EL-01-02"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 2
+    },
+    {
+      "id": "OBJ-EL-2027Q1-01",
+      "divisionId": "DIV-EL",
+      "initiativeId": "INIT-EL-02",
+      "quarter": "2027Q1",
+      "statement": "Cut stack cost 18%",
+      "owner": [
+        "toru@celadyne.com"
+      ],
+      "plannedStart": 2560,
+      "plannedEnd": 2641,
+      "milestoneIds": [
+        "MS-EL-02-01"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 3
+    },
+    {
+      "id": "OBJ-BD-2026Q4-01",
+      "divisionId": "DIV-BD",
+      "initiativeId": "INIT-BD-01",
+      "quarter": "2026Q4",
+      "statement": "Close three utility pilot agreements",
+      "owner": [
+        "sam@celadyne.com"
+      ],
+      "plannedStart": 2465,
+      "plannedEnd": 2543,
+      "milestoneIds": [
+        "MS-BD-01-01"
+      ],
+      "productId": null,
+      "modelId": null,
+      "order": 1
+    },
+    {
+      "id": "OBJ-BD-2027Q1-01",
+      "divisionId": "DIV-BD",
+      "initiativeId": "INIT-BD-01",
+      "quarter": "2027Q1",
+      "statement": "Build the Q1 hydrogen-hub pipeline",
+      "owner": [
+        "sam@celadyne.com"
+      ],
+      "plannedStart": 2560,
+      "plannedEnd": 2641,
+      "milestoneIds": [],
+      "productId": null,
+      "modelId": null,
+      "order": 2
+    }
+  ],
+  "objectiveEdges": [
+    {
+      "fromObj": "OBJ-EL-2026Q4-02",
+      "toObj": "OBJ-EL-2027Q1-01",
+      "lagDays": 14
+    }
+  ],
+  "milestoneEdges": [],
+  "stageGateEdges": [],
+  "kpis": [
+    {
+      "id": "KPI-EL-01-1",
+      "objectiveId": null,
+      "hostType": "initiative",
+      "hostId": "INIT-EL-01",
+      "name": "Stack voltage efficiency (HHV)",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 75,
+      "unit": "%",
+      "isDefiner": true,
+      "groupId": null
+    },
+    {
+      "id": "KPI-FC-01-1",
+      "objectiveId": null,
+      "hostType": "initiative",
+      "hostId": "INIT-FC-01",
+      "name": "Line yield",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 5,
+      "direction": "up",
+      "target": 85,
+      "unit": "%",
+      "isDefiner": true,
+      "groupId": null
+    },
+    {
+      "id": "KPI-BD-01-1",
+      "objectiveId": null,
+      "hostType": "initiative",
+      "hostId": "INIT-BD-01",
+      "name": "Signed pilot capacity",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 3,
+      "unit": "MW",
+      "isDefiner": true,
+      "groupId": null
+    },
+    {
+      "id": "KPI-EL-01-02-1",
+      "objectiveId": null,
+      "hostType": "milestone",
+      "hostId": "MS-EL-01-02",
+      "name": "Cell voltage at 2 A/cm²",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 1.85,
+      "unit": "V",
+      "isDefiner": true,
+      "groupId": null,
+      "sources": [
+        "KPI-EL-2026Q4-01-1-1"
+      ]
+    },
+    {
+      "id": "KPI-FC-01-01-1",
+      "objectiveId": null,
+      "hostType": "milestone",
+      "hostId": "MS-FC-01-01",
+      "name": "Continuous run length",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 50,
+      "unit": "m",
+      "isDefiner": true,
+      "groupId": null,
+      "sources": []
+    },
+    {
+      "id": "KPI-PRD-EL-1-1",
+      "objectiveId": null,
+      "hostType": "product",
+      "hostId": "PRD-EL-1",
+      "name": "Rated stack power",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 25,
+      "unit": "kW",
+      "isDefiner": true,
+      "groupId": null
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-KPI-EL-01-1-a",
+      "kpiId": "KPI-EL-01-1",
+      "value": 73.1,
+      "timestamp": 1791558000000,
+      "note": "",
+      "by": "toru@celadyne.com"
+    },
+    {
+      "id": "UPD-KPI-FC-01-1-a",
+      "kpiId": "KPI-FC-01-1",
+      "value": 78,
+      "timestamp": 1790953200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-KPI-FC-01-1-b",
+      "kpiId": "KPI-FC-01-1",
+      "value": 83,
+      "timestamp": 1791471600000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-KPI-FC-01-1-c",
+      "kpiId": "KPI-FC-01-1",
+      "value": 86,
+      "timestamp": 1791817200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-KPI-FC-01-01-1-a",
+      "kpiId": "KPI-FC-01-01-1",
+      "value": 32,
+      "timestamp": 1791478800000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-KPI-BD-01-1-a",
+      "kpiId": "KPI-BD-01-1",
+      "value": 1,
+      "timestamp": 1791738000000,
+      "note": "",
+      "by": "sam@celadyne.com"
+    }
+  ],
+  "kpiDefs": []
+}

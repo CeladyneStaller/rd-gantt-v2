@@ -134,6 +134,7 @@
       case 'range':   return statRange(xs);
       case 'max':     return statMax(xs);
       case 'min':     return statMin(xs);
+      case 'sum':     return statSum(xs);
     }
     return statAverage(xs);
   }
@@ -500,6 +501,7 @@
   // source of a value. { value, src, own }.
   function effectiveValueEntry(kpi, kpis, execDocs, root, seen){
     seen=seen||{}; if(seen[kpi.id]) return null; seen[kpi.id]=1;
+    if(kpi.pull){ var pv=pulledEntryValue(kpi, execDocs); return pv==null?null:{ value:pv, src:kpi.id, own:true, key:precKey(kpi, null, LINK_OWN_RANK, execDocs) }; }   // a pulled KPI: its statistic over what it pulls (see pulled KPIs)
     root = root || rootOf(kpi, kpis);
     var pool=[];
     var ownV=resolvedReadingValue(readingSourceId(kpi, kpis), root, execDocs);   // borrowed sample, own statistic
@@ -601,7 +603,7 @@
   function sampleOfEntry(kpi, kpis, execDocs, entry) {
     var root = rootOf(kpi, kpis);
     var stat = !!root && root.targetType === 'statistical';
-    var want = stat ? Number(root.readCount) : NaN;
+    var want = stat && !root.pull ? Number(root.readCount) : NaN;      // a pulled KPI's sample is what it pulls: never discounted
     if (!stat || !isFinite(want) || !(want > 0)) {
       return { statistical: stat, expected: null, n: null, factor: 1, partial: false };
     }
@@ -1596,7 +1598,10 @@
   // ---- schedule cascade (§6) -----------------------------------------------
   // cascade(portfolio, execDocs, today) ->
   //   { objectiveProjectedEnd, milestoneEffective, initiativeProjectedEnd,
-  //     longTermSlip, gateEffective, gateSlipped, cycles }
+  //     longTermSlip, gateEffective, gateSlipped, objectiveRevisionDay, cycles }
+  // A plan revision (planRevision: Execution's Revise plan, Sales' Build revised plan) takes in every delay
+  // known the day it was committed: from then on a gate is pushed only by what slips after it, and the
+  // schedule is measured over the work that was not yet done (October 20).
   function cascade(portfolio, execDocs, today) {
     var objs = portfolio.objectives || [];
     var inits = portfolio.initiatives || [];
@@ -1636,6 +1641,29 @@
       c.sgs.forEach(function (s) { gateById[s.id] = s; gateObjOf[s.id] = o; });
     });
 
+    /* Each objective's latest plan revision (planRevision): the day its plan last took in every delay known
+       then. A revision re-dates the remaining gates with what had happened by that day in mind (a passed gate's
+       3 days over, an overdue gate still open), or keeps their dates as a plan to make the time up. Either way
+       that delay is in the plan now, so it must not push the revised gates a second time; only what slips after
+       the revision does. (Until October 20 Sales' re-committed gates ignored every upstream push, later ones
+       too, and Execution's plan versions took nothing in: a passed gate's overrun pushed the revised dates
+       again on top of themselves.) */
+    var revDay = {};
+    objs.forEach(function (o) { revDay[o.id] = planRevisionDay(execFor(o.divisionId), o.id); });
+    // what a revision on day R knew of a gate: its actual date when it had passed by then, otherwise its
+    // planned date, or R itself when that date was already behind it
+    function knownAt(p, R) {
+      if (p.actualDate != null && p.actualDate <= R) return p.actualDate;
+      return p.plannedDate != null ? Math.max(p.plannedDate, R) : R;
+    }
+    // the push along one edge that the revision of the gate's objective already took in: how far the
+    // predecessor, as the revision knew it, had pushed this gate past the date the revision gave it
+    function takenIn(g, fromId, lag) {
+      var o = gateObjOf[g.id], R = o ? revDay[o.id] : null, p = gateById[fromId];
+      if (R == null || !p || g.plannedDate == null) return 0;
+      return Math.max(0, knownAt(p, R) + lag - g.plannedDate);
+    }
+
     // gate predecessors: explicit stageGateEdges + opt-in per-objective date-chain.
     // Edges and the chain flag may live on the portfolio (cross-division) OR in an
     // execDoc (per-division, authored in the execution app). Both are merged here.
@@ -1670,30 +1698,22 @@
     // still seeds its successors at pfGate. Lock never lets an overdue, undone gate
     // read as on-time: the seed still floors at today via pfGate.
     var gateEff = {}, gateStack = {};
-    /* A gate re-committed by an active revised plan is a deliberate new commitment: the team has said
-       "we will hit THIS date regardless of what happened upstream". Chained gates take their lag from
-       the ORIGINAL planned spacing, so without this a single late predecessor pushes every downstream
-       gate by the same number of days forever and the re-commitment changes nothing — the schedule card
-       keeps reporting the original overrun and keeps demanding a plan that already exists.
-       This is the same exemption `locked` already provides, for the same reason. The seed still floors
-       at today via pfGate, so a re-committed date in the past cannot read as on-time. */
-    function gateRecommitted(gid) {
-      var o = gateObjOf[gid]; if (!o) return false;
-      return !!catchupEntry(execFor(o.divisionId).catchupPlans, o.id, gid);
-    }
+    /* After a plan revision a predecessor pushes a gate only by what it slipped since (takenIn): a date the
+       revision set holds against the delays it was set with, and a later overrun pushes it as usual. The seed
+       still floors at today via pfGate, so a revised date already in the past cannot read as on time. */
     function computeGateEff(gid) {
       if (gateEff[gid] != null) return gateEff[gid];
       var g = gateById[gid];
       if (!g) return 0;
       var seed = pfGate(g);
-      if (g.locked || gateRecommitted(gid)) { gateEff[gid] = seed; return seed; }
+      if (g.locked) { gateEff[gid] = seed; return seed; }
       if (g.actualDate != null) { gateEff[gid] = seed; return seed; }   // a finished gate anchors at its actual; a late predecessor can't inflate it, and a recovered gate re-anchors its successors
       if (gateStack[gid]) { cycles.push('GATE:' + gid); return seed; }
       gateStack[gid] = true;
       var res = seed, preds = gatePreds[gid];
       for (var i = 0; i < preds.length; i++) {
         if (gateStack[preds[i].from]) { cycles.push('GATE:' + preds[i].from); continue; }
-        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag);
+        res = Math.max(res, computeGateEff(preds[i].from) + preds[i].lag - takenIn(g, preds[i].from, preds[i].lag));
       }
       gateStack[gid] = false;
       gateEff[gid] = res;
@@ -1717,7 +1737,7 @@
       var preds = gatePreds[gid], chain = null;
       for (var i = 0; i < preds.length; i++) {
         if (gateEStack[preds[i].from]) continue;
-        var c = computeGateEarliest(preds[i].from) + preds[i].lag;
+        var c = computeGateEarliest(preds[i].from) + preds[i].lag - takenIn(g, preds[i].from, preds[i].lag);
         chain = (chain == null) ? c : Math.max(chain, c);
       }
       // No binding predecessor -> a gate's earliest is its OWN planned date; it is not accelerated by nothing.
@@ -1782,24 +1802,25 @@
     var objectiveWorkForecast = {}, objectiveScheduleSlip = {};
     objs.forEach(function (o) {
       var c = childCache[o.id], hasWork = (c.sgs.length + c.tasks.length) > 0, fEnd, pEnd, pd = [];
-      /* A revised plan re-commits the objective's REMAINING work while holding the original finish
-         date. A gate that has already passed is history: its overrun cannot be recovered, and the plan
-         deliberately does not touch a passed gate's planned date. So once a plan is enacted, slip is
-         measured over OUTSTANDING work only — otherwise a past overrun is permanent and the schedule
-         card reports the same lateness forever, no matter what the team commits to.
-         This is scoped to objectives with an active plan: everywhere else slip still counts every gate. */
-      var cuActive = !!activeCatchupPlan(execFor(o.divisionId).catchupPlans, o.id);
-      var sgsForSlip = cuActive ? c.sgs.filter(function (s) { return s.actualDate == null; }) : c.sgs;
+      /* After a plan revision the schedule is measured against the revised plan: work already done the day
+         it was committed is history (a gate's overrun, or its early finish, is in the plan now and cannot be
+         recovered; the revision never moves a passed gate's planned date), and everything else counts
+         against its planned date, including a gate that passes late after the revision. Otherwise a past
+         overrun is permanent and the schedule reports the same lateness forever, whatever the team commits
+         to. Without a revision every gate counts. */
+      var R = revDay[o.id], revised = R != null;
+      var sgsForSlip = revised ? c.sgs.filter(function (s) { return !(s.actualDate != null && s.actualDate <= R); }) : c.sgs;
+      var tasksForSlip = revised ? c.tasks.filter(function (t) { return !(t.actualEnd != null && t.actualEnd <= R); }) : c.tasks;
       if (hasWork) {
-        c.tasks.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
+        tasksForSlip.forEach(function (t) { if (t.plannedEnd != null) pd.push(t.plannedEnd); });
         sgsForSlip.forEach(function (s) { if (s.plannedDate != null) pd.push(s.plannedDate); });
-        if (cuActive) {
-          /* Recomputed from outstanding work only. pfTask returns an unstarted task's PLANNED end, so
-             it must be floored at today here: intrinsic normally gets that floor from the gates beside
-             it, and dropping the passed ones would otherwise let the forecast run backwards and an
-             overdue task read as on time. */
+        if (revised) {
+          /* Recomputed from the work the revision did not take in. pfTask returns an unstarted task's PLANNED
+             end, so it must be floored at today here: intrinsic normally gets that floor from the gates beside
+             it, and dropping the passed ones would otherwise let the forecast run backwards and an overdue
+             task read as on time. */
           var fv = [];
-          c.tasks.forEach(function (t) { fv.push(t.actualEnd != null ? pfTask(t) : Math.max(pfTask(t), today)); });
+          tasksForSlip.forEach(function (t) { fv.push(t.actualEnd != null ? pfTask(t) : Math.max(pfTask(t), today)); });
           sgsForSlip.forEach(function (s) { fv.push(gateEff[s.id]); });
           fEnd = fv.length ? Math.max.apply(null, fv) : o.plannedEnd;
         } else {
@@ -1905,6 +1926,7 @@
       gateForecastEarliest: gateEarliest,
       gateAcceleration: gateAcceleration,
       gateSlipped: gateSlipped,
+      objectiveRevisionDay: revDay,
       cycles: cycles
     };
   }
@@ -2322,6 +2344,18 @@
     for (var i=0;i<arr.length;i++){ var r=arr[i]; if(r && r.objectiveId===objId && (r.status==='achieved'||r.status==='abandoned')) return r; }
     return null;
   }
+  /* An objective's latest plan revision: Execution's newest plan version (v2 and up; v1 is the plan as first
+     committed, written with the first revision) or Sales' revised plan (re-committed gates), whichever was
+     committed later. -> { day, v (Execution's version number, else null), kind: 'version' | 'recommit' }, or
+     null when the plan was never revised. A revision takes in every delay known that day (cascade). */
+  function planRevision(exec, objId){
+    var best = null, last = latestPlanVersion(exec, objId);
+    if (last && (last.v || 0) >= 2 && last.committedDay != null && isFinite(last.committedDay)) best = { day: Number(last.committedDay), v: last.v, kind: 'version' };
+    var cu = activeCatchupPlan(exec && exec.catchupPlans, objId);
+    if (cu && cu.enactedDay != null && isFinite(cu.enactedDay) && (!best || Number(cu.enactedDay) > best.day)) best = { day: Number(cu.enactedDay), v: null, kind: 'recommit' };
+    return best;
+  }
+  function planRevisionDay(exec, objId){ var r = planRevision(exec, objId); return r ? r.day : null; }
   function activeCatchupPlan(catchupPlans, objId){
     var plans=(catchupPlans||[]).filter(function(p){return p&&p.objectiveId===objId;});
     if(!plans.length) return null;
@@ -2829,6 +2863,456 @@
     return out;
   }
 
+  // ---- pulled KPIs (October 2026) -----------------------------------------------------------------
+  // A pulled KPI is a statistical KPI whose readings are PULLED from other work instead of posted. Every
+  // matching objective, key result, stage-gate, workstream, kanban tile, experiment or logic tree gives
+  // one reading (its score, its days behind schedule, its state, a dated happening) and the KPI's
+  // statistic runs over them. It then scores like any statistical KPI against its own target, so key
+  // result and objective scores, gate readiness and auto-pass take it unchanged.
+  //
+  //   kpi.pull = { v: 1, each, measure, states: [], window, scope: { div, quarter, proj, owner, narrow },
+  //                follow, items?: [itemId], exclude: [itemId], by, at }
+  //   kpi.statistic   a number:  average | median | min | max | sum | stddev | cv | range,
+  //                              countAbove | countBelow | shareAbove | shareBelow (against kpi.threshold)
+  //                   a status:  share | count (of the items whose state is in pull.states)
+  //                   dated:     count | perWeek (happenings within pull.window)
+  //   scope.div       'all' (every division, any kind or unit: the default) | 'rd' | 'biz' (every division of
+  //                   that kind) | 'unit:<unitId>' (every division in that unit) | one division id
+  //   scope.quarter   'current' | 'next' (from today) | 'YYYYQn' | '' (any quarter)
+  //   scope.proj / scope.owner   an initiative id / an owner's email ('' = any; any case, against one email or a list)
+  //   scope.narrow    a workstream id (gates, workstreams), a board id (tiles), 'objId:tid' (experiments, trees)
+  //   pull.window     'd7' | 'd30' | 'd90' | 'quarter' (so far): dated readings and days to finish
+  //   pull.follow     false: only the items in pull.items count (the ones picked when it was saved)
+  //
+  // Never pulled: the KPI's own host (a key result's KPI never reads its own objective or key result, a
+  // gate's target never reads its gate), so a KPI cannot read itself; a longer loop reads null. Waiting,
+  // not zero: an item without a reading (no score yet, a gate not due, a parked tile, an experiment not
+  // concluded…) is listed with the reason and left out, like an item left out by hand. A statistic over
+  // nothing has no value, except a count of dated happenings, which is 0.
+  //
+  // A value needs every document the KPI reads, and today: the apps load every division's document (each
+  // edits only its own kind), so a KPI anywhere can pull from any division. A page registers
+  // setPullSource(fn), fn() -> { portfolio, docs: { divisionId: doc }, today (day count), todayIso }, and
+  // every call reads it, whatever map it was handed. Without one, the map handed in is used, with today's
+  // date. Results are kept on that source object: a page hands out a new one per render and after every change.
+  var PULL_EPOCH = Date.UTC(2020, 0, 1);          // documents count days from 2020-01-01 (UTC)
+  var PULL_SOURCE = null;
+  var PULL_MEASURES = {                            // measure -> [the item it reads, the kind of reading]
+    score: ['objective', 'number'], slip: ['objective', 'number'], health: ['objective', 'number'], status: ['objective', 'state'],
+    krScore: ['keyResult', 'number'], krPace: ['keyResult', 'state'],
+    daysLate: ['gate', 'number'], onTime: ['gate', 'state'], gateScore: ['gate', 'number'],
+    wsShare: ['workstream', 'number'],
+    finished: ['tile', 'state'], stageHealth: ['tile', 'state'], daysInStage: ['tile', 'number'],
+    finishedIn: ['tile', 'event'], daysToFinish: ['tile', 'number'],
+    concluded: ['experiment', 'event'], hypothesis: ['experiment', 'state'], expStatus: ['experiment', 'state'],
+    daysRunning: ['experiment', 'number'],
+    treeOutcome: ['tree', 'state']
+  };
+  var PULL_STATES = {                              // each status reading's states, and the default pick
+    status: [['on-track', 'at-risk', 'off-track'], ['on-track']],
+    krPace: [['on-track', 'at-risk', 'off-track'], ['on-track']],
+    onTime: [['ontime', 'late', 'overdue'], ['ontime']],
+    finished: [['finished', 'open'], ['finished']],
+    stageHealth: [['on-track', 'at-risk', 'breached'], ['on-track']],
+    hypothesis: [['confirmed', 'refuted', 'none'], ['confirmed']],
+    expStatus: [['planned', 'in_progress', 'complete'], ['in_progress']],
+    treeOutcome: [['success', 'pause', 'stop', 'open'], ['success']]
+  };
+  var PULL_STATS = {
+    number: ['average', 'median', 'min', 'max', 'sum', 'stddev', 'cv', 'range', 'countAbove', 'countBelow', 'shareAbove', 'shareBelow'],
+    state: ['share', 'count'],
+    event: ['count', 'perWeek']
+  };
+  var PULL_WINDOWS = { d7: 7, d30: 30, d90: 90 };
+
+  function setPullSource(fn) { PULL_SOURCE = (typeof fn === 'function') ? fn : null; }
+  function pullDayOfIso(iso) { if (!iso) return null; var t = Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z'); return isNaN(t) ? null : Math.round((t - PULL_EPOCH) / 86400000); }
+  function pullIsoOfDay(d) { return d == null || !isFinite(d) ? '' : new Date(PULL_EPOCH + d * 86400000).toISOString().slice(0, 10); }
+  function pullTodayNow() { var n = new Date(); return Math.round((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - PULL_EPOCH) / 86400000); }
+  function pullHide(obj, key, val) {
+    try { Object.defineProperty(obj, key, { value: val, enumerable: false, configurable: true, writable: true }); } catch (e) { obj[key] = val; }
+  }
+  // the source a value is read against: the page's, else the map handed in (and today)
+  function pullSourceFor(execDocs) {
+    if (PULL_SOURCE) {
+      var s = null;
+      try { s = PULL_SOURCE(); } catch (e) { s = null; }
+      if (s && s.docs) return s;
+    }
+    if (execDocs && execDocs.__pullSrc) return execDocs.__pullSrc;
+    var docs = {}, pf = execDocs ? execDocs[PORTFOLIO_KEY] : null;
+    for (var k in execDocs) { if (execDocs.hasOwnProperty(k) && k !== PORTFOLIO_KEY) docs[k] = execDocs[k]; }
+    var t = pullTodayNow();
+    var src = { portfolio: pf || {}, docs: docs, today: t, todayIso: pullIsoOfDay(t) };
+    if (execDocs) pullHide(execDocs, '__pullSrc', src);
+    return src;
+  }
+  function pullCache(src) {
+    if (!src.__pullCache) pullHide(src, '__pullCache', { em: null, casc: undefined, vals: {}, busy: {}, depth: 0, cycle: false });
+    return src.__pullCache;
+  }
+  function pullEm(src, c) {
+    if (!c.em) { c.em = withPortfolio(src.portfolio || {}, src.docs || {}); pullHide(c.em, '__pullSrc', src); }
+    return c.em;
+  }
+  function pullCascade(src, c) {
+    if (c.casc === undefined) { try { c.casc = cascade(src.portfolio || {}, pullEm(src, c), src.today); } catch (e) { c.casc = null; } }
+    return c.casc;
+  }
+  function pullToday(src) { return (src.today != null && isFinite(src.today)) ? src.today : pullTodayNow(); }
+  function pullTodayIso(src) { return src.todayIso || pullIsoOfDay(pullToday(src)); }
+
+  // quarters, from an ISO date
+  function pullQuarterOf(iso) {
+    var y = +String(iso || '').slice(0, 4), m = +String(iso || '').slice(5, 7);
+    return (y && m) ? y + 'Q' + (Math.floor((m - 1) / 3) + 1) : '';
+  }
+  function pullNextQuarter(q) {
+    var m = /^(\d{4})Q([1-4])$/.exec(q || '');
+    if (!m) return '';
+    var y = +m[1], n = +m[2];
+    return n === 4 ? (y + 1) + 'Q1' : y + 'Q' + (n + 1);
+  }
+  // the window, as day counts: from (exclusive) to today (inclusive), and its length in weeks
+  function pullWindow(w, src) {
+    var today = pullToday(src);
+    if (w === 'quarter') {
+      var qr = quarterRange(pullQuarterOf(pullTodayIso(src)));
+      var start = qr ? pullDayOfIso(qr.start) : today;
+      return { key: 'quarter', from: start - 1, to: today, days: today - start + 1, weeks: (today - start + 1) / 7 };
+    }
+    var n = PULL_WINDOWS[w] || 30;
+    return { key: PULL_WINDOWS[w] ? w : 'd30', from: today - n, to: today, days: n, weeks: n / 7 };
+  }
+  function pullInWindow(win, d) { return d != null && d > win.from && d <= win.to; }
+
+  // which objectives the KPI reads, in unit order, then division order, then objective order
+  function pullObjectives(kpi, src) {
+    var P = src.portfolio || {}, pull = kpi.pull || {}, sc = pull.scope || {}, docs = src.docs || {};
+    var units = P.units || [], uRank = {};
+    for (var u = 0; u < units.length; u++) if (units[u] && units[u].id) uRank[units[u].id] = (units[u].order != null && isFinite(units[u].order)) ? Number(units[u].order) : u;
+    var divs = P.divisions || [], kindOf = {}, unitOf = {}, rank = {};
+    for (var i = 0; i < divs.length; i++) {
+      var d = divs[i];
+      if (!d || !d.id) continue;
+      kindOf[d.id] = divisionKind(d);
+      unitOf[d.id] = d.unitId || '';
+      rank[d.id] = [d.unitId && uRank[d.unitId] != null ? uRank[d.unitId] : 1e6, (d.order != null && isFinite(d.order)) ? Number(d.order) : i];
+    }
+    var objs = P.objectives || [];
+    var dv = String(sc.div || 'all');                                 // 'all': every division, of every kind and unit
+    var unit = dv.indexOf('unit:') === 0 ? dv.slice(5) : null;
+    var todayQ = pullQuarterOf(pullTodayIso(src));
+    var want = sc.quarter === 'current' ? todayQ : sc.quarter === 'next' ? pullNextQuarter(todayQ) : (sc.quarter || '');
+    var owner = String(sc.owner || '').trim().toLowerCase();
+    var out = [];
+    for (var j = 0; j < objs.length; j++) {
+      var o = objs[j];
+      if (!o || !o.id || !docs[o.divisionId]) continue;            // a division whose document this page doesn't have
+      if (unit != null) { if (unitOf[o.divisionId] !== unit) continue; }
+      else if (dv === 'rd' || dv === 'biz') { if ((kindOf[o.divisionId] || 'rd') !== dv) continue; }
+      else if (dv !== 'all' && o.divisionId !== dv) continue;
+      if (want && o.quarter !== want) continue;
+      if (sc.proj && o.initiativeId !== sc.proj) continue;
+      if (owner) {
+        var own = ownersOf(o), hit = false;                            // one email (older records) or a list
+        for (var q = 0; q < own.length; q++) if (String(own[q]).trim().toLowerCase() === owner) hit = true;
+        if (!hit) continue;
+      }
+      out.push(o);
+    }
+    out.sort(function (a, b) {                                        // unit order, then division order, as the apps list them
+      var ra = rank[a.divisionId] || [1e9, 1e9], rb = rank[b.divisionId] || [1e9, 1e9];
+      return (ra[0] - rb[0]) || (ra[1] - rb[1]) || ((a.order || 0) - (b.order || 0));
+    });
+    return out;
+  }
+  function pullByOrder(a, b) { return (a.order || 0) - (b.order || 0); }
+
+  // a logic tree's ending: the recorded outcomes followed from its root to a terminal (as the Experiments tab)
+  function pullIsSentinel(rid) { return rid === 'other' || rid === 'inconclusive'; }
+  function pullTreeEnd(tree) {
+    var exps = (tree && tree.experiments) || {}, ids = Object.keys(exps), hasParent = {};
+    for (var i = 0; i < ids.length; i++) {
+      var e = exps[ids[i]] || {}, rs = e.possible_results || [];
+      for (var j = 0; j < rs.length; j++) { var nx = rs[j].next_experiment_ids || []; for (var k = 0; k < nx.length; k++) hasParent[nx[k]] = 1; }
+      var ao0 = e.actual_outcome;
+      if (ao0 && pullIsSentinel(ao0.result_id)) { var sx = ao0.next_experiment_ids || []; for (var m = 0; m < sx.length; m++) hasParent[sx[m]] = 1; }
+    }
+    var roots = ids.filter(function (id) { return !hasParent[id]; });
+    var root = roots.length === 1 ? roots[0] : (tree.root_experiment_id && exps[tree.root_experiment_id] ? tree.root_experiment_id : (roots[0] || null));
+    var seen = {}, cur = root;
+    while (cur && !seen[cur]) {
+      seen[cur] = 1;
+      var x = exps[cur];
+      if (!x || !x.actual_outcome) return null;
+      var ao = x.actual_outcome, term = null, next = null;
+      if (pullIsSentinel(ao.result_id)) { term = ao.terminal || null; next = (ao.next_experiment_ids || [])[0] || null; }
+      else {
+        var r = null, prs = x.possible_results || [];
+        for (var p = 0; p < prs.length; p++) if (prs[p].id === ao.result_id) r = prs[p];
+        term = r ? r.terminal || null : null;
+        next = r ? (r.next_experiment_ids || [])[0] || null : null;
+      }
+      if (term && term.type) {
+        var tt = (tree.terminal_types || {})[term.type] || {};
+        var kind = tt.kind || (term.type === 'target_achieved' ? 'success' : term.type === 'conduct_fmea' ? 'pause' : 'stop');
+        return { kind: kind, type: term.type, label: tt.label || term.label || term.type, at: x.code || cur };
+      }
+      cur = next;
+    }
+    return null;
+  }
+
+  // every item the KPI's scope matches: { id, kind, name, divId, objId, objName, quarter, host }
+  function pullItems(kpi, src, objs) {
+    var pull = kpi.pull || {}, each = pull.each, narrow = (pull.scope && pull.scope.narrow) || '', docs = src.docs || {};
+    var out = [];
+    function add(o, x) {
+      x.divId = o.divisionId; x.objId = o.id; x.objName = o.statement || o.id; x.quarter = o.quarter || '';
+      x.host = (x.id === kpi.hostId) || (kpi.hostType === 'keyResult' && x.kind === 'objective' && x.id === kpi.objectiveId);
+      out.push(x);
+    }
+    for (var i = 0; i < objs.length; i++) {
+      var o = objs[i], doc = docs[o.divisionId] || {};
+      if (each === 'objective') add(o, { id: o.id, kind: 'objective', name: o.statement || o.id });
+      else if (each === 'keyResult') {
+        (doc.keyResults || []).forEach(function (kr) { if (kr && kr.objectiveId === o.id) add(o, { id: kr.id, kind: 'keyResult', name: kr.statement || kr.id }); });
+      } else if (each === 'gate') {
+        (doc.stageGates || []).filter(function (g) { return g && g.objectiveId === o.id && (!narrow || g.setId === narrow); })
+          .sort(function (a, b) { var pa = a.plannedDate == null ? 1e9 : a.plannedDate, pb = b.plannedDate == null ? 1e9 : b.plannedDate; return (pa - pb) || pullByOrder(a, b); })
+          .forEach(function (g) { add(o, { id: g.id, kind: 'gate', name: g.name || g.id }); });
+      } else if (each === 'workstream') {
+        (doc.stageGateSets || []).filter(function (s) { return s && s.objectiveId === o.id && (!narrow || s.id === narrow); }).sort(pullByOrder)
+          .forEach(function (s) { add(o, { id: s.id, kind: 'workstream', name: s.name || s.id }); });
+      } else if (each === 'tile') {
+        (doc.boards || []).filter(function (b) { return b && b.objectiveId === o.id && (!narrow || b.id === narrow); }).forEach(function (b) {
+          (b.tiles || []).forEach(function (t) { if (t) add(o, { id: b.id + '/' + t.id, kind: 'tile', name: t.name || t.id, boardId: b.id, boardName: b.name || b.id }); });
+        });
+      } else if (each === 'experiment' || each === 'tree') {
+        var bag = (doc.etbTrees || {})[o.id];
+        if (!bag) continue;
+        etbTreesOf(bag).trees.forEach(function (t) {
+          var tk = o.id + ':' + (t.tid || 't_main');
+          if (narrow && tk !== narrow) return;
+          var tname = t.name || t.title || 'Logic tree';
+          if (each === 'tree') { add(o, { id: tk, kind: 'tree', name: tname }); return; }
+          var exps = t.experiments || {};
+          Object.keys(exps).forEach(function (eid) {
+            var e = exps[eid] || {};
+            add(o, { id: tk + ':' + eid, kind: 'experiment', name: ((e.code ? e.code + ' ' : '') + (e.name || '')).trim() || eid, treeName: tname });
+          });
+        });
+      }
+    }
+    return out;
+  }
+  // find what an item points at again (items carry ids only, never live records)
+  function pullRecord(it, src) {
+    var doc = (src.docs || {})[it.divId] || {}, i;
+    if (it.kind === 'objective') { var os = (src.portfolio || {}).objectives || []; for (i = 0; i < os.length; i++) if (os[i].id === it.id) return os[i]; return null; }
+    if (it.kind === 'keyResult') { var krs = doc.keyResults || []; for (i = 0; i < krs.length; i++) if (krs[i].id === it.id) return krs[i]; return null; }
+    if (it.kind === 'gate') { var gs = doc.stageGates || []; for (i = 0; i < gs.length; i++) if (gs[i].id === it.id) return gs[i]; return null; }
+    if (it.kind === 'workstream') { var ss = doc.stageGateSets || []; for (i = 0; i < ss.length; i++) if (ss[i].id === it.id) return ss[i]; return null; }
+    if (it.kind === 'tile') {
+      var bs = doc.boards || [], tid = it.id.slice(it.boardId.length + 1);
+      for (i = 0; i < bs.length; i++) if (bs[i].id === it.boardId) {
+        var ts = bs[i].tiles || [];
+        for (var j = 0; j < ts.length; j++) if (ts[j].id === tid) return { tile: ts[j], board: bs[i] };
+      }
+      return null;
+    }
+    if (it.kind === 'experiment' || it.kind === 'tree') {
+      var parts = it.id.split(':'), bag = (doc.etbTrees || {})[it.objId];
+      if (!bag) return null;
+      var tree = etbTreeById(bag, parts[1]) || (parts[1] === 't_main' ? etbActiveTree(bag) : null);
+      if (!tree) return null;
+      if (it.kind === 'tree') return tree;
+      return (tree.experiments || {})[parts.slice(2).join(':')] || null;
+    }
+    return null;
+  }
+  function pullBandState(s) { var b = band(s); return b === 'no-band' ? null : b; }
+
+  // one item's reading: { counts, num | state, why (when it waits), det (what the screens show) }
+  function pullEval(it, measure, src, c, win) {
+    var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
+    var rec = pullRecord(it, src);
+    if (!rec) return no('missing');
+    var em = pullEm(src, c), today = pullToday(src), todayIso = pullTodayIso(src);
+    switch (measure) {
+      case 'score': case 'status': {
+        var s = objectiveScore(rec.id, em);
+        if (s == null) return no('noScore');
+        return measure === 'score' ? { counts: true, num: s, det: { score: s } } : { counts: true, state: pullBandState(s), det: { score: s } };
+      }
+      case 'slip': {
+        var casc = pullCascade(src, c);
+        var sl = casc && casc.objectiveScheduleSlip ? casc.objectiveScheduleSlip[rec.id] : null;
+        if (sl == null) return no(objectiveEndState(((src.docs || {})[rec.divisionId] || {}).objectiveState, rec.id) ? 'ended' : 'noDates');
+        return { counts: true, num: sl, det: { slip: sl } };
+      }
+      case 'health': {
+        var hv = objectiveGateReadiness(rec.id, em, today);
+        return hv == null ? no('noWorkstreams') : { counts: true, num: hv, det: { health: hv } };
+      }
+      case 'krScore': {
+        var ks = keyResultScore(rec.id, em);
+        return ks == null ? no('noScore') : { counts: true, num: ks, det: { score: ks } };
+      }
+      case 'krPace': {
+        var obj = null, os = (src.portfolio || {}).objectives || [];
+        for (var oi = 0; oi < os.length; oi++) if (os[oi].id === rec.objectiveId) obj = os[oi];
+        var p = keyResultPace(rec.id, obj, em, today);
+        if (!p || p.band === 'no-band') return no('noScore');
+        return { counts: true, state: p.band, det: { score: p.attainment } };
+      }
+      case 'daysLate': case 'onTime': {
+        var cls = classifyGate(rec, today), ref = rec.baselineDate != null ? rec.baselineDate : rec.plannedDate;
+        var det = { cls: cls, planned: rec.plannedDate, actual: rec.actualDate, ref: ref };
+        if (cls === 'pending') return no(rec.plannedDate != null ? 'notDue' : 'noDate', det);
+        var late = cls === 'passed-late' ? rec.actualDate - ref : cls === 'overdue' ? today - rec.plannedDate : 0;
+        det.late = late;
+        if (measure === 'daysLate') return { counts: true, num: late, det: det };
+        return { counts: true, state: cls === 'passed' ? 'ontime' : cls === 'passed-late' ? 'late' : 'overdue', det: det };
+      }
+      case 'gateScore': {
+        var gsv = stageGateScore(rec.id, em);
+        return gsv == null ? no('noTargets') : { counts: true, num: gsv, det: { score: gsv } };
+      }
+      case 'wsShare': {
+        var ws = setScore(rec.id, em, today);
+        return ws == null ? no('noGates') : { counts: true, num: ws, det: { share: ws } };
+      }
+      case 'finished': case 'stageHealth': case 'daysInStage': case 'finishedIn': case 'daysToFinish': {
+        var t = rec.tile, b = rec.board, cols = b.columns || [], last = cols.length ? cols[cols.length - 1].id : null;
+        var colName = null;
+        for (var ci = 0; ci < cols.length; ci++) if (cols[ci].id === t.col) colName = cols[ci].name || cols[ci].id;
+        var tdet = { col: colName, colId: t.col || null };
+        if (tileInBacklog(t)) return no('parked', tdet);
+        var fin = last != null && t.col === last;
+        var finDay = fin ? pullDayOfIso(t.enteredCol) : null;
+        tdet.fin = fin; tdet.finDay = finDay;
+        if (measure === 'finished') return { counts: true, state: fin ? 'finished' : 'open', det: tdet };
+        if (measure === 'finishedIn' || measure === 'daysToFinish') {
+          if (!fin) return no('notFinished', tdet);
+          if (finDay == null) return no('noFinishDate', tdet);         // finished, but when isn't recorded
+          if (!pullInWindow(win, finDay)) return no('beforeWindow', tdet);
+          if (measure === 'finishedIn') return { counts: true, det: tdet };
+          var st = pullDayOfIso(t.startDate);
+          tdet.startDay = st;
+          if (st == null) return no('noStart', tdet);
+          return { counts: true, num: finDay - st, det: tdet };
+        }
+        if (fin) return no('finished', tdet);
+        var lane = null, lanes = b.swimlanes || [];
+        for (var li = 0; li < lanes.length; li++) if (lanes[li].id === t.lane) lane = lanes[li];
+        var hh = tileHealth(t, lane, todayIso);
+        tdet.daysInCol = hh.daysInCol;
+        if (measure === 'daysInStage') return { counts: true, num: hh.daysInCol, det: tdet };
+        return { counts: true, state: hh.status, det: tdet };
+      }
+      case 'expStatus': case 'concluded': case 'hypothesis': case 'daysRunning': {
+        var e = rec, est = e.status || 'planned';
+        var cd = pullDayOfIso(e.completed_date), pd = pullDayOfIso(e.planned_date);
+        var edet = { status: est, completedDay: cd, plannedDay: pd };
+        if (measure === 'expStatus') return { counts: true, state: est === 'in_progress' || est === 'complete' ? est : 'planned', det: edet };
+        if (measure === 'daysRunning') {
+          if (est !== 'in_progress') return no('notRunning', edet);
+          if (pd == null) return no('noPlannedStart', edet);
+          if (pd > today) return no('notStarted', edet);               // in progress ahead of its planned start
+          return { counts: true, num: today - pd, det: edet };
+        }
+        if (est !== 'complete') return no('notConcluded', edet);
+        if (measure === 'hypothesis') {
+          var v = e.hypothesis_verdict === 'confirmed' || e.hypothesis_verdict === 'refuted' ? e.hypothesis_verdict : 'none';
+          edet.inconclusive = !!(e.actual_outcome && e.actual_outcome.result_id === 'inconclusive');
+          return { counts: true, state: v, det: edet };
+        }
+        if (cd == null) return no('noCompletion', edet);
+        return pullInWindow(win, cd) ? { counts: true, det: edet } : no('beforeWindow', edet);
+      }
+      case 'treeOutcome': {
+        var end = pullTreeEnd(rec);
+        return end ? { counts: true, state: end.kind, det: { end: end } } : { counts: true, state: 'open', det: { end: null } };
+      }
+    }
+    return no('unknown');
+  }
+
+  // the statistic over the counted readings
+  function pullStatistic(kind, stat, xs, k, n, win) {
+    if (kind === 'event') return stat === 'perWeek' ? (win.weeks > 0 ? k / win.weeks : null) : k;
+    if (kind === 'state') return n ? (stat === 'count' ? k : 100 * k / n) : null;
+    if (!xs.length) return null;
+    switch (stat) {
+      case 'countAbove': case 'countBelow': return k;
+      case 'shareAbove': case 'shareBelow': return 100 * k / xs.length;
+      case 'sum': return statSum(xs);
+    }
+    return computeStat(stat, xs);
+  }
+
+  // pulledResult(kpi, src?, opts?) -> { value, n, k, kind, measure, stat, thr, states, win, items } | null
+  //   items: [{ id, kind, name, divId, objId, objName, quarter, counts, num?, state?, hit, why?, det, host, hand }]
+  //   opts.fresh: compute without the cache (a draft being edited)
+  function pulledCompute(kpi, src, c) {
+    var pull = kpi.pull || {}, ms = PULL_MEASURES[pull.measure];
+    var win = pullWindow(pull.window, src);
+    if (!ms || ms[0] !== pull.each) return { value: null, n: 0, k: 0, kind: null, measure: pull.measure || null, stat: kpi.statistic || null, thr: null, states: [], win: win, items: [] };
+    var kind = ms[1], stats = PULL_STATS[kind];
+    var stat = stats.indexOf(kpi.statistic) >= 0 ? kpi.statistic : stats[0];
+    var thrN = Number(kpi.threshold), thr = (kpi.threshold != null && kpi.threshold !== '' && isFinite(thrN)) ? thrN : 0;
+    var st = PULL_STATES[pull.measure];
+    var picks = (Array.isArray(pull.states) && pull.states.length) ? pull.states.slice() : (st ? st[1].slice() : []);
+    var above = /Above$/.test(stat), thrStat = /^(count|share)(Above|Below)$/.test(stat);
+    var only = (pull.follow === false && Array.isArray(pull.items)) ? pull.items : null;
+    var ex = Array.isArray(pull.exclude) ? pull.exclude : [];
+    var items = pullItems(kpi, src, pullObjectives(kpi, src));
+    var xs = [], n = 0, k = 0;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i], ev;
+      if (it.host) ev = { counts: false, why: 'host', det: {} };
+      else if (only && only.indexOf(it.id) < 0) ev = { counts: false, why: 'notPicked', det: {} };
+      else if (!only && ex.indexOf(it.id) >= 0) { ev = pullEval(it, pull.measure, src, c, win); ev = { counts: false, why: 'hand', det: ev.det || {} }; it.hand = true; }
+      else ev = pullEval(it, pull.measure, src, c, win);
+      it.counts = !!ev.counts; it.why = ev.counts ? null : ev.why; it.det = ev.det || {};
+      it.hand = !!it.hand; it.hit = false;
+      if (ev.counts) {
+        n++;
+        if (kind === 'number') {
+          it.num = ev.num; xs.push(ev.num);
+          if (thrStat && (above ? ev.num > thr : ev.num < thr)) { it.hit = true; k++; }
+        } else if (kind === 'state') {
+          it.state = ev.state;
+          if (picks.indexOf(ev.state) >= 0) { it.hit = true; k++; }
+        } else k++;
+      }
+    }
+    return { value: pullStatistic(kind, stat, xs, k, n, win), n: n, k: k, kind: kind, measure: pull.measure, stat: stat, thr: thrStat ? thr : null, states: picks, win: win, items: items };
+  }
+  function pulledResult(kpi, src, opts) {
+    if (!kpi || !kpi.pull || typeof kpi.pull !== 'object') return null;
+    src = src || pullSourceFor(null);
+    var c = pullCache(src);
+    var fresh = !!(opts && opts.fresh) || !kpi.id;
+    if (!fresh && c.vals.hasOwnProperty(kpi.id)) return c.vals[kpi.id];
+    var key = kpi.id || '__fresh__';
+    if (c.busy[key]) { c.cycle = true; return null; }             // the KPI reads itself back: no value
+    c.busy[key] = 1; c.depth++;
+    var before = c.cycle, res = null;
+    c.cycle = false;
+    try { res = pulledCompute(kpi, src, c); } catch (e) { res = null; }
+    var hit = c.cycle;
+    delete c.busy[key]; c.depth--;
+    if (!fresh && !hit) c.vals[kpi.id] = res;                      // a value worked out across a loop is not kept
+    c.cycle = (before || hit) && c.depth > 0;
+    return res;
+  }
+  function pulledValue(kpi, src) { var r = pulledResult(kpi, src); return r ? r.value : null; }
+  // the value effectiveValueEntry takes for a pulled KPI (null: nothing to pull yet)
+  function pulledEntryValue(kpi, execDocs) { return pulledValue(kpi, pullSourceFor(execDocs)); }
+
   var API = {
     allocId: allocId,
     kpiScore: kpiScore,
@@ -2956,6 +3440,7 @@
     sliceScore: sliceScore,
     cascade: cascade,
     activeCatchupPlan: activeCatchupPlan, catchupEntry: catchupEntry, objectiveEndState: objectiveEndState,
+    planRevision: planRevision, planRevisionDay: planRevisionDay,
     planVersionsOf: planVersionsOf, latestPlanVersion: latestPlanVersion,
     nextPlanVersionNumber: nextPlanVersionNumber, capturePlanSnapshot: capturePlanSnapshot,
     diffPlanSnapshots: diffPlanSnapshots, gateVersionMarks: gateVersionMarks,
@@ -2996,6 +3481,10 @@
     blankEffect: blankEffect,
     blankCause: blankCause,
     migrateProblem: migrateProblem,
+    // pulled KPIs
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue,
+    PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
+    pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
     _mean: mean, _clamp: clamp, _progressLinear: progressLinear, _progressRange: progressRange
   };

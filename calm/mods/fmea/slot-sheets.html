@@ -1,0 +1,165 @@
+<sc-if value="{{fmea.ed}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{fmea.ed.title}}</h2><span class="sub">{{fmea.ed.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close without saving" onClick="{{fmea.ed.cancel}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body" data-k="fmea-editor">
+    <section class="sh-sec">
+      <label class="fld">Problem<textarea class="ta" placeholder="Describe the problem or risk to analyze" value="{{fmea.ed.problem}}" onChange="{{fmea.ed.onProblem}}" autoFocus=""></textarea></label>
+      <label class="fld">Stage-gate (optional)
+        <select class="sel" value="{{fmea.ed.gateV}}" onChange="{{fmea.ed.onGate}}"><sc-for list="{{fmea.ed.gateOpts}}" as="fgo" hint-placeholder-count="3"><option value="{{fgo.v}}" label="{{fgo.label}}"></option></sc-for></select>
+        <span class="hint">{{fmea.ed.gateHint}}</span>
+      </label>
+    </section>
+    <section class="sh-sec">
+      <div class="row"><h3>Knowns</h3><button class="btn xs push" type="button" onClick="{{fmea.ed.addKnown}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add known</button></div>
+      <sc-if value="{{fmea.ed.noKnowns}}" hint-placeholder-val="{{false}}"><div class="sub">None yet. Add established facts about this problem.</div></sc-if>
+      <sc-for list="{{fmea.ed.knowns}}" as="ek" hint-placeholder-count="2">
+        <div class="row"><input class="in grow" aria-label="{{ek.aria}}" placeholder="A known fact about this problem" value="{{ek.text}}" onChange="{{ek.on}}" autoFocus="{{ek.af}}"><button class="btn sm ic q" type="button" aria-label="{{ek.delAria}}" title="{{ek.delAria}}" onClick="{{ek.del}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+      </sc-for>
+    </section>
+    <section class="sh-sec">
+      <div class="row wrap"><h3>Failure modes</h3>
+        <div class="row push g4">
+<!--@if exec-->
+          <button class="btn xs q" type="button" title="Collapse every section" onClick="{{fmea.ed.collapseAll}}">Collapse all</button>
+          <button class="btn xs q" type="button" title="Expand every section" onClick="{{fmea.ed.expandAll}}">Expand all</button>
+<!--@endif-->
+          <button class="btn xs" type="button" onClick="{{fmea.ed.addMode}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add failure mode</button>
+        </div>
+      </div>
+      <sc-if value="{{fmea.ed.noModes}}" hint-placeholder-val="{{false}}"><div class="sub">No failure modes yet. Add one to begin.</div></sc-if>
+      <sc-for list="{{fmea.ed.modes}}" as="fm" hint-placeholder-count="1">
+        <div class="fmea-node fmea-mode" data-k="{{fm.k}}">
+          <div class="fmea-nh">
+<!--@if exec-->
+            <button class="btn xs ic q" type="button" aria-expanded="{{fm.open}}" aria-label="{{fm.caretAria}}" title="{{fm.caretTitle}}" onClick="{{fm.toggle}}"><sc-if value="{{fm.open}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></sc-if><sc-if value="{{fm.closed}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></sc-if></button>
+<!--@endif-->
+            <span class="fmea-nl">{{fm.n}}</span>
+            <sc-if value="{{fm.closed}}" hint-placeholder-val="{{false}}"><span class="fmea-ct ellip">{{fm.ctext}}</span><span class="sub fmea-cm">{{fm.summary}}</span></sc-if>
+            <button class="btn xs ic q push" type="button" aria-label="{{fm.delAria}}" title="{{fm.delAria}}" onClick="{{fm.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <sc-if value="{{fm.open}}" hint-placeholder-val="{{true}}">
+            <textarea class="ta fmea-nta" aria-label="{{fm.n}}" placeholder="What could go wrong?" value="{{fm.text}}" onChange="{{fm.onText}}" autoFocus="{{fm.af}}"></textarea>
+<!--@if exec-->
+            <!--@include mods/fmea/part-xrows.html XN=fm-->
+<!--@endif-->
+            <div class="row"><span class="fmea-sl">Effects</span><button class="btn xs push" type="button" aria-label="{{fm.addEffectAria}}" title="{{fm.addEffectAria}}" onClick="{{fm.addEffect}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add effect</button></div>
+            <sc-if value="{{fm.noEffects}}" hint-placeholder-val="{{false}}"><div class="sub">No effects yet.</div></sc-if>
+            <div class="fmea-kids">
+              <sc-for list="{{fm.effects}}" as="fe" hint-placeholder-count="1">
+                <div class="fmea-node fmea-eff" data-k="{{fe.k}}" aria-label="{{fe.aria}}">
+                  <div class="fmea-nh">
+<!--@if exec-->
+                    <button class="btn xs ic q" type="button" aria-expanded="{{fe.open}}" aria-label="{{fe.caretAria}}" title="{{fe.caretTitle}}" onClick="{{fe.toggle}}"><sc-if value="{{fe.open}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></sc-if><sc-if value="{{fe.closed}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></sc-if></button>
+<!--@endif-->
+                    <span class="fmea-nl">{{fe.n}}</span>
+                    <sc-if value="{{fe.closed}}" hint-placeholder-val="{{false}}"><span class="fmea-ct ellip">{{fe.ctext}}</span><span class="sub fmea-cm">{{fe.summary}}</span></sc-if>
+                    <button class="btn xs ic q push" type="button" aria-label="{{fe.delAria}}" title="{{fe.delAria}}" onClick="{{fe.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                  </div>
+                  <sc-if value="{{fe.open}}" hint-placeholder-val="{{true}}">
+                    <textarea class="ta fmea-nta" aria-label="{{fe.aria}}" placeholder="What happens if this failure mode occurs?" value="{{fe.text}}" onChange="{{fe.onText}}" autoFocus="{{fe.af}}"></textarea>
+<!--@if exec-->
+                    <!--@include mods/fmea/part-xrows.html XN=fe-->
+<!--@endif-->
+                    <div class="row"><span class="fmea-sl">Causes</span><button class="btn xs push" type="button" aria-label="{{fe.addCauseAria}}" title="{{fe.addCauseAria}}" onClick="{{fe.addCause}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add cause</button></div>
+                    <sc-if value="{{fe.noCauses}}" hint-placeholder-val="{{false}}"><div class="sub">No causes yet.</div></sc-if>
+                    <div class="fmea-kids">
+                      <sc-for list="{{fe.causes}}" as="fc" hint-placeholder-count="1">
+                        <div class="fmea-node fmea-cause" data-k="{{fc.k}}" aria-label="{{fc.aria}}">
+                          <div class="fmea-nh">
+<!--@if exec-->
+                            <button class="btn xs ic q" type="button" aria-expanded="{{fc.open}}" aria-label="{{fc.caretAria}}" title="{{fc.caretTitle}}" onClick="{{fc.toggle}}"><sc-if value="{{fc.open}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></sc-if><sc-if value="{{fc.closed}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></sc-if></button>
+<!--@endif-->
+                            <span class="fmea-nl">{{fc.n}}</span>
+                            <sc-if value="{{fc.closed}}" hint-placeholder-val="{{false}}"><span class="fmea-ct ellip">{{fc.ctext}}</span><span class="sub fmea-cm">{{fc.summary}}</span></sc-if>
+                            <button class="btn xs ic q push" type="button" aria-label="{{fc.delAria}}" title="{{fc.delAria}}" onClick="{{fc.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                          </div>
+                          <sc-if value="{{fc.open}}" hint-placeholder-val="{{true}}">
+                            <textarea class="ta fmea-nta" aria-label="{{fc.aria}}" placeholder="Why might this failure occur?" value="{{fc.text}}" onChange="{{fc.onText}}" autoFocus="{{fc.af}}"></textarea>
+                            <div class="fmea-sod">
+                              <sc-for list="{{fc.sod}}" as="fs" hint-placeholder-count="3">
+                                <label class="fld">{{fs.label}}<select class="sel sm" value="{{fs.v}}" onChange="{{fs.on}}"><sc-for list="{{fs.opts}}" as="fso" hint-placeholder-count="10"><option value="{{fso.v}}" label="{{fso.label}}"></option></sc-for></select></label>
+                              </sc-for>
+                              <div class="fld"><span>RPN</span><span class="fmea-rpn fmea-live"><span class="fmea-rpnn">{{fc.rpn}}</span><span class="{{fc.bandCls}}"><span class="dot"></span>{{fc.bandWord}}</span></span></div>
+                            </div>
+<!--@if exec-->
+                            <!--@include mods/fmea/part-xrows.html XN=fc-->
+<!--@endif-->
+                            <label class="fld">Mitigation or action<input class="in" placeholder="Mitigation / action" value="{{fc.mit}}" onChange="{{fc.onMit}}"></label>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+  </div>
+  <div class="sh-foot">
+    <button class="btn pri" type="button" onClick="{{fmea.ed.save}}">{{fmea.ed.saveLabel}}</button>
+    <button class="btn" type="button" onClick="{{fmea.ed.cancel}}">Cancel</button>
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><span class="err" role="alert">{{ui.sheetErr}}</span></sc-if>
+  </div>
+</sc-if>
+<!--@if exec-->
+<sc-if value="{{fmea.ex}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <button class="btn ic q" type="button" aria-label="Back to problem" title="Back to problem" onClick="{{fmea.ex.back}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+    <div class="sh-title"><h2>{{fmea.ex.title}}</h2><span class="sub">{{fmea.ex.sub}}</span></div>
+    <sc-if value="{{fmea.ex.ok}}" hint-placeholder-val="{{true}}"><span class="{{fmea.ex.vCls}}"><span class="dot"></span>{{fmea.ex.vWord}}</span></sc-if>
+  </div>
+  <sc-if value="{{fmea.ex.missing}}" hint-placeholder-val="{{false}}"><div class="sh-body"><div class="muted">This experiment is no longer available.</div></div></sc-if>
+  <sc-if value="{{fmea.ex.ok}}" hint-placeholder-val="{{true}}">
+    <div class="sh-body" data-k="fmea-experiment">
+      <section class="sh-sec">
+        <h3>Experiment details</h3>
+        <label class="fld">Hypothesis<textarea class="ta" placeholder="What you expect to be true" value="{{fmea.ex.hypothesis}}" onChange="{{fmea.ex.onHypothesis}}" autoFocus=""></textarea></label>
+        <label class="fld">Toggle<input class="in" placeholder="What is varied" value="{{fmea.ex.toggle}}" onChange="{{fmea.ex.onToggle}}"></label>
+        <label class="fld">Experiment<textarea class="ta" placeholder="How the test is run" value="{{fmea.ex.test}}" onChange="{{fmea.ex.onTest}}"></textarea></label>
+        <div class="fld"><span>Samples</span>
+          <div class="fmea-samples">
+            <sc-for list="{{fmea.ex.samples}}" as="xsm" hint-placeholder-count="2"><span class="fmea-sch">{{xsm.name}}<button class="fmea-schx" type="button" aria-label="{{xsm.delAria}}" title="{{xsm.delAria}}" onClick="{{xsm.del}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></span></sc-for>
+            <input class="fmea-sadd" aria-label="Add sample" placeholder="Add a sample, then press Enter" value="{{fmea.ex.sample}}" onChange="{{fmea.ex.onSample}}" onKeyDown="{{fmea.ex.onSampleKey}}">
+            <button class="btn xs" type="button" onClick="{{fmea.ex.addSample}}">Add</button>
+          </div>
+        </div>
+      </section>
+      <section class="sh-sec">
+        <div class="row"><h3>Results</h3><button class="btn xs push" type="button" onClick="{{fmea.ex.addKr}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add key read</button></div>
+        <div class="fmea-gw">
+          <table class="tbl fmea-grid">
+            <thead><tr><th class="fmea-gs">Sample</th>
+              <sc-for list="{{fmea.ex.cols}}" as="xk" hint-placeholder-count="2">
+                <th><div class="col g4"><div class="row g4"><input class="in sm grow" aria-label="{{xk.nameAria}}" placeholder="Key read" value="{{xk.name}}" onChange="{{xk.onName}}"><button class="btn xs ic q" type="button" aria-label="{{xk.delAria}}" title="{{xk.delAria}}" onClick="{{xk.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><input class="in sm" aria-label="{{xk.unitAria}}" placeholder="Unit" value="{{xk.unit}}" onChange="{{xk.onUnit}}"></div></th>
+              </sc-for>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{fmea.ex.rows}}" as="xw" hint-placeholder-count="2">
+                <tr><td class="fmea-gs">{{xw.name}}</td><sc-for list="{{xw.cells}}" as="xc" hint-placeholder-count="2"><td><input class="{{xc.cls}}" aria-label="{{xc.aria}}" title="{{xc.title}}" placeholder="—" value="{{xc.v}}" onChange="{{xc.on}}"></td></sc-for></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <sc-if value="{{!fmea.ex.hasGrid}}" hint-placeholder-val="{{false}}"><div class="sub">{{fmea.ex.gridHint}}</div></sc-if>
+      </section>
+      <section class="sh-sec">
+        <label class="fld">Notes<textarea class="ta" value="{{fmea.ex.notes}}" onChange="{{fmea.ex.onNotes}}"></textarea></label>
+        <h3>Conclusion</h3>
+        <label class="fld">Verdict<select class="sel" value="{{fmea.ex.verdict}}" onChange="{{fmea.ex.onVerdict}}"><sc-for list="{{fmea.ex.verdictOpts}}" as="xv" hint-placeholder-count="4"><option value="{{xv.v}}" label="{{xv.label}}"></option></sc-for></select></label>
+        <label class="fld">What the experiment showed<textarea class="ta" aria-label="Conclusion" value="{{fmea.ex.conclusion}}" onChange="{{fmea.ex.onConclusion}}"></textarea></label>
+      </section>
+    </div>
+    <div class="sh-foot">
+      <button class="btn pri" type="button" onClick="{{fmea.ex.save}}">Save experiment</button>
+      <button class="btn" type="button" onClick="{{fmea.ex.back}}">Back to problem</button>
+      <span class="sub push">{{fmea.ex.prog}}</span>
+      <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><span class="err" role="alert">{{ui.sheetErr}}</span></sc-if>
+    </div>
+  </sc-if>
+</sc-if>
+<!--@endif-->

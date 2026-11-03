@@ -1,0 +1,28 @@
+{
+  "app": "mine",
+  "out": "Mine-A.dc.html",
+  "title": "My Projects, calm workspace",
+  "preview": {
+    "width": 1440,
+    "height": 1400
+  },
+  "shell": "apps/mine/shell.html",
+  "css": [
+    "apps/mine/shell.css"
+  ],
+  "js": [
+    "apps/mine/shell.js"
+  ],
+  "mods": [
+    "kpi",
+    "pull",
+    "kr",
+    "gates",
+    "kb",
+    "fmea",
+    "step",
+    "etb",
+    "review"
+  ],
+  "flags": []
+}

@@ -1,0 +1,79 @@
+<!-- ======================= outcome recorder (Conclude… / Record outcome) ======================= -->
+<sc-if value="{{step.rec}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{step.rec.title}}</h2><sc-if value="{{step.rec.ok}}" hint-placeholder-val="{{true}}"><span class="sub">{{step.rec.sub}}</span></sc-if></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <sc-if value="{{step.rec.missing}}" hint-placeholder-val="{{false}}"><div class="sh-body"><div class="note">This experiment no longer exists.</div></div></sc-if>
+  <sc-if value="{{step.rec.ok}}" hint-placeholder-val="{{true}}">
+    <div class="sh-body">
+      <section class="sh-sec">
+        <div class="row"><h3 class="grow">Key reads: enter the measured values</h3>
+<!--@if !sales-->
+          <sc-if value="{{step.rec.canConnect}}" hint-placeholder-val="{{true}}"><button class="btn xs" type="button" onClick="{{step.rec.connect}}">Connect data</button></sc-if>
+<!--@endif-->
+        </div>
+        <sc-if value="{{step.rec.noKrs}}" hint-placeholder-val="{{false}}"><div class="hint">No key reads on this experiment. Choose a result below.</div></sc-if>
+        <sc-for list="{{step.rec.krs}}" as="k" hint-placeholder-count="2">
+          <div class="row wrap step-erk" data-k="{{k.key}}">
+            <div class="col g2 grow"><span>{{k.name}}</span><span class="sub">{{k.crit}}</span><sc-if value="{{k.hasStat}}" hint-placeholder-val="{{false}}"><span class="{{k.statCls}}">{{k.stat}}</span></sc-if></div>
+<!--@if sales-->
+            <input class="in sm step-erin" type="number" step="any" aria-label="{{k.aria}}" placeholder="{{k.ph}}" value="{{k.v}}" onChange="{{k.set}}">
+<!--@else-->
+            <input class="in sm step-erin" aria-label="{{k.aria}}" placeholder="{{k.ph}}" value="{{k.v}}" onChange="{{k.set}}">
+<!--@endif-->
+            <span class="sub step-erunit">{{k.unit}}</span>
+          </div>
+        </sc-for>
+      </section>
+      <div class="{{step.rec.concl.cls}}"><div class="col g2"><span class="strong">{{step.rec.concl.head}}</span><sc-if value="{{step.rec.concl.hasSub}}" hint-placeholder-val="{{false}}"><span>{{step.rec.concl.sub}}</span></sc-if></div></div>
+      <section class="sh-sec" aria-label="Result">
+        <h3>Result</h3>
+        <sc-if value="{{step.rec.noResults}}" hint-placeholder-val="{{false}}"><div class="hint">No possible results are defined for this experiment. Add them in the logic tree first.</div></sc-if>
+        <sc-for list="{{step.rec.results}}" as="r" hint-placeholder-count="2">
+          <label class="{{r.cls}}" data-k="{{r.key}}"><input class="cb" type="radio" name="step-rec-pick" checked="{{r.on}}" onChange="{{r.pick}}"><span class="grow">{{r.label}}</span><sc-if value="{{r.hasMark}}" hint-placeholder-val="{{true}}"><span class="{{r.markCls}}"><span class="dot"></span>{{r.mark}}</span></sc-if></label>
+        </sc-for>
+      </section>
+      <section class="sh-sec">
+        <label class="fld" style="max-width: 220px"><span class="lab">Recorded date</span><input class="in" type="date" value="{{step.rec.date}}" onChange="{{step.rec.setDate}}"></label>
+      </section>
+    </div>
+    <div class="sh-foot"><button class="btn" type="button" onClick="{{step.rec.cancel}}">Cancel</button><button class="btn pri push" type="button" disabled="{{step.rec.recordOff}}" onClick="{{step.rec.record}}">Record outcome</button></div>
+  </sc-if>
+</sc-if>
+
+<!--@if !sales-->
+<!-- ======================= logic-tree manager ======================= -->
+<sc-if value="{{step.mgr}}" hint-placeholder-val="{{false}}">
+  <div class="sh-head">
+    <div class="sh-title"><h2>Logic trees</h2><span class="sub">{{step.mgr.ctxId}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <div class="hint">Each tree has its own root and its own logic. Nothing in one gates anything in another.</div>
+    <sc-if value="{{step.mgr.empty}}" hint-placeholder-val="{{false}}"><div class="note">No logic trees yet. Create one with New tree, or add an experiment to start the first.</div></sc-if>
+    <div class="col g10">
+      <sc-for list="{{step.mgr.rows}}" as="t" hint-placeholder-count="2">
+        <div class="row step-mrow" data-k="{{t.key}}">
+          <sc-if value="{{step.mgr.canEdit}}" hint-placeholder-val="{{true}}">
+            <div class="col g2">
+              <button class="btn xs q ic" type="button" aria-label="Move {{t.name}} up" title="Move up" disabled="{{t.upOff}}" onClick="{{t.up}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+              <button class="btn xs q ic" type="button" aria-label="Move {{t.name}} down" title="Move down" disabled="{{t.downOff}}" onClick="{{t.down}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+            </div>
+            <label class="fld grow"><span class="lab">Tree name</span><input class="in sm" value="{{t.nameF.v}}" onChange="{{t.nameF.set}}" onBlur="{{t.nameF.commit}}" onKeyDown="{{t.nameF.key}}"></label>
+          </sc-if>
+          <sc-if value="{{step.mgr.ro}}" hint-placeholder-val="{{false}}"><span class="strong grow">{{t.name}}</span></sc-if>
+          <span class="sub step-mmeta">{{t.meta}}</span>
+          <sc-if value="{{t.isActive}}" hint-placeholder-val="{{false}}"><span class="st t-info"><span class="dot"></span>Open now</span></sc-if>
+          <sc-if value="{{step.mgr.canEdit}}" hint-placeholder-val="{{true}}">
+            <sc-if value="{{!t.isActive}}" hint-placeholder-val="{{true}}"><button class="btn xs" type="button" onClick="{{t.open}}">Open</button></sc-if>
+            <sc-if value="{{t.canDel}}" hint-placeholder-val="{{true}}"><button class="btn xs danger" type="button" onClick="{{t.del}}">Delete</button></sc-if>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div class="sh-foot"><span class="sub">{{step.mgr.count}}</span><button class="btn pri push" type="button" onClick="{{ui.closeSheet}}">Done</button></div>
+</sc-if>
+
+<!--@endif-->

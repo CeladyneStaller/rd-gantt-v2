@@ -2,7 +2,7 @@ const C=require('./rdcore.js'); let n=0,f=0; const ok=(c,m)=>{n++; if(!c){f++; c
 const pb=C.keyResultPaceBand;
 ok(pb(null,0,100,50)==='no-band','null attainment -> no-band');
 ok(pb(100,0,100,20)==='on-track','attainment 100 -> on-track (met, regardless of time)');
-ok(pb(80,null,null,50)==='at-risk','no objective dates -> score band (80 -> at-risk)');
+ok(pb(70,null,null,50)==='at-risk','no objective dates -> score band (70 -> at-risk)');
 ok(pb(95,null,null,50)==='on-track','no dates, 95 -> on-track (score band)');
 ok(pb(80,0,100,100)==='off-track','deadline reached + unmet -> off-track');
 ok(pb(70,0,100,75)==='on-track','gap 5 (att70 / elapsed75) -> on-track');

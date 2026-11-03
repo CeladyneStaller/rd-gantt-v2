@@ -1,0 +1,132 @@
+<section class="panel fmea" aria-labelledby="fmea-h" data-k="fmea-register">
+  <div class="ph">
+    <div class="col g2 grow">
+      <div class="row g12"><h2 id="fmea-h" class="h2">FMEA risk register</h2><span class="cnt">{{fmea.reg.count}}</span></div>
+      <span class="sub">{{fmea.reg.summary}}</span>
+    </div>
+    <sc-if value="{{fmea.reg.canEdit}}" hint-placeholder-val="{{true}}">
+      <div class="act"><button class="btn sm" type="button" onClick="{{fmea.reg.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add problem</button></div>
+    </sc-if>
+  </div>
+  <div class="fmea-legend">RPN is severity × occurrence × detection, each scored 1 to 10. Below 100 is low, 100 to 199 medium, 200 or more high. Problems are sorted by their worst open RPN; resolved items and problems whose stage-gate has passed no longer count as open.</div>
+  <sc-if value="{{fmea.reg.empty}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{fmea.reg.emptyText}}</div></sc-if>
+  <sc-for list="{{fmea.reg.probs}}" as="fp" hint-placeholder-count="2">
+    <article class="{{fp.cls}}" aria-label="{{fp.aria}}" data-k="{{fp.k}}">
+      <div class="fmea-ph">
+        <div class="col g4 grow">
+          <div class="fmea-ptl">
+            <sc-if value="{{fp.hasGate}}" hint-placeholder-val="{{true}}"><span class="tag" title="{{fp.gateTitle}}">{{fp.gateTag}}</span></sc-if>
+            <sc-if value="{{fp.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink fmea-pt" type="button" title="Edit problem" autoFocus="{{fp.focus}}" onClick="{{fp.edit}}">{{fp.text}}</button></sc-if>
+            <sc-if value="{{!fp.canEdit}}" hint-placeholder-val="{{false}}"><span class="fmea-pt">{{fp.text}}</span></sc-if>
+          </div>
+          <div class="row wrap sub fmea-meta">
+            <sc-if value="{{fp.hasGate}}" hint-placeholder-val="{{true}}"><span>{{fp.gateLine}}</span></sc-if>
+            <span>{{fp.meta}}</span>
+            <sc-if value="{{fp.hasEv}}" hint-placeholder-val="{{false}}"><span>{{fp.ev}}</span></sc-if>
+          </div>
+          <sc-if value="{{fp.hasNote}}" hint-placeholder-val="{{false}}"><div class="sub fmea-note">{{fp.note}}</div></sc-if>
+        </div>
+        <div class="fmea-right">
+          <sc-if value="{{fp.hasRpn}}" hint-placeholder-val="{{true}}"><span class="fmea-rpn" title="{{fp.rpnTitle}}"><span class="fmea-rpnn">RPN {{fp.rpn}}</span><span class="{{fp.bandCls}}"><span class="dot"></span>{{fp.bandWord}}</span></span></sc-if>
+          <!--@include mods/fmea/part-status.html ST=fp.st-->
+          <sc-if value="{{fp.canEdit}}" hint-placeholder-val="{{true}}">
+            <div class="{{fp.moreCls}}" onKeyDown="{{fp.moreKey}}">
+              <button class="btn xs ic q" type="button" aria-haspopup="menu" aria-expanded="{{fp.moreOpen}}" aria-label="{{fp.moreAria}}" title="More actions" onClick="{{fp.moreToggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+              <sc-if value="{{fp.moreOpen}}" hint-placeholder-val="{{false}}">
+                <div class="menu r fmea-more" role="menu" aria-label="Problem actions">
+                  <button class="mi" type="button" role="menuitem" onClick="{{fp.menuEdit}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit problem</button>
+                  <button class="mi bad" type="button" role="menuitem" onClick="{{fp.menuDel}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg>Delete problem</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{fp.hasKnowns}}" hint-placeholder-val="{{true}}">
+        <div class="fmea-knowns">
+          <span class="fmea-sl">Knowns</span>
+          <ul class="fmea-kl"><sc-for list="{{fp.knowns}}" as="fk" hint-placeholder-count="2"><li>{{fk.text}}</li></sc-for></ul>
+        </div>
+      </sc-if>
+      <sc-if value="{{fp.noModes}}" hint-placeholder-val="{{false}}"><div class="sub">No failure modes yet. Open the problem to add them.</div></sc-if>
+      <sc-if value="{{fp.hasTable}}" hint-placeholder-val="{{true}}">
+        <div class="fmea-tw">
+          <table class="tbl fmea-tbl">
+            <thead><tr><th>Failure mode</th><th>Effect</th><th>Cause and mitigation</th><th title="Severity, occurrence and detection, each 1 to 10">S, O, D</th><th>RPN</th><th>Status</th><th><span class="fmea-vh">Actions</span></th></tr></thead>
+            <tbody>
+              <sc-for list="{{fp.rows}}" as="fr" hint-placeholder-count="3">
+                <tr class="{{fr.cls}}">
+                  <td class="{{fr.mCls}}">
+                    <sc-if value="{{fr.showMode}}" hint-placeholder-val="{{true}}">
+                      <div class="col g6">
+                        <span class="{{fr.mode.tCls}}">{{fr.mode.text}}</span>
+<!--@if exec-->
+                        <!--@include mods/fmea/part-chips.html XS=fr.mode-->
+<!--@endif-->
+                        <!--@include mods/fmea/part-status.html ST=fr.mode.st-->
+                      </div>
+                    </sc-if>
+                  </td>
+                  <td class="{{fr.eCls}}">
+                    <sc-if value="{{fr.showEff}}" hint-placeholder-val="{{true}}">
+                      <div class="col g6">
+                        <span class="{{fr.eff.tCls}}">{{fr.eff.text}}</span>
+<!--@if exec-->
+                        <!--@include mods/fmea/part-chips.html XS=fr.eff-->
+<!--@endif-->
+                        <sc-if value="{{fr.eff.hasSt}}" hint-placeholder-val="{{true}}"><!--@include mods/fmea/part-status.html ST=fr.eff.st--></sc-if>
+                      </div>
+                    </sc-if>
+                  </td>
+                  <td class="fmea-cc">
+                    <sc-if value="{{fr.hasCause}}" hint-placeholder-val="{{true}}">
+                      <div class="col g4">
+                        <span class="{{fr.cause.tCls}}">{{fr.cause.text}}</span>
+                        <sc-if value="{{fr.cause.hasMit}}" hint-placeholder-val="{{true}}"><span class="fmea-mit">{{fr.cause.mit}}</span></sc-if>
+<!--@if exec-->
+                        <!--@include mods/fmea/part-chips.html XS=fr.cause-->
+<!--@endif-->
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{fr.noCause}}" hint-placeholder-val="{{false}}"><span class="faint">No causes yet</span></sc-if>
+                  </td>
+                  <td class="fmea-c-sod">
+                    <sc-if value="{{fr.hasCause}}" hint-placeholder-val="{{true}}">
+                      <sc-if value="{{fr.cause.sod.edit}}" hint-placeholder-val="{{true}}">
+                        <div class="{{fr.cause.sod.wrapCls}}" onKeyDown="{{fr.cause.sod.onKey}}">
+                          <button class="fmea-sodb" type="button" aria-haspopup="dialog" aria-expanded="{{fr.cause.sod.open}}" aria-label="{{fr.cause.sod.aria}}" title="{{fr.cause.sod.title}}" onClick="{{fr.cause.sod.toggle}}"><span class="faint">S</span><span>{{fr.cause.sod.s}}</span><span class="faint">O</span><span>{{fr.cause.sod.o}}</span><span class="faint">D</span><span>{{fr.cause.sod.d}}</span></button>
+                          <sc-if value="{{fr.cause.sod.open}}" hint-placeholder-val="{{false}}">
+                            <div class="pop fmea-sodp" role="dialog" aria-label="Rescore this cause">
+                              <div class="h3">Rescore this cause</div>
+                              <sc-for list="{{fr.cause.sod.fields}}" as="sf" hint-placeholder-count="3">
+                                <label class="fld">{{sf.label}}<select class="sel sm" value="{{sf.v}}" onChange="{{sf.on}}"><sc-for list="{{sf.opts}}" as="sfo" hint-placeholder-count="10"><option value="{{sfo.v}}" label="{{sfo.label}}"></option></sc-for></select></label>
+                              </sc-for>
+                              <div class="row"><span class="fmea-rpn"><span class="fmea-rpnn">RPN {{fr.cause.rpn}}</span><span class="{{fr.cause.bandCls}}"><span class="dot"></span>{{fr.cause.bandWord}}</span></span><button class="btn sm push" type="button" onClick="{{fr.cause.sod.done}}">Done</button></div>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{!fr.cause.sod.edit}}" hint-placeholder-val="{{false}}"><span class="fmea-sodt" title="{{fr.cause.sod.title}}"><span class="faint">S</span><span>{{fr.cause.sod.s}}</span><span class="faint">O</span><span>{{fr.cause.sod.o}}</span><span class="faint">D</span><span>{{fr.cause.sod.d}}</span></span></sc-if>
+                    </sc-if>
+                  </td>
+                  <td class="fmea-c-rpn">
+                    <sc-if value="{{fr.hasCause}}" hint-placeholder-val="{{true}}">
+                      <sc-if value="{{fr.cause.rpnHidden}}" hint-placeholder-val="{{false}}"><span class="faint" title="{{fr.cause.rpnTitle}}">—</span></sc-if>
+                      <sc-if value="{{!fr.cause.rpnHidden}}" hint-placeholder-val="{{true}}"><span class="fmea-rpn" title="{{fr.cause.rpnTitle}}"><span class="fmea-rpnn">{{fr.cause.rpn}}</span><span class="{{fr.cause.bandCls}}"><span class="dot"></span>{{fr.cause.bandWord}}</span></span></sc-if>
+                    </sc-if>
+                  </td>
+                  <td class="fmea-c-st">
+                    <sc-if value="{{fr.hasCause}}" hint-placeholder-val="{{true}}"><!--@include mods/fmea/part-status.html ST=fr.cause.st--></sc-if>
+                  </td>
+                  <td class="fmea-c-act">
+                    <sc-if value="{{fr.canDel}}" hint-placeholder-val="{{true}}"><button class="btn xs ic q" type="button" aria-label="{{fr.cause.delAria}}" title="Remove cause" onClick="{{fr.cause.del}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button></sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+    </article>
+  </sc-for>
+</section>

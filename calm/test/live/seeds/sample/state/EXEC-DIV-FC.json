@@ -1,0 +1,981 @@
+{
+  "keyResults": [
+    {
+      "id": "KR-FC-2026Q3-01-1",
+      "objectiveId": "OBJ-FC-2026Q3-01",
+      "statement": "Pass 80 °C qualification",
+      "trackingType": "percentage",
+      "progress": 100
+    },
+    {
+      "id": "KR-FC-2026Q4-01-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "statement": "Hold thickness variation under 1.5 µm (2σ) across a 50 m run",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-FC-2026Q4-01-2",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "statement": "Reach 95 mS/cm proton conductivity at 80 °C, 95% RH",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-FC-2026Q4-02-1",
+      "objectiveId": "OBJ-FC-2026Q4-02",
+      "statement": "Identify the dominant degradation mechanism",
+      "trackingType": "percentage",
+      "progress": 45
+    },
+    {
+      "id": "KR-FC-2026Q4-03-1",
+      "objectiveId": "OBJ-FC-2026Q4-03",
+      "statement": "Lift 20% RH current density at 0.6 V by 20%",
+      "trackingType": "subkr",
+      "subKrs": [
+        {
+          "name": "Swap to the short-side-chain ionomer",
+          "weight": 1,
+          "trackingType": "percentage",
+          "progress": 40
+        },
+        {
+          "name": "Current density at 0.6 V, 20% RH",
+          "weight": 2,
+          "trackingType": "kpi",
+          "kpis": [
+            {
+              "type": "kpi",
+              "targetType": "demonstration",
+              "name": "Current density at 0.6 V",
+              "current": 0.22,
+              "direction": "up",
+              "target": 1.2,
+              "unit": "A/cm²"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "kpis": [
+    {
+      "id": "KPI-FC-2026Q4-01-1-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-FC-2026Q4-01-1",
+      "name": "Thickness variation (2σ)",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 5,
+      "direction": "down",
+      "target": 1.5,
+      "unit": "µm",
+      "order": 0
+    },
+    {
+      "id": "KPI-FC-2026Q4-01-2-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "hostType": "keyResult",
+      "hostId": "KR-FC-2026Q4-01-2",
+      "name": "Proton conductivity",
+      "targetType": "statistical",
+      "statistic": "median",
+      "readCount": 6,
+      "direction": "up",
+      "target": 95,
+      "unit": "mS/cm",
+      "order": 0
+    },
+    {
+      "id": "KPI-FC-2026Q4-01-3-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "hostType": "stageGate",
+      "hostId": "SG-FC-2026Q4-01-3",
+      "name": "Continuous run length",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 50,
+      "unit": "m",
+      "order": 0,
+      "linkParent": "KPI-FC-01-01-1",
+      "linkType": "direct",
+      "linkPriority": 0
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-TH-1",
+      "kpiId": "KPI-FC-2026Q4-01-1-1",
+      "value": 1.3,
+      "timestamp": 1791385200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-TH-2",
+      "kpiId": "KPI-FC-2026Q4-01-1-1",
+      "value": 1.7,
+      "timestamp": 1791558000000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-TH-3",
+      "kpiId": "KPI-FC-2026Q4-01-1-1",
+      "value": 1.4,
+      "timestamp": 1791817200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-1",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 91,
+      "timestamp": 1791039600000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-2",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 92.5,
+      "timestamp": 1791212400000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-3",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 93,
+      "timestamp": 1791385200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-4",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 94.1,
+      "timestamp": 1791558000000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-5",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 92,
+      "timestamp": 1791730800000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    },
+    {
+      "id": "UPD-CO-6",
+      "kpiId": "KPI-FC-2026Q4-01-2-1",
+      "value": 93.6,
+      "timestamp": 1791817200000,
+      "note": "",
+      "by": "erin@celadyne.com"
+    }
+  ],
+  "stageGateSets": [
+    {
+      "id": "SGSET-FC-2026Q4-01-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "name": "Line setup",
+      "order": 0,
+      "chained": true
+    },
+    {
+      "id": "SGSET-FC-2026Q4-01-2",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "name": "Qualification",
+      "order": 1,
+      "chained": true
+    },
+    {
+      "id": "SGSET-FC-2026Q4-02-1",
+      "objectiveId": "OBJ-FC-2026Q4-02",
+      "name": "Analysis",
+      "order": 0,
+      "chained": true
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-FC-2026Q4-01-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "setId": "SGSET-FC-2026Q4-01-1",
+      "name": "Commission the coating line",
+      "intention": "Line runs at speed with tension control on.",
+      "plannedDate": 2463,
+      "actualDate": 2460,
+      "status": "hit",
+      "completionMethod": "manual",
+      "overrideJustification": "Commissioning checklist signed by the line vendor.",
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q4-01-2",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "setId": "SGSET-FC-2026Q4-01-1",
+      "name": "First 10 m trial roll",
+      "intention": "A 10 m roll within thickness spec.",
+      "plannedDate": 2473,
+      "actualDate": 2476,
+      "status": "hit",
+      "completionMethod": "manual",
+      "overrideJustification": "Visual and thickness map reviewed by Erin.",
+      "order": 1
+    },
+    {
+      "id": "SG-FC-2026Q4-01-3",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "setId": "SGSET-FC-2026Q4-01-1",
+      "name": "50 m continuous run",
+      "intention": "A single uninterrupted 50 m run.",
+      "plannedDate": 2501,
+      "actualDate": null,
+      "status": "pending",
+      "order": 2
+    },
+    {
+      "id": "SG-FC-2026Q4-01-4",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "setId": "SGSET-FC-2026Q4-01-2",
+      "name": "Thickness map across the full roll",
+      "intention": "2σ under 1.5 µm across the full width.",
+      "plannedDate": 2520,
+      "actualDate": null,
+      "status": "pending",
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q4-01-5",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "setId": "SGSET-FC-2026Q4-01-2",
+      "name": "Customer audit readiness review",
+      "intention": "Ready for the customer line audit.",
+      "plannedDate": 2536,
+      "actualDate": null,
+      "status": "pending",
+      "order": 1
+    },
+    {
+      "id": "SG-FC-2026Q4-02-1",
+      "objectiveId": "OBJ-FC-2026Q4-02",
+      "setId": "SGSET-FC-2026Q4-02-1",
+      "name": "Post-AST cross-section imaging",
+      "intention": "Image the cathode after 30k cycles.",
+      "plannedDate": 2493,
+      "actualDate": null,
+      "status": "pending",
+      "order": 0
+    },
+    {
+      "id": "SG-FC-2026Q4-02-2",
+      "objectiveId": "OBJ-FC-2026Q4-02",
+      "setId": "SGSET-FC-2026Q4-02-1",
+      "name": "Degradation mechanism report",
+      "intention": "A written mechanism with supporting data.",
+      "plannedDate": 2507,
+      "actualDate": null,
+      "status": "pending",
+      "order": 1
+    }
+  ],
+  "stageGateEdges": [],
+  "tasks": [
+    {
+      "id": "TSK-FC-2026Q4-01-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "name": "Order a second slot-die shim set",
+      "plannedStart": 2465,
+      "plannedEnd": 2472,
+      "percentComplete": 100,
+      "actualStart": 2465,
+      "actualEnd": 2471
+    },
+    {
+      "id": "TSK-FC-2026Q4-01-2",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "name": "Write the roll inspection procedure",
+      "plannedStart": 2472,
+      "plannedEnd": 2493,
+      "percentComplete": 30,
+      "actualStart": 2473,
+      "actualEnd": null
+    },
+    {
+      "id": "TSK-FC-2026Q4-02-1",
+      "objectiveId": "OBJ-FC-2026Q4-02",
+      "name": "Run the 30k-cycle AST on the baseline MEA",
+      "plannedStart": 2448,
+      "plannedEnd": 2501,
+      "percentComplete": 10,
+      "actualStart": 2450,
+      "actualEnd": null
+    }
+  ],
+  "boards": [],
+  "risks": [
+    {
+      "rid": "r_fc_coat",
+      "problem": "Coating defects on the roll-to-roll line",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "gateId": "SG-FC-2026Q4-01-3",
+      "status": "mitigating",
+      "knowns": [
+        {
+          "kid": "k_fc_coat_1",
+          "text": "Pinholes cluster in the first 3 m after each splice."
+        },
+        {
+          "kid": "k_fc_coat_2",
+          "text": "Thickness 2σ reached 1.7 µm on the Oct 9 roll."
+        }
+      ],
+      "modes": [
+        {
+          "mid": "m_fc_coat_1",
+          "mode": "Pinholes in the cast membrane",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_fc_coat_1",
+              "effect": "MEAs fail the crossover screen",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_fc_coat_1",
+                  "cause": "Air entrained in the ionomer dispersion",
+                  "severity": 8,
+                  "occurrence": 5,
+                  "detection": 4,
+                  "mitigation": "Vacuum-degas the dispersion for 30 min before each run.",
+                  "status": "mitigating",
+                  "experiments": [
+                    {
+                      "xid": "fx_pin01",
+                      "code": "EXP-1",
+                      "hypothesis": "Vacuum degassing the ionomer dispersion removes most pinholes.",
+                      "toggle": "Degassed or not degassed",
+                      "test": "Coat two 10 m rolls back to back and count pinholes on the light table.",
+                      "samples": [
+                        "Roll 12, degassed",
+                        "Roll 13, control"
+                      ],
+                      "key_reads": [
+                        {
+                          "krid": "k_pin",
+                          "name": "Pinholes",
+                          "unit": "per m²"
+                        }
+                      ],
+                      "values": {
+                        "Roll 12, degassed": {
+                          "k_pin": "0.4"
+                        },
+                        "Roll 13, control": {
+                          "k_pin": "2.1"
+                        }
+                      },
+                      "notes": "",
+                      "verdict": "confirmed",
+                      "conclusion": "Degassing cut pinholes by about 80%. It is now on the run sheet."
+                    }
+                  ]
+                },
+                {
+                  "cid": "c_fc_coat_2",
+                  "cause": "Dust on the carrier film at the splice",
+                  "severity": 8,
+                  "occurrence": 4,
+                  "detection": 5,
+                  "mitigation": "Tack-roll the carrier film ahead of the slot die.",
+                  "status": "open"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "mid": "m_fc_coat_2",
+          "mode": "Thickness drifts across the web",
+          "status": "open",
+          "effects": [
+            {
+              "eid": "e_fc_coat_2",
+              "effect": "Edge conductivity falls below 95 mS/cm",
+              "status": "open",
+              "causes": [
+                {
+                  "cid": "c_fc_coat_3",
+                  "cause": "Slot-die shim wear",
+                  "severity": 6,
+                  "occurrence": 4,
+                  "detection": 3,
+                  "mitigation": "Second shim set ordered and fitted Oct 7.",
+                  "status": "resolved"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "planVersions": [
+    {
+      "id": "PV-OBJ-FC-2026Q4-01-1",
+      "objectiveId": "OBJ-FC-2026Q4-01",
+      "v": 1,
+      "committedDay": 2464,
+      "reason": "plan as first committed",
+      "snapshot": {
+        "sets": [
+          {
+            "id": "SGSET-FC-2026Q4-01-1",
+            "name": "Line setup",
+            "order": 0
+          },
+          {
+            "id": "SGSET-FC-2026Q4-01-2",
+            "name": "Qualification",
+            "order": 1
+          }
+        ],
+        "gates": [
+          {
+            "id": "SG-FC-2026Q4-01-1",
+            "setId": "SGSET-FC-2026Q4-01-1",
+            "name": "Commission the coating line",
+            "plannedDate": 2463,
+            "actualDate": 2460,
+            "order": 0,
+            "kpis": []
+          },
+          {
+            "id": "SG-FC-2026Q4-01-4",
+            "setId": "SGSET-FC-2026Q4-01-2",
+            "name": "Thickness map across the full roll",
+            "plannedDate": 2520,
+            "actualDate": null,
+            "order": 0,
+            "kpis": []
+          },
+          {
+            "id": "SG-FC-2026Q4-01-2",
+            "setId": "SGSET-FC-2026Q4-01-1",
+            "name": "First 10 m trial roll",
+            "plannedDate": 2473,
+            "actualDate": null,
+            "order": 1,
+            "kpis": []
+          },
+          {
+            "id": "SG-FC-2026Q4-01-5",
+            "setId": "SGSET-FC-2026Q4-01-2",
+            "name": "Customer audit readiness review",
+            "plannedDate": 2536,
+            "actualDate": null,
+            "order": 1,
+            "kpis": []
+          },
+          {
+            "id": "SG-FC-2026Q4-01-3",
+            "setId": "SGSET-FC-2026Q4-01-1",
+            "name": "50 m continuous run",
+            "plannedDate": 2501,
+            "actualDate": null,
+            "order": 2,
+            "kpis": [
+              {
+                "kpiId": "KPI-FC-2026Q4-01-3-1",
+                "name": "Continuous run length",
+                "direction": "up",
+                "target": 50,
+                "unit": "m"
+              }
+            ]
+          }
+        ],
+        "finishDay": 2543
+      }
+    }
+  ],
+  "catchupPlans": [],
+  "objectiveState": [
+    {
+      "objectiveId": "OBJ-FC-2026Q3-01",
+      "status": "achieved",
+      "endedDay": 2459,
+      "note": "Passed 80 °C qualification on schedule."
+    }
+  ],
+  "gateMode": {},
+  "chainGatesByDate": {},
+  "etbTrees": {
+    "OBJ-FC-2026Q4-02": {
+      "schema_version": "1.0",
+      "tree_id": "tree_fc_ast_2026",
+      "title": "AST degradation root cause",
+      "project_id": "OBJ-FC-2026Q4-02",
+      "root_experiment_id": "exp_001",
+      "terminal_types": {
+        "target_achieved": {
+          "label": "Target achieved",
+          "kind": "success"
+        },
+        "conduct_fmea": {
+          "label": "Conduct FMEA",
+          "kind": "pause"
+        },
+        "halt": {
+          "label": "Halt",
+          "kind": "stop"
+        }
+      },
+      "metadata": {
+        "created_date": "2026-10-05",
+        "modified_date": "2026-10-12"
+      },
+      "experiments": {
+        "exp_001": {
+          "hypothesis": "Fresh HP6-12 MEAs start within family: ECSA above 50 m²/g, HFR under 0.06 Ω·cm².",
+          "toggle": "Nothing varied: beginning of life",
+          "hypothesis_verdict": "confirmed",
+          "test": "Cyclic voltammetry and EIS on three MEAs at 80 °C, 100% RH.",
+          "status": "complete",
+          "owner": "MO",
+          "planned_date": "2026-10-05",
+          "completed_date": "2026-10-07",
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_001_1",
+              "name": "Average ECSA, fresh",
+              "unit": "m²/g",
+              "critical_value": "50",
+              "critical_value_hi": "",
+              "direction": ">=",
+              "statistic": "average",
+              "readCount": 3
+            },
+            {
+              "id": "kr_001_2",
+              "name": "HFR, fresh",
+              "unit": "Ω·cm²",
+              "critical_value": "0.06",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_001a",
+              "label": "Baseline in family",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "hit"
+                },
+                {
+                  "key_read_id": "kr_001_2",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Start the AST on these three cells.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_002"
+              ],
+              "terminal": null
+            },
+            {
+              "id": "res_001b",
+              "label": "Baseline off",
+              "criteria": [
+                {
+                  "key_read_id": "kr_001_1",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Bad MEA batch. Stop before spending AST time on it.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "halt",
+                "label": "Halt",
+                "note": null
+              }
+            }
+          ],
+          "actual_outcome": {
+            "result_id": "res_001a",
+            "recorded_date": "2026-10-07",
+            "recorded_by": "Maya Okafor",
+            "note": null,
+            "conclusion": null,
+            "next_experiment_ids": [],
+            "terminal": null,
+            "key_read_values": {
+              "kr_001_1": [
+                54.1,
+                52.8,
+                53.6
+              ],
+              "kr_001_2": 0.052
+            },
+            "key_read_samples": {
+              "kr_001_1": [
+                "HP6-AST-01",
+                "HP6-AST-02",
+                "HP6-AST-03"
+              ]
+            }
+          },
+          "audit_log": [
+            {
+              "timestamp": "2026-10-08T09:12:00.000Z",
+              "user": "Maya Okafor",
+              "field": "possible_results.res_001a.conclusion",
+              "action": "amend",
+              "from": "Start the AST.",
+              "to": "Start the AST on these three cells.",
+              "reason": "Named the cells so the AST log matches."
+            }
+          ],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_001",
+          "code": "EXP-1",
+          "name": "Baseline ECSA and HFR before the AST"
+        },
+        "exp_002": {
+          "hypothesis": "ECSA loss, not membrane thinning, drives the voltage decay seen after the AST.",
+          "toggle": "Cycle count (0 vs 30k)",
+          "hypothesis_verdict": null,
+          "test": "Square-wave AST, 30k cycles 0.6 to 0.95 V, then CV, EIS and fluoride emission on each cell.",
+          "status": "in_progress",
+          "owner": "MO",
+          "planned_date": "2026-10-08",
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_002_1",
+              "name": "Average ECSA after 30k cycles",
+              "unit": "m²/g",
+              "critical_value": "32",
+              "critical_value_hi": "",
+              "direction": ">=",
+              "statistic": "average",
+              "readCount": 3
+            },
+            {
+              "id": "kr_002_2",
+              "name": "HFR after 30k cycles",
+              "unit": "Ω·cm²",
+              "critical_value": "0.07",
+              "critical_value_hi": "",
+              "direction": "<="
+            },
+            {
+              "id": "kr_002_3",
+              "name": "Fluoride emission rate",
+              "unit": "µg/cm²/h",
+              "critical_value": "5",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_002a",
+              "label": "Catalyst-dominated",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "miss"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "The catalyst layer is what degrades. Try a Pt-Co catalyst.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_003"
+              ],
+              "terminal": null
+            },
+            {
+              "id": "res_002b",
+              "label": "Membrane-dominated",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "hit"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "The membrane thins. Take it to the FMEA with the membrane team.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "conduct_fmea",
+                "label": "Conduct FMEA",
+                "note": null
+              }
+            },
+            {
+              "id": "res_002c",
+              "label": "Both degrade",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "miss"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Mixed signal. Rerun on fresh cells before deciding.",
+              "accomplishments": [],
+              "next_experiment_ids": [
+                "exp_004"
+              ],
+              "terminal": null
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_002",
+          "code": "EXP-2",
+          "name": "30k-cycle AST: catalyst or membrane?",
+          "key_read_readings": {
+            "kr_002_1": [
+              {
+                "v": 31.2,
+                "src": {
+                  "portal": "analysis",
+                  "job_id": "j-ast-0102",
+                  "bin_id": "bin-j-ast-0102",
+                  "sample": "HP6-AST-01",
+                  "bucket": "ecsa",
+                  "key": "Average ECSA",
+                  "step": "30k",
+                  "cond": {
+                    "T_C": 80,
+                    "RH_pct": 100
+                  },
+                  "run_t": "2026-10-11T10:00:00Z",
+                  "imported_t": "2026-10-12T16:20:00.000Z"
+                },
+                "batch": "b_ast30k"
+              },
+              {
+                "v": 29.8,
+                "src": {
+                  "portal": "analysis",
+                  "job_id": "j-ast-0202",
+                  "bin_id": "bin-j-ast-0202",
+                  "sample": "HP6-AST-02",
+                  "bucket": "ecsa",
+                  "key": "Average ECSA",
+                  "step": "30k",
+                  "cond": {
+                    "T_C": 80,
+                    "RH_pct": 100
+                  },
+                  "run_t": "2026-10-11T15:30:00Z",
+                  "imported_t": "2026-10-12T16:20:00.000Z"
+                },
+                "batch": "b_ast30k"
+              }
+            ]
+          }
+        },
+        "exp_003": {
+          "hypothesis": "A Pt-Co cathode halves the ECSA loss over 30k cycles.",
+          "toggle": "Cathode catalyst",
+          "hypothesis_verdict": null,
+          "test": "Same AST protocol on three Pt-Co MEAs.",
+          "status": "planned",
+          "owner": "MO",
+          "planned_date": null,
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_003_1",
+              "name": "Average ECSA after 30k cycles",
+              "unit": "m²/g",
+              "critical_value": "40",
+              "critical_value_hi": "",
+              "direction": ">=",
+              "statistic": "average",
+              "readCount": 3
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "res_003a",
+              "label": "Loss halved",
+              "criteria": [
+                {
+                  "key_read_id": "kr_003_1",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "Adopt Pt-Co for the low-humidity build.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "target_achieved",
+                "label": "Target achieved",
+                "note": null
+              }
+            },
+            {
+              "id": "res_003b",
+              "label": "No better",
+              "criteria": [
+                {
+                  "key_read_id": "kr_003_1",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Catalyst swap does not help; stop this line.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": {
+                "type": "halt",
+                "label": "Halt",
+                "note": null
+              }
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": null,
+          "overrides": {},
+          "id": "exp_003",
+          "code": "EXP-3",
+          "name": "Swap to a Pt-Co catalyst and rerun the AST"
+        },
+        "exp_004": {
+          "hypothesis": "ECSA loss, not membrane thinning, drives the voltage decay seen after the AST.",
+          "toggle": "Cycle count (0 vs 30k)",
+          "hypothesis_verdict": null,
+          "test": "Square-wave AST, 30k cycles 0.6 to 0.95 V, then CV, EIS and fluoride emission on each cell.",
+          "status": "planned",
+          "owner": "MO",
+          "planned_date": null,
+          "completed_date": null,
+          "notes": "",
+          "key_reads": [
+            {
+              "id": "kr_002_1",
+              "name": "Average ECSA after 30k cycles",
+              "unit": "m²/g",
+              "critical_value": "32",
+              "critical_value_hi": "",
+              "direction": ">=",
+              "statistic": "average",
+              "readCount": 3
+            },
+            {
+              "id": "kr_002_2",
+              "name": "HFR after 30k cycles",
+              "unit": "Ω·cm²",
+              "critical_value": "0.07",
+              "critical_value_hi": "",
+              "direction": "<="
+            },
+            {
+              "id": "kr_002_3",
+              "name": "Fluoride emission rate",
+              "unit": "µg/cm²/h",
+              "critical_value": "5",
+              "critical_value_hi": "",
+              "direction": "<="
+            }
+          ],
+          "possible_results": [
+            {
+              "id": "exp_004_r1",
+              "source_result_id": "res_002a",
+              "label": "Catalyst-dominated",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "miss"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "hit"
+                }
+              ],
+              "conclusion": "The catalyst layer is what degrades. Try a Pt-Co catalyst.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": null
+            },
+            {
+              "id": "exp_004_r2",
+              "source_result_id": "res_002b",
+              "label": "Membrane-dominated",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "hit"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "The membrane thins. Take it to the FMEA with the membrane team.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": null
+            },
+            {
+              "id": "exp_004_r3",
+              "source_result_id": "res_002c",
+              "label": "Both degrade",
+              "criteria": [
+                {
+                  "key_read_id": "kr_002_1",
+                  "status": "miss"
+                },
+                {
+                  "key_read_id": "kr_002_2",
+                  "status": "miss"
+                }
+              ],
+              "conclusion": "Mixed signal. Rerun on fresh cells before deciding.",
+              "accomplishments": [],
+              "next_experiment_ids": [],
+              "terminal": null
+            }
+          ],
+          "actual_outcome": null,
+          "audit_log": [],
+          "repeat_of": "exp_002",
+          "overrides": {},
+          "id": "exp_004",
+          "code": "EXP-2·R1",
+          "name": "30k-cycle AST: catalyst or membrane? (repeat)"
+        }
+      }
+    }
+  }
+}

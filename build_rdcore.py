@@ -8,12 +8,12 @@ RDCore must exist in exactly ONE place or the tools silently disagree about what
 "on-track" means. That place is rdcore.js, and build.py is the ONLY thing that
 writes it into an app:
 
-    rdcore.js + *_app.template.html  --build.py-->  *_app.html
+    rdcore.js + calm/  --build.py-->  *_app.html, product_designer.html, my_projects.html
 
 An earlier version of this script ALSO wrote *_app.html, in place, from its own
 copy of the engine. That made two writers with two sources for one file: whichever
 ran last won, and because this one edits the BUILT artifact while build.py
-regenerates it from the TEMPLATE, its edits were erased by the next build anyway.
+regenerates it from SOURCE, its edits were erased by the next build anyway.
 So it does not write any more. It answers one question build.py cannot:
 
     do the DEPLOYED copies still match the repo's rdcore.js?
@@ -46,7 +46,7 @@ import sys
 MARK_START_PREFIX = "/* ==RDCORE_START=="
 MARK_END = "/* ==RDCORE_END== */"
 
-DEFAULT_APPS = ["planning_app.html", "execution_app.html", "product_designer.html"]
+DEFAULT_APPS = ["planning_app.html", "execution_app.html", "sales_app.html", "product_designer.html", "my_projects.html"]
 DEFAULT_CORE = "rdcore.js"
 
 

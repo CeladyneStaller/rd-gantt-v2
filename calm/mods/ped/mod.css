@@ -1,0 +1,38 @@
+/* ped: editor, targets, lineage, delete (tokens only) */
+.ped-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.ped-f{position:relative;display:flex;flex-direction:column;gap:5px;min-width:0}
+.ped-f.wide{grid-column:1 / -1}
+.ped-f .in,.ped-f .sel,.ped-f .ta{width:100%}
+.ped-ftag{position:absolute;top:-1px;right:0}
+.ped-checks{display:flex;flex-direction:column;gap:6px;margin:0;padding:8px 12px 10px;border:1px solid var(--line-2);border-radius:10px;max-height:228px;overflow:auto;min-width:0}
+.ped-checks legend{padding:0 4px}
+.ped-check{align-items:flex-start;padding:2px 0}
+.ped-check .cb{margin-top:2px}
+.ped-trow{padding:10px 12px;border-top:1px solid var(--line-3)}
+.ped-trow:first-child{border-top:0}
+.ped-trow-main{align-items:center}
+.ped-trow-sub{padding-left:20px;margin-top:4px}
+.ped-curbtn{display:inline-flex;align-items:center;min-height:28px;padding:2px 9px;border:1px dashed var(--field);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.ped-curbtn:hover{border-color:var(--accent-line);background:var(--accent-wash)}
+.ped-cur{font-weight:500;white-space:nowrap}
+.ped-rv{width:110px}
+.ped-dmd{display:inline-block;width:9px;height:9px;margin:0 2px;transform:rotate(45deg);border-radius:1.5px;background:var(--none);flex:none}
+.ped-dmd.t-ok{background:var(--ok)}
+.ped-dmd.t-warn{background:var(--warn)}
+.ped-dmd.t-bad{background:var(--bad)}
+.ped-msrow{padding:8px 2px;border-top:1px solid var(--line-3)}
+.ped-pause{align-items:flex-end}
+.ped-crumb{font-size:13px}
+.ped-tree{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.ped-lrow{display:flex;align-items:center;gap:8px;min-height:34px;padding-right:12px;border-top:1px solid var(--line-3);min-width:0;font-size:13.5px}
+.ped-lrow:first-child{border-top:0}
+.ped-lname{min-width:0;font-weight:500}
+.ped-chev{display:grid;place-items:center;width:22px;height:22px;flex:none;padding:0;border:0;border-radius:5px;background:transparent;color:var(--faint);cursor:pointer}
+.ped-chev:hover{background:var(--hover);color:var(--ink)}
+.ped-chev[aria-expanded="false"] .ped-chev-ic{transform:rotate(-90deg)}
+.ped-chev-sp{display:inline-block;width:22px;flex:none}
+.ped-src-obj{margin-top:6px}
+.ped-src-kr{padding-left:14px}
+.ped-src-kpi{padding-left:28px}
+.ped-rel{padding:4px 0}
+@media (max-width: 900px){.ped-form{grid-template-columns:minmax(0,1fr)}}

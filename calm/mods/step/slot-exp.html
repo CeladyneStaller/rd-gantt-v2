@@ -1,0 +1,147 @@
+<div class="col g16" data-k="exp-tab">
+  <section class="panel" aria-label="Current step" data-k="current-step">
+    <div class="ph">
+      <h2 class="h2">Current step</h2><span class="cnt">{{step.count}}</span>
+    </div>
+    <sc-for list="{{step.blocks}}" as="bl" hint-placeholder-count="1">
+      <div class="step-block" data-k="{{bl.key}}">
+<!--@if !sales-->
+        <sc-if value="{{bl.head}}" hint-placeholder-val="{{false}}">
+          <div class="step-bhead"><span class="h3">{{bl.name}}</span><span class="sub">{{bl.range}} next steps</span><sc-if value="{{bl.graphOpen}}" hint-placeholder-val="{{false}}"><button class="btn xs q push" type="button" onClick="{{bl.hideGraph}}">Hide graph</button></sc-if></div>
+        </sc-if>
+<!--@endif-->
+        <div class="step-wrap">
+          <div class="step-cards">
+            <sc-if value="{{bl.empty}}" hint-placeholder-val="{{false}}"><div class="note">{{bl.emptyText}}</div></sc-if>
+            <sc-for list="{{bl.cards}}" as="cd" hint-placeholder-count="1">
+              <article class="step-card" data-k="{{cd.key}}" aria-label="{{cd.aria}}">
+                <div class="row top">
+                  <div class="col g2 grow"><span class="tid">{{cd.code}}</span><button class="lnk ink strong step-title" type="button" title="Open in the logic tree" onClick="{{cd.open}}">{{cd.name}}</button></div>
+                  <span class="{{cd.statusCls}}"><span class="dot"></span>{{cd.statusW}}</span>
+                </div>
+                <sc-if value="{{cd.hasHyp}}" hint-placeholder-val="{{true}}"><div class="step-hyp"><span class="faint">Hypothesis</span> {{cd.hyp}}</div></sc-if>
+<!--@if !sales-->
+                <div class="row"><span class="etb-lab">Key reads</span><sc-if value="{{cd.canConnect}}" hint-placeholder-val="{{true}}"><button class="btn xs push" type="button" onClick="{{cd.connect}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Connect data</button></sc-if></div>
+                <sc-if value="{{cd.noReads}}" hint-placeholder-val="{{false}}"><div class="hint">No key reads defined.</div></sc-if>
+                <sc-if value="{{cd.hasReads}}" hint-placeholder-val="{{true}}">
+                  <div class="tbox step-tbox">
+                    <table class="tbl step-tbl">
+                      <thead><tr><th>Key read</th><th class="r">Pass criterion</th><th>Unit</th><th class="r">Current value</th></tr></thead>
+                      <tbody>
+                        <sc-for list="{{cd.rows}}" as="r" hint-placeholder-count="2">
+                          <tr data-k="{{r.key}}">
+                            <td>{{r.name}}</td>
+                            <td class="r num">{{r.crit}}</td>
+                            <td class="sub">{{r.unit}}</td>
+                            <td class="r step-cur">
+                              <sc-if value="{{r.editing}}" hint-placeholder-val="{{false}}"><input class="in sm num step-in" aria-label="{{r.aria}}" placeholder="value" value="{{r.ed.v}}" onChange="{{r.ed.set}}" onKeyDown="{{r.ed.key}}" onBlur="{{r.ed.commit}}" autoFocus=""></sc-if>
+                              <sc-if value="{{r.showCell}}" hint-placeholder-val="{{true}}">
+                                <div class="above step-anchor">
+                                  <sc-if value="{{r.clickStat}}" hint-placeholder-val="{{false}}">
+                                    <button class="step-val" type="button" aria-label="{{r.aria}}" title="Click to see the readings and add one" aria-expanded="{{r.popOpen}}" onClick="{{r.click}}"><!--@include mods/step/part-val.html--></button>
+                                  </sc-if>
+                                  <sc-if value="{{r.clickOne}}" hint-placeholder-val="{{true}}">
+                                    <button class="step-val" type="button" aria-label="{{r.aria}}" title="Click to add a reading" onClick="{{r.click}}"><!--@include mods/step/part-val.html--></button>
+                                  </sc-if>
+                                  <sc-if value="{{r.plain}}" hint-placeholder-val="{{false}}">
+                                    <span class="step-plainval"><!--@include mods/step/part-val.html--></span>
+                                  </sc-if>
+                                  <sc-if value="{{r.popOpen}}" hint-placeholder-val="{{false}}">
+                                    <div class="pop step-pop" role="dialog" aria-label="Readings for {{r.pop.name}}" onKeyDown="{{r.pop.key}}">
+                                      <div class="row"><span class="strong grow">{{r.pop.name}}</span><button class="btn xs q ic" type="button" aria-label="Close readings" title="Close" onClick="{{r.pop.close}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+                                      <div class="row wrap"><span>{{r.pop.statLbl}} <span class="strong">{{r.pop.computed}}</span> {{r.pop.unit}}</span><span class="{{r.pop.cntCls}} push"><span class="dot"></span>{{r.pop.cnt}}</span></div>
+                                      <div class="sub">Target {{r.pop.crit}}</div>
+                                      <div class="step-plist">
+                                        <sc-if value="{{r.pop.empty}}" hint-placeholder-val="{{false}}"><div class="hint">No readings yet. Add the first measurement below.</div></sc-if>
+                                        <sc-for list="{{r.pop.rows}}" as="p" hint-placeholder-count="3">
+                                          <div class="{{p.cls}}"><span class="num strong">{{p.v}}</span><span class="{{p.tagCls}}">{{p.tag}}</span><sc-if value="{{p.hasNote}}" hint-placeholder-val="{{false}}"><span class="hint">{{p.note}}</span></sc-if><button class="{{p.rmCls}}" type="button" aria-label="{{p.rmAria}}" title="Remove this reading" onClick="{{p.rm}}">{{p.rmText}}</button></div>
+                                        </sc-for>
+                                      </div>
+                                      <div class="row"><input class="in sm grow" aria-label="Add readings" placeholder="Add reads, e.g. 0.68 0.67" value="{{r.pop.in}}" onChange="{{r.pop.setIn}}" onKeyDown="{{r.pop.inKey}}" autoFocus=""><button class="btn sm" type="button" onClick="{{r.pop.add}}">Add</button></div>
+                                      <div class="row wrap"><button class="btn xs q" type="button" title="Start a fresh sample. Earlier readings are kept but stop counting." onClick="{{r.pop.newBatch}}">New batch</button><sc-if value="{{r.pop.batchPending}}" hint-placeholder-val="{{false}}"><span class="sub">The next reading starts a fresh sample.</span></sc-if></div>
+                                      <div class="hint">Each entry is one measurement; the {{r.pop.statLbl}} above is computed from them. Imported readings are tagged with their sample.</div>
+                                    </div>
+                                  </sc-if>
+                                </div>
+                              </sc-if>
+                            </td>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </sc-if>
+                <div class="{{cd.strip.cls}}"><span class="strong">{{cd.strip.head}}</span><sc-if value="{{cd.strip.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{cd.strip.sub}}</span></sc-if></div>
+                <sc-if value="{{cd.canConclude}}" hint-placeholder-val="{{true}}">
+                  <div class="row top">
+                    <sc-if value="{{cd.concludeOn}}" hint-placeholder-val="{{false}}"><button class="btn sm pri" type="button" title="Record the outcome of this step" onClick="{{cd.conclude}}">Conclude…</button></sc-if>
+                    <sc-if value="{{cd.concludeOff}}" hint-placeholder-val="{{true}}"><button class="btn sm pri" type="button" disabled="{{cd.concludeOff}}" title="{{cd.concludeWhy}}">Conclude…</button><span class="hint">{{cd.concludeWhy}}</span></sc-if>
+                  </div>
+                </sc-if>
+<!--@else-->
+                <div class="col g4">
+                  <span class="etb-lab">Key reads</span>
+                  <sc-if value="{{cd.noReads}}" hint-placeholder-val="{{false}}"><div class="hint">No key reads defined.</div></sc-if>
+                  <sc-for list="{{cd.reads}}" as="r" hint-placeholder-count="2"><div class="row step-read"><span class="grow">{{r.name}}</span><span class="sub num">{{r.crit}}</span></div></sc-for>
+                </div>
+                <sc-if value="{{cd.canRecord}}" hint-placeholder-val="{{true}}"><div class="row"><button class="btn sm pri" type="button" onClick="{{cd.record}}">Record outcome</button></div></sc-if>
+<!--@endif-->
+              </article>
+            </sc-for>
+          </div>
+          <sc-if value="{{bl.graphOpen}}" hint-placeholder-val="{{true}}">
+            <div class="step-graph" aria-label="Graph of the current step and its next steps">
+              <sc-if value="{{bl.graph.empty}}" hint-placeholder-val="{{false}}"><div class="sub step-gempty">{{bl.graph.emptyText}}</div></sc-if>
+              <sc-if value="{{bl.graph.has}}" hint-placeholder-val="{{true}}">
+                <div class="step-gsizer" style="{{bl.graph.sizer}}">
+                  <div class="etb-gcanvas" style="{{bl.graph.canvas}}">
+                    <svg class="etb-gedges" width="{{bl.graph.W}}" height="{{bl.graph.H}}" aria-hidden="true">
+                      <defs>
+                        <marker id="stpm-{{bl.graph.mk}}-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="etb-mk-active" d="M1 1L9 5L1 9z"></path></marker>
+                        <marker id="stpm-{{bl.graph.mk}}-pending" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="etb-mk-pending" d="M1 1L9 5L1 9z"></path></marker>
+                        <marker id="stpm-{{bl.graph.mk}}-not_pursued" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="etb-mk-not_pursued" d="M1 1L9 5L1 9z"></path></marker>
+                      </defs>
+                      <sc-for list="{{bl.graph.edges}}" as="ge" hint-placeholder-count="2"><path class="{{ge.cls}}" d="{{ge.d}}" marker-end="{{ge.mk}}"></path></sc-for>
+                    </svg>
+                    <sc-for list="{{bl.graph.nodes}}" as="gn" hint-placeholder-count="3">
+                      <sc-if value="{{gn.isExp}}" hint-placeholder-val="{{true}}"><button class="{{gn.cls}}" style="{{gn.style}}" type="button" aria-label="{{gn.aria}}" title="Open details" onClick="{{gn.open}}"><span class="etb-gcode">{{gn.code}}</span><span class="etb-gname">{{gn.name}}</span></button></sc-if>
+                      <sc-if value="{{gn.isStatic}}" hint-placeholder-val="{{false}}"><div class="{{gn.cls}}" style="{{gn.style}}">{{gn.text}}</div></sc-if>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+<!--@if !sales-->
+          <sc-if value="{{bl.graphLazy}}" hint-placeholder-val="{{false}}">
+            <div class="step-graph step-lazy"><span class="sub">{{bl.range}} next steps</span><button class="btn xs" type="button" onClick="{{bl.showGraph}}">Show graph</button></div>
+          </sc-if>
+<!--@endif-->
+        </div>
+      </div>
+    </sc-for>
+  </section>
+<!--@if !sales-->
+  <!-- Logic trees (November 3): between the current step and the logic-tree editor, the tree it opens -->
+  <sc-if value="{{step.showTrees}}" hint-placeholder-val="{{true}}">
+    <section class="panel" aria-label="Logic trees" data-k="logic-trees">
+      <div class="ph">
+        <h2 class="h2">Logic trees</h2><span class="cnt">{{step.treeCount}}</span>
+        <sc-if value="{{step.canTrees}}" hint-placeholder-val="{{true}}">
+          <div class="act">
+            <sc-if value="{{step.hasTrees}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" onClick="{{step.manage}}">Manage trees</button></sc-if>
+            <button class="btn sm" type="button" onClick="{{step.newTree}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New tree</button>
+          </div>
+        </sc-if>
+      </div>
+      <div class="step-trees">
+        <sc-for list="{{step.trees}}" as="t" hint-placeholder-count="2">
+          <button class="{{t.cls}}" type="button" aria-pressed="{{t.on}}" title="{{t.title}}" onClick="{{t.pick}}"><span class="strong">{{t.name}}</span><span class="sub">{{t.range}} next steps</span><sc-if value="{{t.unplanned}}" hint-placeholder-val="{{false}}"><span class="st t-warn small"><span class="dot"></span>Unplanned branch</span></sc-if></button>
+        </sc-for>
+        <sc-if value="{{step.noTrees}}" hint-placeholder-val="{{false}}"><div class="note">No logic trees yet. Create one with New tree, or add an experiment below to start the first.</div></sc-if>
+      </div>
+    </section>
+  </sc-if>
+<!--@endif-->
+  <!-- The logic-tree editor (mods/etb/slot-exp-tree.html) follows: the shell places the exp-tree slot right after this one. -->
+</div>

@@ -1,0 +1,12 @@
+<section class="panel" aria-label="Current step summary" data-k="ov-step">
+  <div class="ph"><h2 class="h2">Current step</h2><button class="lnk push small" type="button" title="{{step.ov.goTitle}}" onClick="{{step.ov.go}}">Open experiments</button></div>
+  <sc-if value="{{step.ov.empty}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{step.ov.emptyText}}</div></sc-if>
+  <sc-for list="{{step.ov.items}}" as="o" hint-placeholder-count="1">
+    <button class="step-ovrow" type="button" onClick="{{o.go}}">
+      <span class="row wrap g4"><span class="tid">{{o.code}}</span><sc-if value="{{o.hasTree}}" hint-placeholder-val="{{false}}"><span class="sub">{{o.tree}}</span></sc-if></span>
+      <span class="strong">{{o.name}}</span>
+      <span class="row wrap g12"><span class="{{o.statusCls}}"><span class="dot"></span>{{o.statusW}}</span><sc-if value="{{o.hasReads}}" hint-placeholder-val="{{true}}"><span class="sub">{{o.reads}}</span></sc-if></span>
+      <sc-if value="{{o.hasStrip}}" hint-placeholder-val="{{true}}"><span class="{{o.stripCls}}">{{o.strip}}</span></sc-if>
+    </button>
+  </sc-for>
+</section>

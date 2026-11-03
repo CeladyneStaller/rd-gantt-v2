@@ -1,0 +1,122 @@
+<sc-if value="{{kb.tile}}" hint-placeholder-val="{{false}}">
+<div class="kb-sheet" data-k="kb-tile-sheet">
+  <div class="sh-head">
+    <div class="sh-title"><h2>{{kb.tile.title}}</h2><span class="sub">{{kb.tile.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <sc-if value="{{kb.tile.missing}}" hint-placeholder-val="{{false}}"><div class="empty">This tile is no longer on the board.</div></sc-if>
+    <sc-if value="{{kb.tile.ok}}" hint-placeholder-val="{{true}}">
+      <sc-if value="{{kb.tile.hasState}}" hint-placeholder-val="{{false}}">
+        <section class="sh-sec">
+          <div class="row wrap"><span class="{{kb.tile.stCls}}"><span class="dot"></span>{{kb.tile.st}}</span><span class="sub">{{kb.tile.stSub}}</span></div>
+        </section>
+      </sc-if>
+      <section class="sh-sec">
+        <label class="fld">Name<input class="in" value="{{kb.tile.name}}" placeholder="e.g. Bonneville Rural Electric" onChange="{{kb.tile.onName}}" onKeyDown="{{kb.tile.onKey}}" disabled="{{kb.tile.ro}}" autoFocus=""></label>
+        <div class="grid2">
+          <label class="fld">Swimlane<select class="sel" value="{{kb.tile.lane}}" onChange="{{kb.tile.onLane}}" disabled="{{kb.tile.ro}}"><sc-for list="{{kb.tile.lanes}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          <label class="fld">Stage<select class="sel" value="{{kb.tile.col}}" onChange="{{kb.tile.onCol}}" disabled="{{kb.tile.ro}}"><sc-for list="{{kb.tile.cols}}" as="o" hint-placeholder-count="4"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          <label class="fld">Started<input class="in" type="date" value="{{kb.tile.start}}" onChange="{{kb.tile.onStart}}" disabled="{{kb.tile.ro}}"></label>
+          <label class="fld">Entered this stage<input class="in" type="date" value="{{kb.tile.entered}}" onChange="{{kb.tile.onEntered}}" disabled="{{kb.tile.ro}}"></label>
+        </div>
+        <sc-if value="{{kb.tile.parkHint}}" hint-placeholder-val="{{false}}"><div class="note t-warn">Without a swimlane the tile stays in the backlog: the day limit lives on the swimlane.</div></sc-if>
+        <div class="hint">A tile left in the backlog runs no clock. Changing the stage restarts the days-in-stage clock, the same as dragging the tile.</div>
+      </section>
+      <section class="sh-sec">
+        <div class="row wrap"><h3 class="h3">Assigned to</h3><label class="check push"><input class="cb" type="checkbox" role="switch" checked="{{kb.tile.narrow}}" onChange="{{kb.tile.toggleNarrow}}" aria-label="Show only people who own an active objective in this division">Division owners only</label></div>
+        <div class="kb-asgs" role="radiogroup" aria-label="Assigned to">
+          <sc-for list="{{kb.tile.people}}" as="p" hint-placeholder-count="2">
+            <button class="{{p.cls}}" type="button" role="radio" aria-checked="{{p.on}}" disabled="{{kb.tile.ro}}" data-k="{{p.k}}" onClick="{{p.pick}}"><span class="avatar sm">{{p.ini}}</span><span class="col g2 grow"><span class="kb-asgn">{{p.name}}</span><span class="sub">{{p.why}}</span></span><sc-if value="{{p.hasEmail}}" hint-placeholder-val="{{true}}"><span class="sub kb-asge">{{p.email}}</span></sc-if></button>
+          </sc-for>
+          <button class="{{kb.tile.noneCls}}" type="button" role="radio" aria-checked="{{kb.tile.noneOn}}" disabled="{{kb.tile.ro}}" onClick="{{kb.tile.pickNone}}"><span class="avatar sm kb-av none">—</span><span class="col g2 grow"><span class="kb-asgn">Unassigned</span><span class="sub">Nobody owns this tile yet</span></span></button>
+        </div>
+        <div class="hint">{{kb.tile.peopleHint}}</div>
+      </section>
+      <sc-if value="{{kb.tile.hasGates}}" hint-placeholder-val="{{false}}">
+        <section class="sh-sec">
+          <h3 class="h3">Stage-gates for this tile</h3>
+          <div class="sub">Each stage is a gate the tile clears by moving on. Due dates come from the swimlane's day limit and deadline.</div>
+          <div class="tbox">
+            <table class="tbl">
+              <thead><tr><th>Stage</th><th>Due</th><th>State</th></tr></thead>
+              <tbody>
+                <sc-for list="{{kb.tile.gates}}" as="g" hint-placeholder-count="3">
+                  <tr><td>{{g.name}}</td><td class="num">{{g.due}}</td><td><span class="{{g.cls}}"><span class="dot"></span>{{g.word}}</span> <span class="sub">{{g.when}}</span></td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </sc-if>
+    </sc-if>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert" style="flex-basis: 100%">{{ui.sheetErr}}</div></sc-if>
+    <sc-if value="{{kb.tile.canDelete}}" hint-placeholder-val="{{false}}"><button class="btn danger" type="button" onClick="{{kb.tile.del}}">Delete tile</button></sc-if>
+    <div class="row push">
+      <button class="btn" type="button" onClick="{{ui.closeSheet}}">{{kb.tile.cancelText}}</button>
+      <sc-if value="{{kb.tile.canSave}}" hint-placeholder-val="{{true}}"><button class="btn pri" type="button" onClick="{{kb.tile.save}}">{{kb.tile.saveText}}</button></sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{kb.cfg}}" hint-placeholder-val="{{false}}">
+<div class="kb-sheet" data-k="kb-cfg-sheet">
+  <div class="sh-head">
+    <div class="sh-title"><h2>Configure board</h2><span class="sub">{{kb.cfg.sub}}</span></div>
+    <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="sh-body">
+    <sc-if value="{{kb.cfg.missing}}" hint-placeholder-val="{{false}}"><div class="empty">This board was deleted.</div></sc-if>
+    <sc-if value="{{kb.cfg.ok}}" hint-placeholder-val="{{true}}">
+      <section class="sh-sec">
+        <label class="fld">Board name<input class="in" value="{{kb.cfg.name}}" onChange="{{kb.cfg.onName}}" onKeyDown="{{kb.cfg.keyName}}" onBlur="{{kb.cfg.blurName}}" disabled="{{kb.cfg.ro}}" autoFocus=""></label>
+        <div class="hint">Changes save as you leave each field or press Enter. Escape puts a field back.</div>
+      </section>
+      <section class="sh-sec">
+        <h3>Stages</h3>
+        <div class="sub">The columns, in order. Each is a stage-gate a tile clears by moving on; the last one is the done column.</div>
+        <div class="col">
+          <sc-for list="{{kb.cfg.cols}}" as="c" hint-placeholder-count="3">
+            <div class="kb-cfgrow" data-k="{{c.k}}">
+              <input class="in sm grow" value="{{c.name}}" aria-label="{{c.aria}}" onChange="{{c.on}}" onKeyDown="{{c.key}}" onBlur="{{c.blur}}" disabled="{{kb.cfg.ro}}">
+              <span class="sub kb-cfgmeta">{{c.meta}}</span>
+              <button class="btn xs q ic" type="button" aria-label="{{c.upLabel}}" title="{{c.upLabel}}" disabled="{{c.upDis}}" onClick="{{c.up}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+              <button class="btn xs q ic" type="button" aria-label="{{c.downLabel}}" title="{{c.downLabel}}" disabled="{{c.downDis}}" onClick="{{c.down}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+              <sc-if value="{{c.canDel}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic" type="button" aria-label="{{c.delLabel}}" title="{{c.delLabel}}" onClick="{{c.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{!kb.cfg.ro}}" hint-placeholder-val="{{true}}"><div><button class="btn sm" type="button" onClick="{{kb.cfg.addCol}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add stage</button></div></sc-if>
+      </section>
+      <section class="sh-sec">
+        <h3>Swimlanes and rules</h3>
+        <div class="sub">Each swimlane sets how many days a tile may sit in one stage and an optional deadline. Leave the limit blank for none. There is no limit on how many tiles a stage holds.</div>
+        <div class="col g10">
+          <sc-for list="{{kb.cfg.lanes}}" as="l" hint-placeholder-count="2">
+            <div class="kb-cfglane" data-k="{{l.k}}">
+              <label class="fld kb-cfgname">Name<input class="in sm" value="{{l.name}}" aria-label="{{l.nameAria}}" onChange="{{l.onName}}" onKeyDown="{{l.keyName}}" onBlur="{{l.blurName}}" disabled="{{kb.cfg.ro}}"></label>
+              <label class="fld kb-cfgmax">Max days per stage<input class="in sm num" type="number" min="0" value="{{l.max}}" aria-label="{{l.maxAria}}" placeholder="No limit" onChange="{{l.onMax}}" onKeyDown="{{l.keyMax}}" onBlur="{{l.blurMax}}" disabled="{{kb.cfg.ro}}"></label>
+              <label class="fld">Deadline<input class="in sm" type="date" value="{{l.due}}" aria-label="{{l.dueAria}}" onChange="{{l.onDue}}" disabled="{{kb.cfg.ro}}"></label>
+              <div class="row g4 kb-cfgbtns">
+                <span class="sub">{{l.meta}}</span>
+                <button class="btn xs q ic" type="button" aria-label="{{l.upLabel}}" title="{{l.upLabel}}" disabled="{{l.upDis}}" onClick="{{l.up}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+                <button class="btn xs q ic" type="button" aria-label="{{l.downLabel}}" title="{{l.downLabel}}" disabled="{{l.downDis}}" onClick="{{l.down}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+                <sc-if value="{{l.canDel}}" hint-placeholder-val="{{true}}"><button class="btn xs q ic" type="button" aria-label="{{l.delLabel}}" title="{{l.delLabel}}" onClick="{{l.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{!kb.cfg.ro}}" hint-placeholder-val="{{true}}"><div><button class="btn sm" type="button" onClick="{{kb.cfg.addLane}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add swimlane</button></div></sc-if>
+      </section>
+    </sc-if>
+  </div>
+  <div class="sh-foot">
+    <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert" style="flex-basis: 100%">{{ui.sheetErr}}</div></sc-if>
+    <sc-if value="{{kb.cfg.canDelete}}" hint-placeholder-val="{{true}}"><button class="btn danger" type="button" onClick="{{kb.cfg.del}}">Delete board</button></sc-if>
+    <button class="btn pri push" type="button" onClick="{{ui.closeSheet}}">Done</button>
+  </div>
+</div>
+</sc-if>

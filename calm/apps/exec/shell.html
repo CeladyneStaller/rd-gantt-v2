@@ -1,0 +1,462 @@
+<div class="cw" data-theme="{{theme}}">
+<sc-if value="{{ui.anyMenu}}" hint-placeholder-val="{{false}}"><button class="scrim" type="button" aria-label="Close menu" onClick="{{ui.closeMenus}}"></button></sc-if>
+<div class="app">
+  <sc-if value="{{sh.full}}" hint-placeholder-val="{{true}}">
+  <aside class="side" aria-label="Navigation">
+    <a class="brand shl-home" href="https://celadynestaller.github.io/CeladyneHQ/" target="_blank" rel="noopener" title="Back to all apps" aria-label="Back to all apps (the Celadyne hub)">
+      <span class="brand-mark"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"></path></svg></span>
+      <span class="brand-name"><b>Celadyne</b><span class="sub"><!--@if deploy-->Prototype with sample data<!--@else-->R&amp;D suite<!--@endif--></span></span>
+    </a>
+    <nav aria-label="Apps" class="side-sec" style="gap: 2px">
+      <a class="nav" href="Mine-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5l1.5-3h4"></path><path d="M6 5h12l2 8v6H4v-6z"></path></svg>My Projects</a>
+      <a class="nav" href="Plan-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h9M8 12h11M6 18h7"></path></svg>Planning</a>
+<!--@if exec-->
+      <a class="nav on" href="#main" aria-current="page"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle></svg>Execution</a>
+      <a class="nav" href="Sales-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"></path></svg>Sales</a>
+<!--@else-->
+      <a class="nav" href="Main.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle></svg>Execution</a>
+      <a class="nav on" href="#main" aria-current="page"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"></path></svg>Sales</a>
+<!--@endif-->
+      <a class="nav" href="Spec-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 4-8 4-8-4z"></path><path d="M4 12l8 4 8-4"></path><path d="M4 16l8 4 8-4"></path></svg>Product spec</a>
+    </nav>
+
+    <sc-if value="{{sh.loaded}}" hint-placeholder-val="{{true}}">
+      <div class="col g10" data-k="context">
+        <div class="above">
+          <button class="btn full shl-pick" type="button" aria-haspopup="menu" aria-expanded="{{sh.divOpen}}" title="{{sh.pickTitle}}" onClick="{{sh.toggleDiv}}">
+            <span class="col g2 shl-pick-t"><span class="sub">Division</span><span class="ellip strong">{{sh.pickName}}</span></span>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{sh.divOpen}}" hint-placeholder-val="{{false}}">
+            <div class="menu shl-divmenu" role="menu" aria-label="Divisions">
+              <sc-if value="{{sh.allItem}}" hint-placeholder-val="{{false}}">
+                <button class="{{sh.allItem.cls}}" type="button" role="menuitemradio" aria-checked="{{sh.allItem.on}}" onClick="{{sh.allItem.pick}}"><span class="ellip" style="font-weight: 500">All divisions</span></button>
+              </sc-if>
+              <sc-for list="{{sh.divMenu}}" as="g" hint-placeholder-count="2">
+                <sc-if value="{{g.hasLabel}}" hint-placeholder-val="{{true}}"><div class="mh">{{g.label}}</div></sc-if>
+                <sc-for list="{{g.divs}}" as="d" hint-placeholder-count="2">
+                  <button class="{{d.cls}}" type="button" role="menuitemradio" aria-checked="{{d.on}}" onClick="{{d.pick}}"><span class="ellip" style="font-weight: 500">{{d.name}}</span><span class="sub">{{d.id}}</span></button>
+                </sc-for>
+              </sc-for>
+              <sc-if value="{{sh.noDivs}}" hint-placeholder-val="{{false}}"><div class="sub" style="padding: 8px 10px">{{sh.noDivsMenu}}</div></sc-if>
+            </div>
+          </sc-if>
+        </div>
+        <div class="row g8 shl-filters">
+          <select class="sel sm" aria-label="Quarter" value="{{sh.fq.v}}" onChange="{{sh.fq.on}}">
+            <option value="">All quarters</option>
+            <sc-for list="{{sh.fq.opts}}" as="x" hint-placeholder-count="3"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for>
+          </select>
+          <select class="sel sm" aria-label="Product" title="{{sh.fp.title}}" disabled="{{sh.fp.off}}" value="{{sh.fp.v}}" onChange="{{sh.fp.on}}">
+            <option value="">All products</option>
+            <sc-for list="{{sh.fp.opts}}" as="x" hint-placeholder-count="2"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for>
+          </select>
+        </div>
+        <sc-if value="{{sh.fo.on}}" hint-placeholder-val="{{false}}">
+          <div class="row"><button class="chip on" type="button" title="Clear the owner filter" onClick="{{sh.fo.clear}}"><span>Owner: {{sh.fo.name}}</span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!--@slot side-filters-->
+
+    <nav aria-label="Objectives" class="side-sec">
+      <sc-for list="{{sh.objGroups}}" as="g" hint-placeholder-count="2">
+        <sc-if value="{{g.hasDiv}}" hint-placeholder-val="{{false}}"><div class="{{g.divCls}}">{{g.div}}</div></sc-if>
+        <sc-if value="{{g.hasLabel}}" hint-placeholder-val="{{true}}"><div class="{{g.cls}}">{{g.label}}</div></sc-if>
+        <sc-for list="{{g.objs}}" as="o" hint-placeholder-count="3">
+          <button class="{{o.cls}}" type="button" aria-current="{{o.cur}}" title="{{o.title}}" onClick="{{o.pick}}"><span class="{{o.dotCls}}"></span><span>{{o.name}}</span><span class="s">{{o.right}}</span></button>
+        </sc-for>
+        <sc-if value="{{g.isEmpty}}" hint-placeholder-val="{{false}}"><div class="sub shl-divnone">{{g.emptyText}}</div></sc-if>
+      </sc-for>
+      <sc-if value="{{sh.noObjs}}" hint-placeholder-val="{{false}}"><div class="sub" style="padding: 4px 10px">{{sh.noObjsText}}</div></sc-if>
+      <sc-if value="{{sh.notLoaded}}" hint-placeholder-val="{{false}}"><div class="sub" style="padding: 4px 10px">{{sh.notLoadedText}}</div></sc-if>
+    </nav>
+
+    <div class="me">
+      <div class="avatar">{{sh.me.initials}}</div>
+      <div class="col g2" style="line-height: 1.2"><span style="font-weight: 500">{{sh.me.name}}</span><span class="sub">{{sh.me.role}}</span></div>
+    </div>
+  </aside>
+  </sc-if>
+
+  <div class="main" id="main">
+    <sc-if value="{{sh.full}}" hint-placeholder-val="{{true}}">
+    <header class="top">
+      <nav aria-label="Breadcrumb" class="crumb">
+        <sc-if value="{{sh.hasUnit}}" hint-placeholder-val="{{true}}"><span title="Unit, grouped in Planning">{{sh.unitName}}</span><span class="sep" aria-hidden="true">/</span></sc-if>
+        <span>{{sh.divName}}</span>
+        <sc-if value="{{sh.hasObj}}" hint-placeholder-val="{{true}}"><span class="sep" aria-hidden="true">/</span><span>{{sh.crumbQ}}</span></sc-if>
+      </nav>
+      <div class="row push g12 wrap">
+        <!--@slot top-->
+        <sc-if value="{{sh.search}}" hint-placeholder-val="{{true}}">
+          <div class="above shl-searchbox">
+            <label class="search"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path></svg><input type="search" aria-label="Search" autoComplete="off" placeholder="{{sh.search.ph}}" value="{{sh.search.q}}" onChange="{{sh.search.onQ}}" onKeyDown="{{sh.search.onKey}}"></label>
+            <sc-if value="{{sh.search.open}}" hint-placeholder-val="{{false}}">
+              <div class="menu r shl-results" aria-label="Search results">
+                <sc-for list="{{sh.search.groups}}" as="g" hint-placeholder-count="2">
+                  <div class="mh">{{g.label}}</div>
+                  <sc-for list="{{g.items}}" as="r" hint-placeholder-count="3">
+                    <button class="mi shl-res" type="button" onClick="{{r.go}}"><span class="col g2 shl-res-t"><span class="ellip" style="font-weight: 500">{{r.label}}</span><sc-if value="{{r.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub ellip">{{r.sub}}</span></sc-if></span></button>
+                  </sc-for>
+                </sc-for>
+                <sc-if value="{{sh.search.none}}" hint-placeholder-val="{{false}}"><div class="sub" style="padding: 8px 10px; white-space: normal">{{sh.search.noneText}}</div></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{sh.roOn}}" hint-placeholder-val="{{false}}"><span class="st t-warn" title="Nothing saves and editing controls are hidden"><span class="dot"></span>Read-only</span></sc-if>
+        <sc-if value="{{sh.showSave}}" hint-placeholder-val="{{true}}">
+          <span class="saveind {{ui.saveTone}}"><sc-if value="{{ui.saving}}" hint-placeholder-val="{{false}}"><span class="spin"></span></sc-if><sc-if value="{{!ui.saving}}" hint-placeholder-val="{{true}}"><span class="dot"></span></sc-if>{{ui.saveText}}</span>
+          <button class="btn sm" type="button" title="Save now. Changes also save on their own." onClick="{{ui.saveNow}}">Save</button>
+        </sc-if>
+        <button class="btn ic q" type="button" aria-label="Settings" title="Settings" onClick="{{sh.openSettings}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
+      </div>
+    </header>
+    </sc-if>
+    <sc-if value="{{sh.vw}}" hint-placeholder-val="{{false}}">
+    <header class="top shl-vtop" data-k="view-top">
+      <nav aria-label="Breadcrumb" class="crumb">
+        <span class="shl-vapp">{{sh.appName}}</span>
+        <sc-if value="{{sh.vw.place}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{sh.hasUnit}}" hint-placeholder-val="{{true}}"><span class="sep" aria-hidden="true">/</span><span title="Unit, grouped in Planning">{{sh.unitName}}</span></sc-if>
+        <span class="sep" aria-hidden="true">/</span><span>{{sh.divName}}</span>
+        </sc-if>
+        <sc-if value="{{sh.hasObj}}" hint-placeholder-val="{{true}}"><span class="sep" aria-hidden="true">/</span><span>{{sh.crumbQ}}</span></sc-if>
+        <span class="sep" aria-hidden="true">/</span><span class="shl-vnow" aria-current="page">{{sh.vw.label}}</span>
+      </nav>
+      <div class="row push g12 wrap" data-k="view-status">
+        <sc-if value="{{sh.vw.ro}}" hint-placeholder-val="{{false}}"><span class="st t-warn" title="{{sh.vw.roTitle}}"><span class="dot"></span>Read-only</span></sc-if>
+        <sc-if value="{{sh.vw.edit}}" hint-placeholder-val="{{true}}"><span class="saveind {{ui.saveTone}}" role="status"><sc-if value="{{ui.saving}}" hint-placeholder-val="{{false}}"><span class="spin"></span></sc-if><sc-if value="{{!ui.saving}}" hint-placeholder-val="{{true}}"><span class="dot"></span></sc-if>{{ui.saveText}}</span></sc-if>
+        <button class="btn sm shl-vopen" type="button" title="{{sh.vw.openTitle}}" onClick="{{sh.vw.openApp}}">Open in {{sh.appName}}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4"></path></svg></button>
+      </div>
+    </header>
+    </sc-if>
+    <sc-if value="{{sh.offline}}" hint-placeholder-val="{{false}}">
+      <div class="banner t-warn" role="status" data-k="offline"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg><span>You are offline. Changes are kept here and save when you are back online.</span><button class="btn sm push" type="button" onClick="{{sh.goOnline}}"><!--@if live-->Try again<!--@else-->Back online<!--@endif--></button></div>
+    </sc-if>
+    <sc-if value="{{sh.banner}}" hint-placeholder-val="{{false}}">
+      <div class="{{sh.banner.cls}}" role="status" data-k="message"><span class="strong">{{sh.banner.text}}</span><sc-if value="{{sh.banner.hasDetail}}" hint-placeholder-val="{{false}}"><span>{{sh.banner.detail}}</span></sc-if><button class="btn xs ic q push" type="button" aria-label="Dismiss message" title="Dismiss message" onClick="{{sh.banner.dismiss}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+    </sc-if>
+    <!--@slot banner-->
+
+    <main class="page">
+      <sc-if value="{{sh.hasObj}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{sh.showHead}}" hint-placeholder-val="{{true}}">
+        <section aria-label="Objective" class="col g16" data-k="objective-head">
+          <div class="row top g12 wrap">
+            <div class="col g10 grow">
+              <div class="row wrap g12 shl-title"><h1 class="h1">{{sh.obj.name}}</h1><span class="tid">{{sh.obj.id}}</span></div>
+              <div class="row wrap sub shl-meta">
+                <span class="row g8 wrap" data-k="owners">
+                  <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"></path></svg>
+                  <sc-if value="{{sh.full}}" hint-placeholder-val="{{true}}"><sc-for list="{{sh.obj.owners}}" as="w" hint-placeholder-count="1"><button class="lnk ink row g4 shl-owner" type="button" title="{{w.title}}" aria-pressed="{{w.on}}" onClick="{{w.filter}}"><span class="avatar xs">{{w.initials}}</span><span>{{w.name}}</span></button></sc-for></sc-if>
+                  <sc-if value="{{sh.vw}}" hint-placeholder-val="{{false}}"><sc-for list="{{sh.obj.owners}}" as="w" hint-placeholder-count="1"><span class="row g4 shl-owner" title="{{w.email}}"><span class="avatar xs">{{w.initials}}</span><span>{{w.name}}</span></span></sc-for></sc-if>
+                  <sc-if value="{{sh.obj.noOwners}}" hint-placeholder-val="{{false}}"><span>No owner</span></sc-if>
+                  <sc-if value="{{sh.full}}" hint-placeholder-val="{{true}}"><span class="hint">Owners are set in <a href="Plan-A.dc.html" title="Open this objective in Planning to change its owners" onClick="{{sh.toPlanning}}">Planning</a><sc-if value="{{sh.planLocked}}" hint-placeholder-val="{{false}}"> by the CTO or CEO</sc-if></span></sc-if>
+                </span>
+                <sc-if value="{{sh.hasUnit}}" hint-placeholder-val="{{true}}"><span class="row g4" title="Unit, grouped in Planning"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg>{{sh.unitName}} unit</span></sc-if>
+                <sc-if value="{{sh.obj.hasInitiative}}" hint-placeholder-val="{{true}}"><span class="row g4" title="Initiative"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg>{{sh.obj.initiative}}</span></sc-if>
+                <sc-if value="{{sh.obj.hasWindow}}" hint-placeholder-val="{{true}}"><span class="row g4" title="Planned window"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg>{{sh.obj.window}}</span></sc-if>
+              </div>
+            </div>
+            <div class="row g8 wrap">
+              <!--@slot head-actions-->
+              <sc-if value="{{sh.head.canEnd}}" hint-placeholder-val="{{true}}"><button class="btn" type="button" onClick="{{sh.head.openEnd}}">End objective</button></sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{sh.head.ended}}" hint-placeholder-val="{{false}}">
+            <div class="{{sh.head.endCls}}" data-k="ended">
+              <span class="{{sh.head.endSt}}"><span class="dot"></span>{{sh.head.endWord}}</span>
+              <span class="col g2 grow"><sc-if value="{{sh.head.hasEndNote}}" hint-placeholder-val="{{true}}"><span>{{sh.head.endNote}}</span></sc-if><span class="sub">{{sh.head.endHint}}</span></span>
+              <sc-if value="{{sh.head.canReopen}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{sh.head.reopen}}">Reopen</button></sc-if>
+            </div>
+          </sc-if>
+
+          <section class="panel" aria-label="Score and pace" data-k="score-panel">
+            <div class="shl-qrow" data-k="quarter">
+              <span class="strong">{{sh.head.strip.label}}</span>
+              <sc-if value="{{sh.head.strip.hasRange}}" hint-placeholder-val="{{true}}"><span class="sub">{{sh.head.strip.range}}</span></sc-if>
+              <sc-if value="{{sh.head.strip.weeks}}" hint-placeholder-val="{{true}}"><span class="shl-weeks" role="img" aria-label="{{sh.head.strip.aria}}"><sc-for list="{{sh.head.strip.cells}}" as="c" hint-placeholder-count="13"><span class="{{c.cls}}"></span></sc-for></span></sc-if>
+              <sc-if value="{{sh.head.strip.window}}" hint-placeholder-val="{{false}}"><span class="track sm shl-wtrack"><span class="fill" style="{{sh.head.strip.fill}}"></span></span></sc-if>
+              <span class="sub shl-qstat">{{sh.head.strip.status}}</span>
+            </div>
+            <div class="shl-score">
+              <div class="row g12">
+                <span class="shl-big">{{sh.head.score.big}}</span>
+                <span class="col g2">
+                  <span class="{{sh.head.score.cls}}"><span class="dot"></span>{{sh.head.score.word}}</span>
+                  <span class="sub">{{sh.head.score.sub}}</span>
+                  <sc-if value="{{sh.head.score.partial}}" hint-placeholder-val="{{false}}"><span class="sub row g4 shl-pt"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none"></path></svg>{{sh.head.score.partialText}}</span></sc-if>
+                </span>
+              </div>
+              <div class="col g4 shl-pace" role="img" aria-label="{{sh.head.score.aria}}">
+                <sc-if value="{{sh.head.score.hasPace}}" hint-placeholder-val="{{true}}"><div class="shl-today"><span style="{{sh.head.score.todayStyle}}">{{sh.head.score.todayLabel}}</span></div></sc-if>
+                <div class="shl-bar">
+                  <span class="track lg"><span class="{{sh.head.score.fillCls}}" style="{{sh.head.score.fillStyle}}"></span><sc-if value="{{sh.head.score.hasHatch}}" hint-placeholder-val="{{false}}"><span class="{{sh.head.score.hatchCls}}" style="{{sh.head.score.hatchStyle}}"></span></sc-if></span>
+                  <sc-if value="{{sh.head.score.hasPace}}" hint-placeholder-val="{{true}}"><span class="tick shl-tick" style="{{sh.head.score.tickStyle}}"></span></sc-if>
+                </div>
+                <sc-if value="{{sh.head.score.hasPace}}" hint-placeholder-val="{{true}}"><div class="row sub"><span>{{sh.head.score.start}}</span><span class="push">{{sh.head.score.end}}</span></div></sc-if>
+              </div>
+            </div>
+            <div class="facts shl-facts">
+              <sc-for list="{{sh.head.facts}}" as="f" hint-placeholder-count="5">
+                <div class="fact" data-k="{{f.k}}"><span class="sub">{{f.label}}</span><span class="{{f.vcls}}"><sc-if value="{{f.dot}}" hint-placeholder-val="{{false}}"><span class="dot"></span></sc-if>{{f.value}}</span><span class="sub">{{f.detail}}</span><sc-if value="{{f.hasExtra}}" hint-placeholder-val="{{false}}"><span class="{{f.extraCls}}">{{f.extra}}</span></sc-if></div>
+              </sc-for>
+            </div>
+            <sc-if value="{{sh.head.sched}}" hint-placeholder-val="{{false}}">
+              <div class="{{sh.head.sched.cls}}" data-k="{{sh.head.sched.k}}"><sc-if value="{{sh.head.sched.warn}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg></sc-if><span class="grow">{{sh.head.sched.text}}</span><sc-if value="{{sh.head.canRevise}}" hint-placeholder-val="{{true}}"><button class="{{sh.head.sched.btnCls}}" type="button" onClick="{{sh.head.revise}}">{{sh.head.sched.btn}}</button></sc-if></div>
+            </sc-if>
+          </section>
+          <!--@slot head-->
+        </section>
+        </sc-if>
+
+        <sc-if value="{{sh.full}}" hint-placeholder-val="{{true}}">
+        <div class="shl-tabrow">
+          <nav class="tabs" aria-label="Objective sections">
+            <sc-for list="{{sh.tabs}}" as="t" hint-placeholder-count="6">
+              <button class="{{t.cls}}" type="button" aria-current="{{t.cur}}" onClick="{{t.pick}}">{{t.label}}</button>
+            </sc-for>
+          </nav>
+          <sc-if value="{{sh.vlink.show}}" hint-placeholder-val="{{true}}">
+            <div class="above shl-vlink" data-k="view-link">
+              <button class="btn sm q" type="button" aria-haspopup="dialog" aria-expanded="{{sh.vlink.open}}" onClick="{{sh.vlink.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"></path><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"></path></svg>Link to this view</button>
+              <sc-if value="{{sh.vlink.open}}" hint-placeholder-val="{{false}}">
+                <div class="pop shl-vlpop" role="dialog" aria-label="{{sh.vlink.title}}">
+                  <div class="col g2"><span class="strong">{{sh.vlink.title}}</span><span class="sub">{{sh.vlink.desc}}</span></div>
+                  <div class="col">
+                    <div class="seg" role="group" aria-label="What the link allows">
+                      <button type="button" aria-pressed="{{sh.vlink.editOn}}" onClick="{{sh.vlink.pickEdit}}">Editable</button>
+                      <button type="button" aria-pressed="{{sh.vlink.roOn}}" onClick="{{sh.vlink.pickRo}}">Read-only</button>
+                    </div>
+                    <span class="hint">{{sh.vlink.modeHint}}</span>
+                  </div>
+                  <div class="shl-url shl-vlurl" data-k="view-url" title="{{sh.vlink.url}}"><sc-for list="{{sh.vlink.urlParts}}" as="u" hint-placeholder-count="2"><span>{{u.t}}</span></sc-for></div>
+                  <div class="row"><button class="btn sm pri" type="button" onClick="{{sh.vlink.copy}}">Copy link</button><button class="btn sm" type="button" onClick="{{sh.vlink.openIt}}">Open in a new tab</button></div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{sh.t.overview}}" hint-placeholder-val="{{true}}">
+          <div class="ov-stack">
+            <!--@slot ov-main-->
+            <div class="ov-three"><!--@slot ov-side--><!--@slot ov-foot--></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{sh.t.krs}}" hint-placeholder-val="{{false}}"><!--@slot krs--></sc-if>
+        <sc-if value="{{sh.t.gates}}" hint-placeholder-val="{{false}}"><!--@slot gates--></sc-if>
+        <sc-if value="{{sh.t.kanban}}" hint-placeholder-val="{{false}}"><!--@slot kanban--></sc-if>
+        <sc-if value="{{sh.t.risks}}" hint-placeholder-val="{{false}}"><!--@slot risks--></sc-if>
+        <sc-if value="{{sh.t.exp}}" hint-placeholder-val="{{false}}"><!--@slot exp--><!--@slot exp-tree--></sc-if>
+      </sc-if>
+      <sc-if value="{{!sh.hasObj}}" hint-placeholder-val="{{false}}">
+        <div class="panel" data-k="empty">
+          <div class="empty">{{sh.empty.text}}</div>
+          <div class="row wrap g8 shl-emptyacts">
+            <sc-if value="{{sh.empty.hasAct}}" hint-placeholder-val="{{false}}"><button class="btn sm" type="button" onClick="{{sh.empty.act}}">{{sh.empty.actLabel}}</button></sc-if>
+            <sc-if value="{{sh.empty.hasPlan}}" hint-placeholder-val="{{false}}"><a class="btn sm q" href="Plan-A.dc.html" onClick="{{sh.toPlanning}}">Open Planning</a></sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+
+<sc-if value="{{ui.sheetOpen}}" hint-placeholder-val="{{false}}">
+  <button class="sheet-scrim" type="button" aria-label="Close panel" onClick="{{ui.dismissAll}}"></button>
+  <aside class="{{ui.sheetCls}}" role="dialog" aria-modal="true" aria-label="Editor" onKeyDown="{{sh.sheetKey}}">
+    <sc-if value="{{sh.settings}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <div class="sh-title"><h2>Settings</h2><span class="sub"><!--@if live-->Your theme and broker token stay in this browser.<!--@else-->These settings and simulations apply to this prototype only.<!--@endif--></span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <section class="sh-sec" aria-label="Appearance">
+          <h3>Appearance</h3>
+          <div class="seg" role="group" aria-label="Theme">
+            <sc-for list="{{sh.settings.themes}}" as="x" hint-placeholder-count="3"><button type="button" aria-pressed="{{x.on}}" onClick="{{x.pick}}">{{x.label}}</button></sc-for>
+          </div>
+          <div class="hint">{{sh.settings.themeHint}}</div>
+        </section>
+        <section class="sh-sec" aria-label="Broker">
+          <h3>Broker</h3>
+          <div class="sub">The broker address is built in and the token lives in this browser only. The division comes from the link (?division=) or the sidebar. An SSO embed can pass ?token= in the link; it removes itself.</div>
+          <div class="row g8 wrap shl-tokenrow">
+            <label class="fld grow">Broker token<input class="in" type="password" autoComplete="off" placeholder="Paste token" value="{{sh.settings.tokenDraft}}" onChange="{{sh.settings.onToken}}" onKeyDown="{{sh.settings.tokenKey}}"></label>
+            <button class="btn" type="button" onClick="{{sh.settings.saveToken}}">Save token</button>
+          </div>
+          <div class="{{sh.settings.tokenCls}}">{{sh.settings.tokenState}}</div>
+<!--@if live-->
+          <div class="row wrap g8" data-k="connection"><span class="{{sh.settings.net.cls}}"><span class="dot"></span>{{sh.settings.net.word}}</span><span class="sub">{{sh.settings.net.text}}</span></div>
+          <div class="row wrap g8">
+            <button class="btn sm" type="button" onClick="{{sh.settings.reload}}">Load from the broker</button>
+          </div>
+          <div class="hint">{{sh.settings.build}}</div>
+<!--@else-->
+          <div class="row wrap g8">
+            <button class="btn sm" type="button" onClick="{{sh.settings.reload}}">Reload from the broker</button>
+            <button class="btn sm q" type="button" onClick="{{sh.settings.simFail}}">Simulate a failed load</button>
+            <button class="btn sm q" type="button" onClick="{{sh.settings.simNoPortfolio}}">Simulate a missing portfolio</button>
+          </div>
+<!--@endif-->
+        </section>
+        <section class="sh-sec" aria-label="Access">
+          <h3>Access</h3>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.roOn}}" disabled="{{sh.settings.roLocked}}" onChange="{{sh.settings.toggleRo}}">Preview the read-only view</label>
+          <div class="hint">{{sh.settings.roHint}}</div>
+        </section>
+        <section class="sh-sec" aria-label="Links">
+          <h3>Links</h3>
+          <div class="sub">Build a link with the URL parameters the app reads (division, quarter, product, objective, owner, read-only, token) and open it the way a fresh load would.</div>
+          <div class="row"><button class="btn sm" type="button" onClick="{{sh.settings.openLink}}">Open a link</button></div>
+        </section>
+<!--@if !live-->
+        <section class="sh-sec" aria-label="Sync">
+          <h3>Sync</h3>
+          <div class="row wrap g8"><span class="{{sh.settings.sync.cls}}"><span class="dot"></span>{{sh.settings.sync.word}}</span><span class="sub">{{sh.settings.sync.text}}</span></div>
+          <div class="row wrap g8">
+            <sc-if value="{{!sh.settings.sync.offline}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{sh.settings.sync.goOffline}}">Go offline</button></sc-if>
+            <sc-if value="{{sh.settings.sync.offline}}" hint-placeholder-val="{{false}}"><button class="btn sm" type="button" onClick="{{sh.settings.sync.goOnline}}">Back online</button><button class="btn sm" type="button" disabled="{{sh.settings.sync.noPending}}" onClick="{{sh.settings.sync.conflict}}">Back online after a teammate saved</button></sc-if>
+          </div>
+          <div class="hint">{{sh.settings.sync.conflictHint}}</div>
+          <div class="row wrap g8"><button class="btn sm" type="button" disabled="{{sh.settings.sync.offline}}" onClick="{{sh.settings.sync.teammate}}">Receive a teammate's change</button><span class="hint">The app checks for teammates' changes every 25 seconds.</span></div>
+          <sc-if value="{{sh.settings.sync.hasLast}}" hint-placeholder-val="{{false}}"><div class="sub">Last change from a teammate: {{sh.settings.sync.last}}</div></sc-if>
+        </section>
+<!--@endif-->
+        <section class="sh-sec" aria-label="Hub sign-in">
+          <h3>Hub sign-in</h3>
+          <label class="fld">Signed in as<select class="sel" value="{{sh.settings.hub.value}}" disabled="{{sh.settings.hub.fixed}}" onChange="{{sh.settings.hub.pick}}"><sc-for list="{{sh.settings.hub.opts}}" as="o" hint-placeholder-count="5"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          <div class="hint">{{sh.settings.hub.hint}}</div>
+          <div class="hint">{{sh.settings.hub.planNote}}</div>
+        </section>
+<!--@if sales-->
+        <section class="sh-sec" aria-label="Maintenance">
+          <h3>Maintenance</h3>
+          <div class="sub">{{sh.settings.recover.intro}}</div>
+          <div class="row wrap g8">
+            <button class="btn sm" type="button" disabled="{{sh.settings.recover.busy}}" onClick="{{sh.settings.recover.scan}}">{{sh.settings.recover.scanLabel}}</button>
+            <sc-if value="{{sh.settings.recover.hasMsg}}" hint-placeholder-val="{{false}}"><span class="{{sh.settings.recover.msgCls}}">{{sh.settings.recover.msg}}</span></sc-if>
+          </div>
+          <sc-if value="{{sh.settings.recover.hasRows}}" hint-placeholder-val="{{false}}">
+            <div class="tbox" data-k="stranded">
+              <sc-for list="{{sh.settings.recover.rows}}" as="x" hint-placeholder-count="1"><div class="li"><span class="col g2"><span class="strong">{{x.name}}</span><span class="sub">{{x.text}}</span></span></div></sc-for>
+            </div>
+            <div class="row wrap g8">
+              <sc-if value="{{sh.settings.recover.canMove}}" hint-placeholder-val="{{true}}"><button class="btn sm pri" type="button" disabled="{{sh.settings.recover.moving}}" onClick="{{sh.settings.recover.move}}">{{sh.settings.recover.moveLabel}}</button></sc-if>
+              <sc-if value="{{sh.settings.recover.roBlocked}}" hint-placeholder-val="{{false}}"><span class="hint">Read-only view: moving is disabled.</span></sc-if>
+              <button class="btn sm q" type="button" onClick="{{sh.settings.recover.cancel}}">Cancel</button>
+            </div>
+          </sc-if>
+<!--@if live-->
+          <sc-if value="{{sh.settings.recover.hasResults}}" hint-placeholder-val="{{false}}">
+            <div class="tbox" data-k="recovered">
+              <sc-for list="{{sh.settings.recover.results}}" as="x" hint-placeholder-count="1"><div class="li"><span class="col g2"><span class="strong">{{x.name}}</span><span class="{{x.cls}}">{{x.text}}</span></span></div></sc-for>
+            </div>
+          </sc-if>
+<!--@endif-->
+        </section>
+<!--@endif-->
+        <!--@slot settings-->
+<!--@if !live-->
+        <section class="sh-sec" aria-label="Sample data">
+          <h3>Sample data</h3>
+          <div class="row"><button class="btn sm" type="button" onClick="{{sh.settings.reset}}">Restore the sample data</button></div>
+          <div class="hint">{{sh.settings.build}}</div>
+        </section>
+<!--@endif-->
+      </div>
+    </sc-if>
+
+    <sc-if value="{{sh.linkSheet}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <sc-if value="{{ui.sheetBack}}" hint-placeholder-val="{{true}}"><button class="btn ic q" type="button" aria-label="Back" title="Back" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+        <div class="sh-title"><h2>Open a link</h2><span class="sub">The URL parameters the app reads, applied the way a fresh load applies them.</span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeAllSheets}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <section class="sh-sec" aria-label="Parameters">
+          <div class="grid2">
+            <label class="fld"><span class="lab">Division <span class="hint">?division=</span></span>
+              <select class="sel" value="{{sh.linkSheet.d.division}}" onChange="{{sh.linkSheet.onDivision}}"><sc-for list="{{sh.linkSheet.divOpts}}" as="x" hint-placeholder-count="3"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for></select>
+            </label>
+            <label class="fld"><span class="lab">Quarter <span class="hint">?quarter=</span></span>
+              <select class="sel" value="{{sh.linkSheet.d.quarter}}" onChange="{{sh.linkSheet.onQuarter}}"><sc-for list="{{sh.linkSheet.quarterOpts}}" as="x" hint-placeholder-count="3"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for></select>
+            </label>
+            <label class="fld"><span class="lab">Product <span class="hint">?product=</span></span>
+              <select class="sel" value="{{sh.linkSheet.d.product}}" onChange="{{sh.linkSheet.onProduct}}"><sc-for list="{{sh.linkSheet.prodOpts}}" as="x" hint-placeholder-count="3"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for></select>
+            </label>
+            <label class="fld"><span class="lab">Objective <span class="hint">?objective=</span></span><input class="in" autoComplete="off" placeholder="{{sh.linkSheet.objPh}}" value="{{sh.linkSheet.d.objective}}" onChange="{{sh.linkSheet.onObjective}}"></label>
+            <label class="fld"><span class="lab">Owner <span class="hint">?owner=</span></span><input class="in" autoComplete="off" placeholder="erin@celadyne.com" value="{{sh.linkSheet.d.owner}}" onChange="{{sh.linkSheet.onOwner}}"></label>
+            <label class="fld"><span class="lab">Token <span class="hint">?token=</span></span><input class="in" autoComplete="off" placeholder="Passed by an SSO embed" value="{{sh.linkSheet.d.token}}" onChange="{{sh.linkSheet.onToken}}"></label>
+            <label class="fld"><span class="lab">View <span class="hint">?view=</span></span>
+              <select class="sel" value="{{sh.linkSheet.d.view}}" onChange="{{sh.linkSheet.onView}}"><sc-for list="{{sh.linkSheet.viewOpts}}" as="x" hint-placeholder-count="5"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for></select>
+              <span class="{{sh.linkSheet.viewHintCls}}">{{sh.linkSheet.viewHint}}</span>
+            </label>
+          </div>
+          <div class="row wrap g12"><label class="check"><input class="cb" type="checkbox" checked="{{sh.linkSheet.d.readonly}}" onChange="{{sh.linkSheet.onReadonly}}">Read-only <span class="hint">?readonly</span></label><button class="btn sm q push" type="button" onClick="{{sh.linkSheet.clear}}">Clear all</button></div>
+          <div class="hint">It starts as the link to what is on screen now.</div>
+        </section>
+        <section class="sh-sec" aria-label="Link">
+          <h3>Link</h3>
+          <div class="shl-url" data-k="url">{{sh.linkSheet.url}}</div>
+          <div class="row"><button class="btn sm" type="button" onClick="{{sh.linkSheet.copy}}">Copy link</button></div>
+          <div class="hint">A fresh load opens an objective in its own division and drops filters that would hide it, ignores an unknown objective, refuses a division of the wrong kind, reads ?quarter=active as the current quarter ({{sh.linkSheet.activeQ}}), and saves ?token in this browser before removing it from the address bar.</div>
+        </section>
+      </div>
+      <div class="sh-foot"><button class="btn pri" type="button" onClick="{{sh.linkSheet.open}}">Open this link</button><button class="btn q" type="button" onClick="{{ui.closeSheet}}">Cancel</button></div>
+    </sc-if>
+
+    <sc-if value="{{sh.endSheet}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <div class="sh-title"><h2>End objective</h2><span class="sub">{{sh.endSheet.name}}</span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <div class="muted">Ending an objective freezes its schedule so its delays stop extending into the next quarter. <sc-if value="{{sh.endSheet.hasOpen}}" hint-placeholder-val="{{true}}"><strong>{{sh.endSheet.openText}}</strong> </sc-if>You can reopen it later.</div>
+        <section class="sh-sec" aria-label="Outcome">
+          <h3>Outcome</h3>
+          <div class="col g8" role="radiogroup" aria-label="Outcome">
+            <sc-for list="{{sh.endSheet.opts}}" as="x" hint-placeholder-count="2"><button class="{{x.cls}}" type="button" role="radio" aria-checked="{{x.on}}" onClick="{{x.pick}}"><span class="shl-radio"></span><span class="col g2"><span class="strong">{{x.label}}</span><span class="sub">{{x.desc}}</span></span></button></sc-for>
+          </div>
+        </section>
+        <section class="sh-sec" aria-label="When and why">
+          <label class="fld">End date<input class="in" type="date" value="{{sh.endSheet.date}}" onChange="{{sh.endSheet.onDate}}" style="max-width: 200px"></label>
+          <label class="fld"><span class="lab">Note <span class="hint">optional</span></span><textarea class="ta" rows="3" placeholder="Why is it ending?" value="{{sh.endSheet.note}}" onChange="{{sh.endSheet.onNote}}"></textarea></label>
+          <sc-if value="{{ui.hasSheetErr}}" hint-placeholder-val="{{false}}"><div class="err">{{ui.sheetErr}}</div></sc-if>
+        </section>
+      </div>
+      <div class="sh-foot"><button class="btn pri" type="button" onClick="{{sh.endSheet.save}}">End objective</button><button class="btn q" type="button" onClick="{{ui.closeSheet}}">Cancel</button></div>
+    </sc-if>
+    <!--@slot sheets-->
+  </aside>
+</sc-if>
+
+<sc-if value="{{ui.hasDlg}}" hint-placeholder-val="{{false}}">
+  <button class="dlg-scrim" type="button" aria-label="Cancel" onClick="{{ui.dlg.cancelFn}}"></button>
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-label="{{ui.dlg.title}}">
+    <h2>{{ui.dlg.title}}</h2>
+    <sc-if value="{{ui.dlg.hasBody}}" hint-placeholder-val="{{true}}"><div class="muted">{{ui.dlg.body}}</div></sc-if>
+    <sc-if value="{{ui.dlg.isAsk}}" hint-placeholder-val="{{false}}">
+      <label class="fld">{{ui.dlg.label}}<input class="in" value="{{ui.dlg.value}}" placeholder="{{ui.dlg.placeholder}}" onChange="{{ui.dlg.onValue}}" onKeyDown="{{ui.dlg.onKey}}" autoFocus=""></label>
+      <sc-if value="{{ui.dlg.hasErr}}" hint-placeholder-val="{{false}}"><div class="err">{{ui.dlg.err}}</div></sc-if>
+    </sc-if>
+    <div class="acts">
+      <button class="btn" type="button" onClick="{{ui.dlg.cancelFn}}">{{ui.dlg.cancel}}</button>
+      <button class="{{ui.dlg.okCls}}" type="button" onClick="{{ui.dlg.okFn}}">{{ui.dlg.ok}}</button>
+    </div>
+  </div>
+</sc-if>
+
+
+<div class="toasts" role="status" aria-live="polite">
+  <sc-for list="{{ui.toasts}}" as="t" hint-placeholder-count="0">
+    <div class="{{t.cls}}"><span>{{t.text}}</span><button class="x" type="button" aria-label="Dismiss" title="Dismiss" onClick="{{t.drop}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+  </sc-for>
+</div>
+</div>

@@ -1,0 +1,90 @@
+/* Kanban (kb). Standalone the board is its own card; inside the Stage-gates panel it becomes a section. */
+.kb-root{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.panel .kb-root{border:0;border-radius:0 0 12px 12px}
+.kb-empty{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:18px 20px}
+.kb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px 10px}
+.kb-acts{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.kb-sum{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:2px 20px 10px}
+.kb-gsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;padding:0 20px 14px;font-size:13px}
+.kb-g{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+
+/* grid: lane header column + one column per stage; scrolls sideways when narrow */
+.kb-gwrap{position:relative;border-top:1px solid var(--line-2)}
+.kb-scroll{overflow-x:auto}
+.kb-grid{display:grid}
+.kb-ch{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px 6px 12px;font-weight:600;background:var(--surface-2);border-bottom:1px solid var(--line);border-left:1px solid var(--line-3);min-width:0}
+.kb-corner{color:var(--muted);font-weight:500;border-left:0}
+.kb-chn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-dbtn{margin-left:auto;color:var(--muted)}
+.kb-ln{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-top:1px solid var(--line-3);min-width:0}
+.kb-lnadd{margin-top:6px;margin-left:-8px;opacity:.75}
+.kb-ln:hover .kb-lnadd,.kb-lnadd:focus-visible{opacity:1}
+.kb-cell{display:flex;flex-direction:column;gap:8px;min-height:96px;padding:8px;border-top:1px solid var(--line-3);border-left:1px solid var(--line-3);min-width:0}
+.kb-cell-done{background:var(--surface-3)}
+
+/* tiles: a quiet card; the left edge repeats the status the dot and word already give */
+.kb-tile{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:9px 11px;border:1px solid var(--line);border-left:3px solid var(--none);border-radius:9px;background:var(--surface);box-shadow:var(--shadow-1);cursor:grab;min-width:0}
+.kb-tile:hover{border-color:var(--field-hover)}
+.kb-tile.kb-ok{border-left-color:var(--ok)}
+.kb-tile.kb-warn{border-left-color:var(--warn)}
+.kb-tile.kb-bad{border-left-color:var(--bad)}
+.kb-tile.kb-done{border-left-color:var(--accent)}
+.kb-tile.kb-park{border-style:dashed;border-left-width:1px;box-shadow:none;background:var(--surface-2)}
+.kb-tile.lift,.kb-drow.lift{opacity:.45}
+.kb-tile.is-focus,.kb-drow.is-focus{background:var(--accent-wash);box-shadow:0 0 0 2px var(--accent-line)}
+.kb-th{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.kb-tm{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px}
+.kb-tm .st{font-size:12.5px}
+.kb-tn{flex:1 1 auto;min-width:0;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;line-height:1.3;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.kb-tn:hover{color:var(--accent-ink);text-decoration:underline}
+.kb-av{margin-left:auto}
+.kb-av.none{background:transparent;border:1px dashed var(--ghost);color:var(--faint)}
+.kb-drow{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line-2);font-size:13px;cursor:grab;min-width:0}
+.kb-drow .kb-tn{font-weight:500}
+.kb-ckok{color:var(--ok);flex:none}
+.kb-when{margin-left:auto;white-space:nowrap}
+.kb-older{align-self:flex-start;padding:2px 4px;border:0;background:transparent;color:var(--accent);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.kb-older:hover{color:var(--accent-ink);text-decoration:underline}
+
+/* the Done-column menu sits outside the scrolling grid so it is never clipped */
+.kb-dmwrap{position:absolute;right:12px;top:42px;z-index:31}
+.kb-dm{position:relative;right:auto;width:300px;max-width:calc(100vw - 48px)}
+.kb-dmh{display:flex;align-items:center;gap:6px}
+.kb-dmh .mh{flex:1}
+.kb-mck{width:16px;display:inline-grid;place-items:center;flex:none;color:var(--accent)}
+.kb-dmnote{padding:4px 10px 6px;font-size:12.5px;color:var(--muted);white-space:normal;line-height:1.4}
+.kb-legend{padding:10px 20px;border-top:1px solid var(--line-3)}
+
+/* backlog */
+.kb-bl{border-top:1px solid var(--line-2)}
+.kb-blhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 20px}
+.kb-bltog{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.kb-bltog svg{color:var(--muted)}
+.kb-blrow{display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;align-items:start;padding:10px 20px;border-top:1px solid var(--line-3)}
+.kb-bllane{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.kb-bllane .btn{margin-top:4px;margin-left:-8px}
+.kb-bldrop{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;min-height:56px;padding:8px;border:1px dashed var(--line);border-radius:10px}
+.kb-bldrop>.sub{align-self:center;padding:0 4px}
+.kb-bldrop .kb-tile{width:220px;max-width:100%}
+
+/* tile sheet: assignee picker */
+.kb-asgs{display:flex;flex-direction:column;gap:2px;max-height:320px;overflow:auto;padding:2px;border:1px solid var(--line-2);border-radius:10px}
+.kb-asg{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.kb-asg:hover{background:var(--hover)}
+.kb-asg.on{background:var(--accent-soft)}
+.kb-asg:disabled{cursor:default}
+.kb-asgn{font-weight:500}
+.kb-asge{white-space:nowrap}
+
+/* config sheet */
+.kb-cfgrow{display:flex;align-items:center;gap:8px;min-width:0}
+.kb-cfgmeta{white-space:nowrap;min-width:84px;text-align:right}
+.kb-cfglane{display:grid;grid-template-columns:minmax(0,1.4fr) 120px 150px auto;gap:10px;align-items:end;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-3)}
+.kb-cfgbtns{padding-bottom:3px}
+@media (max-width: 700px){
+  .kb-blrow{grid-template-columns:minmax(0,1fr)}
+  .kb-cfglane{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .kb-bar,.kb-sum,.kb-gsum,.kb-blhead,.kb-blrow,.kb-legend{padding-left:14px;padding-right:14px}
+}
+/* sheet wrapper keeps the kit's head / scrolling body / footer layout */
+.kb-sheet{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}

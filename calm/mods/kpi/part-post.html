@@ -1,0 +1,5 @@
+<div class="kpi-ed">
+  <input class="in sm num" type="text" inputMode="decimal" autoComplete="off" aria-label="{{$KE.aria}}" placeholder="{{$KE.ph}}" value="{{$KE.v}}" onChange="{{$KE.onChange}}" onKeyDown="{{$KE.onKey}}" onBlur="{{$KE.onBlur}}" autoFocus="">
+  <sc-if value="{{$KE.hasUnit}}" hint-placeholder-val="{{false}}"><span class="sub">{{$KE.unit}}</span></sc-if>
+</div>
+<sc-if value="{{$KE.hasErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert">{{$KE.err}}</div></sc-if>

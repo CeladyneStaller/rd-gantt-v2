@@ -1,0 +1,192 @@
+<sc-if value="{{ssub.show}}" hint-placeholder-val="{{true}}">
+<section class="panel" aria-labelledby="ssub-h" data-k="sub-products">
+  <div class="ph">
+    <h2 id="ssub-h" class="h2 ssub-h"><button class="ssub-tgl" type="button" aria-expanded="{{ssub.open}}" onClick="{{ssub.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Sub-products<span class="cnt">{{ssub.count}}</span></button></h2>
+    <span class="sub">{{ssub.sum}}</span>
+    <sc-if value="{{ssub.canEdit}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{ssub.openAdd}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add sub-product</button></div></sc-if>
+  </div>
+  <sc-if value="{{ssub.open}}" hint-placeholder-val="{{true}}">
+    <sc-if value="{{ssub.empty}}" hint-placeholder-val="{{false}}"><div class="empty">{{ssub.emptyText}}</div></sc-if>
+    <sc-for list="{{ssub.hosts}}" as="h" hint-placeholder-count="1">
+      <article class="ssub-card" aria-label="{{h.aria}}" data-k="{{h.id}}">
+        <div class="ssub-top">
+          <sc-if value="{{h.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink ssub-name" type="button" title="Edit sub-product" onClick="{{h.edit}}">{{h.name}}</button></sc-if>
+          <sc-if value="{{!h.canEdit}}" hint-placeholder-val="{{false}}"><span class="ssub-name">{{h.name}}</span></sc-if>
+          <span class="tid" title="{{h.childName}}">{{h.child}}</span>
+          <sc-if value="{{h.loading}}" hint-placeholder-val="{{false}}"><span class="st t-info"><span class="spin" aria-hidden="true"></span>Loading specifications</span></sc-if>
+          <sc-if value="{{h.unreachable}}" hint-placeholder-val="{{false}}"><span class="st t-warn" title="Couldn’t reach that product’s SPEC bin"><span class="dot"></span>Unreachable</span></sc-if>
+          <sc-if value="{{h.canEdit}}" hint-placeholder-val="{{true}}">
+            <div class="above ssub-more">
+              <button class="btn q xs ic" type="button" aria-label="{{h.moreAria}}" title="More actions" aria-haspopup="menu" aria-expanded="{{h.menuOpen}}" onClick="{{h.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+              <sc-if value="{{h.menuOpen}}" hint-placeholder-val="{{false}}">
+                <div class="menu r ssub-menu" role="menu" aria-label="Sub-product actions">
+                  <button class="mi" type="button" role="menuitem" onClick="{{h.edit}}">Edit sub-product</button>
+                  <div class="msep"></div>
+                  <button class="mi bad" type="button" role="menuitem" onClick="{{h.remove}}">Remove sub-product</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+        <div class="ssub-tbl">
+          <table class="tbl">
+            <thead><tr><th>Imported specification</th><th>Sub-product target</th><th>Sub-product value</th><th>Your target</th><th class="r">Score</th><th>Links to specification</th></tr></thead>
+            <tbody>
+              <sc-for list="{{h.rows}}" as="r" hint-placeholder-count="2">
+                <tr class="hov" data-k="{{r.key}}">
+                  <td>
+                    <div class="col g2">
+                      <span class="ssub-spec">{{r.name}}<sc-if value="{{r.pending}}" hint-placeholder-val="{{false}}"> <span class="tag">Loading</span></sc-if></span>
+                      <sc-if value="{{r.missing}}" hint-placeholder-val="{{false}}"><span class="sub">No longer a specification of the sub-product</span></sc-if>
+                    </div>
+                  </td>
+                  <td class="num">{{r.stackTarget}}</td>
+                  <td class="num"><span class="{{r.valCls}}">{{r.stackValue}}</span></td>
+                  <td>
+                    <sc-if value="{{r.editing}}" hint-placeholder-val="{{false}}">
+                      <div class="row wrap g4">
+                        <sc-if value="{{r.notRange}}" hint-placeholder-val="{{true}}"><input class="in sm ssub-oin" inputMode="decimal" autoComplete="off" value="{{r.ev}}" placeholder="{{r.eph}}" aria-label="{{r.earia}}" onChange="{{r.onV}}" onKeyDown="{{r.onKey}}" autoFocus=""></sc-if>
+                        <sc-if value="{{r.isRange}}" hint-placeholder-val="{{false}}"><input class="in sm ssub-oin" inputMode="decimal" autoComplete="off" value="{{r.elo}}" placeholder="{{r.loPh}}" aria-label="Range low" onChange="{{r.onLo}}" onKeyDown="{{r.onKey}}" autoFocus=""><span class="sub">to</span><input class="in sm ssub-oin" inputMode="decimal" autoComplete="off" value="{{r.ehi}}" placeholder="{{r.hiPh}}" aria-label="Range high" onChange="{{r.onHi}}" onKeyDown="{{r.onKey}}"></sc-if>
+                        <button class="btn pri xs" type="button" onClick="{{r.setT}}">Set target</button>
+                        <sc-if value="{{r.canClear}}" hint-placeholder-val="{{false}}"><button class="btn xs" type="button" onClick="{{r.clear}}">Clear override</button></sc-if>
+                        <button class="btn q xs" type="button" onClick="{{r.cancel}}">Cancel</button>
+                      </div>
+                      <sc-if value="{{r.hasErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert">{{r.err}}</div></sc-if>
+                    </sc-if>
+                    <sc-if value="{{!r.editing}}" hint-placeholder-val="{{true}}">
+                      <div class="row wrap g4">
+                        <sc-if value="{{r.canEdit}}" hint-placeholder-val="{{true}}"><button class="ssub-mv {{r.yCls}}" type="button" title="Set your own target" onClick="{{r.startEdit}}">{{r.yours}}</button></sc-if>
+                        <sc-if value="{{!r.canEdit}}" hint-placeholder-val="{{false}}"><span class="{{r.yCls}}">{{r.yours}}</span></sc-if>
+                        <sc-if value="{{r.overridden}}" hint-placeholder-val="{{false}}"><span class="tag">Override</span></sc-if>
+                      </div>
+                    </sc-if>
+                  </td>
+                  <td class="r"><span class="{{r.scoreCls}}"><span class="dot"></span>{{r.score}}</span></td>
+                  <td>
+                    <sc-if value="{{r.canEdit}}" hint-placeholder-val="{{true}}"><select class="sel sm ssub-sel" aria-label="{{r.linkAria}}" value="{{r.linkVal}}" onChange="{{r.onLink}}"><sc-for list="{{ssub.linkOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></sc-if>
+                    <sc-if value="{{!r.canEdit}}" hint-placeholder-val="{{false}}"><span>{{r.linkText}}</span></sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <sc-if value="{{h.empty}}" hint-placeholder-val="{{false}}"><div class="empty">This model has no importable specifications.</div></sc-if>
+        </div>
+        <sc-if value="{{h.hasNotes}}" hint-placeholder-val="{{false}}">
+          <div class="ssub-notes">
+            <button class="lnk muted ssub-ntgl" type="button" aria-expanded="{{h.notesOpen}}" onClick="{{h.toggleNotes}}"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>Notes</button>
+            <sc-if value="{{h.notesOpen}}" hint-placeholder-val="{{false}}"><div class="ssub-nbody">{{h.notes}}</div></sc-if>
+          </div>
+        </sc-if>
+      </article>
+    </sc-for>
+  </sc-if>
+</section>
+
+<sc-if value="{{ssub.prod.show}}" hint-placeholder-val="{{true}}">
+<section class="panel" aria-labelledby="ssub-pk-h" data-k="product-kpis">
+  <div class="ph">
+    <h2 id="ssub-pk-h" class="h2 ssub-h"><button class="ssub-tgl" type="button" aria-expanded="{{ssub.prod.open}}" onClick="{{ssub.prod.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Product KPIs<span class="cnt">{{ssub.prod.count}}</span></button></h2>
+    <span class="sub">{{ssub.prod.sub}}</span>
+    <sc-if value="{{ssub.prod.canEdit}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{ssub.prod.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add product KPI</button></div></sc-if>
+  </div>
+  <sc-if value="{{ssub.prod.empty}}" hint-placeholder-val="{{false}}"><div class="empty">{{ssub.prod.emptyText}}</div></sc-if>
+  <sc-if value="{{ssub.prod.has}}" hint-placeholder-val="{{true}}">
+    <div class="ssub-pk">
+      <table class="tbl">
+        <thead><tr><th>KPI</th><th>Target</th><th>Current</th><th class="r">Score</th><sc-if value="{{ssub.prod.canEdit}}" hint-placeholder-val="{{true}}"><th>Post a reading</th><th class="r"><span class="ssub-sr">Actions</span></th></sc-if></tr></thead>
+        <tbody>
+          <sc-for list="{{ssub.prod.rows}}" as="pk" hint-placeholder-count="1">
+            <tr class="hov" data-k="{{pk.id}}">
+              <td>
+                <sc-if value="{{pk.canOpen}}" hint-placeholder-val="{{true}}"><button class="lnk ink ssub-spec" type="button" title="{{pk.openTitle}}" onClick="{{pk.open}}">{{pk.name}}</button></sc-if>
+                <sc-if value="{{!pk.canOpen}}" hint-placeholder-val="{{false}}"><span class="ssub-spec">{{pk.name}}</span></sc-if>
+                <sc-if value="{{pk.hasBadges}}" hint-placeholder-val="{{false}}"><div class="row wrap g4 ssub-badges"><sc-for list="{{pk.badges}}" as="pb" hint-placeholder-count="1"><span class="tag" title="{{pb.title}}">{{pb.text}}</span></sc-for></div></sc-if>
+              </td>
+              <td><span class="num" title="{{pk.targetTitle}}">{{pk.target}}</span><sc-if value="{{pk.hasTgtNote}}" hint-placeholder-val="{{false}}"><div class="sub">{{pk.tgtNote}}</div></sc-if></td>
+              <td><span class="{{pk.currentCls}}" title="{{pk.currentTitle}}">{{pk.current}}</span><sc-if value="{{pk.hasSample}}" hint-placeholder-val="{{false}}"><div class="{{pk.sampleCls}}">{{pk.sample}}</div></sc-if></td>
+              <td class="r"><span class="{{pk.scoreCls}}" title="{{pk.scoreTitle}}"><span class="dot"></span>{{pk.score}}</span></td>
+              <sc-if value="{{ssub.prod.canEdit}}" hint-placeholder-val="{{true}}">
+                <td>
+                  <sc-if value="{{pk.notBinary}}" hint-placeholder-val="{{true}}"><div class="row g4"><input class="in sm num ssub-oin" inputMode="decimal" autoComplete="off" aria-label="{{pk.readLabel}}" placeholder="Value" value="{{pk.read}}" onChange="{{pk.onRead}}" onKeyDown="{{pk.onReadKey}}"><button class="btn xs" type="button" onClick="{{pk.post}}">Post</button></div></sc-if>
+                  <sc-if value="{{pk.isBinary}}" hint-placeholder-val="{{false}}"><div class="row g4"><button class="btn xs" type="button" aria-label="{{pk.metLabel}}" onClick="{{pk.postMet}}">Met</button><button class="btn xs" type="button" aria-label="{{pk.notMetLabel}}" onClick="{{pk.postNotMet}}">Not met</button></div></sc-if>
+                </td>
+                <td class="r">
+                  <div class="above ssub-pkmenu">
+                    <button class="btn xs ic q" type="button" aria-label="{{pk.menuLabel}}" title="More actions" aria-haspopup="menu" aria-expanded="{{pk.menuOpen}}" onClick="{{pk.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                    <sc-if value="{{pk.menuOpen}}" hint-placeholder-val="{{false}}">
+                      <div class="menu r ssub-menu" role="menu" aria-label="{{pk.menuLabel}}">
+                        <button class="mi" type="button" role="menuitem" onClick="{{pk.open}}">{{pk.editLabel}}</button>
+                        <sc-if value="{{pk.isMember}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{pk.unlink}}">Unlink</button></sc-if>
+                        <div class="msep"></div>
+                        <button class="mi bad" type="button" role="menuitem" onClick="{{pk.del}}">{{pk.delLabel}}</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </td>
+              </sc-if>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </sc-if>
+</section>
+</sc-if>
+
+<section class="panel" aria-labelledby="ssub-ow-h" data-k="component-owners">
+  <div class="ph">
+    <h2 id="ssub-ow-h" class="h2 ssub-h"><button class="ssub-tgl" type="button" aria-expanded="{{ssub.ow.open}}" onClick="{{ssub.ow.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Component owners<span class="cnt">{{ssub.ow.count}}</span></button></h2>
+    <span class="sub">Products this model is a component in</span>
+  </div>
+  <sc-if value="{{ssub.ow.open}}" hint-placeholder-val="{{false}}">
+    <sc-if value="{{ssub.ow.empty}}" hint-placeholder-val="{{false}}"><div class="empty">{{ssub.ow.emptyText}}</div></sc-if>
+    <sc-for list="{{ssub.ow.prods}}" as="p" hint-placeholder-count="1">
+      <div class="ssub-og" data-k="{{p.key}}">
+        <button class="ssub-gh" type="button" aria-expanded="{{p.open}}" onClick="{{p.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg><span class="strong">{{p.name}}</span><sc-if value="{{p.hasDiv}}" hint-placeholder-val="{{true}}"><span class="tag">{{p.div}}</span></sc-if></button>
+        <sc-for list="{{p.models}}" as="m" hint-placeholder-count="1">
+          <div class="ssub-om" data-k="{{m.key}}">
+            <button class="ssub-gh ssub-gh2" type="button" aria-expanded="{{m.open}}" onClick="{{m.toggle}}"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>{{m.name}}</button>
+            <sc-if value="{{m.loading}}" hint-placeholder-val="{{false}}"><div class="ssub-onote"><span class="st t-info"><span class="spin" aria-hidden="true"></span>Loading specifications</span></div></sc-if>
+            <sc-if value="{{m.unreachable}}" hint-placeholder-val="{{false}}"><div class="ssub-onote"><span class="st t-warn" title="Couldn’t reach that product’s SPEC bin"><span class="dot"></span>Unreachable</span></div></sc-if>
+            <sc-if value="{{m.none}}" hint-placeholder-val="{{false}}"><div class="ssub-onote sub">No specifications yet</div></sc-if>
+            <sc-for list="{{m.rows}}" as="r" hint-placeholder-count="2">
+              <div class="ssub-orow"><span class="ellip" title="{{r.name}}">{{r.name}}</span><span class="sub num">{{r.target}}</span><span class="{{r.scoreCls}} ssub-osc"><span class="dot"></span>{{r.score}}</span></div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </sc-if>
+</section>
+
+<sc-if value="{{ssub.dep.show}}" hint-placeholder-val="{{false}}">
+<section class="panel" aria-labelledby="ssub-dep-h" data-k="cross-product-dependencies">
+  <div class="ph">
+    <h2 id="ssub-dep-h" class="h2 ssub-h"><button class="ssub-tgl" type="button" aria-expanded="{{ssub.dep.open}}" onClick="{{ssub.dep.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Cross-product dependencies<span class="cnt">{{ssub.dep.count}}</span></button></h2>
+    <span class="sub">{{ssub.dep.sub}}</span>
+  </div>
+  <sc-for list="{{ssub.dep.groups}}" as="g" hint-placeholder-count="1">
+    <div class="ssub-dg" data-k="{{g.key}}">
+      <div class="row"><span class="strong">{{g.name}}</span><sc-if value="{{g.hasDiv}}" hint-placeholder-val="{{true}}"><span class="tag">{{g.div}}</span></sc-if></div>
+      <div class="ssub-tbl">
+        <table class="tbl">
+          <thead><tr><th>Used in</th><th>Metric</th><th>Current</th><th>Target</th><th class="r">Score</th></tr></thead>
+          <tbody>
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="1">
+              <tr class="hov" data-k="{{r.key}}">
+                <td><div class="col g2"><span>{{r.where}}</span><span class="sub">{{r.model}}</span></div></td>
+                <td><div class="row wrap g4"><span>{{r.metric}}</span><span class="tag" title="Relationship">{{r.rel}}</span></div></td>
+                <td class="num"><span class="{{r.valCls}}">{{r.value}}</span></td>
+                <td class="num">{{r.target}}</td>
+                <td class="r"><span class="{{r.scoreCls}}"><span class="dot"></span>{{r.score}}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </sc-for>
+</section>
+</sc-if>
+</sc-if>

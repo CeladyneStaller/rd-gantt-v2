@@ -1,0 +1,362 @@
+{
+  "keyResults": [
+    {
+      "id": "KR-EL-1-1-1",
+      "objectiveId": "MDL-EL-1-1",
+      "statement": "Rated stack power",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-1-1-2",
+      "objectiveId": "MDL-EL-1-1",
+      "statement": "Specific energy at rated load",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-1-1-3",
+      "objectiveId": "MDL-EL-1-1",
+      "statement": "Voltage degradation",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-1-1-4",
+      "objectiveId": "MDL-EL-1-1",
+      "statement": "Gas purity",
+      "trackingType": "kpi"
+    },
+    {
+      "id": "KR-EL-2-1-1",
+      "objectiveId": "MDL-EL-2-1",
+      "statement": "System efficiency at rated load",
+      "trackingType": "percentage",
+      "progress": 70,
+      "notes": "Waiting on the balance-of-plant model."
+    }
+  ],
+  "stageGates": [
+    {
+      "id": "SG-EL-1-1-1",
+      "objectiveId": "MDL-EL-1-1",
+      "name": "Membrane electrode assembly",
+      "ctype": "MEA",
+      "status": "Prototype",
+      "notes": ""
+    },
+    {
+      "id": "SG-EL-1-1-2",
+      "objectiveId": "MDL-EL-1-1",
+      "name": "Porous transport layer",
+      "ctype": "PTL",
+      "status": "Qualified",
+      "notes": ""
+    },
+    {
+      "id": "SG-EL-1-1-3",
+      "objectiveId": "MDL-EL-1-1",
+      "name": "Bipolar plate",
+      "ctype": "BPP",
+      "status": "Second source in trial",
+      "notes": ""
+    },
+    {
+      "id": "SG-EL-1-1-4",
+      "objectiveId": "MDL-EL-1-1",
+      "name": "End plates and compression",
+      "ctype": "",
+      "status": "",
+      "notes": "Disc springs set to 30 N·m at assembly. Re-torque after the first thermal cycle."
+    },
+    {
+      "id": "SG-EL-2-1-5",
+      "objectiveId": "MDL-EL-2-1",
+      "refModel": "MDL-EL-1-1",
+      "refProduct": "PRD-EL-1",
+      "name": "Tera stack · Tera 25-30-R5",
+      "notes": "Four stacks per skid."
+    }
+  ],
+  "kpis": [
+    {
+      "id": "KPI-EL-1-1-1-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-1-1-1",
+      "name": "Stack power",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 25,
+      "unit": "kW",
+      "linkParent": "KPI-PRD-EL-1-1",
+      "linkType": "contribute",
+      "linkPriority": 0
+    },
+    {
+      "id": "KPI-EL-1-1-2-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-1-1-2",
+      "name": "Specific energy",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 52,
+      "unit": "kWh/kg",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-3-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-1-1-3",
+      "name": "Decay at 2 A/cm²",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 5,
+      "unit": "µV/h",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-4-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-1-1-4",
+      "name": "H₂ in O₂",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 1,
+      "unit": "%",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-C1-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-1",
+      "name": "Membrane thickness",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 90,
+      "unit": "µm",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-C1-2",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-1",
+      "name": "Iridium loading",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 0.4,
+      "unit": "mg/cm²",
+      "gates": "KR-EL-1-1-1",
+      "notes": "Lower loading is the main cost lever.",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-C2-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-2",
+      "name": "Porosity",
+      "targetType": "demonstration",
+      "direction": "up",
+      "target": 35,
+      "unit": "%",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-C3-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-3",
+      "name": "Interfacial contact resistance",
+      "targetType": "demonstration",
+      "direction": "down",
+      "target": 10,
+      "unit": "mΩ·cm²",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-1-1-C4-1",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-4",
+      "name": "Compression uniformity",
+      "targetType": "statistical",
+      "statistic": "average",
+      "readCount": 4,
+      "direction": "up",
+      "target": 90,
+      "unit": "%",
+      "linkParent": null,
+      "linkType": "contribute"
+    },
+    {
+      "id": "KPI-EL-2-1-5-1",
+      "objectiveId": "MDL-EL-2-1",
+      "hostType": "component",
+      "hostId": "SG-EL-2-1-5",
+      "name": "Rated stack power",
+      "refModel": "MDL-EL-1-1",
+      "refKr": "KR-EL-1-1-1",
+      "linkType": "specification",
+      "linkParent": null,
+      "target": null,
+      "unit": "kW",
+      "linkSpec": "KR-EL-2-1-1"
+    },
+    {
+      "id": "KPI-EL-2-1-5-2",
+      "objectiveId": "MDL-EL-2-1",
+      "hostType": "component",
+      "hostId": "SG-EL-2-1-5",
+      "name": "Gas purity",
+      "refModel": "MDL-EL-1-1",
+      "refKr": "KR-EL-1-1-4",
+      "linkType": "specification",
+      "linkParent": null,
+      "target": 0.5,
+      "unit": "%"
+    },
+    {
+      "id": "KPI-EL-1-1-C1-3",
+      "objectiveId": "MDL-EL-1-1",
+      "hostType": "component",
+      "hostId": "SG-EL-1-1-1",
+      "linkParent": "KPI-EL-1-1-4-1",
+      "linkType": "contribute",
+      "linkPriority": 0,
+      "name": null,
+      "direction": null,
+      "unit": null,
+      "target": null,
+      "order": 0
+    },
+    {
+      "id": "KPI-EL-2-1-1-1",
+      "objectiveId": "MDL-EL-2-1",
+      "hostType": "keyResult",
+      "hostId": "KR-EL-2-1-1",
+      "linkParent": "KPI-PRD-EL-1-1",
+      "linkType": "specification",
+      "linkPriority": 0,
+      "name": null,
+      "direction": null,
+      "unit": null,
+      "target": null,
+      "order": 0
+    }
+  ],
+  "kpiUpdates": [
+    {
+      "id": "UPD-S1-a",
+      "kpiId": "KPI-EL-1-1-1-1",
+      "value": 23.6,
+      "timestamp": 1790262000000,
+      "note": ""
+    },
+    {
+      "id": "UPD-S1-b",
+      "kpiId": "KPI-EL-1-1-1-1",
+      "value": 24.1,
+      "timestamp": 1791558000000,
+      "note": ""
+    },
+    {
+      "id": "UPD-S2-a",
+      "kpiId": "KPI-EL-1-1-2-1",
+      "value": 53.4,
+      "timestamp": 1791558000000,
+      "note": ""
+    },
+    {
+      "id": "UPD-S3-a",
+      "kpiId": "KPI-EL-1-1-3-1",
+      "value": 6.8,
+      "timestamp": 1790780400000,
+      "note": ""
+    },
+    {
+      "id": "UPD-S3-b",
+      "kpiId": "KPI-EL-1-1-3-1",
+      "value": 6.2,
+      "timestamp": 1791644400000,
+      "note": ""
+    },
+    {
+      "id": "UPD-S4-a",
+      "kpiId": "KPI-EL-1-1-4-1",
+      "value": 0.62,
+      "timestamp": 1791471600000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C1-a",
+      "kpiId": "KPI-EL-1-1-C1-1",
+      "value": 89,
+      "timestamp": 1790953200000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C1-b",
+      "kpiId": "KPI-EL-1-1-C1-2",
+      "value": 0.45,
+      "timestamp": 1790953200000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C2-a",
+      "kpiId": "KPI-EL-1-1-C2-1",
+      "value": 37,
+      "timestamp": 1790607600000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C3-a",
+      "kpiId": "KPI-EL-1-1-C3-1",
+      "value": 12.5,
+      "timestamp": 1791298800000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C4-a",
+      "kpiId": "KPI-EL-1-1-C4-1",
+      "value": 86,
+      "timestamp": 1791385200000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C4-b",
+      "kpiId": "KPI-EL-1-1-C4-1",
+      "value": 88,
+      "timestamp": 1791471600000,
+      "note": ""
+    },
+    {
+      "id": "UPD-C1-c",
+      "kpiId": "KPI-EL-1-1-C1-3",
+      "value": 0.48,
+      "timestamp": 1791298800000,
+      "note": ""
+    }
+  ],
+  "modelSpec": {
+    "MDL-EL-1-1": {
+      "application": "Grid-scale PEM electrolysis, 30 bar output",
+      "maturity": "Pilot",
+      "notes": "Component lock targets the November design freeze."
+    },
+    "MDL-EL-2-1": {
+      "application": "Containerised 250 kW electrolysis skid",
+      "maturity": "Concept",
+      "notes": ""
+    }
+  }
+}

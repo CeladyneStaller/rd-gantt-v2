@@ -1,0 +1,39 @@
+<sc-if value="{{gates.ov}}" hint-placeholder-val="{{true}}">
+<section class="panel" aria-label="Stage-gates summary" data-k="gates-ov">
+  <div class="ph">
+    <h2 class="h2">Stage-gates</h2>
+    <sc-if value="{{gates.ov.has}}" hint-placeholder-val="{{true}}"><span class="sub">{{gates.ov.summary}}</span></sc-if>
+    <div class="act"><button class="btn sm q" type="button" onClick="{{gates.ov.go}}">{{gates.ov.goLabel}}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+  </div>
+  <sc-if value="{{gates.ov.none}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{gates.ov.emptyText}}</div></sc-if>
+  <sc-if value="{{gates.ov.hasSets}}" hint-placeholder-val="{{true}}">
+    <div class="sec gates-ovsets">
+      <sc-for list="{{gates.ov.sets}}" as="w" hint-placeholder-count="2">
+        <div class="gates-ovline" data-k="{{w.key}}">
+          <div class="col g2 grow"><span class="ellip">{{w.name}}</span><span class="sub">{{w.letter}}</span></div>
+          <span class="track sm gates-ovtrack"><span class="{{w.fillCls}}" style="{{w.fillStyle}}"></span></span>
+          <span class="num strong gates-ovpct">{{w.pct}}</span>
+          <span class="sub num gates-ovtxt">{{w.text}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{gates.ov.hasNext}}" hint-placeholder-val="{{true}}">
+    <div class="sec pb col g10">
+      <span class="sub strong">Next gate</span>
+      <div class="row wrap g12">
+        <div class="col g2 grow">
+          <div class="row wrap g4"><span class="tid">{{gates.ov.next.label}}</span><button class="lnk ink strong" type="button" onClick="{{gates.ov.next.open}}">{{gates.ov.next.name}}</button></div>
+          <div class="row wrap g12"><span class="{{gates.ov.next.dueCls}}">{{gates.ov.next.due}}</span><sc-if value="{{gates.ov.next.hasFc}}" hint-placeholder-val="{{false}}"><span class="sub">{{gates.ov.next.fc}}</span></sc-if></div>
+        </div>
+        <div class="col g2 gates-ovready">
+          <div class="row"><span class="sub">Readiness</span><span class="push num strong">{{gates.ov.next.ready}}</span></div>
+          <span class="track sm"><span class="{{gates.ov.next.fillCls}}" style="{{gates.ov.next.fillStyle}}"></span></span>
+          <sc-if value="{{gates.ov.next.hasPartial}}" hint-placeholder-val="{{false}}"><span class="sub">{{gates.ov.next.partial}}</span></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{gates.ov.noNext}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{gates.ov.noNextText}}</div></sc-if>
+</section>
+</sc-if>

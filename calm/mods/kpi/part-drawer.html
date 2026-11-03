@@ -1,0 +1,43 @@
+<div class="kpi-drawer" role="region" aria-label="{{$KD.title}}">
+  <div class="kpi-dh">
+    <span class="h3">{{$KD.title}}</span>
+    <button class="btn xs ic q push" type="button" aria-label="Close readings" title="Close readings" onClick="{{$KD.close}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div class="kpi-dsum">
+    <span class="strong">{{$KD.statLine}}</span>
+    <span class="{{$KD.cntCls}}"><span class="dot"></span>{{$KD.cnt}}</span>
+    <span class="sub">{{$KD.tgt}}</span>
+  </div>
+  <sc-if value="{{$KD.borrowed}}" hint-placeholder-val="{{false}}"><div class="note">{{$KD.borrowText}}</div></sc-if>
+  <sc-if value="{{$KD.partial}}" hint-placeholder-val="{{false}}">
+    <div class="kpi-ptb">
+      <div class="row wrap g12"><span class="strong">Partial check-in</span><span>Scores <span class="{{$KD.pt.scoreCls}}">{{$KD.pt.score}}</span></span><span class="sub">{{$KD.pt.raw}}</span></div>
+      <span class="track sm"><span class="{{$KD.pt.fillCls}}" style="{{$KD.pt.fill}}"></span><span class="hatch" style="{{$KD.pt.hatch}}"></span></span>
+      <div class="row wrap g12"><span class="sub">{{$KD.pt.math}}</span><span class="sub">{{$KD.pt.more}}</span></div>
+    </div>
+  </sc-if>
+  <div class="kpi-dlist" role="list" aria-label="Readings, newest first">
+    <sc-for list="{{$KD.rows}}" as="kpi_d" hint-placeholder-count="3">
+      <div class="{{kpi_d.cls}}" role="listitem">
+        <span class="kpi-dv">{{kpi_d.v}}</span>
+        <span class="sub">{{kpi_d.when}}</span>
+        <sc-if value="{{kpi_d.hasBy}}" hint-placeholder-val="{{false}}"><span class="sub">{{kpi_d.by}}</span></sc-if>
+        <sc-if value="{{kpi_d.hasNote}}" hint-placeholder-val="{{false}}"><span class="sub kpi-dnote">{{kpi_d.note}}</span></sc-if>
+        <sc-if value="{{kpi_d.imported}}" hint-placeholder-val="{{false}}"><span class="tag">Analysis</span></sc-if>
+        <sc-if value="{{kpi_d.stale}}" hint-placeholder-val="{{false}}"><span class="tag">Earlier batch</span></sc-if>
+        <sc-if value="{{kpi_d.canRm}}" hint-placeholder-val="{{true}}"><button class="{{kpi_d.rmCls}}" type="button" aria-label="{{kpi_d.rmAria}}" onClick="{{kpi_d.rm}}">{{kpi_d.rmLabel}}</button></sc-if>
+      </div>
+    </sc-for>
+    <sc-if value="{{$KD.none}}" hint-placeholder-val="{{false}}"><div class="sub">{{$KD.noneText}}</div></sc-if>
+  </div>
+  <sc-if value="{{$KD.canEdit}}" hint-placeholder-val="{{true}}">
+    <div class="kpi-dadd">
+      <input class="in sm num" type="text" inputMode="decimal" autoComplete="off" value="{{$KD.v}}" onChange="{{$KD.onV}}" onKeyDown="{{$KD.onKey}}" aria-label="{{$KD.vAria}}" placeholder="New reading" autoFocus="">
+      <button class="btn sm pri" type="button" onClick="{{$KD.add}}">Add reading</button>
+      <button class="btn sm" type="button" title="Start a fresh sample. Earlier readings are kept but stop counting." onClick="{{$KD.newBatch}}">Start a new batch</button>
+    </div>
+    <sc-if value="{{$KD.hasErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert">{{$KD.err}}</div></sc-if>
+  </sc-if>
+  <sc-if value="{{$KD.hasRoNote}}" hint-placeholder-val="{{false}}"><div class="sub">{{$KD.roNote}}</div></sc-if>
+  <div class="hint">{{$KD.hint}}</div>
+</div>

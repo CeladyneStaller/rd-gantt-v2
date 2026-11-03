@@ -7,6 +7,14 @@
 import os, sys, importlib.util
 
 OUT = os.environ.get("RD_OUT", "/mnt/user-data/outputs")
+HERE = os.path.dirname(os.path.abspath(__file__))
+def src_path(name):
+    """RD_OUT when it is set (the sweep sets it), else beside this harness, else the repo's ops/ folder (a copy
+    of this harness sits in broker/, where create_bins.py is ../ops/), else the sandbox outputs folder."""
+    for d in (os.environ.get("RD_OUT"), HERE, os.path.join(os.path.dirname(HERE), "ops"), OUT):
+        if d and os.path.exists(os.path.join(d, name)):
+            return os.path.join(d, name)
+    return os.path.join(OUT, name)            # let the open fail, naming where it looked last
 n = 0; fails = 0
 def ok(cond, msg):
     global n, fails; n += 1
@@ -17,7 +25,7 @@ def ok(cond, msg):
 os.environ["UNIFIED_DIVISIONS"] = "DIV-FC,DIV-EL"
 os.environ["BIZ_DIVISIONS"] = "DIV-FIN,DIV-BD,DIV-HR"
 os.environ.setdefault("JSONBIN_MASTER_KEY", "test-key")
-spec = importlib.util.spec_from_file_location("broker_patch", os.path.join(OUT, "broker_patch.py"))
+spec = importlib.util.spec_from_file_location("broker_patch", src_path("broker_patch.py"))
 bp = importlib.util.module_from_spec(spec); spec.loader.exec_module(bp)
 
 # ---- 1. the broker's doc set ----
@@ -38,9 +46,9 @@ ok("BIZ-DIV-FC" not in bp._DOC_IDS, "...and no BIZ- doc")
 ok(bp._env_name("BIZ-DIV-FIN") == "BIZ_DIV_FIN_BIN", "a BIZ- doc maps to the <DOC>_BIN env var name")
 
 # ---- 2. create_bins emits EXACTLY the broker's doc set for the same env ----
-spec2 = importlib.util.spec_from_file_location("create_bins_dryrun", os.path.join(OUT, "create_bins.py"))
+spec2 = importlib.util.spec_from_file_location("create_bins_dryrun", src_path("create_bins.py"))
 # create_bins runs its network loop at import; read + exec only the doc-set computation to avoid hitting JSONBin
-src = open(os.path.join(OUT, "create_bins.py"), encoding="utf-8").read()
+src = open(src_path("create_bins.py"), encoding="utf-8").read()
 ns = {"os": os}
 # exec the two list comprehensions + the DOC_IDS assembly (everything before create_bin's definition)
 head = src[: src.index("def create_bin(")]
@@ -53,7 +61,7 @@ ok([d for d in ns["DOC_IDS"] if d.startswith("BIZ-")] == [d for d in bp._DOC_IDS
 
 # ---- with no BIZ_DIVISIONS, biz is absent entirely (opt-in) ----
 os.environ["BIZ_DIVISIONS"] = ""
-spec3 = importlib.util.spec_from_file_location("broker_patch_nobiz", os.path.join(OUT, "broker_patch.py"))
+spec3 = importlib.util.spec_from_file_location("broker_patch_nobiz", src_path("broker_patch.py"))
 bp2 = importlib.util.module_from_spec(spec3); spec3.loader.exec_module(bp2)
 ok(not any(d.startswith("BIZ-") for d in bp2._DOC_IDS),
    "with BIZ_DIVISIONS unset, the broker builds no BIZ- docs (biz is opt-in, no empty bins)")

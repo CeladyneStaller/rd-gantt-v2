@@ -1,0 +1,54 @@
+<sc-if value="{{scomp.show}}" hint-placeholder-val="{{true}}">
+<section class="panel scomp-panel" aria-labelledby="scomp-h" data-k="components">
+  <div class="ph">
+    <h2 id="scomp-h" class="h2 scomp-h"><button class="scomp-tgl" type="button" aria-expanded="{{scomp.open}}" onClick="{{scomp.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Components<span class="cnt">{{scomp.count}}</span></button></h2>
+    <span class="sub">{{scomp.sum}}</span>
+    <sc-if value="{{scomp.canEdit}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{scomp.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add component</button></div></sc-if>
+  </div>
+  <sc-if value="{{scomp.open}}" hint-placeholder-val="{{true}}">
+    <sc-if value="{{scomp.empty}}" hint-placeholder-val="{{false}}"><div class="empty">{{scomp.emptyText}}</div></sc-if>
+    <sc-for list="{{scomp.rows}}" as="c" hint-placeholder-count="4">
+      <article class="{{c.cls}}" aria-label="{{c.aria}}" data-k="{{c.id}}" onDragOver="{{c.dragOver}}" onDrop="{{c.drop}}">
+        <div class="scomp-head">
+          <sc-if value="{{c.canDrag}}" hint-placeholder-val="{{true}}"><span class="handle" draggable="true" aria-label="{{c.dragLabel}}" title="Drag to reorder" onDragStart="{{c.dragStart}}" onDragEnd="{{c.dragEnd}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"></circle><circle cx="15" cy="6" r="1.4"></circle><circle cx="9" cy="12" r="1.4"></circle><circle cx="15" cy="12" r="1.4"></circle><circle cx="9" cy="18" r="1.4"></circle><circle cx="15" cy="18" r="1.4"></circle></svg></span></sc-if>
+          <span class="tid scomp-tag">{{c.tag}}</span>
+          <div class="col g2 grow">
+            <sc-if value="{{c.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink scomp-name" type="button" title="Edit component" aria-label="{{c.editLabel}}" onClick="{{c.edit}}">{{c.name}}</button></sc-if>
+            <sc-if value="{{!c.canEdit}}" hint-placeholder-val="{{false}}"><span class="scomp-name">{{c.name}}</span></sc-if>
+            <div class="row wrap g4 scomp-meta">
+              <sc-if value="{{c.hasType}}" hint-placeholder-val="{{true}}"><span class="tag" title="Type">{{c.ctype}}</span></sc-if>
+              <sc-if value="{{c.hasStatus}}" hint-placeholder-val="{{true}}"><span class="sub" title="Status">{{c.status}}</span></sc-if>
+            </div>
+          </div>
+          <span class="scomp-score" title="{{c.scoreTitle}}"><span class="{{c.scoreCls}}"><span class="dot"></span>{{c.word}}</span><span class="scomp-num">{{c.score}}</span></span>
+          <sc-if value="{{c.canEdit}}" hint-placeholder-val="{{true}}">
+            <div class="row g4 scomp-acts">
+              <button class="btn xs q" type="button" aria-label="{{c.addSpecLabel}}" onClick="{{c.addSpec}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Specification</button>
+              <button class="btn xs q" type="button" aria-label="{{c.linkLabel}}" onClick="{{c.link}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Link</button>
+              <div class="above">
+                <button class="btn xs ic q" type="button" aria-label="{{c.moreAria}}" title="More actions" aria-haspopup="menu" aria-expanded="{{c.menuOpen}}" onClick="{{c.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                <sc-if value="{{c.menuOpen}}" hint-placeholder-val="{{false}}">
+                  <div class="menu r scomp-menu" role="menu" aria-label="{{c.moreAria}}">
+                    <button class="mi" type="button" role="menuitem" onClick="{{c.edit}}">Edit component</button>
+                    <button class="mi" type="button" role="menuitem" onClick="{{c.addSpec}}">Add specification</button>
+                    <button class="mi" type="button" role="menuitem" onClick="{{c.link}}">Link a metric</button>
+                    <sc-if value="{{c.canUp}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{c.up}}">Move up</button></sc-if>
+                    <sc-if value="{{c.canDown}}" hint-placeholder-val="{{true}}"><button class="mi" type="button" role="menuitem" onClick="{{c.down}}">Move down</button></sc-if>
+                    <div class="msep"></div>
+                    <button class="mi bad" type="button" role="menuitem" onClick="{{c.del}}">Delete component</button>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{c.hasMt}}" hint-placeholder-val="{{true}}"><div class="scomp-pad"><!--@include mods/sspec/part-metrics.html MT=c.mt--></div></sc-if>
+        <sc-if value="{{c.hasNotes}}" hint-placeholder-val="{{false}}">
+          <div class="scomp-line"><button class="lnk muted small" type="button" aria-expanded="{{c.notesOpen}}" onClick="{{c.toggleNotes}}">{{c.notesLabel}}</button></div>
+          <sc-if value="{{c.notesOpen}}" hint-placeholder-val="{{false}}"><div class="scomp-note">{{c.notes}}</div></sc-if>
+        </sc-if>
+      </article>
+    </sc-for>
+  </sc-if>
+</section>
+</sc-if>

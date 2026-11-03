@@ -1,0 +1,139 @@
+/* P-gantt: the Planning Gantt tab. Tokens only (dark mode follows the kit). */
+.pgt{min-width:0}
+.pgt-tools{display:flex;flex-direction:column;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line-2)}
+.pgt-trow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.pgt-tl{font-size:12.5px;color:var(--muted);font-weight:500}
+.pgt-vsep{width:1px;height:22px;margin:0 6px;background:var(--line)}
+/* timeframe grid: one unbreakable group per year, the groups flow and wrap */
+.pgt-tf{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px}
+.pgt-tf.off .pgt-tfg{opacity:.62}
+.pgt-tfg{display:flex;align-items:center;gap:3px;flex:0 0 auto}
+.pgt-yr{height:28px;min-width:48px;padding:0 6px;border:0;border-radius:6px;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);text-align:left;cursor:pointer}
+.pgt-yr:hover{background:var(--hover);color:var(--ink)}
+.pgt-yr.on{color:var(--accent-ink)}
+.pgt-q{height:28px;min-width:40px;padding:0 8px;border:1px solid var(--field);border-radius:7px;background:var(--surface);font:inherit;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer}
+.pgt-q:hover{border-color:var(--accent-line);color:var(--ink)}
+.pgt-q.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink);font-weight:600}
+.pgt-q.imp{background:var(--accent-wash);border-style:dashed;border-color:var(--accent-line);color:var(--accent-ink);font-weight:400}
+.pgt-q.now{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.pgt-tfnote{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-height:28px}
+.pgt-range{font-size:13px;font-weight:600;color:var(--ink)}
+
+/* chart: fluid track, positions are percentages of the track */
+.pgt-scroll{overflow-x:auto}
+/* no containment on the chart itself: layout containment would make it a stacking context and
+   trap the details popover under the menu scrim */
+.pgt-chart{position:relative;width:100%;min-width:880px;--pg-labelw:240px;font-size:13px}
+.pgt-gridl{position:absolute;left:var(--pg-labelw);right:20px;top:0;bottom:0;pointer-events:none}
+.pgt-gq{position:absolute;top:26px;bottom:0;width:1px;background:var(--line)}
+.pgt-gm{position:absolute;top:26px;bottom:0;width:0;border-left:1px dotted var(--line-2)}
+.pgt-today{position:absolute;top:26px;bottom:0;width:2px;margin-left:-1px;background:var(--accent);opacity:.85}
+.pgt-todaytag{position:absolute;top:5px;transform:translateX(-50%);padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--surface);font-size:11.5px;font-weight:600;white-space:nowrap}
+.pgt-grip{position:absolute;left:var(--pg-labelw);top:0;bottom:0;width:10px;margin-left:-5px;cursor:col-resize;z-index:6;touch-action:none}
+.pgt-grip::after{content:"";position:absolute;left:4.5px;top:0;bottom:0;width:1px;background:var(--line)}
+.pgt-grip:hover::after,.pgt-grip.drag::after,.pgt-grip:focus-visible::after{left:4px;width:2px;background:var(--accent)}
+.pgt-axis{display:flex;align-items:stretch;height:54px;border-bottom:1px solid var(--line);container-type:inline-size;container-name:pgtaxis}
+.pgt-axlab{align-items:flex-end;padding:0 8px 8px 16px;font-size:12.5px;font-weight:500;color:var(--muted)}
+.pgt-axis .pgt-trk{overflow:visible}
+/* quarter and month labels share one line, to the right of their gridline, below the today tag */
+.pgt-ql{position:absolute;top:28px;padding-left:6px;font-size:12.5px;font-weight:600;line-height:18px;white-space:nowrap;color:var(--ink)}
+.pgt-ml{position:absolute;top:28px;padding-left:6px;font-size:12px;line-height:18px;color:var(--muted);white-space:nowrap;display:none}
+/* month labels only once the chart is at least 1100px wide (the axis row spans the chart) */
+@container pgtaxis (min-width: 1100px){ .pgt-ml{display:inline} }
+@supports not (container-type: inline-size){ @media (min-width: 1400px){ .pgt-ml{display:inline} } }
+
+.pgt-row{position:relative;display:flex;align-items:stretch;height:30px}
+.pgt-row:hover{background:var(--surface-3)}
+.pgt-row.lv-grp{height:36px;background:var(--surface-2);border-top:1px solid var(--line-2)}
+.pgt-row.lv-div{height:34px;border-top:1px solid var(--line-2)}
+.pgt-row.sel,.pgt-row.sel:hover{background:var(--accent-wash)}
+.pgt-row.paused .pgt-lab{opacity:.7}
+.pgt-lab{position:relative;width:var(--pg-labelw);flex:none;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;padding-right:12px}
+.pgt-trk{position:relative;flex:1 1 auto;min-width:0;height:100%;margin-right:20px;overflow:hidden}
+.pgt-chev{width:20px;height:20px;flex:none;display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:transparent;color:var(--faint);cursor:pointer}
+.pgt-chev:hover{background:var(--press);color:var(--ink)}
+.pgt-chev svg{transition:transform .15s ease}
+.pgt-chev.shut svg{transform:rotate(-90deg)}
+.pgt-sp{width:20px;flex:none}
+.pgt-dot{width:8px;height:8px;flex:none;border-radius:50%;background:var(--none)}
+.pgt-dot.dia{width:8px;height:8px;border-radius:1px;transform:rotate(45deg)}
+.pgt-dot.t-ok{background:var(--ok)}
+.pgt-dot.t-warn{background:var(--warn)}
+.pgt-dot.t-bad{background:var(--bad)}
+.pgt-dot.t-none{background:var(--none)}
+.pgt-tag{flex:none;height:18px;font-size:11px}
+.pgt-nm{display:block;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;color:var(--ink);text-align:left}
+.pgt-nm.lnk{font-weight:500}
+.pgt-nm.lnk:hover{color:var(--accent-ink)}
+.pgt-nm.e-division{font-size:13.5px;font-weight:600}
+.pgt-nm.e-milestone{font-weight:400;color:var(--ink-2)}
+.pgt-nm.grp{font-weight:600}
+.pgt-nm.static{font-size:12.5px;font-weight:400;color:var(--muted)}
+.pgt-nm.e-stagegateset{font-style:italic}
+.pgt-nm.e-milestonekr,.pgt-nm.e-board{font-weight:500;color:var(--ink-2)}
+.pgt-sub{flex:none;margin-left:auto;font-size:12px;color:var(--faint)}
+/* row actions: quiet buttons that appear on hover or keyboard focus */
+.pgt-acts{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:1px;padding:1px 2px;border-radius:7px;background:var(--surface);box-shadow:var(--shadow-1);opacity:0;pointer-events:none}
+.pgt-row:hover .pgt-acts,.pgt-row:focus-within .pgt-acts{opacity:1;pointer-events:auto}
+
+/* bars: the band colour is currentColor, so border and fill follow it */
+.pgt-bar{position:absolute;top:8px;height:14px;padding:0;border:1.5px solid currentColor;border-radius:4px;background:transparent;color:var(--ghost);font:inherit;overflow:hidden;cursor:pointer;touch-action:none}
+.pgt-bar::before{content:"";position:absolute;inset:0;background:currentColor;opacity:.32}
+.pgt-bar.t-ok{color:var(--ok)}
+.pgt-bar.t-warn{color:var(--warn)}
+.pgt-bar.t-bad{color:var(--bad)}
+.pgt-bar.t-none{color:var(--ghost)}
+.pgt-bar.derived{border-style:dashed}
+.pgt-bar.derived::before{opacity:.15}
+.pgt-bar.set{top:10px;height:10px;border-style:dashed;opacity:.8}
+.pgt-bar.cancelled{color:var(--none);opacity:.55}
+.pgt-bar.cancelled::before{background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px);opacity:.6}
+.pgt-bar.drag{cursor:grabbing;box-shadow:var(--shadow-pop)}
+.pgt-bar.sel,.pgt-mk.sel,.pgt-gbar.sel{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.pgt-gbar{position:absolute;top:13px;height:9px;padding:0;border:1.5px dashed var(--field-hover);border-radius:5px;background:transparent;cursor:pointer}
+.pgt-kbspan{position:absolute;top:13px;height:4px;padding:0;border:0;border-radius:2px;background:var(--line);cursor:pointer}
+.pgt-slip{position:absolute;top:8px;height:14px;border-radius:0 4px 4px 0;background:var(--bad);opacity:.85}
+.lv-div .pgt-bar,.lv-div .pgt-slip{top:10px}
+.lv-grp .pgt-gbar{top:13px}
+.pgt-end{position:absolute;top:4px;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:var(--ok)}
+.pgt-end.abandoned{background:var(--bad)}
+.pgt-conn{position:absolute;top:14px;height:2px;border-radius:1px;background:var(--muted);opacity:.5}
+.pgt-conn.committed{background:var(--bad);opacity:.75}
+/* markers: a diamond is a milestone, a square is a stage-gate; colour says how it is doing */
+.pgt-mk{position:absolute;top:9px;width:12px;height:12px;margin-left:-6px;padding:0;border:1.5px solid var(--muted);border-radius:2px;background:var(--surface);transform:rotate(45deg);font:inherit;color:var(--ink);cursor:pointer;touch-action:none}
+div.pgt-mk{cursor:default}
+.pgt-mk.sq{transform:none}
+.pgt-mk.passed,.pgt-mk.done{background:var(--ok);border-color:var(--ok)}
+.pgt-mk.passed-late{background:var(--warn);border-color:var(--warn)}
+.pgt-mk.overdue{background:var(--bad);border-color:var(--bad)}
+.pgt-mk.pending{background:var(--surface);border-color:var(--muted)}
+.pgt-mk.ghost{background:transparent;border:1.5px dashed var(--muted);opacity:.6}
+.pgt-mk.ghost.paused{opacity:.75}
+.pgt-mk.cancelled{background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)}
+.pgt-mk.cancelled.missed{background:repeating-linear-gradient(45deg,var(--bad) 0 1.5px,transparent 1.5px 3.5px);border-color:var(--bad)}
+.pgt-mk.drag{box-shadow:var(--shadow-pop)}
+.pgt-sqn{position:absolute;left:50%;top:-13px;transform:translateX(-50%);font-size:10.5px;font-weight:700;line-height:1;color:var(--ink)}
+
+/* details popover */
+.pgt-pop{gap:10px}
+.pgt-ptitle{font-size:15px;font-weight:600;line-height:1.3}
+
+/* legend */
+.pgt-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:12px 20px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-2)}
+.pgt-legend .st{font-size:12.5px}
+.pgt-lg{display:inline-flex;align-items:center;gap:6px}
+.pgt-lgt{font-weight:600;color:var(--muted)}
+.pgt-lgbar{display:inline-block;width:22px;height:10px;border:1.5px solid var(--muted);border-radius:3px;background:var(--track)}
+.pgt-lgbar.derived{border-style:dashed;background:transparent}
+.pgt-lgslip{display:inline-block;width:16px;height:10px;border-radius:0 3px 3px 0;background:var(--bad);opacity:.85}
+.pgt-lgmk{display:inline-block;width:9px;height:9px;border:1.5px solid var(--muted);border-radius:1px;transform:rotate(45deg)}
+.pgt-lgmk.ghost{border-style:dashed;opacity:.6}
+.pgt-lgtoday{display:inline-block;width:2px;height:14px;background:var(--accent)}
+.pgt-lgsq{display:inline-block;width:10px;height:10px;border:1.5px solid var(--muted);border-radius:2px}
+.pgt-lgsq.passed{background:var(--ok);border-color:var(--ok)}
+.pgt-lgsq.passed-late{background:var(--warn);border-color:var(--warn)}
+.pgt-lgsq.overdue{background:var(--bad);border-color:var(--bad)}
+.pgt-lgsq.ghost{border-style:dashed;opacity:.6}
+.pgt-lgsq.cancelled{background:repeating-linear-gradient(45deg,var(--none) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--none)}
+.pgt-lgsq.cancelled.missed{background:repeating-linear-gradient(45deg,var(--bad) 0 1.5px,transparent 1.5px 3.5px);border-color:var(--bad)}
+@media (prefers-reduced-motion: reduce){ .pgt-chev svg{transition:none} }

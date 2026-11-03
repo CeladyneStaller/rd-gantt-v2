@@ -1,0 +1,361 @@
+<div class="cw" data-theme="{{theme}}">
+<sc-if value="{{ui.anyMenu}}" hint-placeholder-val="{{false}}"><button class="scrim" type="button" aria-label="Close menu" onClick="{{ui.closeMenus}}"></button></sc-if>
+<div class="app">
+  <aside class="side" aria-label="Navigation">
+    <a class="brand mine-home" href="https://celadynestaller.github.io/CeladyneHQ/" target="_blank" rel="noopener" title="Back to all apps" aria-label="Back to all apps (the Celadyne hub)">
+      <span class="brand-mark"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"></path></svg></span>
+      <span class="brand-name"><b>Celadyne</b><span class="sub"><!--@if deploy-->Prototype with sample data<!--@else-->R&amp;D suite<!--@endif--></span></span>
+    </a>
+    <nav aria-label="Apps" class="side-sec" style="gap: 2px">
+      <a class="nav on" href="#main" aria-current="page"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5l1.5-3h4"></path><path d="M6 5h12l2 8v6H4v-6z"></path></svg>My Projects</a>
+      <a class="nav" href="Plan-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h9M8 12h11M6 18h7"></path></svg>Planning</a>
+      <a class="nav" href="Main.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle></svg>Execution</a>
+      <a class="nav" href="Sales-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"></path></svg>Sales</a>
+      <a class="nav" href="Spec-A.dc.html"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 4-8 4-8-4z"></path><path d="M4 12l8 4 8-4"></path><path d="M4 16l8 4 8-4"></path></svg>Product spec</a>
+    </nav>
+    <div class="me">
+      <div class="avatar">{{sh.me.initials}}</div>
+      <div class="col g2" style="line-height: 1.2"><span style="font-weight: 500">{{sh.me.name}}</span><span class="sub">{{sh.me.role}}</span></div>
+    </div>
+  </aside>
+
+  <div class="main" id="main">
+    <header class="top">
+      <nav aria-label="Breadcrumb" class="crumb">
+        <span>My Projects</span>
+        <sc-if value="{{sh.hasCrumbView}}" hint-placeholder-val="{{false}}"><span class="sep" aria-hidden="true">/</span><span>{{sh.crumbView}}</span></sc-if>
+      </nav>
+      <div class="row push g12 wrap">
+        <sc-if value="{{sh.roOn}}" hint-placeholder-val="{{false}}"><span class="st t-warn" title="Nothing saves and values are not buttons"><span class="dot"></span>Read-only</span></sc-if>
+        <sc-if value="{{sh.showSave}}" hint-placeholder-val="{{true}}">
+          <span class="saveind {{ui.saveTone}}"><sc-if value="{{ui.saving}}" hint-placeholder-val="{{false}}"><span class="spin"></span></sc-if><sc-if value="{{!ui.saving}}" hint-placeholder-val="{{true}}"><span class="dot"></span></sc-if>{{ui.saveText}}</span>
+          <button class="btn sm" type="button" title="Save now. Changes also save on their own." onClick="{{ui.saveNow}}">Save</button>
+        </sc-if>
+        <button class="btn ic q" type="button" aria-label="Settings" title="Settings" onClick="{{sh.openSettings}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
+      </div>
+    </header>
+    <sc-if value="{{sh.offline}}" hint-placeholder-val="{{false}}">
+      <div class="banner t-warn" role="status" data-k="offline"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg><span>You are offline. Changes are kept here and save when you are back online.</span><button class="btn sm push" type="button" onClick="{{sh.goOnline}}"><!--@if live-->Try again<!--@else-->Back online<!--@endif--></button></div>
+    </sc-if>
+    <sc-if value="{{sh.banner}}" hint-placeholder-val="{{false}}">
+      <div class="{{sh.banner.cls}}" role="status" data-k="banner"><span>{{sh.banner.text}}</span><button class="btn sm q push" type="button" aria-label="Dismiss" title="Dismiss" onClick="{{sh.banner.dismiss}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+    </sc-if>
+
+    <main class="page">
+      <div class="mine-head">
+        <div class="col g2">
+          <h1 class="h1" style="margin: 0">My projects</h1>
+          <span class="sub">{{sh.lede}}<sc-if value="{{sh.scopeLink}}" hint-placeholder-val="{{false}}"> <button class="lnk mine-lnk" type="button" data-k="team-scope-link" onClick="{{sh.scopeLink.open}}">Change divisions</button></sc-if></span>
+        </div>
+        <sc-if value="{{sh.scope}}" hint-placeholder-val="{{true}}">
+          <div class="mine-scope" data-k="scope">
+            <sc-if value="{{sh.views.show}}" hint-placeholder-val="{{false}}">
+              <div class="seg" role="group" aria-label="View"><sc-for list="{{sh.views.opts}}" as="v" hint-placeholder-count="2"><button type="button" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for></div>
+            </sc-if>
+            <select class="sel" aria-label="Quarter" value="{{sh.qsel.v}}" onChange="{{sh.qsel.on}}"><sc-for list="{{sh.qsel.opts}}" as="x" hint-placeholder-count="3"><option value="{{x.v}}" label="{{x.label}}"></option></sc-for></select>
+            <!-- Group and sort (October 22, round 6's A): Group by and Sort by in a popover; they arrange the timeline and the tree alike -->
+            <sc-if value="{{sh.arrange}}" hint-placeholder-val="{{true}}">
+              <span class="above anchor">
+                <button class="{{sh.arrange.btnCls}}" type="button" data-k="group-sort" aria-haspopup="dialog" aria-expanded="{{sh.arrange.exp}}" aria-label="{{sh.arrange.name}}" title="{{sh.arrange.title}}" onClick="{{sh.arrange.toggle}}" onKeyDown="{{sh.arrange.btnKey}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"></path><circle cx="16" cy="7" r="2.5"></circle><circle cx="10" cy="17" r="2.5"></circle></svg>Group and sort<svg class="mine-gschev" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+                <sc-if value="{{sh.arrange.open}}" hint-placeholder-val="{{false}}">
+                  <div class="pop mine-gspop" role="dialog" aria-label="Group and sort" data-k="group-sort-pop" tabIndex="-1" onKeyDown="{{sh.arrange.key}}">
+                    <div class="row mine-gsph"><span class="strong grow">Group and sort</span><button class="btn xs q ic" type="button" aria-label="Close" title="Close" onClick="{{sh.arrange.close}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+                    <div class="mine-gssec" role="group" aria-label="Grouping levels">
+                      <span class="mine-gslab" aria-hidden="true">Group by</span>
+                      <sc-for list="{{sh.arrange.levels}}" as="lv" hint-placeholder-count="2">
+                        <div class="mine-gslvl" data-k="{{lv.k}}"><span class="mine-gsn" aria-hidden="true">{{lv.n}}</span><select class="sel sm grow" aria-label="{{lv.aria}}" value="{{lv.v}}" onChange="{{lv.on}}"><sc-for list="{{lv.opts}}" as="o" hint-placeholder-count="4"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select><button class="btn xs ic q" type="button" aria-label="{{lv.rmLabel}}" title="{{lv.rmLabel}}" onClick="{{lv.rm}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+                      </sc-for>
+                      <sc-if value="{{sh.arrange.flat}}" hint-placeholder-val="{{false}}"><span class="sub">No levels, so objectives show as one list.</span></sc-if>
+                      <sc-if value="{{sh.arrange.canAdd}}" hint-placeholder-val="{{true}}"><div class="mine-gslvl" data-k="gb-add"><span class="mine-gsn mine-gsplus" aria-hidden="true">+</span><select class="sel sm grow mine-add" aria-label="Add a grouping level" value="" onChange="{{sh.arrange.add}}"><sc-for list="{{sh.arrange.addOpts}}" as="o" hint-placeholder-count="4"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select><span class="mine-gssp" aria-hidden="true"></span></div></sc-if>
+                    </div>
+                    <label class="mine-gssec"><span class="mine-gslab">Sort by</span><select class="sel sm" aria-label="Sort by" value="{{sh.arrange.sort.v}}" onChange="{{sh.arrange.sort.on}}"><sc-for list="{{sh.arrange.sort.opts}}" as="o" hint-placeholder-count="7"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+                    <div class="mine-gsfoot"><span class="sub grow" data-k="group-sort-words">{{sh.arrange.words}}</span><sc-if value="{{sh.arrange.changed}}" hint-placeholder-val="{{true}}"><button class="lnk" type="button" onClick="{{sh.arrange.reset}}">Back to the default</button></sc-if></div>
+                  </div>
+                </sc-if>
+              </span>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- the roll-up panel: the scorecard, the timeline under it (round 5, proposal E) -->
+      <sc-if value="{{sh.roll}}" hint-placeholder-val="{{true}}">
+        <section class="panel mine-roll" aria-label="Every project in view: scorecard and timeline" data-k="roll">
+          <sc-if value="{{sh.roll.score.hasStrip}}" hint-placeholder-val="{{true}}">
+            <div class="mine-qrow" data-k="roll-quarter">
+              <span class="strong">{{sh.roll.score.strip.label}}</span>
+              <span class="sub">{{sh.roll.score.strip.range}}</span>
+              <span class="mine-weeks" role="img" aria-label="{{sh.roll.score.strip.aria}}"><sc-for list="{{sh.roll.score.strip.cells}}" as="c" hint-placeholder-count="13"><span class="{{c.cls}}"></span></sc-for></span>
+              <span class="sub mine-qstat">{{sh.roll.score.strip.status}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{sh.roll.score.noFull}}" hint-placeholder-val="{{false}}"><div class="sub mine-scnone" data-k="roll-nofull">{{sh.roll.score.noFullText}}</div></sc-if>
+          <sc-if value="{{sh.roll.score.hasFull}}" hint-placeholder-val="{{true}}">
+            <div class="mine-sc">
+              <div class="row g12 mine-sch">
+                <sc-if value="{{sh.roll.score.hasBig}}" hint-placeholder-val="{{true}}"><span class="mine-big">{{sh.roll.score.big}}</span></sc-if>
+                <span class="col g2">
+                  <span class="{{sh.roll.score.cls}}"><span class="dot"></span>{{sh.roll.score.word}}</span>
+                  <span class="sub">{{sh.roll.score.sub}}</span>
+                  <sc-if value="{{sh.roll.score.hasSub2}}" hint-placeholder-val="{{true}}"><span class="sub">{{sh.roll.score.sub2}}</span></sc-if>
+                </span>
+              </div>
+              <div class="mine-line" data-k="roll-spread">
+                <div class="mine-plot" role="group" aria-label="{{sh.roll.score.aria}}">
+                  <div class="mine-zones" aria-hidden="true"><sc-for list="{{sh.roll.score.zones}}" as="z" hint-placeholder-count="3"><span class="{{z.cls}}" style="{{z.style}}"></span></sc-for></div>
+                  <sc-if value="{{sh.roll.score.mark}}" hint-placeholder-val="{{true}}"><span class="mine-elapsed" style="{{sh.roll.score.mark.style}}" title="{{sh.roll.score.mark.title}}" aria-hidden="true"></span></sc-if>
+                  <sc-for list="{{sh.roll.score.dots}}" as="d" hint-placeholder-count="3"><button class="{{d.cls}}" type="button" style="{{d.style}}" title="{{d.title}}" aria-label="{{d.title}}" data-k="{{d.k}}" onClick="{{d.go}}"><span class="mine-dlbl">{{d.label}}</span></button></sc-for>
+                </div>
+                <sc-if value="{{sh.roll.score.mark}}" hint-placeholder-val="{{true}}"><div class="mine-mrow" aria-hidden="true" data-k="roll-elapsed"><span class="{{sh.roll.score.mark.lcls}}" style="{{sh.roll.score.mark.style}}">{{sh.roll.score.mark.label}}</span></div></sc-if>
+                <div class="mine-zkey" aria-hidden="true"><sc-for list="{{sh.roll.score.zoneKey}}" as="z" hint-placeholder-count="3"><span class="mine-zk"><i class="{{z.cls}}"></i>{{z.text}}</span></sc-for></div>
+                <sc-if value="{{sh.roll.score.hasCaption}}" hint-placeholder-val="{{true}}"><span class="sub mine-cap2">{{sh.roll.score.caption}}</span></sc-if>
+              </div>
+            </div>
+            <div class="facts mine-facts">
+              <sc-for list="{{sh.roll.score.facts}}" as="f" hint-placeholder-count="5">
+                <div class="fact" data-k="{{f.k}}"><span class="sub">{{f.label}}</span><span class="{{f.vcls}}"><sc-if value="{{f.dot}}" hint-placeholder-val="{{false}}"><span class="dot"></span></sc-if>{{f.value}}</span><span class="sub" title="{{f.title}}">{{f.detail}}</span></div>
+              </sc-for>
+              <div class="fact" data-k="roll-due"><span class="sub">Readings due</span><span class="mine-fv"><span class="dot t-warn"></span>{{sh.roll.score.due.n}}</span><sc-if value="{{sh.roll.score.due.some}}" hint-placeholder-val="{{true}}"><button class="{{sh.roll.score.due.cls}}" type="button" aria-pressed="{{sh.roll.score.due.on}}" onClick="{{sh.roll.score.due.toggle}}">{{sh.roll.score.due.text}}</button></sc-if><sc-if value="{{sh.roll.score.due.none}}" hint-placeholder-val="{{false}}"><span class="sub">Nothing due</span></sc-if></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{sh.roll.score.alarm}}" hint-placeholder-val="{{false}}">
+            <div class="note t-bad mine-alarm" data-k="roll-alarm"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg><span class="grow">{{sh.roll.score.alarm.text}}</span><sc-if value="{{sh.roll.score.alarm.one}}" hint-placeholder-val="{{true}}"><button class="btn sm danger" type="button" onClick="{{sh.roll.score.alarm.go}}">Show it</button></sc-if></div>
+          </sc-if>
+          <div class="mine-etl" data-k="roll-timeline">
+            <div class="mine-tlscroll">
+              <div class="mine-tl">
+                <div class="mine-tlgrid" aria-hidden="true">
+                  <sc-for list="{{sh.roll.tl.months}}" as="m" hint-placeholder-count="6"><span class="mine-mon" style="{{m.style}}"><span>{{m.label}}</span></span></sc-for>
+                  <span class="mine-today" style="{{sh.roll.tl.todayStyle}}"><span>Today</span></span>
+                </div>
+                <sc-for list="{{sh.roll.tl.rows}}" as="r" hint-placeholder-count="4">
+                  <div class="{{r.cls}}" data-k="{{r.k}}">
+                    <div class="mine-tllab" style="{{r.padStyle}}">
+                      <sc-if value="{{r.isGrp}}" hint-placeholder-val="{{false}}"><button class="{{r.caretCls}}" type="button" aria-expanded="{{r.caretExp}}" aria-label="{{r.caretLabel}}" title="{{r.caretLabel}}" onClick="{{r.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button><button class="mine-tlname" type="button" title="{{r.title}}" onClick="{{r.go}}"><span class="{{r.tagCls}}">{{r.tagText}}</span><span class="mine-tltxt">{{r.name}}</span></button><sc-if value="{{r.hasCount}}" hint-placeholder-val="{{false}}"><span class="sub mine-tlval">{{r.count}}</span></sc-if></sc-if>
+                      <sc-if value="{{r.isObj}}" hint-placeholder-val="{{true}}"><button class="mine-tlname" type="button" title="{{r.nameTitle}}" onClick="{{r.go}}"><span class="{{r.dotCls}}"></span><span class="mine-tltxt">{{r.name}}</span></button><span class="{{r.valCls}}">{{r.val}}</span></sc-if>
+                    </div>
+                    <div class="mine-tltrack">
+                      <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}"><span class="{{r.barCls}}" style="{{r.barStyle}}" title="{{r.barTitle}}"></span></sc-if>
+                      <sc-for list="{{r.flags}}" as="g" hint-placeholder-count="1"><span class="{{g.cls}}" style="{{g.style}}" title="{{g.title}}" role="img" aria-label="{{g.title}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 21V4" fill="none"></path><path d="M6 4h11l-2 4 2 4H6z"></path></svg></span></sc-for>
+                      <sc-for list="{{r.gates}}" as="g" hint-placeholder-count="2"><span class="{{g.cls}}" style="{{g.style}}" title="{{g.title}}" role="img" aria-label="{{g.title}}"></span></sc-for>
+                      <sc-if value="{{r.hasFc}}" hint-placeholder-val="{{false}}"><span class="mine-fc" style="{{r.fcStyle}}" title="{{r.fcTitle}}" role="img" aria-label="{{r.fcTitle}}"></span></sc-if>
+                      <sc-if value="{{r.hasSlip}}" hint-placeholder-val="{{false}}"><span class="{{r.slipCls}}" style="{{r.slipStyle}}">{{r.slip}}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="mine-legend sub" aria-hidden="true">
+              <span><i class="mine-lg-bar"></i>Planned window, in its status by pace</span>
+              <span><i class="mine-lg-fc"></i>Forecast finish</span>
+              <span><i class="mine-gt passed"></i>Gate passed</span>
+              <span><i class="mine-gt overdue"></i>Gate overdue</span>
+              <span><i class="mine-gt open"></i>Gate ahead</span>
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" class="mine-lg-ms"><path d="M6 21V4" fill="none"></path><path d="M6 4h11l-2 4 2 4H6z"></path></svg>Project milestone</span>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{sh.hasTree}}" hint-placeholder-val="{{true}}">
+        <section class="panel" aria-label="My projects" data-k="tree">
+          <div class="mine-tools">
+            <button class="{{sh.due.cls}}" type="button" aria-pressed="{{sh.due.on}}" title="{{sh.due.title}}" onClick="{{sh.due.toggle}}"><span class="dot t-warn"></span>Needs a check-in<b>{{sh.due.n}}</b></button>
+            <label class="search mine-search"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path></svg><input type="search" aria-label="Filter by name" autoComplete="off" placeholder="Filter by name" value="{{sh.text.v}}" onChange="{{sh.text.on}}" onKeyDown="{{sh.text.key}}"></label>
+            <span class="row g8 push"><button class="btn sm" type="button" onClick="{{sh.expandAll}}">Expand all</button><button class="btn sm" type="button" onClick="{{sh.collapse}}">Collapse to objectives</button></span>
+          </div>
+          <div class="mine-scroll">
+            <div class="mine-grid" role="table" aria-label="{{sh.tableLabel}}">
+              <div class="mine-row k-hd" role="row"><div class="mine-c" role="columnheader"><span class="mine-sr">Reading due</span></div><div class="mine-c" role="columnheader">Name</div><div class="mine-c" role="columnheader">Date</div><div class="mine-c" role="columnheader">Owner</div><div class="mine-c mine-cscore" role="columnheader">Score</div><div class="mine-c" role="columnheader">Status</div><div class="mine-c" role="columnheader">Progress</div></div>
+              <sc-for list="{{sh.rows}}" as="mr" hint-placeholder-count="6">
+                <sc-if value="{{mr.isRow}}" hint-placeholder-val="{{true}}">
+                  <div class="{{mr.cls}}" role="row" data-k="{{mr.k}}">
+                    <div class="mine-c mine-cflag" role="cell">
+                      <sc-if value="{{mr.hasFlag}}" hint-placeholder-val="{{false}}"><span class="{{mr.flagCls}}" role="img" aria-label="{{mr.flagTitle}}" title="{{mr.flagTitle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"></path><path d="M6 4h11l-2 4 2 4H6"></path></svg></span></sc-if>
+                    </div>
+                    <div class="mine-c mine-cname" role="cell" style="{{mr.padStyle}}">
+                      <sc-if value="{{mr.hasCaret}}" hint-placeholder-val="{{true}}"><button class="{{mr.caretCls}}" type="button" aria-expanded="{{mr.caretExp}}" aria-label="{{mr.caretLabel}}" title="{{mr.caretLabel}}" onClick="{{mr.toggle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+                      <sc-if value="{{mr.noCaret}}" hint-placeholder-val="{{false}}"><span class="mine-sp" aria-hidden="true"></span></sc-if>
+                      <sc-if value="{{mr.hasTag}}" hint-placeholder-val="{{false}}"><span class="{{mr.tagCls}}">{{mr.tagText}}</span></sc-if>
+                      <sc-if value="{{mr.hasTid}}" hint-placeholder-val="{{false}}"><span class="tid">{{mr.tid}}</span></sc-if>
+                      <sc-if value="{{mr.iconGauge}}" hint-placeholder-val="{{false}}"><span class="mine-ic"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 15a8 8 0 0 1 16 0"></path><path d="M12 15l4-4"></path></svg></span></sc-if>
+                      <sc-if value="{{mr.iconTarget}}" hint-placeholder-val="{{false}}"><span class="mine-ic"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span></sc-if>
+                      <sc-if value="{{mr.iconStep}}" hint-placeholder-val="{{false}}"><span class="mine-ic"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8 12l3 3 5-6"></path></svg></span></sc-if>
+                      <sc-if value="{{mr.iconTile}}" hint-placeholder-val="{{false}}"><span class="mine-ic"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2.5"></rect><path d="M4 10h16"></path></svg></span></sc-if>
+                      <sc-if value="{{mr.iconCause}}" hint-placeholder-val="{{false}}"><span class="mine-ic"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg></span></sc-if>
+                      <sc-if value="{{mr.isGroup}}" hint-placeholder-val="{{false}}"><sc-if value="{{mr.gLink}}" hint-placeholder-val="{{true}}"><a class="mine-gname mine-glink" href="{{mr.gHref}}" target="{{mr.gTarget}}" rel="{{mr.gRel}}" title="{{mr.gTitle}}" onClick="{{mr.gGo}}">{{mr.gname}}<svg class="mine-ext" role="img" aria-label="{{mr.gTitle}}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4"></path></svg></a></sc-if><sc-if value="{{!mr.gLink}}" hint-placeholder-val="{{false}}"><span class="mine-gname">{{mr.gname}}</span></sc-if><span class="cnt">{{mr.gcount}}</span></sc-if>
+                      <sc-if value="{{mr.isLink}}" hint-placeholder-val="{{false}}"><a class="mine-nt mine-olink" href="{{mr.href}}" target="{{mr.target}}" rel="{{mr.rel}}" title="{{mr.linkTitle}}" onClick="{{mr.go}}"><span class="mine-nm">{{mr.name}}<svg class="mine-ext" role="img" aria-label="{{mr.linkTitle}}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4"></path></svg></span><sc-if value="{{mr.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{mr.sub}}</span></sc-if></a></sc-if>
+                      <sc-if value="{{mr.isPlain}}" hint-placeholder-val="{{true}}"><span class="mine-nt"><span class="mine-nm">{{mr.name}}</span><sc-if value="{{mr.hasSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{mr.sub}}</span></sc-if></span></sc-if>
+                    </div>
+                    <div class="mine-c" role="cell">
+                      <sc-if value="{{mr.hasDate}}" hint-placeholder-val="{{true}}"><span class="mine-dt"><span>{{mr.date}}</span><sc-if value="{{mr.hasDateSub}}" hint-placeholder-val="{{true}}"><span class="sub">{{mr.dateSub}}</span></sc-if></span></sc-if>
+                    </div>
+                    <div class="mine-c" role="cell">
+                      <sc-if value="{{mr.hasOwners}}" hint-placeholder-val="{{false}}"><span class="mine-own"><sc-for list="{{mr.owners}}" as="ow" hint-placeholder-count="1"><span class="avatar xs" title="{{ow.name}}">{{ow.ini}}</span></sc-for></span></sc-if>
+                    </div>
+                    <div class="mine-c mine-cscore" role="cell"><sc-if value="{{mr.hasScore}}" hint-placeholder-val="{{true}}"><span class="mine-score">{{mr.score}}</span></sc-if></div>
+                    <div class="mine-c" role="cell">
+                      <sc-if value="{{mr.hasStatus}}" hint-placeholder-val="{{true}}"><span class="{{mr.stCls}}"><sc-if value="{{mr.stDone}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>{{mr.stWord}}</span></sc-if>
+                    </div>
+                    <div class="mine-c mine-cprog" role="cell">
+                      <div class="mine-dia">
+                        <sc-if value="{{mr.pBar}}" hint-placeholder-val="{{false}}"><span class="mine-bar" role="img" aria-label="{{mr.barAria}}"><span class="track"><span class="{{mr.barCls}}" style="{{mr.barStyle}}"></span></span><sc-if value="{{mr.hasTick}}" hint-placeholder-val="{{false}}"><span class="tick mine-tk" style="{{mr.tickStyle}}"></span></sc-if></span></sc-if>
+                        <sc-if value="{{mr.pSeg}}" hint-placeholder-val="{{false}}"><span class="review-bar mine-seg" role="img" aria-label="{{mr.segAria}}"><sc-for list="{{mr.segs}}" as="sg" hint-placeholder-count="3"><span class="{{sg.cls}}" style="{{sg.style}}" title="{{sg.title}}">{{sg.n}}</span></sc-for></span></sc-if>
+                        <sc-if value="{{mr.pLine}}" hint-placeholder-val="{{false}}"><span class="review-pg"><span class="review-barw" role="img" aria-label="{{mr.lineAria}}"><span class="track sm"><span class="{{mr.lineCls}}" style="{{mr.lineStyle}}"></span></span><sc-if value="{{mr.lineTick}}" hint-placeholder-val="{{false}}"><span class="review-tk" style="{{mr.lineTickStyle}}"></span></sc-if></span><sc-if value="{{mr.lineStatic}}" hint-placeholder-val="{{true}}"><b class="num">{{mr.lineVal}}</b></sc-if><sc-if value="{{mr.lineBtn}}" hint-placeholder-val="{{false}}"><button class="{{mr.btnCls}}" type="button" aria-label="{{mr.btnAria}}" aria-expanded="{{mr.btnExp}}" title="{{mr.btnTitle}}" onClick="{{mr.btnClick}}">{{mr.btnText}}</button></sc-if></span></sc-if>
+                        <sc-if value="{{mr.pStage}}" hint-placeholder-val="{{false}}"><span class="review-stage"><span class="review-pips" aria-hidden="true"><sc-for list="{{mr.pips}}" as="pp" hint-placeholder-count="4"><i class="{{pp.cls}}"></i></sc-for></span>{{mr.stage}}</span></sc-if>
+                        <sc-if value="{{mr.pGauge}}" hint-placeholder-val="{{false}}"><span class="review-gauge" role="img" aria-label="{{mr.gAria}}"><span class="review-gax"></span><span class="review-gband" style="{{mr.bandStyle}}"></span><sc-if value="{{mr.hasMk}}" hint-placeholder-val="{{true}}"><span class="{{mr.gmkCls}}" style="{{mr.mkStyle}}"></span></sc-if><sc-for list="{{mr.gLabels}}" as="gl" hint-placeholder-count="2"><span class="review-glb" style="{{gl.style}}">{{gl.text}}</span></sc-for></span></sc-if>
+                        <sc-if value="{{mr.pRpn}}" hint-placeholder-val="{{false}}"><span class="review-rpn"><span>{{mr.rpnPre}}</span><b>{{mr.rpnVal}}</b></span></sc-if>
+                        <sc-if value="{{mr.pText}}" hint-placeholder-val="{{false}}"><span class="{{mr.pTxtCls}}">{{mr.pTxt}}</span></sc-if>
+                        <sc-if value="{{mr.pValLine}}" hint-placeholder-val="{{false}}"><span class="review-vline"><button class="{{mr.btnCls}}" type="button" aria-label="{{mr.btnAria}}" aria-expanded="{{mr.btnExp}}" title="{{mr.btnTitle}}" onClick="{{mr.btnClick}}">{{mr.btnText}}</button></span></sc-if>
+                        <sc-if value="{{mr.pKpiEd}}" hint-placeholder-val="{{false}}"><!--@include mods/kpi/part-post.html KE=mr.ed--></sc-if>
+                        <sc-if value="{{mr.pMyEd}}" hint-placeholder-val="{{false}}">
+                          <div class="kpi-ed"><input class="in sm num" type="text" inputMode="decimal" autoComplete="off" aria-label="{{mr.my.aria}}" placeholder="{{mr.my.ph}}" value="{{mr.my.v}}" onChange="{{mr.my.onChange}}" onKeyDown="{{mr.my.onKey}}" onBlur="{{mr.my.onBlur}}" autoFocus=""><span class="sub">%</span></div>
+                          <sc-if value="{{mr.my.hasErr}}" hint-placeholder-val="{{false}}"><div class="err" role="alert">{{mr.my.err}}</div></sc-if>
+                        </sc-if>
+                        <sc-if value="{{mr.pRead}}" hint-placeholder-val="{{false}}">
+                          <sc-for list="{{mr.reads}}" as="r" hint-placeholder-count="1">
+                            <span class="mine-read">
+                              <sc-if value="{{r.editing}}" hint-placeholder-val="{{false}}"><input class="in sm num step-in" aria-label="{{r.aria}}" placeholder="value" value="{{r.ed.v}}" onChange="{{r.ed.set}}" onKeyDown="{{r.ed.key}}" onBlur="{{r.ed.commit}}" autoFocus=""></sc-if>
+                              <sc-if value="{{r.showCell}}" hint-placeholder-val="{{true}}">
+                                <div class="above step-anchor">
+                                  <sc-if value="{{r.clickStat}}" hint-placeholder-val="{{false}}"><button class="step-val" type="button" aria-label="{{r.aria}}" title="Click to see the readings and add one" aria-expanded="{{r.popOpen}}" onClick="{{r.click}}"><!--@include mods/step/part-val.html--></button></sc-if>
+                                  <sc-if value="{{r.clickOne}}" hint-placeholder-val="{{true}}"><button class="step-val" type="button" aria-label="{{r.aria}}" title="Click to add a reading" onClick="{{r.click}}"><!--@include mods/step/part-val.html--></button></sc-if>
+                                  <sc-if value="{{r.plain}}" hint-placeholder-val="{{false}}"><span class="step-plainval"><!--@include mods/step/part-val.html--></span></sc-if>
+                                  <sc-if value="{{r.popOpen}}" hint-placeholder-val="{{false}}">
+                                    <div class="pop step-pop mine-pop" role="dialog" aria-label="Readings for {{r.pop.name}}" onKeyDown="{{r.pop.key}}">
+                                      <div class="row"><span class="strong grow">{{r.pop.name}}</span><button class="btn xs q ic" type="button" aria-label="Close readings" title="Close" onClick="{{r.pop.close}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+                                      <div class="row wrap"><span>{{r.pop.statLbl}} <span class="strong">{{r.pop.computed}}</span> {{r.pop.unit}}</span><span class="{{r.pop.cntCls}} push"><span class="dot"></span>{{r.pop.cnt}}</span></div>
+                                      <div class="sub">Target {{r.pop.crit}}</div>
+                                      <div class="step-plist">
+                                        <sc-if value="{{r.pop.empty}}" hint-placeholder-val="{{false}}"><div class="hint">No readings yet. Add the first measurement below.</div></sc-if>
+                                        <sc-for list="{{r.pop.rows}}" as="p" hint-placeholder-count="3">
+                                          <div class="{{p.cls}}"><span class="num strong">{{p.v}}</span><span class="{{p.tagCls}}">{{p.tag}}</span><sc-if value="{{p.hasNote}}" hint-placeholder-val="{{false}}"><span class="hint">{{p.note}}</span></sc-if><button class="{{p.rmCls}}" type="button" aria-label="{{p.rmAria}}" title="Remove this reading" onClick="{{p.rm}}">{{p.rmText}}</button></div>
+                                        </sc-for>
+                                      </div>
+                                      <div class="row"><input class="in sm grow" aria-label="Add readings" placeholder="Add reads, e.g. 0.68 0.67" value="{{r.pop.in}}" onChange="{{r.pop.setIn}}" onKeyDown="{{r.pop.inKey}}" autoFocus=""><button class="btn sm" type="button" onClick="{{r.pop.add}}">Add</button></div>
+                                      <div class="row wrap"><button class="btn xs q" type="button" title="Start a fresh sample. Earlier readings are kept but stop counting." onClick="{{r.pop.newBatch}}">New batch</button><sc-if value="{{r.pop.batchPending}}" hint-placeholder-val="{{false}}"><span class="sub">The next reading starts a fresh sample.</span></sc-if></div>
+                                      <div class="hint">Each entry is one measurement; the {{r.pop.statLbl}} above is computed from them. Imported readings are tagged with their sample.</div>
+                                    </div>
+                                  </sc-if>
+                                </div>
+                              </sc-if>
+                            </span>
+                          </sc-for>
+                        </sc-if>
+                        <sc-if value="{{mr.hasCap}}" hint-placeholder-val="{{true}}"><span class="{{mr.capCls}}">{{mr.cap}}</span></sc-if>
+                        <sc-if value="{{mr.hasAct}}" hint-placeholder-val="{{false}}"><span><a class="small" href="{{mr.actHref}}" target="{{mr.actTarget}}" rel="{{mr.actRel}}" onClick="{{mr.actGo}}">{{mr.actText}}</a></span></sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{mr.isDrawer}}" hint-placeholder-val="{{false}}">
+                  <div class="mine-drow" role="row" data-k="{{mr.k}}"><div class="mine-dcell" role="cell"><!--@include mods/kpi/part-drawer.html KD=mr.drawer--></div></div>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{sh.noRows}}" hint-placeholder-val="{{false}}"><div class="mine-none" data-k="no-rows"><span>{{sh.noRowsText}}</span><button type="button" class="btn sm" onClick="{{sh.clearFilters}}">Clear filters</button></div></sc-if>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{sh.empty}}" hint-placeholder-val="{{false}}">
+        <div class="panel" data-k="empty">
+          <div class="empty">{{sh.empty.text}}</div>
+          <sc-if value="{{sh.empty.hasAct}}" hint-placeholder-val="{{false}}"><div class="row wrap g8 mine-emptyacts"><button class="btn sm" type="button" onClick="{{sh.empty.act}}">{{sh.empty.actLabel}}</button></div></sc-if>
+        </div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+
+<sc-if value="{{ui.sheetOpen}}" hint-placeholder-val="{{false}}">
+  <button class="sheet-scrim" type="button" aria-label="Close panel" onClick="{{ui.dismissAll}}"></button>
+  <aside class="{{ui.sheetCls}}" role="dialog" aria-modal="true" aria-label="Editor" onKeyDown="{{sh.sheetKey}}">
+    <sc-if value="{{sh.settings}}" hint-placeholder-val="{{false}}">
+      <div class="sh-head">
+        <div class="sh-title"><h2>Settings</h2><span class="sub"><!--@if live-->Your theme and broker token stay in this browser.<!--@else-->These settings apply to this prototype only.<!--@endif--></span></div>
+        <button class="btn ic q" type="button" aria-label="Close" title="Close" onClick="{{ui.closeSheet}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="sh-body">
+        <section class="sh-sec" aria-label="Appearance">
+          <h3>Appearance</h3>
+          <div class="seg" role="group" aria-label="Theme">
+            <sc-for list="{{sh.settings.themes}}" as="x" hint-placeholder-count="3"><button type="button" aria-pressed="{{x.on}}" onClick="{{x.pick}}">{{x.label}}</button></sc-for>
+          </div>
+          <div class="hint">{{sh.settings.themeHint}}</div>
+        </section>
+        <section class="sh-sec" aria-label="Hub sign-in">
+          <h3>Hub sign-in</h3>
+          <label class="fld">Signed in as<select class="sel" value="{{sh.settings.hub.value}}" disabled="{{sh.settings.hub.fixed}}" onChange="{{sh.settings.hub.pick}}"><sc-for list="{{sh.settings.hub.opts}}" as="o" hint-placeholder-count="5"><option value="{{o.v}}" label="{{o.label}}"></option></sc-for></select></label>
+          <div class="hint">{{sh.settings.hub.hint}}</div>
+          <div class="hint">What is yours comes from who is signed in. Leads, the CTO and the CEO also get Team Projects.</div>
+        </section>
+        <sc-if value="{{sh.settings.team}}" hint-placeholder-val="{{false}}">
+          <section class="sh-sec" aria-label="Team Projects" data-k="team-scope">
+            <h3>Team Projects</h3>
+            <div class="sub">{{sh.settings.team.lede}}</div>
+            <div class="col g8" role="radiogroup" aria-label="Divisions in Team Projects">
+              <sc-for list="{{sh.settings.team.opts}}" as="o" hint-placeholder-count="4">
+                <label class="mine-opt"><input class="cb" type="radio" name="mine-team" checked="{{o.on}}" onChange="{{o.pick}}"><span class="col g2"><span class="row g8"><span class="strong">{{o.label}}</span><sc-if value="{{o.isDefault}}" hint-placeholder-val="{{false}}"><span class="tag">Default</span></sc-if></span><span class="sub">{{o.desc}}</span></span></label>
+              </sc-for>
+            </div>
+            <sc-if value="{{sh.settings.team.picking}}" hint-placeholder-val="{{false}}">
+              <div class="mine-picks" data-k="team-picks">
+                <sc-for list="{{sh.settings.team.groups}}" as="g" hint-placeholder-count="2">
+                  <div class="col g6" role="group" aria-label="{{g.label}} divisions"><span class="mine-picklbl">{{g.label}}</span>
+                    <sc-for list="{{g.divs}}" as="d" hint-placeholder-count="2"><label class="check" title="{{d.title}}"><input class="cb" type="checkbox" checked="{{d.on}}" disabled="{{d.locked}}" onChange="{{d.toggle}}">{{d.name}}</label></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div class="hint">{{sh.settings.team.hint}}</div>
+          </section>
+        </sc-if>
+        <section class="sh-sec" aria-label="Broker">
+          <h3>Broker</h3>
+          <div class="sub">The broker address is built in and the token lives in this browser only, shared with the other apps.</div>
+          <div class="row g8 wrap mine-tokenrow">
+            <label class="fld grow">Broker token<input class="in" type="password" autoComplete="off" placeholder="Paste token" value="{{sh.settings.tokenDraft}}" onChange="{{sh.settings.onToken}}" onKeyDown="{{sh.settings.tokenKey}}"></label>
+            <button class="btn" type="button" onClick="{{sh.settings.saveToken}}">Save token</button>
+          </div>
+          <div class="{{sh.settings.tokenCls}}">{{sh.settings.tokenState}}</div>
+          <sc-if value="{{sh.settings.hasNet}}" hint-placeholder-val="{{false}}"><div class="row wrap g8" data-k="connection"><span class="{{sh.settings.net.cls}}"><span class="dot"></span>{{sh.settings.net.word}}</span><span class="sub">{{sh.settings.net.text}}</span></div></sc-if>
+          <div class="row wrap g8"><button class="btn sm" type="button" onClick="{{sh.settings.reload}}">Load from the broker</button></div>
+          <div class="hint">{{sh.settings.build}}</div>
+        </section>
+        <section class="sh-sec" aria-label="Access">
+          <h3>Access</h3>
+          <label class="check"><input class="cb" type="checkbox" checked="{{sh.settings.roOn}}" disabled="{{sh.settings.roLocked}}" onChange="{{sh.settings.toggleRo}}">Preview the read-only view</label>
+          <div class="hint">{{sh.settings.roHint}}</div>
+        </section>
+<!--@if !live-->
+        <section class="sh-sec" aria-label="Sample data">
+          <h3>Sample data</h3>
+          <div class="row"><button class="btn sm" type="button" onClick="{{sh.settings.reset}}">Restore the sample data</button></div>
+        </section>
+<!--@endif-->
+      </div>
+    </sc-if>
+  </aside>
+</sc-if>
+<sc-if value="{{ui.hasDlg}}" hint-placeholder-val="{{false}}">
+  <button class="dlg-scrim" type="button" aria-label="Cancel" onClick="{{ui.dlg.cancelFn}}"></button>
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-label="{{ui.dlg.title}}">
+    <h2>{{ui.dlg.title}}</h2>
+    <sc-if value="{{ui.dlg.hasBody}}" hint-placeholder-val="{{true}}"><div class="muted">{{ui.dlg.body}}</div></sc-if>
+    <sc-if value="{{ui.dlg.isAsk}}" hint-placeholder-val="{{false}}">
+      <label class="fld">{{ui.dlg.label}}<input class="in" value="{{ui.dlg.value}}" placeholder="{{ui.dlg.placeholder}}" onChange="{{ui.dlg.onValue}}" onKeyDown="{{ui.dlg.onKey}}" autoFocus=""></label>
+      <sc-if value="{{ui.dlg.hasErr}}" hint-placeholder-val="{{false}}"><div class="err">{{ui.dlg.err}}</div></sc-if>
+    </sc-if>
+    <div class="acts">
+      <button class="btn" type="button" onClick="{{ui.dlg.cancelFn}}">{{ui.dlg.cancel}}</button>
+      <button class="{{ui.dlg.okCls}}" type="button" onClick="{{ui.dlg.okFn}}">{{ui.dlg.ok}}</button>
+    </div>
+  </div>
+</sc-if>
+<div class="toasts" role="status" aria-live="polite">
+  <sc-for list="{{ui.toasts}}" as="t" hint-placeholder-count="0">
+    <div class="{{t.cls}}"><span>{{t.text}}</span><button class="x" type="button" aria-label="Dismiss" title="Dismiss" onClick="{{t.drop}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+  </sc-for>
+</div>
+</div>

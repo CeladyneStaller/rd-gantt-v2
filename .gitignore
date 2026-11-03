@@ -1,3 +1,13 @@
 node_modules/
 __pycache__/
 *.pyc
+
+# Calm build outputs (python build.py writes the four pages to the repo root instead)
+calm/out/
+calm/deploy/
+calm/live/
+# generated from mapped/ by calm/test/live/export_mapped.py (real documents: not committed twice)
+calm/test/live/seeds/mapped/
+
+# ops/backup_docs.py writes its backups wherever it runs; keep them out of commits
+backup-*/

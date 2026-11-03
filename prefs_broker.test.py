@@ -22,6 +22,8 @@ if not BROKER_DIR:
 
 os.environ["PREFS_BIN"] = "bin_prefs"
 os.environ["ALLOWED_ORIGINS"] = "https://celadynestaller.github.io,https://celadyne.atlassian.net"
+TOKEN = "test-token-not-a-secret"
+os.environ["BROKER_TOKEN"] = TOKEN          # /prefs is a data route: every call carries the broker token
 sys.path.insert(0, BROKER_DIR)
 for m in ("broker", "broker_patch", "broker_core"):
     sys.modules.pop(m, None)
@@ -50,8 +52,10 @@ FAIL = {"get": False, "put": False}
 
 def fake_get(bin_id):
     CALLS["get"] += 1
-    if FAIL["get"] or bin_id not in BINS:
-        return None                       # what _jsonbin_get returns on any HTTP error
+    if FAIL["get"]:
+        raise bp.JSONBinError("JSONBin HTTP 500")   # what _jsonbin_get raises on any failure but a 404
+    if bin_id not in BINS:
+        return None                       # what _jsonbin_get returns on a JSONBin 404 (and only then)
     return {"record": json.loads(json.dumps(BINS[bin_id])), "metadata": {"id": bin_id}}
 
 
@@ -74,7 +78,9 @@ def fresh(seed):
     FAIL["get"] = FAIL["put"] = False
 
 
-c = TestClient(broker.app, raise_server_exceptions=False)   # a server error is a 500 RESPONSE, as uvicorn sends it
+c = TestClient(broker.app, raise_server_exceptions=False,   # a server error is a 500 RESPONSE, as uvicorn sends it
+               headers={"Authorization": "Bearer " + TOKEN})
+anon = TestClient(broker.app, raise_server_exceptions=False)   # no token: what an old or foreign page sends
 B1 = {"win": 14, "style": "compact"}
 B2 = {"win": 3, "style": "cards"}
 def stored():
@@ -111,6 +117,14 @@ def mine(email="corey@x.com", area="kbDone"):
 def bin_version():
     d = BINS.get("bin_prefs")
     return d.get("version") if isinstance(d, dict) else None
+
+# ---- the broker token: no token, no settings (read or write) ----
+fresh({"version": 1, "updatedAt": 1.0, "doc": {"users": {"corey@x.com": {"kbDone": {"B1": {"win": 14}}}}}})
+ok(anon.get("/prefs/corey@x.com").status_code == 401, "GET without the broker token -> 401")
+before = CALLS["put"]
+r = anon.patch("/prefs/corey@x.com", json={"kbDone": {"B1": None}})
+ok(r.status_code == 401 and CALLS["put"] == before and stored() == {"corey@x.com": {"kbDone": {"B1": {"win": 14}}}},
+   "PATCH without the broker token -> 401, and nothing is written")
 
 # ---- not configured: a clear 503, never a pretend-empty answer ----
 fresh({})
@@ -228,7 +242,7 @@ bp.PREFS_MAX_USERS = saved_max
 r = c.get("/state/prefs")
 ok(r.status_code == 404, "GET /state/prefs is not a document")
 before = json.dumps(BINS["bin_prefs"], sort_keys=True)
-r = c.put("/state/prefs", json={"doc": {}}, headers={"If-Match": "0"})
+r = c.put("/state/prefs", json={"doc": {}, "client": "calm-1"}, headers={"If-Match": "0"})   # a current page
 ok(r.status_code >= 400 and json.dumps(BINS["bin_prefs"], sort_keys=True) == before,
    "PUT /state/prefs cannot overwrite everyone's settings in one go")
 

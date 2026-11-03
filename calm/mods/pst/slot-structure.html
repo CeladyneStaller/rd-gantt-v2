@@ -1,0 +1,201 @@
+<sc-if value="{{pst.hier}}" hint-placeholder-val="{{true}}">
+  <section class="panel" aria-label="Units">
+    <div class="ph"><h2 class="h2">Units</h2><span class="cnt">{{pst.h.units.length}}</span>
+      <sc-if value="{{pst.h.canEdit}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{pst.h.addUnit}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add unit</button></div></sc-if>
+    </div>
+    <sc-if value="{{pst.h.noUnits}}" hint-placeholder-val="{{false}}"><div class="empty sec">No units yet. Units group divisions, like Business and Technical.</div></sc-if>
+    <sc-if value="{{pst.h.hasUnits}}" hint-placeholder-val="{{true}}">
+      <table class="tbl pst-tbl">
+        <thead><tr><th>Unit</th><th class="r">Order</th><th class="r">Divisions</th><th class="pst-act"><span class="pst-sr">Actions</span></th></tr></thead>
+        <tbody>
+          <sc-for list="{{pst.h.units}}" as="r" hint-placeholder-count="2">
+            <tr class="hov" data-k="{{r.id}}">
+              <td><div class="row g12"><button class="lnk ink strong" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span></div></td>
+              <td class="r num">{{r.order}}</td>
+              <td class="r num">{{r.nDivs}}</td>
+              <td class="pst-act">
+                <div class="{{r.menuWrap}}">
+                  <button class="btn xs ic q" type="button" aria-haspopup="menu" aria-expanded="{{r.menuExp}}" aria-label="{{r.menuLabel}}" title="More actions" onClick="{{r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                  <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                    <div class="menu r pst-menu" role="menu" aria-label="{{r.menuLabel}}">
+                      <sc-for list="{{r.items}}" as="it" hint-placeholder-count="3">
+                        <button class="{{it.cls}}" type="button" role="menuitem" onClick="{{it.fn}}">{{it.label}}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </sc-if>
+  </section>
+
+  <section class="panel" aria-label="Divisions">
+    <div class="ph"><h2 class="h2">Divisions</h2><span class="cnt">{{pst.h.divs.length}}</span>
+      <sc-if value="{{pst.h.canEdit}}" hint-placeholder-val="{{true}}"><div class="act"><button class="btn sm" type="button" onClick="{{pst.h.addDiv}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add division</button></div></sc-if>
+    </div>
+    <sc-if value="{{pst.h.noDivs}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{pst.h.divEmpty}}</div></sc-if>
+    <sc-if value="{{pst.h.hasDivs}}" hint-placeholder-val="{{true}}">
+      <table class="tbl pst-tbl">
+        <thead><tr><th>Division</th><th>Unit</th><th>Kind</th><th class="r">Score</th><th class="r">Order</th><th class="pst-act"><span class="pst-sr">Actions</span></th></tr></thead>
+        <tbody>
+          <sc-for list="{{pst.h.divs}}" as="r" hint-placeholder-count="3">
+            <tr class="hov" data-k="{{r.id}}">
+              <td><div class="row g12"><button class="lnk ink strong" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span></div></td>
+              <td>{{r.unit}}</td>
+              <td>{{r.kind}}</td>
+              <td class="r"><span class="{{r.scoreCls}}">{{r.score}}</span></td>
+              <td class="r num">{{r.order}}</td>
+              <td class="pst-act">
+                <div class="{{r.menuWrap}}">
+                  <button class="btn xs ic q" type="button" aria-haspopup="menu" aria-expanded="{{r.menuExp}}" aria-label="{{r.menuLabel}}" title="More actions" onClick="{{r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                  <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                    <div class="menu r pst-menu" role="menu" aria-label="{{r.menuLabel}}">
+                      <sc-for list="{{r.items}}" as="it" hint-placeholder-count="3">
+                        <button class="{{it.cls}}" type="button" role="menuitem" onClick="{{it.fn}}">{{it.label}}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </sc-if>
+  </section>
+
+  <section class="panel" aria-label="Products">
+    <div class="ph"><h2 class="h2">Products and models</h2>
+      <div class="act">
+      <sc-if value="{{pst.h.canFoldProds}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" onClick="{{pst.h.prodFoldGo}}">{{pst.h.prodFold}}</button></sc-if>
+      <sc-if value="{{pst.h.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{pst.h.addProd}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add product</button></sc-if>
+      </div>
+    </div>
+    <sc-if value="{{pst.h.noProds}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{pst.h.prodEmpty}}</div></sc-if>
+    <sc-if value="{{pst.h.hasProds}}" hint-placeholder-val="{{true}}">
+      <table class="tbl pst-tbl">
+        <thead><tr><th>Product or model</th><th>Division</th><th>Code</th><th class="r">Order</th><th class="pst-act"><span class="pst-sr">Actions</span></th></tr></thead>
+        <tbody>
+          <sc-for list="{{pst.h.prods}}" as="r" hint-placeholder-count="4">
+            <tr class="hov {{r.cls}}" data-k="{{r.id}}">
+              <td>
+                <sc-if value="{{r.isProd}}" hint-placeholder-val="{{true}}"><div class="row g12"><sc-if value="{{r.hasToggle}}" hint-placeholder-val="{{false}}"><button class="ped-chev" type="button" aria-expanded="{{r.open}}" aria-label="{{r.toggleLabel}}" title="{{r.toggleLabel}}" onClick="{{r.toggle}}"><svg class="ped-chev-ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if><sc-if value="{{r.noToggle}}" hint-placeholder-val="{{true}}"><span class="ped-chev-sp"></span></sc-if><button class="lnk ink strong" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span></div></sc-if>
+                <sc-if value="{{r.isModel}}" hint-placeholder-val="{{false}}"><div class="row g12 pst-ind"><span class="tag">Model</span><button class="lnk ink" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span><sc-if value="{{r.hasConf}}" hint-placeholder-val="{{false}}"><span class="{{r.confCls}}">{{r.conf}}</span></sc-if></div></sc-if>
+              </td>
+              <td>{{r.div}}</td>
+              <td class="num">{{r.code}}</td>
+              <td class="r num">{{r.order}}</td>
+              <td class="pst-act">
+                <div class="{{r.menuWrap}}">
+                  <button class="btn xs ic q" type="button" aria-haspopup="menu" aria-expanded="{{r.menuExp}}" aria-label="{{r.menuLabel}}" title="More actions" onClick="{{r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                  <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                    <div class="menu r pst-menu" role="menu" aria-label="{{r.menuLabel}}">
+                      <sc-for list="{{r.items}}" as="it" hint-placeholder-count="3">
+                        <sc-if value="{{it.isLink}}" hint-placeholder-val="{{false}}"><a class="mi" role="menuitem" href="{{it.href}}" onClick="{{it.go}}">{{it.label}}</a></sc-if>
+                        <sc-if value="{{!it.isLink}}" hint-placeholder-val="{{true}}"><button class="{{it.cls}}" type="button" role="menuitem" onClick="{{it.fn}}">{{it.label}}</button></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </sc-if>
+  </section>
+
+  <section class="panel" aria-label="Initiatives">
+    <div class="ph"><h2 class="h2">Initiatives, objectives and milestones</h2>
+      <sc-if value="{{pst.h.hasPaused}}" hint-placeholder-val="{{false}}"><span class="sub">{{pst.h.pausedText}}</span></sc-if>
+      <div class="act">
+      <sc-if value="{{pst.h.canFoldInits}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" onClick="{{pst.h.initFoldGo}}">{{pst.h.initFold}}</button></sc-if>
+      <sc-if value="{{pst.h.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{pst.h.addInit}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add initiative</button></sc-if>
+      </div>
+    </div>
+    <sc-if value="{{pst.h.noInits}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{pst.h.initEmpty}}</div></sc-if>
+    <sc-if value="{{pst.h.hasInits}}" hint-placeholder-val="{{true}}">
+      <table class="tbl pst-tbl">
+        <thead><tr><th>Name</th><th>Division</th><th>When</th><th>Status</th><th class="pst-act"><span class="pst-sr">Actions</span></th></tr></thead>
+        <tbody>
+          <sc-for list="{{pst.h.inits}}" as="r" hint-placeholder-count="6">
+            <tr class="hov {{r.cls}}" data-k="{{r.id}}">
+              <td>
+                <sc-if value="{{r.isInit}}" hint-placeholder-val="{{true}}"><div class="row g12"><sc-if value="{{r.hasToggle}}" hint-placeholder-val="{{false}}"><button class="ped-chev" type="button" aria-expanded="{{r.open}}" aria-label="{{r.toggleLabel}}" title="{{r.toggleLabel}}" onClick="{{r.toggle}}"><svg class="ped-chev-ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if><sc-if value="{{r.noToggle}}" hint-placeholder-val="{{true}}"><span class="ped-chev-sp"></span></sc-if><button class="lnk ink strong" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span></div></sc-if>
+                <sc-if value="{{r.isObj}}" hint-placeholder-val="{{false}}"><div class="row wrap pst-ind" style="gap: 4px 10px"><span class="tag">Objective</span><button class="lnk ink" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span>
+                  <sc-if value="{{r.hasEnd}}" hint-placeholder-val="{{false}}"><span class="{{r.endCls}}" title="{{r.endTitle}}"><span class="dot"></span>{{r.endText}}</span></sc-if>
+                  <sc-if value="{{r.hasX}}" hint-placeholder-val="{{false}}"><span class="pill t-info" title="{{r.xTitle}}">{{r.xText}}</span></sc-if></div></sc-if>
+                <sc-if value="{{r.isMs}}" hint-placeholder-val="{{false}}"><div class="row g12 pst-ind"><span class="{{r.dmdCls}}" aria-hidden="true"></span><button class="lnk ink" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button><span class="tid">{{r.id}}</span></div></sc-if>
+              </td>
+              <td>{{r.div}}</td>
+              <td class="num">{{r.when}}</td>
+              <td><span class="row g12"><span class="{{r.stCls}}"><span class="dot"></span>{{r.stWord}}</span><sc-if value="{{r.hasScore}}" hint-placeholder-val="{{false}}"><span class="{{r.scoreCls}}">{{r.score}}</span></sc-if></span></td>
+              <td class="pst-act">
+                <div class="{{r.menuWrap}}">
+                  <button class="btn xs ic q" type="button" aria-haspopup="menu" aria-expanded="{{r.menuExp}}" aria-label="{{r.menuLabel}}" title="More actions" onClick="{{r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                  <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                    <div class="menu r pst-menu" role="menu" aria-label="{{r.menuLabel}}">
+                      <sc-for list="{{r.items}}" as="it" hint-placeholder-count="3">
+                        <sc-if value="{{it.isLink}}" hint-placeholder-val="{{false}}"><a class="mi" role="menuitem" href="{{it.href}}" onClick="{{it.go}}">{{it.label}}</a></sc-if>
+                        <sc-if value="{{!it.isLink}}" hint-placeholder-val="{{true}}"><button class="{{it.cls}}" type="button" role="menuitem" onClick="{{it.fn}}">{{it.label}}</button></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </sc-if>
+  </section>
+</sc-if>
+
+<sc-if value="{{pst.custom}}" hint-placeholder-val="{{false}}">
+  <section class="panel" aria-label="Grouped objectives">
+    <div class="ph"><h2 class="h2">{{pst.g.title}}</h2><span class="cnt">{{pst.g.count}}</span>
+      <sc-if value="{{pst.g.showTools}}" hint-placeholder-val="{{false}}"><div class="act">
+        <button class="btn sm" type="button" onClick="{{pst.g.addObj}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add objective</button>
+        <button class="btn sm" type="button" onClick="{{pst.g.addInit}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add initiative</button>
+      </div></sc-if>
+    </div>
+    <sc-if value="{{pst.g.none}}" hint-placeholder-val="{{false}}"><div class="empty sec">No objectives match the current filters.</div></sc-if>
+    <div class="pst-tree">
+      <sc-for list="{{pst.g.rows}}" as="r" hint-placeholder-count="6">
+        <sc-if value="{{r.isGroup}}" hint-placeholder-val="{{false}}">
+          <div class="pst-grp" style="{{r.pad}}" data-k="{{r.key}}">
+            <button class="ped-chev" type="button" aria-expanded="{{r.open}}" aria-label="{{r.toggleLabel}}" title="{{r.toggleLabel}}" onClick="{{r.toggle}}"><svg class="ped-chev-ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+            <span class="{{r.dotCls}}" title="{{r.word}}"></span>
+            <span class="pst-glab"><span class="sub">{{r.dimWord}}</span> <span class="strong">{{r.label}}</span></span>
+            <span class="sub">{{r.count}}</span>
+            <sc-if value="{{r.hasAdds}}" hint-placeholder-val="{{false}}">
+              <span class="row g4 push">
+                <sc-for list="{{r.adds}}" as="a" hint-placeholder-count="2"><button class="btn xs q" type="button" aria-label="{{a.aria}}" title="{{a.aria}}" onClick="{{a.go}}"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{a.label}}</button></sc-for>
+              </span>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{r.isObj}}" hint-placeholder-val="{{true}}">
+          <div class="pst-orow" style="{{r.pad}}" data-k="{{r.id}}">
+            <span class="{{r.dotCls}}" title="{{r.word}}"></span>
+            <div class="col g2 grow">
+              <div class="row wrap" style="gap: 4px 10px"><button class="lnk ink" type="button" title="Show lineage" onClick="{{r.lineage}}">{{r.name}}</button>
+                <sc-if value="{{r.hasEnd}}" hint-placeholder-val="{{false}}"><span class="{{r.endCls}}" title="{{r.endTitle}}"><span class="dot"></span>{{r.endText}}</span></sc-if>
+                <sc-if value="{{r.hasX}}" hint-placeholder-val="{{false}}"><span class="pill t-info" title="{{r.xTitle}}">{{r.xText}}</span></sc-if>
+              </div>
+              <div class="row wrap sub" style="gap: 2px 14px"><span>{{r.quarter}}</span><span>{{r.initiative}}</span><span>{{r.owners}}</span></div>
+            </div>
+            <a class="btn xs q" href="{{r.openHref}}" onClick="{{r.openApp}}">{{r.openLabel}}</a>
+            <sc-if value="{{pst.g.canEdit}}" hint-placeholder-val="{{true}}">
+              <button class="btn xs ic q" type="button" aria-label="{{r.editLabel}}" title="{{r.editLabel}}" onClick="{{r.edit}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+              <button class="btn xs ic q" type="button" aria-label="{{r.delLabel}}" title="{{r.delLabel}}" onClick="{{r.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+            </sc-if>
+          </div>
+        </sc-if>
+      </sc-for>
+    </div>
+  </section>
+</sc-if>

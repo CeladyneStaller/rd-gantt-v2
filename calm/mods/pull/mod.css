@@ -1,0 +1,88 @@
+/* pulled KPIs: the value's dropdown button, the readings drawer's pulled lines, and the sheet that adds or edits a pulled KPI */
+
+/* the value as a dropdown button: a bordered pill with a chevron that turns up while the readings show */
+button.kpi-val.pull-dd{gap:7px;margin:-3px 0 -3px -9px;padding:2px 8px 2px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+button.kpi-val.pull-dd:hover{border-color:var(--field-hover);background:var(--hover)}
+button.kpi-val.pull-dd.tx-ok:hover{color:var(--ok-ink)} button.kpi-val.pull-dd.tx-warn:hover{color:var(--warn-ink)} button.kpi-val.pull-dd.tx-bad:hover{color:var(--bad-ink)}
+button.kpi-val.pull-dd.open{border-color:var(--accent-line);background:var(--accent-wash)}
+button.kpi-val.pull-dd::after{content:"";flex:none;width:6px;height:6px;margin-top:-3px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(45deg);transition:transform .15s ease}
+button.kpi-val.pull-dd.open::after{margin-top:3px;transform:rotate(-135deg)}
+button.kpi-val.pull-dd:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* in the Overview's progress cell there is no room for the pill: the chevron alone */
+.review-pg button.kpi-val.pull-dd{margin:0;padding:0;border:0;border-radius:0;background:transparent;gap:5px}
+@media (prefers-reduced-motion:reduce){button.kpi-val.pull-dd::after{transition:none}}
+
+/* the readings drawer: one aligned line per pulled item (reading, item, where it sits, what it means) */
+.kpi-dlist:has(.pull-di){max-height:none}
+.kpi-ditem.pull-di{flex:none;display:grid;grid-template-columns:104px minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1.3fr);gap:2px 14px;align-items:baseline;padding:7px 12px}
+.pull-di>span:nth-child(2){color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pull-di .kpi-dv{min-width:0;font-variant-numeric:tabular-nums}
+.pull-di .kpi-dnote{max-width:none;white-space:normal}
+.pull-di.out>span{color:var(--muted)}
+.pull-di.out .kpi-dv{font-weight:500}
+.pull-di.pull-hit{box-shadow:inset 3px 0 0 var(--bad)}
+.pull-di.pull-hit.good{box-shadow:inset 3px 0 0 var(--ok)}
+.pull-di.pull-hit.bad .kpi-dv{color:var(--bad-ink)}
+.pull-di.pull-mark .kpi-dv{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+@media (max-width:760px){.kpi-ditem.pull-di{grid-template-columns:72px minmax(0,1fr)}.pull-di>span:nth-child(n+3){grid-column:2}}
+
+/* the sheet: a live preview on top, then what to pull, the statistics, which work, and a target per statistic */
+.pull-bbody{gap:18px}
+.pull-pv{position:sticky;top:-18px;z-index:2;display:flex;flex-direction:column;gap:10px;margin:-18px -22px 0;padding:14px 22px;background:var(--surface-2);border-bottom:1px solid var(--line-2)}
+.pull-tiles{display:flex;flex-wrap:wrap;gap:10px}
+.pull-tile{display:flex;flex-direction:column;gap:3px;min-width:176px;padding:10px 14px 11px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface)}
+.pull-tl{font-size:12.5px;font-weight:500;color:var(--muted)}
+.pull-tv{font-size:26px;font-weight:600;line-height:1.1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+.pull-tv.tx-ok{color:var(--ok-ink)} .pull-tv.tx-warn{color:var(--warn-ink)} .pull-tv.tx-bad{color:var(--bad-ink)} .pull-tv.tx-none{color:var(--muted)}
+.pull-tsc{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:13px}
+.pull-pline{line-height:1.4}
+.pull-rsrc{flex-direction:row;align-items:center;gap:12px}
+.pull-cols{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.pull-left{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.pull-right{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.pull-part{display:flex;flex-direction:column;gap:12px}
+.pull-left .pull-part+.pull-part,.pull-bbody>.pull-part{padding-top:16px;border-top:1px solid var(--line-2)}
+.pull-each{max-width:260px}
+.pull-mss{display:flex;flex-direction:column;gap:2px}
+.pull-ms{display:flex;align-items:flex-start;gap:10px;padding:7px 9px;border:0;border-radius:8px;background:transparent;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.pull-ms:hover{background:var(--hover)}
+.pull-ms.on{background:var(--accent-wash)}
+.pull-radio{flex:none;width:14px;height:14px;margin-top:2px;border:1.5px solid var(--field-hover);border-radius:50%;background:var(--surface)}
+.pull-ms.on .pull-radio{border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--surface);background:var(--accent)}
+.pull-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pull-chips .pull-gap{margin-left:12px}
+.pull-thr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 14px}
+.pull-thr .hint{padding-bottom:7px}
+.pull-inu{display:flex;align-items:center;gap:8px}
+.pull-inu .in{width:96px}
+
+/* targets: one row per statistic */
+.pull-tgs{display:flex;flex-direction:column;gap:6px}
+.pull-tgr{display:grid;grid-template-columns:150px minmax(0,1fr) 112px 84px 104px;gap:8px;align-items:center}
+.pull-tgr .in,.pull-tgr .sel{width:100%}
+.pull-tgh{font-size:12px;font-weight:500;color:var(--muted)}
+.pull-tgl{font-size:13.5px}
+@media (max-width:760px){.pull-tgr{grid-template-columns:minmax(0,1fr) 104px 84px}.pull-tgr>:first-child,.pull-tgr>:nth-child(2){grid-column:1 / -1}.pull-tgh{display:none}}
+
+/* which work, and the items it pulls */
+.pull-sels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pull-sels .sel{width:100%}
+.pull-wide{grid-column:1 / -1}
+.pull-list{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-3)}
+.pull-grp{display:flex;flex-direction:column;gap:2px}
+.pull-grp+.pull-grp{margin-top:8px}
+.pull-gh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:2px 0 4px;font-size:13px}
+.pull-it{display:flex;align-items:center;gap:10px;min-height:34px;padding:4px 8px;border-radius:7px;font-size:13.5px;cursor:pointer}
+.pull-it:hover{background:var(--hover)}
+.pull-in{flex:1 1 auto;min-width:0;color:var(--ink)}
+.pull-ix{flex:none;max-width:44%;text-align:right}
+.pull-iv{flex:none;min-width:58px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.pull-it.out .pull-in,.pull-it.out .pull-iv{color:var(--muted)}
+.pull-it.out .pull-iv{font-weight:500}
+/* a waiting item says why on a line of its own under its name, so a long name never squeezes into a column */
+.pull-it.out{flex-wrap:wrap;row-gap:0}
+.pull-it.out .pull-in{flex:1 1 0}
+.pull-it.out .pull-iv{order:1}
+.pull-it.out .pull-ix{order:2;flex:1 0 100%;max-width:none;margin-top:-2px;padding-left:26px;text-align:left}
+.pull-it.hit.bad .pull-iv{color:var(--bad-ink)}
+.pull-it.hit.good .pull-iv{color:var(--ok-ink)}

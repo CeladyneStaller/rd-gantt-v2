@@ -1,0 +1,198 @@
+<sc-if value="{{gates.tab.has}}" hint-placeholder-val="{{true}}">
+<section class="panel" aria-label="Stage-gates" data-k="gates-panel">
+  <div class="ph">
+    <h2 class="h2">Stage-gates</h2>
+    <span class="cnt">{{gates.tab.count}}</span>
+    <div class="act">
+<!--@if exec-->
+<!--@else-->
+      <sc-if value="{{gates.tab.canRecommit}}" hint-placeholder-val="{{false}}"><button class="btn sm" type="button" onClick="{{gates.tab.recommit}}">Build revised plan</button></sc-if>
+<!--@endif-->
+      <sc-if value="{{gates.tab.canAdd}}" hint-placeholder-val="{{true}}">
+        <button class="btn sm" type="button" onClick="{{gates.tab.addWs}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add workstream</button>
+        <button class="btn sm pri" type="button" onClick="{{gates.tab.addGate}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add gate</button>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{gates.tab.cu}}" hint-placeholder-val="{{false}}">
+    <div class="gates-banner">
+      <div class="note t-info" role="status">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"></path><path d="M20 4v5h-5"></path></svg>
+        <div class="col g2 grow"><span class="strong">Revised plan active</span><span>{{gates.tab.cu.text}}</span></div>
+        <sc-if value="{{gates.tab.cu.canEdit}}" hint-placeholder-val="{{true}}">
+          <div class="row g4">
+            <button class="btn sm" type="button" onClick="{{gates.tab.cu.revise}}">Revise</button>
+            <button class="btn sm q" type="button" onClick="{{gates.tab.cu.clear}}">Clear plan</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-for list="{{gates.tab.sets}}" as="ws" hint-placeholder-count="2">
+<!--@if exec-->
+    <div class="{{ws.cls}}" data-k="{{ws.key}}" onDragOver="{{ws.onOver}}" onDragEnter="{{ws.onOver}}" onDragLeave="{{ws.onLeave}}" onDrop="{{ws.onDrop}}">
+<!--@else-->
+    <div class="{{ws.cls}}" data-k="{{ws.key}}">
+<!--@endif-->
+      <div class="gates-wsh">
+<!--@if exec-->
+        <sc-if value="{{ws.canDrag}}" hint-placeholder-val="{{false}}">
+          <span class="handle" draggable="true" aria-label="Drag to reorder workstreams" title="Drag to reorder workstreams" onDragStart="{{ws.onDragStart}}" onDragEnd="{{ws.onDragEnd}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.4"></circle><circle cx="15" cy="6" r="1.4"></circle><circle cx="9" cy="12" r="1.4"></circle><circle cx="15" cy="12" r="1.4"></circle><circle cx="9" cy="18" r="1.4"></circle><circle cx="15" cy="18" r="1.4"></circle></svg></span>
+        </sc-if>
+<!--@endif-->
+        <div class="col g2 grow">
+          <span class="sub">{{ws.letter}}</span>
+          <sc-if value="{{ws.renaming}}" hint-placeholder-val="{{false}}">
+            <input class="in sm gates-ren" aria-label="Workstream name" value="{{ws.renVal}}" onChange="{{ws.onRen}}" onKeyDown="{{ws.onRenKey}}" onBlur="{{ws.onRenBlur}}" autoFocus="">
+            <sc-if value="{{ws.renErr}}" hint-placeholder-val="{{false}}"><span class="err">{{ws.renErr}}</span></sc-if>
+          </sc-if>
+          <sc-if value="{{ws.notRenaming}}" hint-placeholder-val="{{true}}">
+            <sc-if value="{{ws.canEdit}}" hint-placeholder-val="{{true}}"><button class="lnk ink gates-wsname" type="button" title="Rename workstream" onClick="{{ws.startRen}}">{{ws.name}}</button></sc-if>
+            <sc-if value="{{!ws.canEdit}}" hint-placeholder-val="{{false}}"><span class="gates-wsname">{{ws.name}}</span></sc-if>
+          </sc-if>
+        </div>
+        <sc-if value="{{ws.canEdit}}" hint-placeholder-val="{{true}}">
+          <button class="chip" type="button" aria-label="{{ws.chainTitle}}" title="{{ws.chainTitle}}" onClick="{{ws.toggleChain}}">
+            <sc-if value="{{ws.chained}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg></sc-if>
+            <sc-if value="{{!ws.chained}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15.7 14l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M8.3 10l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path><path d="M4 4l16 16"></path></svg></sc-if>
+            {{ws.chainLabel}}
+          </button>
+        </sc-if>
+        <sc-if value="{{!ws.canEdit}}" hint-placeholder-val="{{false}}"><span class="chip static" title="{{ws.chainTitleRo}}">{{ws.chainLabel}}</span></sc-if>
+        <div class="gates-meter" title="Gates passed in this workstream">
+          <span class="track sm"><span class="{{ws.fillCls}}" style="{{ws.fillStyle}}"></span></span>
+          <span class="num strong">{{ws.pct}}</span>
+          <span class="sub num">{{ws.passedText}}</span>
+        </div>
+        <sc-if value="{{ws.canEdit}}" hint-placeholder-val="{{true}}">
+          <button class="btn sm q" type="button" aria-label="{{ws.addLabel}}" title="{{ws.addLabel}}" onClick="{{ws.addGate}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add gate</button>
+          <div class="above">
+            <button class="btn sm ic q" type="button" aria-label="{{ws.menuLabel}}" title="Workstream actions" aria-haspopup="menu" aria-expanded="{{ws.menuOpen}}" onClick="{{ws.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+            <sc-if value="{{ws.showMenu}}" hint-placeholder-val="{{false}}">
+              <div class="menu r" role="menu" aria-label="{{ws.menuLabel}}" style="top: 34px">
+                <button class="mi" type="button" role="menuitem" onClick="{{ws.edit}}">Edit workstream</button>
+<!--@if exec-->
+                <sc-if value="{{ws.canUp}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{ws.up}}">Move up</button></sc-if>
+                <sc-if value="{{ws.canDown}}" hint-placeholder-val="{{false}}"><button class="mi" type="button" role="menuitem" onClick="{{ws.down}}">Move down</button></sc-if>
+<!--@endif-->
+                <div class="msep"></div>
+                <button class="mi bad" type="button" role="menuitem" onClick="{{ws.del}}">Delete workstream</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ws.empty}}" hint-placeholder-val="{{false}}">
+        <div class="gates-empty sub">{{ws.emptyText}}</div>
+      </sc-if>
+      <ol class="gates-steps" aria-label="{{ws.name}}">
+        <sc-for list="{{ws.gates}}" as="g" hint-placeholder-count="3">
+          <li class="{{g.cls}}" data-k="{{g.key}}">
+            <span class="gates-ring" style="{{g.ring}}" aria-hidden="true"><sc-if value="{{g.passed}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+            <div class="gates-body">
+              <div class="gates-main">
+                <div class="row wrap g4 gates-title">
+                  <span class="tid">{{g.label}}</span>
+                  <button class="lnk ink gates-name" type="button" autoFocus="{{g.focus}}" onClick="{{g.open}}">{{g.name}}</button>
+                  <sc-if value="{{g.hasMark}}" hint-placeholder-val="{{false}}"><span class="tag" title="{{g.vmarkTitle}}">{{g.vmark}}</span></sc-if>
+                  <sc-if value="{{g.committed}}" hint-placeholder-val="{{false}}"><span class="tag" title="{{g.committedTitle}}">Committed</span></sc-if>
+                  <sc-if value="{{g.recommitted}}" hint-placeholder-val="{{false}}"><span class="tag" title="Re-committed by the revised plan">Re-committed</span></sc-if>
+                </div>
+                <div class="row wrap gates-when">
+                  <sc-for list="{{g.when}}" as="w" hint-placeholder-count="2"><span class="{{w.cls}}">{{w.text}}</span></sc-for>
+                </div>
+                <sc-if value="{{g.hasIntent}}" hint-placeholder-val="{{true}}"><div class="gates-intent">{{g.intent}}</div></sc-if>
+                <sc-if value="{{g.hasRecommit}}" hint-placeholder-val="{{false}}"><div class="sub">{{g.recommitText}}</div></sc-if>
+                <sc-if value="{{g.hasPartial}}" hint-placeholder-val="{{false}}"><div class="sub gates-partial">{{g.partialText}}</div></sc-if>
+              </div>
+              <div class="gates-cell gates-state">
+                <span class="{{g.stCls}}"><span class="dot"></span>{{g.stWord}}</span>
+                <sc-if value="{{g.hasPartialTag}}" hint-placeholder-val="{{false}}"><span class="tag gates-ptag">Partial</span></sc-if>
+                <sc-if value="{{g.hasNote}}" hint-placeholder-val="{{false}}"><span class="{{g.noteCls}}">{{g.note}}</span></sc-if>
+              </div>
+              <div class="gates-cell gates-ready">
+                <div class="row"><span class="sub">Readiness</span><span class="push num strong">{{g.ready}}</span></div>
+                <span class="track sm"><span class="{{g.fillCls}}" style="{{g.fillStyle}}"></span><sc-if value="{{g.hasHatch}}" hint-placeholder-val="{{false}}"><span class="hatch" style="{{g.hatchStyle}}"></span></sc-if></span>
+              </div>
+              <div class="gates-cell gates-done">
+                <sc-if value="{{g.canMark}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" aria-label="{{g.markLabel}}" title="{{g.markLabel}}" onClick="{{g.markComplete}}">Mark complete</button></sc-if>
+                <sc-if value="{{g.isPassed}}" hint-placeholder-val="{{false}}"><button class="lnk {{g.passedCls}}" type="button" title="View or edit the completion" onClick="{{g.completion}}">{{g.passedText}}</button></sc-if>
+              </div>
+              <div class="gates-tgts">
+                <sc-if value="{{g.hasTargets}}" hint-placeholder-val="{{true}}">
+                  <button class="gates-tog" type="button" aria-expanded="{{g.openStr}}" onClick="{{g.toggle}}"><svg class="{{g.chevCls}}" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>Targets<span class="sub">{{g.metText}}</span></button>
+                </sc-if>
+                <sc-if value="{{g.noTargets}}" hint-placeholder-val="{{false}}">
+                  <sc-if value="{{g.canEdit}}" hint-placeholder-val="{{true}}">
+                    <div class="row wrap g4"><button class="btn xs q" type="button" onClick="{{g.addTarget}}">Add a target</button><button class="btn xs q" type="button" onClick="{{g.addLink}}">Add linked KPI</button></div>
+                  </sc-if>
+                  <sc-if value="{{!g.canEdit}}" hint-placeholder-val="{{false}}"><span class="sub">No targets on this gate.</span></sc-if>
+                </sc-if>
+                <sc-if value="{{g.isOpen}}" hint-placeholder-val="{{false}}">
+                  <div class="gates-kt">
+                    <!--@include mods/kpi/part-table.html KT=g.kt-->
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <sc-if value="{{g.canEdit}}" hint-placeholder-val="{{true}}">
+              <div class="above">
+                <button class="btn sm ic q" type="button" aria-label="{{g.menuLabel}}" title="Gate actions" aria-haspopup="menu" aria-expanded="{{g.menuOpen}}" onClick="{{g.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                <sc-if value="{{g.showMenu}}" hint-placeholder-val="{{false}}">
+                  <div class="menu r" role="menu" aria-label="{{g.menuLabel}}" style="top: 34px">
+                    <button class="mi" type="button" role="menuitem" onClick="{{g.dup}}">Duplicate gate</button>
+<!--@if exec-->
+                    <button class="mi" type="button" role="menuitem" onClick="{{g.connect}}">Connect data</button>
+<!--@endif-->
+                    <div class="msep"></div>
+                    <button class="mi bad" type="button" role="menuitem" onClick="{{g.del}}">Delete gate</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </li>
+        </sc-for>
+      </ol>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{gates.tab.noSets}}" hint-placeholder-val="{{false}}">
+    <div class="empty sec">No workstreams yet. Add a gate to start one, or add a workstream for a parallel track.</div>
+  </sc-if>
+</section>
+<!--@if exec-->
+
+<sc-if value="{{gates.hist}}" hint-placeholder-val="{{false}}">
+<section class="panel" aria-label="Plan history" data-k="gates-history">
+  <div class="ph">
+    <h2 class="h2">Plan history</h2>
+    <sc-if value="{{gates.hist.has}}" hint-placeholder-val="{{true}}"><span class="cnt">{{gates.hist.count}}</span></sc-if>
+    <sc-if value="{{gates.hist.hasHeld}}" hint-placeholder-val="{{false}}"><span class="sub">{{gates.hist.held}}</span></sc-if>
+    <sc-if value="{{gates.hist.canRevise}}" hint-placeholder-val="{{true}}">
+      <div class="act"><button class="btn sm" type="button" onClick="{{gates.hist.revise}}">Revise plan</button></div>
+    </sc-if>
+  </div>
+  <sc-for list="{{gates.hist.rows}}" as="h" hint-placeholder-count="2">
+    <div class="li" data-k="{{h.key}}">
+      <div class="col g2 gates-hv">
+        <span class="strong">{{h.v}}</span>
+        <sc-if value="{{h.hasTag}}" hint-placeholder-val="{{true}}"><span class="{{h.tagCls}}"><span class="dot"></span>{{h.tag}}</span></sc-if>
+      </div>
+      <div class="col g2 grow">
+        <span>{{h.reason}}</span>
+        <span class="sub">{{h.date}}</span>
+        <sc-if value="{{h.hasChips}}" hint-placeholder-val="{{false}}"><div class="row wrap g4"><sc-for list="{{h.chips}}" as="c" hint-placeholder-count="2"><span class="{{c.cls}}">{{c.t}}</span></sc-for></div></sc-if>
+      </div>
+      <button class="btn sm" type="button" onClick="{{h.cmp}}">{{h.cmpLabel}}</button>
+    </div>
+  </sc-for>
+  <sc-if value="{{gates.hist.none}}" hint-placeholder-val="{{false}}">
+    <div class="empty sec">No plan versions yet. Committing a revision records the plan as it stands as v1 and the revision as v2. Versions are history only; there is no restore.</div>
+  </sc-if>
+</section>
+</sc-if>
+<!--@endif-->
+</sc-if>

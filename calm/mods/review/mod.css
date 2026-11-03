@@ -1,0 +1,134 @@
+/* Review table on the Overview (mods/review). Tokens only; classes use the review- prefix. */
+.review-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:16px 20px 0}
+.review-sum{display:flex;flex-direction:column;gap:12px;padding:14px 20px 16px}
+.review-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.review-chip b{font-weight:700;color:var(--ink)}
+.review-chip.on b{color:var(--accent-ink)}
+.review-show{margin-left:auto}
+.review-ctl2{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.cw .review-search{width:260px;height:34px}
+.review-gb{display:flex;align-items:center;gap:8px;margin-left:auto}
+
+/* status bars: one segment per status, its width the count; a segment filters */
+.review-bar{display:flex;gap:2px;height:18px}
+.review-seg{flex:1 1 0;min-width:22px;height:100%;padding:0;margin:0;border:0;border-radius:0;cursor:pointer;font:inherit;font-size:11px;font-weight:700;line-height:18px;text-align:center;transition:opacity .15s ease}
+.review-seg:first-child{border-radius:4px 0 0 4px}
+.review-seg:last-child{border-radius:0 4px 4px 0}
+.review-seg:only-child{border-radius:4px}
+.review-seg:hover{filter:brightness(.93)}
+.review-seg.dim{opacity:.25}
+.review-b-bad{background:var(--bad);color:var(--pri-ink)}
+.review-b-warn{background:var(--warn);color:var(--ink)}
+.cw[data-theme="dark"] .review-b-warn{color:var(--pri-ink)}
+.review-b-ok{background:var(--ok);color:var(--pri-ink)}
+.review-b-none{background:var(--none);color:var(--ink)}
+.review-b-done{background:var(--ok-line);color:var(--ok-ink)}
+.review-b-cnl{background:var(--track);color:var(--muted)}
+.dot.review-d-done{background:var(--ok-soft);box-shadow:inset 0 0 0 2px var(--ok)}
+.dot.review-d-cnl{background:var(--surface);box-shadow:inset 0 0 0 2px var(--none)}
+
+/* per-type bars when the rows are grouped by status or due date */
+.review-tbars{display:grid;grid-template-columns:120px minmax(0,1fr) 40px;align-items:center;gap:8px 12px;padding:12px 20px 14px;border-top:1px solid var(--line-2)}
+.review-tlab{font-size:13px;font-weight:600}
+.review-tnum{font-size:12.5px;color:var(--muted);text-align:right}
+
+/* the table: a grid of rows with the same five columns */
+.review-scroll{overflow-x:auto}
+.review-grid{min-width:1000px}
+.review-tr{display:grid;grid-template-columns:316px 142px 204px 128px minmax(0,1fr)}
+.review-tr>div{padding:11px 12px;min-width:0}
+.review-tr>div:first-child{padding-left:16px}
+.review-tr>div:last-child{padding-right:20px}
+.review-th>div{padding-top:8px;padding-bottom:8px;font-size:12px;font-weight:500;color:var(--muted);border-top:1px solid var(--line-2)}
+.review-th>div:first-child{padding-left:20px}
+.review-row{border-top:1px solid var(--line-3);font-size:13px;line-height:1.4}
+.review-row.is-item:hover{background:var(--surface-3)}
+.review-row.is-kid{background:var(--surface-3);font-size:12.5px}
+.review-row.is-kid>div{padding-top:8px;padding-bottom:8px}
+.review-row.is-kid>div:first-child{padding-left:46px}
+.review-row.is-kid .st{font-size:12.5px}
+.review-grow{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);background:var(--surface-2)}
+.review-grow+.review-row{border-top:0}
+.review-grp{display:flex;flex-direction:column;gap:8px;padding:6px 20px 10px 12px}
+.review-grp.nobar{padding-bottom:6px}
+.review-grp .review-bar{margin-left:8px}
+.review-gline{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.review-gbtn{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 8px 0 4px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+.review-gbtn:hover{background:var(--hover)}
+.review-gbtn svg{color:var(--muted);transform:rotate(-90deg);transition:transform .15s ease}
+.review-gbtn.open svg{transform:rotate(0deg)}
+.review-health{font-size:12.5px}
+/* workstream and swimlane headings inside the Stage-gates and Kanban sections (grouped by type) */
+.review-srow{border-top:1px solid var(--line-2)}
+.review-grow+.review-srow{border-top:0}
+.review-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:7px 20px 5px 12px}
+.review-sbtn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 8px 0 4px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.review-sbtn:hover{background:var(--hover)}
+.review-sbtn svg{color:var(--muted);transform:rotate(-90deg);transition:transform .15s ease}
+.review-sbtn.open svg{transform:rotate(0deg)}
+.review-slab{font-weight:600}
+.review-sname{color:var(--ink-2)}
+.review-scnts{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-left:auto}
+.st.review-sst{gap:5px;font-size:12px;font-weight:600}
+/* rows under a heading sit one step in */
+.review-row.in-sub>div:first-child{padding-left:28px}
+.review-row.is-kid.in-sub>div:first-child{padding-left:58px}
+
+/* first cell: expander, marker, name */
+.review-c1{display:flex;align-items:flex-start;gap:6px}
+.review-exp{flex:none;width:24px;height:24px;margin-top:-2px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.review-exp:hover{background:var(--hover);color:var(--ink)}
+.review-exp svg{transition:transform .15s ease}
+.review-exp.open svg{transform:rotate(90deg)}
+.review-exp-sp{flex:none;width:24px}
+.review-mk{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--ghost);font-size:10.5px;font-weight:700;color:var(--muted)}
+.review-mk.done{background:var(--ok);border-color:var(--ok);color:var(--pri-ink)}
+.review-mk.part{border:2px solid var(--accent);color:var(--accent-ink)}
+.review-mk.tgt{border-radius:5px}
+.review-it{display:flex;flex-direction:column;gap:2px;min-width:0}
+.review-nm{display:block}
+.review-nm .tid,.review-nm .tag{margin-right:6px}
+.review-nm .tag{display:inline-flex;vertical-align:1px}
+.review-kname{font-weight:400}
+.review-link{display:inline;padding:0;margin:0;border:0;background:transparent;font:inherit;font-weight:600;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer}
+.review-link:hover .review-lt{color:var(--accent-ink);text-decoration:underline}
+.review-cell{display:flex;flex-direction:column;gap:2px;min-width:0}
+.review-note{color:var(--ink-2)}
+
+/* progress cell variants */
+.review-pg{display:flex;align-items:center;gap:10px;height:19px}
+.review-barw{position:relative;display:block;flex:1 1 auto;height:6px}
+.review-barw .track{height:6px}
+.review-tk{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ink)}
+.review-pg b{font-size:12.5px;font-weight:600;min-width:34px;text-align:right;white-space:nowrap}
+.review-stage{display:inline-flex;align-items:center;gap:8px;height:19px;white-space:nowrap}
+.review-pips{display:inline-flex;gap:2px}
+.review-pips i{width:10px;height:6px;border-radius:2px;background:var(--track)}
+.review-pips i.c{background:var(--ok)}
+.review-pips i.l{background:var(--warn)}
+.review-pips i.h{background:var(--accent)}
+.review-pips i.o{background:var(--bad)}
+.review-gauge{position:relative;display:block;height:30px;margin-top:6px}
+.review-gax{position:absolute;left:0;right:0;top:0;height:6px;border-radius:3px;background:var(--track)}
+.review-gband{position:absolute;top:0;height:6px;background:var(--ok-line)}
+.review-gmk{position:absolute;top:-5px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--surface-3)}
+.review-gmk.in{background:var(--ok)}
+.review-gmk.out{background:var(--bad)}
+.review-glb{position:absolute;top:12px;font-size:11px;color:var(--muted);transform:translateX(-50%);white-space:nowrap}
+.review-rpn{display:inline-flex;align-items:center;gap:4px;height:19px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.review-rpn b{font-weight:600;color:var(--ink)}
+
+.review-emptyrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 20px;border-top:1px solid var(--line-3);color:var(--muted);font-size:13px}
+.review-none{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:28px 20px;border-top:1px solid var(--line-2);color:var(--ink-2);font-size:13.5px}
+.review-foot{padding:12px 20px 14px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--muted);line-height:1.55}
+
+@media (max-width: 900px){.review-show,.review-gb{margin-left:0}}
+@media (prefers-reduced-motion: reduce){.review-seg,.review-gbtn svg,.review-sbtn svg,.review-exp svg{transition:none}}
+
+/* readings on KPI and target rows (October 19): the KPI table's value button, inline editor and readings drawer */
+.review-pg .review-val{min-width:34px;justify-content:flex-end;font-size:12.5px}
+.review-vline{display:block;margin-top:2px}
+.review-vline .review-val{font-size:12.5px}
+.review-row .kpi-ed .in{width:104px}
+.review-drow{padding:0 20px 12px 46px;background:var(--surface-3)}
+.review-drow.in-sub{padding-left:58px}

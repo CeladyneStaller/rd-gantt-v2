@@ -1,0 +1,24 @@
+<section class="panel kr-ovp" aria-label="Key results summary" data-k="kr-ov">
+  <div class="ph">
+    <h2 class="h2">Key results</h2>
+    <span class="cnt">{{kr.count}}</span>
+    <div class="act">
+      <sc-if value="{{kr.has}}" hint-placeholder-val="{{true}}"><button class="btn sm q" type="button" onClick="{{kr.goTab}}">Open key results</button></sc-if>
+      <sc-if value="{{kr.none}}" hint-placeholder-val="{{false}}"><sc-if value="{{kr.canEdit}}" hint-placeholder-val="{{true}}"><button class="btn sm" type="button" onClick="{{kr.add}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add key result</button></sc-if></sc-if>
+    </div>
+  </div>
+  <sc-if value="{{kr.none}}" hint-placeholder-val="{{false}}"><div class="empty">{{kr.emptyText}}</div></sc-if>
+  <sc-if value="{{kr.has}}" hint-placeholder-val="{{true}}">
+    <div class="kr-ovl">
+      <sc-for list="{{kr.ov}}" as="kro" hint-placeholder-count="3">
+        <button class="kr-ov" type="button" title="Open in Key results" aria-label="{{kro.goLabel}}" onClick="{{kro.go}}">
+          <span class="tid">{{kro.tag}}</span>
+          <span class="kr-ov-st">{{kro.statement}}</span>
+          <span class="kr-ov-pace"><span class="{{kro.paceCls}}"><span class="dot"></span>{{kro.paceWord}}</span><sc-if value="{{kro.partial}}" hint-placeholder-val="{{false}}"><span class="kr-pt">Partial</span></sc-if></span>
+          <span class="track kr-track"><span class="{{kro.fillCls}}" style="{{kro.fillStyle}}"></span><sc-if value="{{kro.hasHatch}}" hint-placeholder-val="{{false}}"><span class="{{kro.hatchCls}}" style="{{kro.hatchStyle}}"></span></sc-if><sc-if value="{{kro.hasTick}}" hint-placeholder-val="{{true}}"><span class="tick" style="{{kro.tickStyle}}"></span></sc-if></span>
+          <span class="kr-score">{{kro.score}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+</section>

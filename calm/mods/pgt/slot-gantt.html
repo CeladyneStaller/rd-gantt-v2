@@ -1,0 +1,117 @@
+<section class="panel pgt" aria-label="Gantt" data-k="gantt">
+  <sc-if value="{{pgt.toolbar}}" hint-placeholder-val="{{true}}">
+    <div class="pgt-tools">
+      <div class="pgt-trow">
+        <span class="pgt-tl">Collapse to</span>
+        <div class="seg" role="group" aria-label="Collapse to">
+          <sc-for list="{{pgt.levels}}" as="l" hint-placeholder-count="4"><button type="button" aria-pressed="{{l.on}}" onClick="{{l.pick}}">{{l.label}}</button></sc-for>
+          <button type="button" aria-pressed="{{pgt.expandOn}}" onClick="{{pgt.expandAll}}">Expand all</button>
+        </div>
+        <span class="pgt-vsep" aria-hidden="true"></span>
+        <span class="pgt-tl">Show</span>
+        <button class="{{pgt.activeCls}}" type="button" aria-pressed="{{pgt.activeOn}}" title="Hide completed work and anything outside its planned window. An initiative disappears once none of its objectives are active." onClick="{{pgt.toggleActive}}">Active only</button>
+        <sc-if value="{{pgt.hasPaused}}" hint-placeholder-val="{{true}}"><button class="{{pgt.pausedCls}}" type="button" aria-pressed="{{pgt.pausedOn}}" title="{{pgt.pausedTitle}}" onClick="{{pgt.togglePaused}}">{{pgt.pausedLabel}}</button></sc-if>
+        <button class="{{pgt.tfCls}}" type="button" aria-pressed="{{pgt.tfOn}}" title="Limit the chart to the quarters selected below. Off, the axis spans all work. The axis keeps a week of slack each side of the selection." onClick="{{pgt.toggleTf}}">Timeframe</button>
+      </div>
+      <div class="{{pgt.tfGridCls}}" role="group" aria-label="Timeframe quarters">
+        <sc-for list="{{pgt.years}}" as="y" hint-placeholder-count="2">
+          <div class="pgt-tfg">
+            <button class="{{y.cls}}" type="button" aria-pressed="{{y.on}}" aria-label="{{y.aria}}" title="{{y.title}}" onClick="{{y.pick}}">{{y.label}}</button>
+            <sc-for list="{{y.qs}}" as="q" hint-placeholder-count="4"><button class="{{q.cls}}" type="button" aria-pressed="{{q.on}}" aria-label="{{q.aria}}" title="{{q.title}}" onClick="{{q.pick}}">{{q.label}}</button></sc-for>
+          </div>
+        </sc-for>
+        <div class="pgt-tfnote">
+          <span class="pgt-range">{{pgt.rangeLabel}}</span>
+          <sc-if value="{{pgt.tfHintOff}}" hint-placeholder-val="{{true}}"><span class="hint">Turn on Timeframe to limit the chart to these quarters.</span></sc-if>
+          <sc-if value="{{pgt.tfHintNone}}" hint-placeholder-val="{{false}}"><span class="hint">Nothing selected, so the chart shows the current quarter.</span></sc-if>
+          <sc-if value="{{pgt.tfCanClear}}" hint-placeholder-val="{{false}}"><button class="btn xs q" type="button" onClick="{{pgt.clearTf}}">Clear</button></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{pgt.empty}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{pgt.emptyText}}</div></sc-if>
+  <sc-if value="{{!pgt.empty}}" hint-placeholder-val="{{true}}">
+    <div class="pgt-scroll">
+      <div class="pgt-chart" style="{{pgt.chartStyle}}" data-k="gantt-chart">
+        <div class="pgt-gridl" aria-hidden="true">
+          <sc-for list="{{pgt.grid}}" as="t" hint-placeholder-count="8"><div class="{{t.cls}}" style="{{t.style}}"></div></sc-for>
+          <sc-if value="{{pgt.todayIn}}" hint-placeholder-val="{{true}}"><div class="pgt-today" style="{{pgt.todayStyle}}"></div><div class="pgt-todaytag" style="{{pgt.todayStyle}}">{{pgt.todayLabel}}</div></sc-if>
+        </div>
+        <div class="{{pgt.gripCls}}" role="separator" aria-orientation="vertical" aria-label="Drag to resize the name column" aria-valuenow="{{pgt.labelw}}" aria-valuemin="140" aria-valuemax="640" tabIndex="0" title="Drag to resize the name column. Double-click to reset it." onPointerDown="{{pgt.gripDown}}" onPointerMove="{{pgt.gripMove}}" onPointerUp="{{pgt.gripUp}}" onPointerCancel="{{pgt.gripUp}}" onDoubleClick="{{pgt.gripReset}}" onKeyDown="{{pgt.gripKey}}"></div>
+        <div class="pgt-axis">
+          <div class="pgt-lab pgt-axlab"><span class="ellip">{{pgt.axisTitle}}</span></div>
+          <div class="pgt-trk" aria-hidden="true"><sc-for list="{{pgt.axis}}" as="a" hint-placeholder-count="6"><span class="{{a.cls}}" style="{{a.style}}">{{a.text}}</span></sc-for></div>
+        </div>
+        <sc-for list="{{pgt.rows}}" as="r" hint-placeholder-count="12">
+          <div class="{{r.cls}}" data-k="{{r.dk}}">
+            <div class="pgt-lab" style="{{r.pad}}">
+              <sc-if value="{{r.hasChev}}" hint-placeholder-val="{{false}}"><button class="{{r.chevCls}}" type="button" aria-expanded="{{r.open}}" aria-label="{{r.chevLabel}}" title="{{r.chevLabel}}" onClick="{{r.toggle}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+              <sc-if value="{{r.noChev}}" hint-placeholder-val="{{true}}"><span class="pgt-sp" aria-hidden="true"></span></sc-if>
+              <sc-if value="{{r.hasDot}}" hint-placeholder-val="{{true}}"><span class="{{r.dotCls}}" aria-hidden="true"></span></sc-if>
+              <sc-if value="{{r.hasTag}}" hint-placeholder-val="{{false}}"><span class="tag pgt-tag">{{r.tag}}</span></sc-if>
+              <sc-if value="{{r.link}}" hint-placeholder-val="{{true}}"><button class="{{r.nameCls}}" type="button" title="{{r.name}}" onClick="{{r.pick}}">{{r.name}}</button></sc-if>
+              <sc-if value="{{r.plain}}" hint-placeholder-val="{{false}}"><span class="{{r.nameCls}}" title="{{r.name}}">{{r.name}}</span></sc-if>
+              <sc-if value="{{r.hasSub}}" hint-placeholder-val="{{false}}"><span class="pgt-sub">{{r.sub}}</span></sc-if>
+              <sc-if value="{{r.hasActs}}" hint-placeholder-val="{{false}}">
+                <span class="pgt-acts">
+                  <sc-for list="{{r.acts}}" as="a" hint-placeholder-count="3">
+                    <button class="btn xs ic q" type="button" aria-label="{{a.label}}" title="{{a.label}}" onClick="{{a.fn}}">
+                      <sc-if value="{{a.isEdit}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></sc-if>
+                      <sc-if value="{{a.isAdd}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></sc-if>
+                      <sc-if value="{{a.isAddMs}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4l5 5-5 5-5-5z"></path><path d="M18 13v7M14.5 16.5h7"></path></svg></sc-if>
+                      <sc-if value="{{a.isDel}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></sc-if>
+                    </button>
+                  </sc-for>
+                </span>
+              </sc-if>
+            </div>
+            <div class="pgt-trk">
+              <sc-for list="{{r.shapes}}" as="s" hint-placeholder-count="2"><div class="{{s.cls}}" style="{{s.style}}" title="{{s.title}}"><sc-if value="{{s.hasTxt}}" hint-placeholder-val="{{false}}"><span class="pgt-sqn">{{s.txt}}</span></sc-if></div></sc-for>
+              <sc-if value="{{r.hasHit}}" hint-placeholder-val="{{true}}"><button class="{{r.hit.cls}}" type="button" style="{{r.hit.style}}" aria-label="{{r.hit.label}}" title="{{r.hit.title}}" onClick="{{r.hit.click}}" onPointerDown="{{r.hit.down}}" onPointerMove="{{r.hit.move}}" onPointerUp="{{r.hit.up}}" onPointerCancel="{{r.hit.cancel}}"></button></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{pgt.hasPop}}" hint-placeholder-val="{{false}}">
+          <div class="pop pgt-pop" role="dialog" aria-label="{{pgt.pop.name}}" style="{{pgt.pop.style}}" data-k="gantt-details">
+            <div class="row top">
+              <div class="col g2 grow"><span class="pgt-ptitle">{{pgt.pop.name}}</span><span class="sub">{{pgt.pop.where}}</span></div>
+              <button class="btn xs ic q" type="button" aria-label="Close details" title="Close details" onClick="{{pgt.pop.close}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </div>
+            <div class="kv"><sc-for list="{{pgt.pop.facts}}" as="f" hint-placeholder-count="4"><span class="k">{{f.k}}</span><span class="{{f.cls}}">{{f.v}}</span></sc-for></div>
+            <sc-if value="{{pgt.pop.hasActs}}" hint-placeholder-val="{{true}}">
+              <div class="row wrap g4">
+                <sc-for list="{{pgt.pop.acts}}" as="a" hint-placeholder-count="3"><button class="{{a.cls}}" type="button" onClick="{{a.fn}}">{{a.label}}</button></sc-for>
+                <sc-if value="{{pgt.pop.hasHandoff}}" hint-placeholder-val="{{false}}"><a class="btn pri sm push" href="{{pgt.pop.handoffHref}}" onClick="{{pgt.pop.handoff}}">{{pgt.pop.handoffLabel}}</a></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+  <div class="pgt-legend" aria-label="Legend">
+    <span class="st t-ok"><span class="dot"></span>On track</span>
+    <span class="st t-warn"><span class="dot"></span>At risk</span>
+    <span class="st t-bad"><span class="dot"></span>Off track</span>
+    <span class="st t-none"><span class="dot"></span>No score yet</span>
+    <span class="pgt-lg"><i class="pgt-lgbar"></i>Planned dates</span>
+    <span class="pgt-lg"><i class="pgt-lgbar derived"></i>Dates inferred</span>
+    <span class="pgt-lg"><i class="pgt-lgslip"></i>Slip past the planned end</span>
+    <span class="pgt-lg"><i class="pgt-lgmk ghost"></i><i class="pgt-lgmk pending"></i>Milestone: planned date, then effective date</span>
+    <span class="pgt-lg"><i class="pgt-lgtoday"></i>Today</span>
+    <sc-if value="{{pgt.canDrag}}" hint-placeholder-val="{{true}}"><span class="sub push">Drag a bar to move its planned dates. Click a bar for details.</span></sc-if>
+    <sc-if value="{{!pgt.canDrag}}" hint-placeholder-val="{{false}}"><span class="sub push">Click a bar for details.</span></sc-if>
+  </div>
+  <sc-if value="{{pgt.hasGates}}" hint-placeholder-val="{{true}}">
+    <div class="pgt-legend sec" aria-label="Stage-gate legend">
+      <span class="pgt-lgt">Stage-gates</span>
+      <span class="pgt-lg"><i class="pgt-lgsq passed"></i>Passed</span>
+      <span class="pgt-lg"><i class="pgt-lgsq passed-late"></i>Passed late</span>
+      <span class="pgt-lg"><i class="pgt-lgsq overdue"></i>Overdue</span>
+      <span class="pgt-lg"><i class="pgt-lgsq pending"></i>Pending</span>
+      <span class="pgt-lg"><i class="pgt-lgsq ghost"></i>Committed or planned date</span>
+      <span class="pgt-lg"><i class="pgt-lgsq cancelled"></i>Cancelled</span>
+      <span class="pgt-lg"><i class="pgt-lgsq cancelled missed"></i>Missed</span>
+    </div>
+  </sc-if>
+</section>

@@ -1,0 +1,12 @@
+<div class="fmea-ev">
+  <div class="row"><span class="fmea-sl">Evidence</span><button class="btn xs q push" type="button" aria-label="{{$XN.addXAria}}" title="{{$XN.addXAria}}" onClick="{{$XN.addX}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add experiment</button></div>
+  <sc-for list="{{$XN.xs}}" as="xr" hint-placeholder-count="1">
+    <div class="fmea-xr">
+      <span class="{{xr.cls}}"><span class="dot"></span><b>{{xr.code}}</b></span>
+      <span class="grow ellip">{{xr.sub}}</span>
+      <span class="sub num">{{xr.prog}}</span>
+      <button class="btn xs" type="button" aria-label="{{xr.openAria}}" onClick="{{xr.open}}">Open</button>
+      <button class="btn xs ic q" type="button" aria-label="{{xr.delAria}}" title="{{xr.delAria}}" onClick="{{xr.del}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+  </sc-for>
+</div>

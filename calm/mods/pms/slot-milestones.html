@@ -1,0 +1,44 @@
+<section class="panel pms" aria-label="Milestones" data-k="milestones">
+  <div class="ph"><h2 class="h2">Milestones</h2><span class="cnt">{{pms.countText}}</span><span class="sub push">{{pms.groupNote}}</span></div>
+  <sc-if value="{{pms.empty}}" hint-placeholder-val="{{false}}"><div class="empty sec">{{pms.emptyText}}</div></sc-if>
+  <sc-if value="{{!pms.empty}}" hint-placeholder-val="{{true}}">
+    <table class="tbl pms-tbl">
+      <thead><tr><th>#</th><th>Milestone</th><th>Initiative</th><th>Product</th><th>Planned</th><th>Effective</th><th>Status</th><th class="r">Score</th><th class="r">KPIs</th><th class="r"><span class="pms-vh">Actions</span></th></tr></thead>
+      <tbody>
+        <sc-for list="{{pms.rows}}" as="r" hint-placeholder-count="6">
+          <sc-if value="{{r.isGroup}}" hint-placeholder-val="{{false}}">
+            <tr class="pms-grp" data-k="{{r.id}}"><td colSpan="10" style="{{r.pad}}"><div class="row g12"><button class="pms-gbtn" type="button" aria-expanded="{{r.open}}" aria-label="{{r.toggleLabel}}" onClick="{{r.toggle}}"><svg class="{{r.chevCls}}" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg><span>{{r.label}}</span></button><span class="cnt">{{r.count}}</span></div></td></tr>
+          </sc-if>
+          <sc-if value="{{r.isMs}}" hint-placeholder-val="{{true}}">
+            <tr class="{{r.cls}}" data-k="{{r.id}}" onClick="{{r.rowClick}}">
+              <td class="pms-num">{{r.num}}</td>
+              <td class="pms-mcell"><button class="lnk ink pms-name" type="button" title="{{r.nameTitle}}" onClick="{{r.edit}}"><span class="{{r.dotCls}}" aria-hidden="true"></span><span class="pms-nmt">{{r.name}}</span></button></td>
+              <td class="pms-dim">{{r.init}}</td>
+              <td class="pms-dim">{{r.prod}}</td>
+              <td class="num">{{r.planned}}</td>
+              <td class="num"><span class="pms-eff">{{r.eff}}<sc-if value="{{r.effDone}}" hint-placeholder-val="{{false}}"><svg class="pms-ok" role="img" aria-label="{{r.effLabel}}" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if><sc-if value="{{r.hasSlip}}" hint-placeholder-val="{{false}}"><span class="tx-bad pms-slip" title="{{r.slipTitle}}">{{r.slip}}</span></sc-if></span></td>
+              <td><span class="{{r.stCls}}" title="{{r.stTitle}}"><span class="{{r.stDotCls}}"></span>{{r.status}}</span></td>
+              <td class="r num">{{r.score}}</td>
+              <td class="r num">{{r.kpis}}</td>
+              <td class="r">
+                <div class="pms-acts">
+                  <sc-if value="{{r.repBtn}}" hint-placeholder-val="{{true}}"><button class="btn xs q pms-rep" type="button" aria-label="{{r.repLabel}}" title="{{r.repLabel}}" onClick="{{r.openReport}}"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"></path><path d="M14 3v5h5M10 13h6M10 17h6"></path></svg><sc-if value="{{r.locked}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if></button></sc-if>
+                  <sc-if value="{{r.hasMenu}}" hint-placeholder-val="{{true}}">
+                    <div class="{{r.wrapCls}}">
+                      <button class="btn xs ic q" type="button" aria-label="Milestone actions" title="Milestone actions" aria-haspopup="menu" aria-expanded="{{r.menuExp}}" onClick="{{r.toggleMenu}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+                      <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                        <div class="menu r pms-menu" role="menu" aria-label="Actions for {{r.name}}">
+                          <sc-for list="{{r.items}}" as="it" hint-placeholder-count="4"><button class="{{it.cls}}" type="button" role="menuitem" onClick="{{it.fn}}">{{it.label}}</button></sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </td>
+            </tr>
+          </sc-if>
+        </sc-for>
+      </tbody>
+    </table>
+  </sc-if>
+</section>
