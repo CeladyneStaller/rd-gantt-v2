@@ -2906,7 +2906,10 @@
     finishedIn: ['tile', 'event'], daysToFinish: ['tile', 'number'],
     concluded: ['experiment', 'event'], hypothesis: ['experiment', 'state'], expStatus: ['experiment', 'state'],
     daysRunning: ['experiment', 'number'],
-    treeOutcome: ['tree', 'state']
+    treeOutcome: ['tree', 'state'],
+    // customer orders (November 9): see "orders as a source" below
+    booked: ['order', 'number'], agreedIn: ['order', 'state'], paidInTerms: ['order', 'state'],
+    shipOnTime: ['shipment', 'state'], unitsShipped: ['shipment', 'number'], cash: ['payment', 'number']
   };
   var PULL_STATES = {                              // each status reading's states, and the default pick
     status: [['on-track', 'at-risk', 'off-track'], ['on-track']],
@@ -2916,7 +2919,10 @@
     stageHealth: [['on-track', 'at-risk', 'breached'], ['on-track']],
     hypothesis: [['confirmed', 'refuted', 'none'], ['confirmed']],
     expStatus: [['planned', 'in_progress', 'complete'], ['in_progress']],
-    treeOutcome: [['success', 'pause', 'stop', 'open'], ['success']]
+    treeOutcome: [['success', 'pause', 'stop', 'open'], ['success']],
+    agreedIn: [['within', 'late'], ['within']],
+    paidInTerms: [['interms', 'late'], ['interms']],
+    shipOnTime: [['ontime', 'late'], ['ontime']]
   };
   var PULL_STATS = {
     number: ['average', 'median', 'min', 'max', 'sum', 'stddev', 'cv', 'range', 'countAbove', 'countBelow', 'shareAbove', 'shareBelow'],
@@ -3137,6 +3143,7 @@
   // one item's reading: { counts, num | state, why (when it waits), det (what the screens show) }
   function pullEval(it, measure, src, c, win) {
     var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
+    if (it.ord) return pullOrderEval(it, measure, src);
     var rec = pullRecord(it, src);
     if (!rec) return no('missing');
     var em = pullEm(src, c), today = pullToday(src), todayIso = pullTodayIso(src);
@@ -3256,6 +3263,143 @@
   // pulledResult(kpi, src?, opts?) -> { value, n, k, kind, measure, stat, thr, states, win, items } | null
   //   items: [{ id, kind, name, divId, objId, objName, quarter, counts, num?, state?, hit, why?, det, host, hand }]
   //   opts.fresh: compute without the cache (a draft being edited)
+  // ---- orders as a source (November 9, "Sales & Execution: linking orders", Patch 3) -------------------------
+  // A key result can read the customer orders themselves, so nobody posts readings for it. The page hands in the
+  // Orders document as src.orders (Calm's C.pullSource); without it (the Hub, the broker) these read no value.
+  // Calm's kit/orders.js is the reference these rules mirror, and its tests compare the two.
+  //   each 'order'     booked (its value, dated when the PO arrived; summed), agreedIn (Technical agreement done,
+  //                    approval included, within pull.n working days of the PO, 2 by default: within | late; the
+  //                    first agreement counts, so a change that reopens it later doesn't; not agreed yet, late once
+  //                    past them and waiting before), paidInTerms (the invoice paid in full by its due date: interms |
+  //                    late; unpaid, late once due and waiting before; dated by the due date)
+  //   each 'shipment'  shipOnTime (on or before the agreed ship date, else the date asked: ontime | late),
+  //                    unitsShipped (units in it; summed)
+  //   each 'payment'   cash (its amount; summed)
+  //   scope.orders     'taken' (the KPI's objective takes them) | 'delivered' (it delivers them) | 'all' (default)
+  //   scope.product    a product id: orders with a line of it ('' any)
+  //   scope.quarter    as for work ('current' | 'next' | 'YYYYQn' | ''), against each item's date
+  // Cancelled orders never count.
+  var PULL_ORDER_EACH = { order: 1, shipment: 1, payment: 1 };
+  var ORD_EPOCH_DOW = 3;                                       // day 0, 2020-01-01, was a Wednesday
+  function ordNum(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
+  function ordIsWd(d) { var w = (((d % 7) + 7) % 7 + ORD_EPOCH_DOW) % 7; return w !== 0 && w !== 6; }
+  // working days from a to b: b counted, a not; negative when b is earlier (kit/orders.js wdBetween)
+  function ordWdBetween(a, b) {
+    if (ordNum(a) == null || ordNum(b) == null) return null;
+    if (a === b) return 0;
+    var s = b > a ? 1 : -1, n = 0, d = a, g = 0;
+    while (d !== b && g < 20000) { d += s; g++; if (ordIsWd(d)) n += s; }
+    return n;
+  }
+  function ordAnswered(o) { var a = o && o.agreement; return !!(a && (a.answer === 'agree' || a.answer === 'deviate')); }
+  // the ship date the order is held to: the agreed one once it holds (no later than asked, a tentative date, or the
+  // customer accepted it), else the date asked (kit/orders.js committedShip)
+  function ordCommittedShip(o) {
+    var asked = ordNum(o && o.shipBy), a = ordAnswered(o) ? o.agreement : null, agreed = a ? ordNum(a.shipOn) : null;
+    if (agreed == null) return asked;
+    if (asked == null || agreed <= asked || o.firmness === 'tentative' || a.customer === 'accepted') return agreed;
+    return asked;
+  }
+  function ordLabel(o) { return (ordNum(o.no) != null ? 'PO-' + o.no : 'New order') + (o.customer ? ' · ' + o.customer : ''); }
+  function ordValue(o) {
+    var v = 0;
+    (o.lines || []).forEach(function (l) { var q = ordNum(l && l.qty), p = ordNum(l && l.unitPrice); if (q != null && p != null) v += Math.round(q * p * 100) / 100; });
+    return Math.round(v * 100) / 100;
+  }
+  // units in a shipment: its lines of a product or model, or everything when the order has none
+  function ordShipUnits(o, s) {
+    var byId = {}, units = 0, all = 0, prod = false;
+    (o.lines || []).forEach(function (l) { if (l && l.id) { byId[l.id] = l; if (l.productId || l.modelId) prod = true; } });
+    (s.lines || []).forEach(function (x) { var q = ordNum(x && x.qty) || 0, l = byId[x && x.lineId]; all += q; if (l && (l.productId || l.modelId)) units += q; });
+    return prod ? units : all;
+  }
+  // the day payments first covered the invoice
+  function ordPaidOn(o) {
+    var amt = o.invoice ? ordNum(o.invoice.amount) : null;
+    if (amt == null) return null;
+    var ps = (o.payments || []).filter(function (p) { return p && ordNum(p.on) != null; }).slice().sort(function (a, b) { return a.on - b.on; });
+    for (var i = 0, sum = 0; i < ps.length; i++) { sum += ordNum(ps[i].amount) || 0; if (sum >= amt - 0.005) return ps[i].on; }
+    return null;
+  }
+  function ordAgreeStep(o) { return (o.steps || []).filter(function (s) { return s && s.done === 'answer'; })[0] || null; }
+  // the day the order was first agreed: an answer of agree or agree with deviations, once approved when its step
+  // names an approver (then the day of the approval); answers a change reopened since are in pastAgreements
+  function ordAgreedOn(o, st) {
+    var appr = !!(st && st.approver && typeof st.approver === 'object' && st.approver.kind);
+    var all = (Array.isArray(o.pastAgreements) ? o.pastAgreements : []).concat(o.agreement ? [o.agreement] : []);
+    for (var i = 0; i < all.length; i++) {
+      var a = all[i];
+      if (!a || typeof a !== 'object' || (a.answer !== 'agree' && a.answer !== 'deviate')) continue;
+      if (!appr) { if (ordNum(a.on) != null) return a.on; continue; }
+      if (a.approval && typeof a.approval === 'object' && a.approval.state === 'approved' && ordNum(a.approval.on) != null) return a.approval.on;
+    }
+    return null;
+  }
+  // the orders, shipments or payments a KPI counts: { id, kind, name, day, ord, ship?, pay?, objId (the order),
+  // objName (its label), quarter }
+  function pullOrderItems(kpi, src) {
+    var pull = kpi.pull || {}, sc = pull.scope || {}, each = pull.each, measure = pull.measure;
+    var doc = src.orders && typeof src.orders === 'object' && src.orders.orders && typeof src.orders.orders === 'object' ? src.orders : null;
+    if (!doc || !PULL_ORDER_EACH[each]) return [];
+    var todayQ = pullQuarterOf(pullTodayIso(src));
+    var want = sc.quarter === 'current' ? todayQ : sc.quarter === 'next' ? pullNextQuarter(todayQ) : (sc.quarter || '');
+    var who = sc.orders === 'taken' || sc.orders === 'delivered' ? sc.orders : 'all', prod = sc.product || '';
+    var list = Object.keys(doc.orders).map(function (k) { return doc.orders[k]; }).filter(function (o) { return o && typeof o === 'object' && !Array.isArray(o); })
+      .sort(function (a, b) { return (ordNum(a.no) || 0) - (ordNum(b.no) || 0); });
+    var out = [];
+    function add(o, x) {
+      if (want && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
+      x.ord = o; x.n = pull.n; x.host = false; x.divId = '';
+      x.objId = o.id; x.objName = ordLabel(o);                  // grouped by order (its shipments, its payments)
+      x.quarter = x.day != null ? pullQuarterOf(pullIsoOfDay(x.day)) : '';
+      out.push(x);
+    }
+    list.forEach(function (o) {
+      if (o.cancelled) return;
+      if (who === 'taken' && o.salesObjectiveId !== kpi.objectiveId) return;
+      if (who === 'delivered' && o.deliveringObjectiveId !== kpi.objectiveId) return;
+      if (prod && !(o.lines || []).some(function (l) { return l && l.productId === prod; })) return;
+      if (each === 'order') add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: measure === 'paidInTerms' ? (o.invoice ? ordNum(o.invoice.dueOn) : null) : ordNum(o.receivedOn) });
+      else if (each === 'shipment') (o.shipments || []).forEach(function (s) { if (s && s.id) add(o, { id: s.id, kind: 'shipment', name: ordLabel(o), day: ordNum(s.on), ship: s }); });
+      else (o.payments || []).forEach(function (p) { if (p && p.id) add(o, { id: p.id, kind: 'payment', name: ordLabel(o), day: ordNum(p.on), pay: p }); });
+    });
+    return out;
+  }
+  function pullOrderEval(it, measure, src) {
+    var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
+    var o = it.ord, today = pullToday(src);
+    switch (measure) {
+      case 'booked': return { counts: true, num: ordValue(o), det: { on: ordNum(o.receivedOn) } };
+      case 'agreedIn': {
+        var n = ordNum(it.n) != null && it.n >= 0 ? it.n : 2, rec = ordNum(o.receivedOn), st = ordAgreeStep(o);
+        if (!st || (st.skipped && typeof st.skipped === 'object') || (st.skipCatalog && !(o.requirements || []).length && !o.agreement)) return no('noAgreement');
+        if (rec == null) return no('noDate');
+        var on = ordAgreedOn(o, st);
+        if (on != null) { var wd = ordWdBetween(rec, on); return { counts: true, state: wd != null && wd <= n ? 'within' : 'late', det: { wd: wd, on: on, n: n } }; }
+        var age = ordWdBetween(rec, today), pend = ordAnswered(o) ? 'approval' : '';   // answered, its approval waits
+        if (age != null && age > n) return { counts: true, state: 'late', det: { wd: age, open: true, n: n, pend: pend } };
+        return no('notAnswered', { wd: age, n: n, pend: pend });
+      }
+      case 'paidInTerms': {
+        var due = o.invoice ? ordNum(o.invoice.dueOn) : null;
+        if (due == null) return no('notInvoiced');
+        var paid = ordPaidOn(o);
+        if (paid != null) return { counts: true, state: paid <= due ? 'interms' : 'late', det: { paid: paid, due: due } };
+        if (today > due) return { counts: true, state: 'late', det: { open: true, due: due } };
+        return no('notDue', { planned: due });
+      }
+      case 'shipOnTime': {
+        var sOn = ordNum(it.ship.on), ref = ordCommittedShip(o);
+        if (sOn == null) return no('noDate');
+        if (ref == null) return no('noShipDate');
+        return { counts: true, state: sOn <= ref ? 'ontime' : 'late', det: { on: sOn, ref: ref, late: sOn - ref } };
+      }
+      case 'unitsShipped': return { counts: true, num: ordShipUnits(o, it.ship), det: { on: ordNum(it.ship.on) } };
+      case 'cash': return { counts: true, num: ordNum(it.pay.amount) || 0, det: { on: ordNum(it.pay.on) } };
+    }
+    return no('missing');
+  }
+
   function pulledCompute(kpi, src, c) {
     var pull = kpi.pull || {}, ms = PULL_MEASURES[pull.measure];
     var win = pullWindow(pull.window, src);
@@ -3268,7 +3412,7 @@
     var above = /Above$/.test(stat), thrStat = /^(count|share)(Above|Below)$/.test(stat);
     var only = (pull.follow === false && Array.isArray(pull.items)) ? pull.items : null;
     var ex = Array.isArray(pull.exclude) ? pull.exclude : [];
-    var items = pullItems(kpi, src, pullObjectives(kpi, src));
+    var items = PULL_ORDER_EACH[pull.each] ? pullOrderItems(kpi, src) : pullItems(kpi, src, pullObjectives(kpi, src));
     var xs = [], n = 0, k = 0;
     for (var i = 0; i < items.length; i++) {
       var it = items[i], ev;

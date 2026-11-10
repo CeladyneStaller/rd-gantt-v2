@@ -37,6 +37,7 @@ os.environ.update({
     "EXEC_DIV_FC_BIN": "fake-bin-exec-fc",
     "SPEC_DIV_FC_BIN": "fake-bin-spec-fc",
     "BIZ_DIV_FIN_BIN": "fake-bin-biz-fin",
+    "ORDERS_BIN": "fake-bin-orders",
     "USERS_BIN": "fake-bin-users",
     "ANALYSIS_INDEX_BIN": "fake-bin-analysis",
     "PREFS_BIN": "fake-bin-prefs",
@@ -495,6 +496,41 @@ r = c.get("/state/SPEC-DIV-XX", headers=AUTH)
 ok(r.status_code == 404 and FAKE.calls == [], "an unconfigured doc id is missing with no JSONBin call (unchanged)")
 BIZ = c.get("/state/BIZ-DIV-FIN/version", headers=AUTH)
 ok(BIZ.status_code == 200 and BIZ.json()["version"] == 0, "a configured BIZ- doc whose bin 404s reads as version 0")
+
+# ---- the customer orders document (November 9): known, its own bin, seeded by the first save ----
+seed()
+ok("orders" in bp._DOC_IDS and bp._env_name("orders") == "ORDERS_BIN" and bp.BIN_FOR.get("orders") == "fake-bin-orders",
+   "orders is a /state document whose bin comes from ORDERS_BIN")
+r = c.get("/state/orders", headers=AUTH)
+ok(r.status_code == 404 and detail(r) == "document not found", "orders whose bin 404s: GET 404, so a fresh page starts it")
+v = c.get("/state/orders/version", headers=AUTH)
+ok(v.status_code == 200 and v.json()["version"] == 0, "...and its version reads 0, so polling is quiet")
+FAKE.bins["fake-bin-orders"] = {"version": 0, "updatedAt": None, "doc": {}}     # what ONLY=orders create_bins.py makes
+bp._CACHE.pop("orders", None)
+r = c.get("/state/orders", headers=AUTH)
+ok(r.status_code == 200 and r.json()["version"] == 0 and r.json()["doc"] == {}, "create_bins.py's seed reads as an empty orders doc")
+w = put("orders", body={"doc": {"v": 1, "seq": 1001, "processes": {}, "orders": {"o-1": {"no": 1001}}}, "client": "calm-1"}, if_match="0")
+ok(w.status_code == 200 and w.json()["version"] == 1 and stored_version("fake-bin-orders") == 1,
+   "the first save of orders (If-Match 0) writes version 1")
+ok(c.get("/state/orders", headers=AUTH).json()["doc"]["orders"]["o-1"]["no"] == 1001, "...and reads back")
+w2 = put("orders", body={"doc": {"v": 1}, "client": "calm-1"}, if_match="0")
+ok(w2.status_code == 412 and ddict(w2).get("currentVersion") == 1, "a second editor still on version 0 gets 412 (the page merges and saves again)")
+w3 = put("orders", body={"doc": {"v": 1}, "client": "calm-0"}, if_match=w.json()["etag"])
+ok(w3.status_code == 426, "a page that predates the update can't write orders either (426)")
+_orders_bin = bp.BIN_FOR.pop("orders")              # the broker deployed before ORDERS_BIN was set
+bp._CACHE.pop("orders", None)
+try:
+    n = len(FAKE.calls)
+    ok(c.get("/state/orders", headers=AUTH).status_code == 404 and len(FAKE.calls) == n,
+       "without ORDERS_BIN, orders reads as missing with no JSONBin call")
+    w4 = put("orders", body={"doc": {}, "client": "calm-1"}, if_match="0")
+    ok(w4.status_code == 500 and "ORDERS_BIN" in str(detail(w4)) and "UNIFIED_DIVISIONS" not in str(detail(w4)),
+       "...and a save says which variable to set, without the division hint")
+    w5 = put("EXEC-DIV-XX", body={"doc": {}, "client": "calm-1"}, if_match="0")
+    ok(w5.status_code == 500 and "EXEC_DIV_XX_BIN" in str(detail(w5)) and "UNIFIED_DIVISIONS" in str(detail(w5)),
+       "a division document still gets the division hint")
+finally:
+    bp.BIN_FOR["orders"] = _orders_bin
 
 # ---- the cache still makes polling free --------------------------------------------
 seed()

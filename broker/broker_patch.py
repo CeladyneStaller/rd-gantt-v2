@@ -26,7 +26,9 @@ cached, and a PUT whose read-before-write fails writes nothing.
 This file is additive and self-contained. To deploy:
   1. include the router:  app.include_router(state_router)
   2. set env vars: BROKER_TOKEN, JSONBIN_MASTER_KEY, UNIFIED_DIVISIONS, and one <DOC>_BIN per doc
-     (PORTFOLIO_BIN, GANTT_VIEW_BIN, EXEC_DIV_FC_BIN, ... — create_bins.py prints them).
+     (PORTFOLIO_BIN, GANTT_VIEW_BIN, ORDERS_BIN, EXEC_DIV_FC_BIN, ... — create_bins.py prints them).
+     ORDERS_BIN holds the shared customer-orders document (Sales, Execution and My Projects write it,
+     Planning reads it); make it with  ONLY=orders python ops/create_bins.py
      Optional: RD_ALLOWED_CLIENTS (default "calm-1,ops").
 
 The JSONBin read/write is implemented below (urllib, no extra dependency). The
@@ -189,7 +191,8 @@ _DIVISIONS = [d.strip() for d in os.environ.get("UNIFIED_DIVISIONS", "DIV-FC").s
 # EXEC- nor SPEC- docs. Kept a SEPARATE list from UNIFIED_DIVISIONS so the two namespaces stay disjoint and no
 # empty EXEC-/SPEC- bins are created for a division that will never use them. Default empty -> biz is opt-in.
 _BIZ_DIVISIONS = [d.strip() for d in os.environ.get("BIZ_DIVISIONS", "").split(",") if d.strip()]
-_DOC_IDS = (["portfolio", "gantt-view"]
+# "orders": the customer orders and their order processes, one document for every division (November 9)
+_DOC_IDS = (["portfolio", "gantt-view", "orders"]
             + [f"EXEC-{d}" for d in _DIVISIONS]
             + [f"SPEC-{d}" for d in _DIVISIONS]    # SPEC-<div>: product-designer per-division spec
             + [f"BIZ-{d}" for d in _BIZ_DIVISIONS])  # BIZ-<div>: Business-division execution (Sales app)
@@ -313,10 +316,11 @@ def _save_raw(doc_id: str, wrapped: Dict[str, Any]) -> None:
     if not bin_id:
         # HTTPException (not RuntimeError) so the message flows back through the CORS
         # middleware and is readable client-side instead of a masked 500/"CORS" error.
+        division = re.match(r"^(EXEC|SPEC|BIZ)-", doc_id) is not None
         raise HTTPException(
             status_code=500,
-            detail=(f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)} "
-                    f"(and add the division to UNIFIED_DIVISIONS)"),
+            detail=(f"no bin id configured for doc '{doc_id}' — set env var {_env_name(doc_id)}"
+                    + (" (and add the division to UNIFIED_DIVISIONS or BIZ_DIVISIONS)" if division else "")),
         )
     try:
         _jsonbin_put(bin_id, wrapped)
