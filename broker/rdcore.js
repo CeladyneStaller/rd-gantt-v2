@@ -765,10 +765,11 @@
     return mode === 'binary' ? (c >= 100 ? w : 0) : w * c / 100;
   }
   // 0..100, or null when the KR has no steps (so it drops out of the objective mean,
-  // exactly like a KPI KR with nothing measured).
-  function milestoneKrScore(kr) {
+  // exactly like a KPI KR with nothing measured). A step bound to an order (November 10) follows the order when the
+  // page has the Orders document (milestoneLiveSteps); without it, the completion last saved counts.
+  function milestoneKrScore(kr, execDocs) {
     if (!kr) return null;
-    var steps = kr.steps || [];
+    var steps = milestoneLiveSteps(kr, execDocs);
     if (!steps.length) return null;
     var eff = milestoneEffectiveWeights(steps);
     var wOf = {};
@@ -1085,7 +1086,7 @@
       return clamp(Number(kr.progress), 0, 100);
     }
     if (tt === 'subkr') return subKrScore(kr.subKrs || []);
-    if (tt === 'milestone') return milestoneKrScore(kr);
+    if (tt === 'milestone') return milestoneKrScore(kr, execDocs);
     return meanScorable(kpisFor('keyResult', krId, execDocs), execDocs, raw);
   }
   function keyResultSample(krId, execDocs) {
@@ -2909,7 +2910,12 @@
     treeOutcome: ['tree', 'state'],
     // customer orders (November 9): see "orders as a source" below
     booked: ['order', 'number'], agreedIn: ['order', 'state'], paidInTerms: ['order', 'state'],
-    shipOnTime: ['shipment', 'state'], unitsShipped: ['shipment', 'number'], cash: ['payment', 'number']
+    shipOnTime: ['shipment', 'state'], unitsShipped: ['shipment', 'number'], cash: ['payment', 'number'],
+    // more readings over orders (November 10, row 4 of the canvas): money, delivery and delays, requirements, volume
+    valueShipped: ['shipment', 'number'], invoiced: ['order', 'number'], backlog: ['order', 'number'], owed: ['order', 'number'],
+    overdue: ['order', 'number'], daysToPaid: ['order', 'number'], completeOnTime: ['order', 'state'], wdLate: ['order', 'number'],
+    forecastSlip: ['order', 'number'], leadTime: ['order', 'number'], daysToAgree: ['order', 'number'],
+    reqReading: ['order', 'number'], reqMet: ['order', 'state'], received: ['order', 'event']
   };
   var PULL_STATES = {                              // each status reading's states, and the default pick
     status: [['on-track', 'at-risk', 'off-track'], ['on-track']],
@@ -2922,11 +2928,13 @@
     treeOutcome: [['success', 'pause', 'stop', 'open'], ['success']],
     agreedIn: [['within', 'late'], ['within']],
     paidInTerms: [['interms', 'late'], ['interms']],
-    shipOnTime: [['ontime', 'late'], ['ontime']]
+    shipOnTime: [['ontime', 'late'], ['ontime']],
+    completeOnTime: [['ontime', 'late'], ['ontime']],
+    reqMet: [['met', 'missed'], ['met']]
   };
   var PULL_STATS = {
-    number: ['average', 'median', 'min', 'max', 'sum', 'stddev', 'cv', 'range', 'countAbove', 'countBelow', 'shareAbove', 'shareBelow'],
-    state: ['share', 'count'],
+    number: ['average', 'median', 'min', 'max', 'sum', 'stddev', 'cv', 'range', 'countAbove', 'countBelow', 'shareAbove', 'shareBelow', 'count'],
+    state: ['share', 'count', 'shareByValue'],
     event: ['count', 'perWeek']
   };
   var PULL_WINDOWS = { d7: 7, d30: 30, d90: 90 };
@@ -3143,7 +3151,7 @@
   // one item's reading: { counts, num | state, why (when it waits), det (what the screens show) }
   function pullEval(it, measure, src, c, win) {
     var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
-    if (it.ord) return pullOrderEval(it, measure, src);
+    if (it.ord) return pullOrderEval(it, measure, src, c);
     var rec = pullRecord(it, src);
     if (!rec) return no('missing');
     var em = pullEm(src, c), today = pullToday(src), todayIso = pullTodayIso(src);
@@ -3248,14 +3256,21 @@
   }
 
   // the statistic over the counted readings
-  function pullStatistic(kind, stat, xs, k, n, win) {
+  // w (state readings): { k, n } the weights of the items picked and of all counted; shareByValue is k over n
+  function pullStatistic(kind, stat, xs, k, n, win, w) {
     if (kind === 'event') return stat === 'perWeek' ? (win.weeks > 0 ? k / win.weeks : null) : k;
-    if (kind === 'state') return n ? (stat === 'count' ? k : 100 * k / n) : null;
+    if (kind === 'state') {
+      if (!n) return null;
+      if (stat === 'count') return k;
+      if (stat === 'shareByValue') return w && w.n > 0 ? 100 * w.k / w.n : null;
+      return 100 * k / n;
+    }
     if (!xs.length) return null;
     switch (stat) {
       case 'countAbove': case 'countBelow': return k;
       case 'shareAbove': case 'shareBelow': return 100 * k / xs.length;
       case 'sum': return statSum(xs);
+      case 'count': return xs.length;
     }
     return computeStat(stat, xs);
   }
@@ -3273,7 +3288,7 @@
   //                    past them and waiting before), paidInTerms (the invoice paid in full by its due date: interms |
   //                    late; unpaid, late once due and waiting before; dated by the due date)
   //   each 'shipment'  shipOnTime (on or before the agreed ship date, else the date asked: ontime | late),
-  //                    unitsShipped (units in it; summed)
+  //                    unitsShipped (units in it, catalog products and custom items; summed)
   //   each 'payment'   cash (its amount; summed)
   //   scope.orders     'taken' (the KPI's objective takes them) | 'delivered' (it delivers them) | 'all' (default)
   //   scope.product    a product id: orders with a line of it ('' any)
@@ -3306,11 +3321,13 @@
     (o.lines || []).forEach(function (l) { var q = ordNum(l && l.qty), p = ordNum(l && l.unitPrice); if (q != null && p != null) v += Math.round(q * p * 100) / 100; });
     return Math.round(v * 100) / 100;
   }
-  // units in a shipment: its lines of a product or model, or everything when the order has none
+  // units in a shipment: its lines of a catalog product or a custom item (kit/orders.js isUnitLine), or everything
+  // when the order has none
+  function ordUnitLine(l) { return !!(l && (l.productId || l.modelId || l.custom === true)); }
   function ordShipUnits(o, s) {
     var byId = {}, units = 0, all = 0, prod = false;
-    (o.lines || []).forEach(function (l) { if (l && l.id) { byId[l.id] = l; if (l.productId || l.modelId) prod = true; } });
-    (s.lines || []).forEach(function (x) { var q = ordNum(x && x.qty) || 0, l = byId[x && x.lineId]; all += q; if (l && (l.productId || l.modelId)) units += q; });
+    (o.lines || []).forEach(function (l) { if (l && l.id) { byId[l.id] = l; if (ordUnitLine(l)) prod = true; } });
+    (s.lines || []).forEach(function (x) { var q = ordNum(x && x.qty) || 0, l = byId[x && x.lineId]; all += q; if (ordUnitLine(l)) units += q; });
     return prod ? units : all;
   }
   // the day payments first covered the invoice
@@ -3322,6 +3339,8 @@
     return null;
   }
   function ordAgreeStep(o) { return (o.steps || []).filter(function (s) { return s && s.done === 'answer'; })[0] || null; }
+  // the agreement step skipped by hand, or on its own for catalog items with no requirements (kit/orders.js stepState)
+  function ordAgreeSkipped(o, st) { return !!(st.skipped && typeof st.skipped === 'object') || !!(st.skipCatalog && !(o.requirements || []).length && !o.agreement); }
   // the day the order was first agreed: an answer of agree or agree with deviations, once approved when its step
   // names an approver (then the day of the approval); answers a change reopened since are in pastAgreements
   function ordAgreedOn(o, st) {
@@ -3335,21 +3354,248 @@
     }
     return null;
   }
+  /* ---- more readings over orders (November 10): money, delivery and delays, requirements, volume ---- */
+  // the units shipped of each line, by line id (kit/orders.js shippedOf)
+  function ordShippedOf(o) {
+    var got = {};
+    (o.shipments || []).forEach(function (s) { ((s && s.lines) || []).forEach(function (x) { if (x && x.lineId) got[x.lineId] = (got[x.lineId] || 0) + (ordNum(x.qty) || 0); }); });
+    return got;
+  }
+  // the day the order shipped complete, every line in full: its latest shipment (kit/orders.js shipInfo all, last)
+  function ordCompleteOn(o) {
+    var got = ordShippedOf(o), ls = (o.lines || []).filter(function (l) { return l && (ordNum(l.qty) || 0) > 0; });
+    if (!ls.length || !ls.every(function (l) { return (got[l.id] || 0) >= l.qty - 1e-9; })) return null;
+    var last = null;
+    (o.shipments || []).forEach(function (s) { if (s && ordNum(s.on) != null && (last == null || s.on > last)) last = s.on; });
+    return last;
+  }
+  function ordLineTotal(q, p) { return q != null && p != null ? Math.round(q * p * 100) / 100 : 0; }
+  // a shipment's lines at the order's prices
+  function ordShipValue(o, s) {
+    var byId = {}, v = 0;
+    (o.lines || []).forEach(function (l) { if (l && l.id) byId[l.id] = l; });
+    ((s && s.lines) || []).forEach(function (x) { var l = byId[x && x.lineId]; if (l) v += ordLineTotal(ordNum(x.qty), ordNum(l.unitPrice)); });
+    return Math.round(v * 100) / 100;
+  }
+  // the order's value shipped so far, no line past its quantity
+  function ordShippedValue(o) {
+    var got = ordShippedOf(o), v = 0;
+    (o.lines || []).forEach(function (l) { var q = ordNum(l && l.qty); if (q != null) v += ordLineTotal(Math.min(q, got[l.id] || 0), ordNum(l.unitPrice)); });
+    return Math.round(v * 100) / 100;
+  }
+  function ordPaidSum(o) { return (o.payments || []).reduce(function (a, p) { return a + ((p && ordNum(p.amount)) || 0); }, 0); }
+  // what is still owed on the invoice (kit/orders.js balance); null with no invoice
+  function ordBalance(o) { return o.invoice && ordNum(o.invoice.amount) != null ? Math.round((o.invoice.amount - ordPaidSum(o)) * 100) / 100 : null; }
+  // n working days after (n < 0: before) a day (kit/orders.js addWd)
+  function ordAddWd(day, n) {
+    if (ordNum(day) == null) return null;
+    n = Math.round(Number(n) || 0);
+    var d = day, left = Math.abs(n), s = n < 0 ? -1 : 1;
+    while (left > 0) { d += s; if (ordIsWd(d)) left--; }
+    return d;
+  }
+  // is a step done (kit/orders.js stepState)
+  function ordStepDone(o, s) {
+    if (s.skipped && typeof s.skipped === 'object') return true;
+    if (s.done === 'answer' && ordAgreeSkipped(o, s)) return true;
+    switch (s.done) {
+      case 'added': return true;
+      case 'answer': return ordAnswered(o) && (!(s.approver && typeof s.approver === 'object' && s.approver.kind) || !!(o.agreement.approval && o.agreement.approval.state === 'approved'));
+      case 'manual': return ordNum(s.doneOn) != null;
+      case 'shipped': return ordCompleteOn(o) != null;
+      case 'accepted': return !!(o.acceptance && ordNum(o.acceptance.on) != null);
+      case 'invoiced': return !!(o.invoice && ordNum(o.invoice.on) != null);
+      case 'paid': { var bal = ordBalance(o); return bal != null && bal <= 0.005 && (o.payments || []).length > 0; }
+    }
+    return false;
+  }
+  // a step dated from the ship date, before it (kit/orders.js ruleDue with the planned ship date)
+  function ordShipRuleDue(o, r) {
+    var base = ordCommittedShip(o), n = ordNum(r.n) || 0;
+    if (base == null) return null;
+    if (r.terms) return base + (ordNum(o.terms) || 0) + n;
+    return r.unit === 'd' ? base + n : ordAddWd(base, n);
+  }
+  // when the order is now expected to ship complete (kit/orders.js expectedShip): the date it is held to, pushed out
+  // by a technical step before shipping that is late or expected later (a gate moved in Stage-gates sets its
+  // expected date), and never earlier than today while it hasn't shipped
+  function ordExpectedShip(o, today) {
+    var done = ordCompleteOn(o);
+    if (done != null) return done;
+    var e = ordCommittedShip(o);
+    if (e == null) return null;
+    var list = o.steps || [], shipAt = -1, i;
+    for (i = 0; i < list.length; i++) if (list[i] && list[i].done === 'shipped') { shipAt = i; break; }
+    for (i = 0; i < list.length; i++) {
+      var st = list[i];
+      if (!st || ordStepDone(o, st) || (shipAt >= 0 && i > shipAt)) continue;
+      var exp = ordNum(st.expectedOn);
+      if (st.done === 'shipped') { if (exp != null && exp > e) e = exp; continue; }
+      var r = st.due && typeof st.due === 'object' ? st.due : { from: 'po', n: 0, unit: 'wd' }, nn = ordNum(r.n) || 0;
+      if (r.from !== 'ship' || !(nn < 0)) continue;
+      var t = exp != null ? exp : ordShipRuleDue(o, r);
+      if (t == null) continue;
+      var ship = ordAddWd(today != null && today > t ? today : t, -nn);
+      if (ship > e) e = ship;
+    }
+    if (today != null && today > e) e = today;
+    return e;
+  }
+  // not waiting on technical agreement: agreed (its approval included), skipped, or no agreement step
+  function ordCommitted(o) {
+    var st = ordAgreeStep(o);
+    if (!st || ordAgreeSkipped(o, st)) return true;
+    return ordAgreedOn(o, st) != null;
+  }
+  // the order's requirement with the name picked (any case), and the targets it became on the gate carrying them
+  function ordReqOf(o, req) {
+    var nm = String((req && req.name) || '').trim().toLowerCase(), rs = o.requirements || [];
+    if (!nm) return null;
+    for (var i = 0; i < rs.length; i++) if (rs[i] && String(rs[i].name || '').trim().toLowerCase() === nm) return rs[i];
+    return null;
+  }
+  function ordReqKpis(o, em) {
+    var out = [], ks = em ? allKpis(em) : [];
+    for (var i = 0; i < ks.length; i++) if (ks[i] && ks[i].orderId === o.id && ks[i].orderReqId) out.push(ks[i]);
+    return out;
+  }
+  // the KPIs read: the one for the requirement (and size) picked, or every one for { all: true }
+  function ordReqTargets(o, em, req) {
+    var ks = ordReqKpis(o, em);
+    if (req && req.all) return ks;
+    var q = ordReqOf(o, req), part = (req && req.part) || '';
+    return q ? ks.filter(function (k) { return k.orderReqId === q.id && (k.orderPart || '') === part; }) : [];
+  }
+  // dated by the gate carrying the targets: when it passed, else its planned date
+  function ordReqDay(o, em, req) {
+    var ks = em ? ordReqTargets(o, em, req) : [];
+    if (!ks.length) return null;
+    var gid = ks[0].hostId;
+    for (var d in em) {
+      if (!em.hasOwnProperty(d)) continue;
+      var gs = (em[d] && em[d].stageGates) || [];
+      for (var i = 0; i < gs.length; i++) if (gs[i] && gs[i].id === gid) return ordNum(gs[i].actualDate) != null ? gs[i].actualDate : ordNum(gs[i].plannedDate);
+    }
+    return null;
+  }
+  var PULL_ORDER_SNAPSHOT = { backlog: 1, owed: 1, overdue: 1, forecastSlip: 1 };   // read as of today
+  // the date that puts an order in the period, for each measure over orders
+  function pullOrderDay(o, measure, em, req) {
+    switch (measure) {
+      case 'paidInTerms': return o.invoice ? ordNum(o.invoice.dueOn) : null;
+      case 'invoiced': return o.invoice ? ordNum(o.invoice.on) : null;
+      case 'daysToPaid': return ordPaidOn(o);
+      case 'completeOnTime': case 'wdLate': return ordCommittedShip(o);
+      case 'leadTime': return ordCompleteOn(o);
+      case 'reqReading': case 'reqMet': return ordReqDay(o, em, req);
+    }
+    return ordNum(o.receivedOn);
+  }
+  function pullOrderQuarter(sc, src) {
+    var todayQ = pullQuarterOf(pullTodayIso(src));
+    return sc.quarter === 'current' ? todayQ : sc.quarter === 'next' ? pullNextQuarter(todayQ) : (sc.quarter || '');
+  }
+  // a dated count over orders runs over its period so far: the quarter up to today (all of a past one), or, any
+  // time, from the first order counted
+  function pullOrderWindow(pull, src, items) {
+    var today = pullToday(src), q = pullOrderQuarter(pull.scope || {}, src), from = null, to = today;
+    if (q) {
+      var qr = quarterRange(q);
+      if (qr) { from = pullDayOfIso(qr.start); to = Math.min(today, pullDayOfIso(qr.end)); }
+    } else items.forEach(function (x) { if (x.day != null && (from == null || x.day < from)) from = x.day; });
+    var days = from == null ? 0 : Math.max(0, to - from + 1);
+    return { key: 'period', from: from == null ? today : from - 1, to: to, days: days, weeks: days / 7 };
+  }
+  // what an item weighs in a share by value: its order's value, a shipment's lines, a payment's amount
+  function pullItemWeight(it) {
+    if (!it.ord) return 1;
+    if (it.ship) return ordShipValue(it.ord, it.ship);
+    if (it.pay) return ordNum(it.pay.amount) || 0;
+    return ordValue(it.ord);
+  }
+  // a milestone step bound to an order (November 10, "Use in a key result"): step.orderId, and step.orderAt, the step
+  // of the order that finishes it: a kind of step ('answer' agreed, 'shipped' shipped complete, 'accepted' delivered,
+  // 'invoiced', 'paid') or the id of one of the order's own steps (e.g. 'build', Built and tested). Its completion
+  // follows the order: 100 once that step is done, else 0; part way (credit by units), the share of units shipped
+  // (lines of a product or a custom item, when the order has any), or of the invoice paid. Short of done, never 100.
+  function ordMilestoneCompletion(o, at) {
+    if (!o || typeof o !== 'object') return null;
+    if (at === 'shipped') {
+      if (ordCompleteOn(o) != null) return 100;
+      var got = ordShippedOf(o), ls = (o.lines || []).filter(function (l) { return l && (ordNum(l.qty) || 0) > 0; }), q = 0, sh = 0;
+      var un = ls.filter(ordUnitLine);
+      (un.length ? un : ls).forEach(function (l) { q += l.qty; sh += Math.min(l.qty, got[l.id] || 0); });
+      return q > 0 ? Math.min(99, Math.round(10000 * sh / q) / 100) : 0;
+    }
+    if (at === 'paid') {
+      var bal = ordBalance(o);
+      if (bal == null) return 0;
+      if (bal <= 0.005 && (o.payments || []).length) return 100;
+      return o.invoice.amount > 0 ? Math.max(0, Math.min(99, Math.round(10000 * ordPaidSum(o) / o.invoice.amount) / 100)) : 0;
+    }
+    var kinds = { answer: 1, accepted: 1, invoiced: 1 }, steps = o.steps || [];
+    for (var i = 0; i < steps.length; i++) {
+      var st = steps[i];
+      if (st && (kinds[at] ? st.done === at : st.id === at)) return ordStepDone(o, st) ? 100 : 0;
+    }
+    return 0;
+  }
+  // the KR's steps as they stand: those bound to an order take its completion, and a cancelled or removed order's step
+  // leaves (blank weights share again). Weighed by value (kr.orderWeight 'value'), the order steps share what they
+  // would have had as blanks, in proportion to their orders' value (two decimals, the last takes what is left).
+  // Without the Orders document (a page that doesn't load it), the steps as saved: the page that does keeps them.
+  function milestoneLiveSteps(kr, execDocs) {
+    var steps = (kr && kr.steps) || [];
+    if (!steps.some(function (x) { return x && x.orderId; })) return steps;
+    var src = execDocs ? pullSourceFor(execDocs) : (PULL_SOURCE ? pullSourceFor(null) : null);
+    var all = src && src.orders && src.orders.orders && typeof src.orders.orders === 'object' ? src.orders.orders : null;
+    if (!all) return steps;
+    var out = [], bound = [];
+    steps.forEach(function (x) {
+      if (!x || !x.orderId) { if (x) out.push(x); return; }
+      var o = all.hasOwnProperty(x.orderId) ? all[x.orderId] : null;
+      if (!o || typeof o !== 'object' || o.cancelled) return;
+      var y = {};
+      for (var k in x) if (x.hasOwnProperty(k)) y[k] = x[k];
+      y.completion = ordMilestoneCompletion(o, x.orderAt || 'shipped');
+      out.push(y); bound.push([y, ordValue(o)]);
+    });
+    var V = bound.reduce(function (a, b) { return a + b[1]; }, 0);
+    if (kr.orderWeight === 'value' && bound.length && V > 0) {
+      var eff = milestoneEffectiveWeights(out.map(function (x) { return x.orderId ? { id: x.id, weight: null } : x; })), G = 0, acc = 0;
+      eff.forEach(function (e, i) { if (out[i].orderId) G += e.w; });
+      bound.forEach(function (b, i) {
+        var w = i < bound.length - 1 ? Math.round(G * b[1] / V * 100) / 100 : Math.round((G - acc) * 100) / 100;
+        acc += w; b[0].weight = w;
+      });
+    }
+    return out;
+  }
   // the orders, shipments or payments a KPI counts: { id, kind, name, day, ord, ship?, pay?, objId (the order),
   // objName (its label), quarter }
-  function pullOrderItems(kpi, src) {
+  //   scope.customer   a customer's name ('' any; any case)    scope.process   an order process id ('' any)
+  //   pull.req         the requirement read: { name, part } (part '' | 'L' | 'W' | 'T'), or { all: true } for
+  //                    every requirement on the order (reqMet only)
+  // Each measure is dated by one date (pullOrderDay); backlog, amounts owed and overdue, and forecast slip are
+  // read as of today, whatever the period.
+  function pullOrderItems(kpi, src, c) {
     var pull = kpi.pull || {}, sc = pull.scope || {}, each = pull.each, measure = pull.measure;
     var doc = src.orders && typeof src.orders === 'object' && src.orders.orders && typeof src.orders.orders === 'object' ? src.orders : null;
     if (!doc || !PULL_ORDER_EACH[each]) return [];
-    var todayQ = pullQuarterOf(pullTodayIso(src));
-    var want = sc.quarter === 'current' ? todayQ : sc.quarter === 'next' ? pullNextQuarter(todayQ) : (sc.quarter || '');
+    var want = pullOrderQuarter(sc, src);
     var who = sc.orders === 'taken' || sc.orders === 'delivered' ? sc.orders : 'all', prod = sc.product || '';
+    var cust = String(sc.customer || '').trim().toLowerCase(), proc = sc.process || '';
+    var snap = !!PULL_ORDER_SNAPSHOT[measure], today = pullToday(src);
+    var reqM = measure === 'reqReading' || measure === 'reqMet', req = pull.req && typeof pull.req === 'object' ? pull.req : null;
+    var em = reqM && c ? pullEm(src, c) : null;
     var list = Object.keys(doc.orders).map(function (k) { return doc.orders[k]; }).filter(function (o) { return o && typeof o === 'object' && !Array.isArray(o); })
       .sort(function (a, b) { return (ordNum(a.no) || 0) - (ordNum(b.no) || 0); });
     var out = [];
     function add(o, x) {
-      if (want && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
+      if (snap) x.day = today;
+      else if (want && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
       x.ord = o; x.n = pull.n; x.host = false; x.divId = '';
+      if (reqM) x.req = req;
       x.objId = o.id; x.objName = ordLabel(o);                  // grouped by order (its shipments, its payments)
       x.quarter = x.day != null ? pullQuarterOf(pullIsoOfDay(x.day)) : '';
       out.push(x);
@@ -3359,20 +3605,23 @@
       if (who === 'taken' && o.salesObjectiveId !== kpi.objectiveId) return;
       if (who === 'delivered' && o.deliveringObjectiveId !== kpi.objectiveId) return;
       if (prod && !(o.lines || []).some(function (l) { return l && l.productId === prod; })) return;
-      if (each === 'order') add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: measure === 'paidInTerms' ? (o.invoice ? ordNum(o.invoice.dueOn) : null) : ordNum(o.receivedOn) });
+      if (cust && String(o.customer || '').trim().toLowerCase() !== cust) return;
+      if (proc && o.processId !== proc) return;
+      if (reqM && !(req && (req.all ? measure === 'reqMet' && (o.requirements || []).length > 0 : ordReqOf(o, req)))) return;   // an order without it isn't listed
+      if (each === 'order') add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: pullOrderDay(o, measure, em, req) });
       else if (each === 'shipment') (o.shipments || []).forEach(function (s) { if (s && s.id) add(o, { id: s.id, kind: 'shipment', name: ordLabel(o), day: ordNum(s.on), ship: s }); });
       else (o.payments || []).forEach(function (p) { if (p && p.id) add(o, { id: p.id, kind: 'payment', name: ordLabel(o), day: ordNum(p.on), pay: p }); });
     });
     return out;
   }
-  function pullOrderEval(it, measure, src) {
+  function pullOrderEval(it, measure, src, c) {
     var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
     var o = it.ord, today = pullToday(src);
     switch (measure) {
       case 'booked': return { counts: true, num: ordValue(o), det: { on: ordNum(o.receivedOn) } };
       case 'agreedIn': {
         var n = ordNum(it.n) != null && it.n >= 0 ? it.n : 2, rec = ordNum(o.receivedOn), st = ordAgreeStep(o);
-        if (!st || (st.skipped && typeof st.skipped === 'object') || (st.skipCatalog && !(o.requirements || []).length && !o.agreement)) return no('noAgreement');
+        if (!st || ordAgreeSkipped(o, st)) return no('noAgreement');
         if (rec == null) return no('noDate');
         var on = ordAgreedOn(o, st);
         if (on != null) { var wd = ordWdBetween(rec, on); return { counts: true, state: wd != null && wd <= n ? 'within' : 'late', det: { wd: wd, on: on, n: n } }; }
@@ -3396,6 +3645,80 @@
       }
       case 'unitsShipped': return { counts: true, num: ordShipUnits(o, it.ship), det: { on: ordNum(it.ship.on) } };
       case 'cash': return { counts: true, num: ordNum(it.pay.amount) || 0, det: { on: ordNum(it.pay.on) } };
+      case 'valueShipped': return { counts: true, num: ordShipValue(o, it.ship), det: { on: ordNum(it.ship.on) } };
+      case 'invoiced': {
+        if (!o.invoice || ordNum(o.invoice.amount) == null) return no('notInvoiced');
+        return { counts: true, num: o.invoice.amount, det: { on: ordNum(o.invoice.on), due: ordNum(o.invoice.dueOn) } };
+      }
+      case 'owed': case 'overdue': {
+        var bal = ordBalance(o), dueOn = o.invoice ? ordNum(o.invoice.dueOn) : null;
+        if (bal == null) return no('notInvoiced');
+        if (bal <= 0.005) return no('paid', { due: dueOn });
+        if (measure === 'overdue' && !(dueOn != null && today > dueOn)) return no('notDue', { planned: dueOn });
+        return { counts: true, num: bal, det: { due: dueOn, over: dueOn != null && today > dueOn ? today - dueOn : 0 } };
+      }
+      case 'daysToPaid': {
+        if (!o.invoice || ordNum(o.invoice.amount) == null) return no('notInvoiced');
+        var invOn = ordNum(o.invoice.on), paidOn = ordPaidOn(o);
+        if (paidOn == null) return no('notPaid', { due: ordNum(o.invoice.dueOn) });
+        if (invOn == null) return no('noDate');
+        return { counts: true, num: paidOn - invOn, det: { on: invOn, paid: paidOn } };
+      }
+      case 'backlog': {
+        if (ordCompleteOn(o) != null) return no('shippedAll');
+        if (!ordCommitted(o)) return no('notAgreed');
+        return { counts: true, num: Math.round((ordValue(o) - ordShippedValue(o)) * 100) / 100, det: { ref: ordCommittedShip(o) } };
+      }
+      case 'completeOnTime': case 'wdLate': {
+        var held = ordCommittedShip(o), comp = ordCompleteOn(o);
+        if (held == null) return no('noShipDate');
+        if (comp == null && !(today > held)) return no('notDue', { planned: held });
+        var lateBy = Math.max(0, ordWdBetween(held, comp != null ? comp : today)), cdet = { ref: held, on: comp, late: lateBy, open: comp == null };
+        if (measure === 'wdLate') return { counts: true, num: lateBy, det: cdet };
+        return { counts: true, state: comp != null && comp <= held ? 'ontime' : 'late', det: cdet };
+      }
+      case 'forecastSlip': {
+        var heldTo = ordCommittedShip(o);
+        if (ordCompleteOn(o) != null) return no('shippedAll');
+        if (heldTo == null) return no('noShipDate');
+        var expOn = ordExpectedShip(o, today);
+        return { counts: true, num: Math.max(0, ordWdBetween(heldTo, expOn)), det: { ref: heldTo, exp: expOn } };
+      }
+      case 'leadTime': {
+        var fin = ordCompleteOn(o), recd = ordNum(o.receivedOn);
+        if (fin == null) return no('notShipped');
+        if (recd == null) return no('noDate');
+        return { counts: true, num: ordWdBetween(recd, fin), det: { on: recd, done: fin } };
+      }
+      case 'daysToAgree': {
+        var ast = ordAgreeStep(o), r0 = ordNum(o.receivedOn);
+        if (!ast || ordAgreeSkipped(o, ast)) return no('noAgreement');
+        if (r0 == null) return no('noDate');
+        var agOn = ordAgreedOn(o, ast);
+        if (agOn == null) return no('notAnswered', { wd: ordWdBetween(r0, today), pend: ordAnswered(o) ? 'approval' : '' });
+        return { counts: true, num: ordWdBetween(r0, agOn), det: { on: agOn } };
+      }
+      case 'reqReading': case 'reqMet': {
+        var em = c ? pullEm(src, c) : null;
+        var ks = em ? ordReqTargets(o, em, it.req) : [];
+        if (!ks.length) return no('notTracked');
+        var kAll = allKpis(em), vals = [], scores = [];
+        for (var ri = 0; ri < ks.length; ri++) {
+          var v = effValue(ks[ri], kAll, em);
+          if (v == null) return no('notTested', { n: ks.length });
+          var smp = kpiSample(ks[ri], kAll, em);                    // waits until every sample is read
+          if (smp && smp.partial) return no('partial', { n: smp.n, of: smp.expected });
+          vals.push(v); scores.push(kpiScoreResolved(ks[ri], kAll, em));
+        }
+        var met = scores.every(function (x) { return x != null && x >= 100 - 1e-9; }), nMet = scores.filter(function (x) { return x != null && x >= 100 - 1e-9; }).length;
+        var rdet = { n: ks.length, met: nMet, unit: ks[0].unit || '', target: ks[0].target, dir: ks[0].direction || null };
+        if (measure === 'reqReading') {
+          if (ks.length !== 1 || ks[0].targetType === 'binary') return no('notNumber', rdet);
+          return { counts: true, num: Number(vals[0]), det: rdet };
+        }
+        return { counts: true, state: met ? 'met' : 'missed', det: rdet };
+      }
+      case 'received': return { counts: true, det: { on: ordNum(o.receivedOn) } };
     }
     return no('missing');
   }
@@ -3412,13 +3735,17 @@
     var above = /Above$/.test(stat), thrStat = /^(count|share)(Above|Below)$/.test(stat);
     var only = (pull.follow === false && Array.isArray(pull.items)) ? pull.items : null;
     var ex = Array.isArray(pull.exclude) ? pull.exclude : [];
-    var items = PULL_ORDER_EACH[pull.each] ? pullOrderItems(kpi, src) : pullItems(kpi, src, pullObjectives(kpi, src));
-    var xs = [], n = 0, k = 0;
+    var ordKind = !!PULL_ORDER_EACH[pull.each];
+    var items = ordKind ? pullOrderItems(kpi, src, c) : pullItems(kpi, src, pullObjectives(kpi, src));
+    if (ordKind && kind === 'event') win = pullOrderWindow(pull, src, items);
+    // picked by hand: an item, or (over orders) its order, so the shipments of an order picked count
+    var picked = function (x) { return only.indexOf(x.id) >= 0 || (!!x.ord && only.indexOf(x.ord.id) >= 0); };
+    var xs = [], n = 0, k = 0, wk = 0, wn = 0;
     for (var i = 0; i < items.length; i++) {
       var it = items[i], ev;
       if (it.host) ev = { counts: false, why: 'host', det: {} };
-      else if (only && only.indexOf(it.id) < 0) ev = { counts: false, why: 'notPicked', det: {} };
-      else if (!only && ex.indexOf(it.id) >= 0) { ev = pullEval(it, pull.measure, src, c, win); ev = { counts: false, why: 'hand', det: ev.det || {} }; it.hand = true; }
+      else if (only && !picked(it)) ev = { counts: false, why: 'notPicked', det: {} };
+      else if (!only && (ex.indexOf(it.id) >= 0 || (!!it.ord && ex.indexOf(it.ord.id) >= 0))) { ev = pullEval(it, pull.measure, src, c, win); ev = { counts: false, why: 'hand', det: ev.det || {} }; it.hand = true; }
       else ev = pullEval(it, pull.measure, src, c, win);
       it.counts = !!ev.counts; it.why = ev.counts ? null : ev.why; it.det = ev.det || {};
       it.hand = !!it.hand; it.hit = false;
@@ -3429,11 +3756,12 @@
           if (thrStat && (above ? ev.num > thr : ev.num < thr)) { it.hit = true; k++; }
         } else if (kind === 'state') {
           it.state = ev.state;
-          if (picks.indexOf(ev.state) >= 0) { it.hit = true; k++; }
+          var wv = pullItemWeight(it); it.weight = wv; wn += wv;
+          if (picks.indexOf(ev.state) >= 0) { it.hit = true; k++; wk += wv; }
         } else k++;
       }
     }
-    return { value: pullStatistic(kind, stat, xs, k, n, win), n: n, k: k, kind: kind, measure: pull.measure, stat: stat, thr: thrStat ? thr : null, states: picks, win: win, items: items };
+    return { value: pullStatistic(kind, stat, xs, k, n, win, { k: wk, n: wn }), n: n, k: k, wk: wk, wn: wn, kind: kind, measure: pull.measure, stat: stat, thr: thrStat ? thr : null, states: picks, win: win, items: items };
   }
   function pulledResult(kpi, src, opts) {
     if (!kpi || !kpi.pull || typeof kpi.pull !== 'object') return null;
@@ -3508,6 +3836,7 @@
     milestoneEffectiveWeights: milestoneEffectiveWeights,
     milestoneStepContribution: milestoneStepContribution,
     milestoneKrScore: milestoneKrScore,
+    milestoneLiveSteps: milestoneLiveSteps, ordMilestoneCompletion: ordMilestoneCompletion,
     tileHealth: tileHealth,
     boardSummary: boardSummary, tileInBacklog: tileInBacklog, backlogByLane: backlogByLane,
     normDoneWindow: normDoneWindow, doneTileAge: doneTileAge, doneSplit: doneSplit, doneByRecency: doneByRecency,
