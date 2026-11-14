@@ -2920,7 +2920,9 @@
     valueShipped: ['shipment', 'number'], invoiced: ['order', 'number'], backlog: ['order', 'number'], owed: ['order', 'number'],
     overdue: ['order', 'number'], daysToPaid: ['order', 'number'], completeOnTime: ['order', 'state'], wdLate: ['order', 'number'],
     forecastSlip: ['order', 'number'], leadTime: ['order', 'number'], daysToAgree: ['order', 'number'],
-    reqReading: ['order', 'number'], reqMet: ['order', 'state'], received: ['order', 'event']
+    reqReading: ['order', 'number'], reqMet: ['order', 'state'], received: ['order', 'event'],
+    // the product-type spec (November 14): a line's spec value, or one worked out from it
+    spec: ['order', 'number'], specCalc: ['order', 'number']
   };
   var PULL_STATES = {                              // each status reading's states, and the default pick
     status: [['on-track', 'at-risk', 'off-track'], ['on-track']],
@@ -3298,8 +3300,21 @@
   //   scope.orders     'taken' (the KPI's objective takes them) | 'delivered' (it delivers them) | 'all' (default)
   //   scope.product    a product id: orders with a line of it ('' any)
   //   scope.quarter    as for work ('current' | 'next' | 'YYYYQn' | ''), against each item's date
+  //   scope.type       a product type (membrane | ccm | uccm | mea | stack | system): orders with a line of it ('' any)
+  //   scope.spec       { kind, key, axis?, v, def?, opts? }: orders with a line of that type whose spec value is v (a
+  //                    size's number on its axis, V for one; a choice's value, def when unset or not in opts; a flag's
+  //                    true or false), as kit/orders.js specFilters gives it
+  // The product-type spec (November 14): each order line has a type (line.kind, else its product's kind in Planning)
+  // and that type's spec (line.spec: sizes as { V } or { L, W, H, T, M } with tol, a choice as its value, a flag).
+  //   each 'order'     spec (pull.field { kind, key, axis }: each line of that type, its spec value), specCalc
+  //                    (pull.field { kind, calc }: each line of that type, a value worked out from its spec, as the
+  //                    order sheet works it out: m², areas, metal, rated current, hydrogen, water); dated by the PO,
+  //                    a line without the value waits ("noSpec"); no target from the orders
   // Cancelled orders never count.
   var PULL_ORDER_EACH = { order: 1, shipment: 1, payment: 1 };
+  var ORD_SPEC_MS = { spec: 1, specCalc: 1 };
+  var ORD_KINDS = { membrane: 1, ccm: 1, uccm: 1, mea: 1, stack: 1, system: 1 };
+  var ORD_F = 96485.33212, ORD_MH2 = 2.01588, ORD_MH2O = 18.01528;   // kit/orders.js FARADAY, M_H2, M_H2O
   var ORD_EPOCH_DOW = 3;                                       // day 0, 2020-01-01, was a Wednesday
   function ordNum(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   /* delivered: received and not rejected (November 13: a rejection leaves Delivered open), as kit/orders.js */
@@ -3750,12 +3765,20 @@
       out.push(x);
     }
     list.forEach(function (o) {
-      if (!pullOrderKeeps(kpi, o)) return;
+      if (!pullOrderKeeps(kpi, o, src)) return;
       if (reqM && !(req && (req.all ? measure === 'reqMet' && (o.requirements || []).length > 0 : ordReqOf(o, req)))) return;   // an order without it isn't listed
       if (each === 'order' && ORD_INV_MEASURES[measure] && ordHasPlan(o)) ordInvoices(o).forEach(function (iv) {   // each invoice of its schedule (Patch 3)
         add(o, { id: o.id + '/' + iv.id, kind: 'order', name: ordLabel(o) + ' · ' + (iv.number ? iv.number + ', ' : '') + iv.share + '% ' + iv.name.charAt(0).toLowerCase() + iv.name.slice(1),
           day: measure === 'paidInTerms' ? iv.dueOn : measure === 'invoiced' ? iv.on : measure === 'daysToPaid' ? iv.paidOn : ordNum(o.receivedOn), inv: iv });
       });
+      else if (each === 'order' && ORD_SPEC_MS[measure]) {           // each line of the type picked (November 14)
+        var fd = ordRec(pull.field) ? pull.field : {}, km = ordKindsOf(src), ls = o.lines || [], sf = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
+        ls.forEach(function (l, li) {
+          if (!l || !l.id || !fd.kind || ordLineKind(l, km) !== fd.kind) return;
+          if (sf && sf.kind === fd.kind && !ordSpecIs(l, sf)) return;   // a spec value of the type read keeps to its lines; of another, to its orders
+          add(o, { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1 });
+        });
+      }
       else if (each === 'order' && perShip) {
         var rq = ordReqOf(o, req), sent = 0;
         (o.shipments || []).forEach(function (s) {
@@ -3775,7 +3798,7 @@
   }
   // does a KPI over orders read this one: not cancelled, taken or delivered by its objective as set, with a line of
   // the product, of the customer and on the process picked
-  function pullOrderKeeps(kpi, o) {
+  function pullOrderKeeps(kpi, o, src) {
     var sc = (kpi.pull && kpi.pull.scope) || {};
     if (!o || typeof o !== 'object' || o.cancelled) return false;
     var who = sc.orders === 'taken' || sc.orders === 'delivered' ? sc.orders : 'all', prod = sc.product || '';
@@ -3785,7 +3808,92 @@
     if (prod && !(o.lines || []).some(function (l) { return l && l.productId === prod; })) return false;
     if (cust && String(o.customer || '').trim().toLowerCase() !== cust) return false;
     if (proc && o.processId !== proc) return false;
+    if (ordTypeScoped(sc)) { var km = src ? ordKindsOf(src) : null; if (!(o.lines || []).some(function (l) { return ordLineFits(l, sc, km); })) return false; }
     return true;
+  }
+  /* ---- the product-type spec (November 14) ---- */
+  function ordRec(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
+  // each product's type, from Planning (kept with what the page worked out)
+  function ordKindsOf(src) {
+    var c = pullCache(src);
+    if (!c.kinds) { c.kinds = {}; ((src.portfolio && src.portfolio.products) || []).forEach(function (p) { if (p && p.id && ORD_KINDS[p.kind]) c.kinds[p.id] = p.kind; }); }
+    return c.kinds;
+  }
+  // a line's type: the one it was added with, else its product's (kit/orders.js lineKind)
+  function ordLineKind(l, km) {
+    if (!l) return '';
+    if (typeof l.kind === 'string' && ORD_KINDS[l.kind]) return l.kind;
+    var k = l.productId && km ? km[l.productId] : '';
+    return k && ORD_KINDS[k] ? k : '';
+  }
+  // a size from a line's spec: its axis (V for a single value), or null
+  function ordSpecNum(l, key, axis) { var sp = l && ordRec(l.spec) ? l.spec : null, x = sp ? sp[key] : null; return ordRec(x) ? ordNum(x[axis || 'V']) : null; }
+  // is a field shown for a line's values (kit/orders.js specFields: a membrane's size for samples, its rolls for roll
+  // goods; diffusion layers and assembly on a MEA only)? A value kept from before a change of form doesn't count
+  var ORD_MEA_ONLY = { gdlA: 1, gdlAThick: 1, gdlAPor: 1, gdlACoat: 1, gdlC: 1, gdlCThick: 1, gdlCPtfe: 1, gdlCComp: 1, contactR: 1, assembly: 1, seal: 1 };
+  var ORD_ROLL_ONLY = { rollW: 1, rollL: 1, rolls: 1 };
+  function ordSpecShown(kind, sp, key) {
+    sp = ordRec(sp) ? sp : {};
+    if (kind === 'membrane') return key === 'size' ? sp.form !== 'roll' : ORD_ROLL_ONLY[key] ? sp.form === 'roll' : true;
+    if (kind === 'uccm' || kind === 'ccm') return !ORD_MEA_ONLY[key];
+    return true;
+  }
+  // is a line's spec value the one a filter names?
+  function ordSpecIs(l, f) {
+    var sp = l && ordRec(l.spec) ? l.spec : {}, x = sp[f.key];
+    if (!ordSpecShown(f.kind, sp, f.key)) return false;
+    if (typeof f.v === 'number') { var n = ordRec(x) ? ordNum(x[f.axis || 'V']) : null; return n != null && Math.abs(n - f.v) < 1e-9; }
+    if (typeof f.v === 'boolean') return (typeof x === 'boolean' ? x : !!f.def) === f.v;
+    var known = typeof x === 'string' && x && (!Array.isArray(f.opts) || f.opts.indexOf(x) >= 0);   // kit/orders.js choiceOf
+    return (known ? x : String(f.def || '')) === String(f.v);
+  }
+  function ordTypeScoped(sc) { return !!(sc && (sc.type || (ordRec(sc.spec) && sc.spec.key))); }
+  // does a line fit the scope's type and spec value?
+  function ordLineFits(l, sc, km) {
+    var kd = ordLineKind(l, km);
+    if (!kd) return false;
+    if (sc.type && kd !== sc.type) return false;
+    var f = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
+    return !f || (kd === f.kind && ordSpecIs(l, f));
+  }
+  // a value worked out from a line's spec, as kit/orders.js calcNum (and its specCalcs show): sizes in mm make areas in
+  // cm²; a loading in mg/cm² times the active area makes mg each; current is A/cm² times cm²; hydrogen is I·N/2F
+  function ordCalc(kind, l, key) {
+    var sp = l && ordRec(l.spec) ? l.spec : {}, q = ordNum(l && l.qty), r = null;
+    var v = function (k) { return ordSpecNum(l, k, 'V'); };
+    var lw = function (k) { var x = sp[k]; return ordRec(x) && ordNum(x.L) != null && ordNum(x.W) != null ? x : null; };
+    var area = function (k) { var x = lw(k); return x ? Number((x.L * x.W / 100).toPrecision(12)) : null; };   // as the kit's dimArea
+    var perQ = function (x, f) { return x != null && q > 0 ? x * q / f : null; };
+    if (kind === 'membrane') {
+      if (sp.form === 'roll') { if (key === 'm2') { var w = v('rollW'), len = v('rollL'), n = v('rolls'); r = w != null && len != null ? w / 1000 * len * (n || 1) : null; } }
+      else { var a = area('size'); r = key === 'areaEach' ? a : key === 'm2' ? perQ(a, 10000) : null; }
+    } else if (kind === 'ccm' || kind === 'uccm' || kind === 'mea') {
+      var am = area('membrane'), aa = area('active'), m = lw('membrane'), ac = lw('active');
+      if (key === 'memArea') r = am;
+      else if (key === 'actArea') r = aa;
+      else if (key === 'actShare') r = am && aa != null ? 100 * aa / am : null;
+      else if (key === 'border') r = m && ac ? ((m.L - ac.L) + (m.W - ac.W)) / 4 : null;
+      else if (key === 'memM2') r = perQ(am, 10000);
+      else if (key === 'anMg' || key === 'anG' || key === 'caMg' || key === 'caG') {
+        var ld = v(key.charAt(0) === 'a' ? 'anLoad' : 'caLoad'), each = ld != null && aa != null ? ld * aa : null;
+        r = key.slice(2) === 'Mg' ? each : perQ(each, 1000);
+      }
+    } else if (kind === 'stack') {
+      var cells = v('cells'), act = v('active'), j = v('j'), cv = v('cellV'), I = act != null && j != null ? act * j : null;
+      var h = I != null && cells != null ? I * cells / (2 * ORD_F) * ORD_MH2 * 86.4 : null;
+      if (key === 'current') r = I;
+      else if (key === 'h2') r = h;
+      else if (key === 'h2Order') r = perQ(h, 1);
+      else if (key === 'limitKw') r = I != null && cells != null && cv != null ? I * cells * cv / 1000 : null;
+      else if (key === 'powerOrder') r = perQ(v('power'), 1);
+    } else if (kind === 'system') {
+      var pw = v('power'), sec = v('sec'), hs = pw != null && sec ? pw * 24 / sec : null;
+      if (key === 'h2') r = hs;
+      else if (key === 'h2Order') r = perQ(hs, 1);
+      else if (key === 'water') r = hs != null ? hs * ORD_MH2O / ORD_MH2 / 1000 : null;
+      else if (key === 'powerOrder') r = perQ(pw, 1);
+    }
+    return r == null || !isFinite(r) ? null : Number(r.toPrecision(12));
   }
   function pullOrderEval(it, measure, src, c) {
     var no = function (why, det) { return { counts: false, why: why, det: det || {} }; };
@@ -3889,16 +3997,19 @@
         var em = c ? pullEm(src, c) : null;
         var ks = em ? ordReqTargets(o, em, it.req) : [];
         if (!ks.length) return no('notTracked');
-        var kAll = allKpis(em), vals = [], scores = [];
+        var kAll = allKpis(em), vals = [], scores = [], readN = 0, readOf = 0, part = false;
         for (var ri = 0; ri < ks.length; ri++) {
           var v = effValue(ks[ri], kAll, em);
           if (v == null) return no('notTested', { n: ks.length });
-          var smp = kpiSample(ks[ri], kAll, em);                    // waits until every sample is read
-          if (smp && smp.partial) return no('partial', { n: smp.n, of: smp.expected });
-          vals.push(v); scores.push(kpiScoreResolved(ks[ri], kAll, em));
+          /* partly read, it counts what has been read so far, met or not on those readings (November 14: "the current
+             values should update on any update to the order status from technical"); it no longer waits for every sample */
+          var sp = kpiScoreParts(ks[ri], kAll, em);
+          if (sp.expected > 0) { readN += Math.min(sp.n, sp.expected); readOf += sp.expected; if (sp.n < sp.expected) part = true; }
+          vals.push(v); scores.push(sp.raw);
         }
         var met = scores.every(function (x) { return x != null && x >= 100 - 1e-9; }), nMet = scores.filter(function (x) { return x != null && x >= 100 - 1e-9; }).length;
         var rdet = { n: ks.length, met: nMet, unit: ks[0].unit || '', target: ks[0].target, dir: ks[0].direction || null };
+        if (part) rdet.part = { n: readN, of: readOf };
         if (measure === 'reqReading') {
           if (ks.length !== 1 || ks[0].targetType === 'binary') return no('notNumber', rdet);
           if (it.units != null) {                                   // a total of an area or volume (November 14)
@@ -3913,6 +4024,12 @@
         return { counts: true, state: met ? 'met' : 'missed', det: rdet };
       }
       case 'received': return { counts: true, det: { on: ordNum(o.receivedOn) } };
+      case 'spec': case 'specCalc': {                               // a line's spec value, or one worked out from it (November 14)
+        var fl = it.field || {}, lsp = it.line && it.line.spec;
+        var lv = measure === 'spec' ? (ordSpecShown(fl.kind, lsp, fl.key) ? ordSpecNum(it.line, fl.key, fl.axis) : null) : ordCalc(fl.kind, it.line, fl.calc);
+        if (lv == null) return no('noSpec');
+        return { counts: true, num: lv, det: { on: ordNum(o.receivedOn), line: it.lineNo } };
+      }
     }
     return no('missing');
   }
@@ -4021,7 +4138,7 @@
     var sum = 0, n = 0;
     Object.keys(doc).forEach(function (id) {
       var o = doc[id];
-      if (!o || typeof o !== 'object' || Array.isArray(o) || !pullOrderKeeps(kpi, o)) return;
+      if (!o || typeof o !== 'object' || Array.isArray(o) || !pullOrderKeeps(kpi, o, src)) return;
       if (only ? only.indexOf(o.id) < 0 : ex.indexOf(o.id) >= 0) return;
       var d = ordDueIn(o, measure, start, end);
       if (d > 0.005) { sum += d; n++; }
@@ -4367,7 +4484,7 @@
     blankCause: blankCause,
     migrateProblem: migrateProblem,
     // pulled KPIs
-    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal,
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind,
     PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
     pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
