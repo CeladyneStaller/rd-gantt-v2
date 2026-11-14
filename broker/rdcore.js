@@ -3306,15 +3306,21 @@
   //                    true or false), as kit/orders.js specFilters gives it
   // The product-type spec (November 14): each order line has a type (line.kind, else its product's kind in Planning)
   // and that type's spec (line.spec: sizes as { V } or { L, W, H, T, M } with tol, a choice as its value, a flag).
-  //   each 'order'     spec (pull.field { kind, key, axis }: each line of that type, its spec value), specCalc
-  //                    (pull.field { kind, calc }: each line of that type, a value worked out from its spec, as the
-  //                    order sheet works it out: m², areas, metal, rated current, hydrogen, water); dated by the PO,
-  //                    a line without the value waits ("noSpec"); no target from the orders
+  //   each 'order'     spec (each line of a type picked, its spec value: { kind, key, axis }), specCalc (each line of
+  //                    a type picked, a value worked out from its spec, as the order sheet works it out: m², areas,
+  //                    metal, rated current, hydrogen, water: { kind, calc }); pull.fields, a value per type (several
+  //                    types read as one, as membrane m² on membrane and CCM orders; pull.field, one, before them);
+  //                    dated by the PO, a line without the value waits ("noSpec"); no target from the orders. A Total
+  //                    counts every unit: one unit's value × the units on its line (its rolls for roll goods, else its
+  //                    quantity; none, it waits, "noQty"); a value for the line in all (m² for the order, test cells)
+  //                    counts once, and every other statistic reads one value a line
   // Cancelled orders never count.
   var PULL_ORDER_EACH = { order: 1, shipment: 1, payment: 1 };
   var ORD_SPEC_MS = { spec: 1, specCalc: 1 };
   var ORD_KINDS = { membrane: 1, ccm: 1, uccm: 1, mea: 1, stack: 1, system: 1 };
   var ORD_F = 96485.33212, ORD_MH2 = 2.01588, ORD_MH2O = 18.01528;   // kit/orders.js FARADAY, M_H2, M_H2O
+  // values for the line in all, not one unit's (kit/orders.js specNumFields and calcFields, per 'line')
+  var ORD_LINE_SPEC = { rolls: 1, testCells: 1 }, ORD_LINE_CALC = { m2: 1, memM2: 1, anG: 1, caG: 1, powerOrder: 1, h2Order: 1 };
   var ORD_EPOCH_DOW = 3;                                       // day 0, 2020-01-01, was a Wednesday
   function ordNum(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   /* delivered: received and not rejected (November 13: a rejection leaves Delivered open), as kit/orders.js */
@@ -3771,12 +3777,14 @@
         add(o, { id: o.id + '/' + iv.id, kind: 'order', name: ordLabel(o) + ' · ' + (iv.number ? iv.number + ', ' : '') + iv.share + '% ' + iv.name.charAt(0).toLowerCase() + iv.name.slice(1),
           day: measure === 'paidInTerms' ? iv.dueOn : measure === 'invoiced' ? iv.on : measure === 'daysToPaid' ? iv.paidOn : ordNum(o.receivedOn), inv: iv });
       });
-      else if (each === 'order' && ORD_SPEC_MS[measure]) {           // each line of the type picked (November 14)
-        var fd = ordRec(pull.field) ? pull.field : {}, km = ordKindsOf(src), ls = o.lines || [], sf = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
+      else if (each === 'order' && ORD_SPEC_MS[measure]) {           // each line of the types picked (November 14)
+        var fds = ordSpecFields(pull) || {}, km = ordKindsOf(src), ls = o.lines || [], sf = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
+        var total = (PULL_STATS.number.indexOf(kpi.statistic) >= 0 ? kpi.statistic : PULL_STATS.number[0]) === 'sum';
         ls.forEach(function (l, li) {
-          if (!l || !l.id || !fd.kind || ordLineKind(l, km) !== fd.kind) return;
-          if (sf && sf.kind === fd.kind && !ordSpecIs(l, sf)) return;   // a spec value of the type read keeps to its lines; of another, to its orders
-          add(o, { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1 });
+          var lk = l && l.id ? ordLineKind(l, km) : '', fd = lk ? fds[lk] : null;
+          if (!fd) return;
+          if (sf && sf.kind === lk && !ordSpecIs(l, sf)) return;   // a spec value of a type read keeps to its lines; of another, to its orders
+          add(o, { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1, total: total });
         });
       }
       else if (each === 'order' && perShip) {
@@ -3855,6 +3863,22 @@
     if (sc.type && kd !== sc.type) return false;
     var f = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
     return !f || (kd === f.kind && ordSpecIs(l, f));
+  }
+  // the values a spec measure reads, a value per type: { kind: field } (pull.fields; pull.field before several types),
+  // the first of a type kept; null when none is whole
+  function ordSpecFields(pull) {
+    var fs = pull && Array.isArray(pull.fields) ? pull.fields : pull && ordRec(pull.field) ? [pull.field] : [], out = {}, n = 0;
+    fs.forEach(function (f) { if (ordRec(f) && ORD_KINDS[f.kind] && (typeof f.calc === 'string' ? f.calc : typeof f.key === 'string' && f.key) && !out[f.kind]) { out[f.kind] = f; n++; } });
+    return n ? out : null;
+  }
+  // one unit's value ('unit') or the line's in all ('line')
+  function ordSpecPer(f) { return f && f.calc ? (ORD_LINE_CALC[f.calc] ? 'line' : 'unit') : f && ORD_LINE_SPEC[f.key] ? 'line' : 'unit'; }
+  // the units on a line, for a total of one unit's value: roll goods, their rolls (as their m² is worked out, at least
+  // one); else its quantity, or null
+  function ordSpecUnits(kind, l) {
+    if (kind === 'membrane' && l && ordRec(l.spec) && l.spec.form === 'roll') { var n = ordSpecNum(l, 'rolls', 'V'); return n != null && n > 0 ? n : 1; }
+    var q = ordNum(l && l.qty);
+    return q != null && q > 0 ? q : null;
   }
   // a value worked out from a line's spec, as kit/orders.js calcNum (and its specCalcs show): sizes in mm make areas in
   // cm²; a loading in mg/cm² times the active area makes mg each; current is A/cm² times cm²; hydrogen is I·N/2F
@@ -4026,9 +4050,16 @@
       case 'received': return { counts: true, det: { on: ordNum(o.receivedOn) } };
       case 'spec': case 'specCalc': {                               // a line's spec value, or one worked out from it (November 14)
         var fl = it.field || {}, lsp = it.line && it.line.spec;
-        var lv = measure === 'spec' ? (ordSpecShown(fl.kind, lsp, fl.key) ? ordSpecNum(it.line, fl.key, fl.axis) : null) : ordCalc(fl.kind, it.line, fl.calc);
+        var lv = fl.calc ? ordCalc(fl.kind, it.line, fl.calc) : ordSpecShown(fl.kind, lsp, fl.key) ? ordSpecNum(it.line, fl.key, fl.axis) : null;
         if (lv == null) return no('noSpec');
-        return { counts: true, num: lv, det: { on: ordNum(o.receivedOn), line: it.lineNo } };
+        var sd = { on: ordNum(o.receivedOn), line: it.lineNo, kind: fl.kind };
+        if (it.total && ordSpecPer(fl) === 'unit') {                 // a Total counts every unit: one unit's value × the units on the line
+          var u = ordSpecUnits(fl.kind, it.line), roll = fl.kind === 'membrane' && ordRec(lsp) && lsp.form === 'roll';
+          if (u == null) return no('noQty');
+          sd.each = lv; sd.units = u; sd.uw = roll ? 'rolls' : String(it.line.unit || '');
+          return { counts: true, num: Number((lv * u).toPrecision(12)), det: sd };
+        }
+        return { counts: true, num: lv, det: sd };
       }
     }
     return no('missing');
@@ -4484,7 +4515,7 @@
     blankCause: blankCause,
     migrateProblem: migrateProblem,
     // pulled KPIs
-    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind,
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind, ordSpecFields: ordSpecFields, ordSpecPer: ordSpecPer, ordSpecUnits: ordSpecUnits,
     PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
     pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
