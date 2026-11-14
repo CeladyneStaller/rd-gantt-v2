@@ -3338,6 +3338,39 @@
     (s.lines || []).forEach(function (x) { var q = ordNum(x && x.qty) || 0, l = byId[x && x.lineId]; all += q; if (ordUnitLine(l)) units += q; });
     return prod ? units : all;
   }
+  // a total of an area or volume (November 14): the units a shipment carries on the requirement's lines (those it
+  // names, else every line; product lines, else every line, as its targets count readings), the lines' unit when
+  // they share one, and the area (or volume) of one unit: the average of the readings its target has now
+  function ordReqLineMap(o, q) {
+    var ids = q && Array.isArray(q.lineIds) ? q.lineIds : null, by = {}, prod = false;
+    (o.lines || []).forEach(function (l) { if (l && l.id && (!ids || ids.indexOf(l.id) >= 0)) { by[l.id] = l; if (ordUnitLine(l)) prod = true; } });
+    return { by: by, prod: prod };
+  }
+  function ordShipReqUnits(o, s, q) {
+    var lm = ordReqLineMap(o, q), units = 0, all = 0;
+    (s && s.lines || []).forEach(function (x) { var l = x && lm.by[x.lineId]; if (!l) return; var n = ordNum(x.qty) || 0; all += n; if (ordUnitLine(l)) units += n; });
+    return lm.prod ? units : all;
+  }
+  function ordReqUnitWord(o, q) {
+    var lm = ordReqLineMap(o, q), us = [];
+    for (var id in lm.by) if (lm.by.hasOwnProperty(id) && (!lm.prod || ordUnitLine(lm.by[id]))) { var u = String(lm.by[id].unit || ''); if (us.indexOf(u) < 0) us.push(u); }
+    return us.length === 1 ? us[0] : '';
+  }
+  // does a KPI total an area or volume: a requirement reading of a dimension's area or volume, its statistic Total?
+  function ordAreaTotal(kpi) {
+    var p = kpi && kpi.pull, r = p && p.req;
+    if (!p || p.measure !== 'reqReading' || p.each !== 'order' || !r || typeof r !== 'object' || r.all || (r.part !== 'A' && r.part !== 'V')) return false;
+    return (PULL_STATS.number.indexOf(kpi.statistic) >= 0 ? kpi.statistic : PULL_STATS.number[0]) === 'sum';
+  }
+  function ordUnitMean(k, kAll, em) {
+    var ups = currentBatchReadings(readingsFor(readingSourceId(k, kAll), em)), s = 0, n = 0;
+    for (var i = 0; i < ups.length; i++) {
+      var r = ups[i];
+      if (!r || r.value == null || r.value === '' || !isFinite(Number(r.value))) continue;
+      s += Number(r.value); n++;
+    }
+    return n ? s / n : null;
+  }
   // the day payments first covered the invoice
   function ordPaidOn(o) {
     var amt = o.invoice ? ordNum(o.invoice.amount) : null;
@@ -3703,6 +3736,7 @@
     var snap = !!PULL_ORDER_SNAPSHOT[measure], today = pullToday(src);
     var reqM = measure === 'reqReading' || measure === 'reqMet', req = pull.req && typeof pull.req === 'object' ? pull.req : null;
     var em = reqM && c ? pullEm(src, c) : null;
+    var perShip = ordAreaTotal(kpi);   // a total of an area or volume: each shipment, its units × one unit's (November 14)
     var list = Object.keys(doc.orders).map(function (k) { return doc.orders[k]; }).filter(function (o) { return o && typeof o === 'object' && !Array.isArray(o); })
       .sort(function (a, b) { return (ordNum(a.no) || 0) - (ordNum(b.no) || 0); });
     var out = [];
@@ -3722,6 +3756,17 @@
         add(o, { id: o.id + '/' + iv.id, kind: 'order', name: ordLabel(o) + ' · ' + (iv.number ? iv.number + ', ' : '') + iv.share + '% ' + iv.name.charAt(0).toLowerCase() + iv.name.slice(1),
           day: measure === 'paidInTerms' ? iv.dueOn : measure === 'invoiced' ? iv.on : measure === 'daysToPaid' ? iv.paidOn : ordNum(o.receivedOn), inv: iv });
       });
+      else if (each === 'order' && perShip) {
+        var rq = ordReqOf(o, req), sent = 0;
+        (o.shipments || []).forEach(function (s) {
+          if (!s || !s.id) return;
+          var u = ordShipReqUnits(o, s, rq);
+          if (!(u > 0)) return;
+          sent++;
+          add(o, { id: o.id + '/' + s.id, kind: 'order', name: ordLabel(o), day: ordNum(s.on), ship: s, units: u });
+        });
+        if (!sent) add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: null, units: 0 });   // nothing of it shipped yet: it waits
+      }
       else if (each === 'order') add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: pullOrderDay(o, measure, em, req) });
       else if (each === 'shipment') (o.shipments || []).forEach(function (s) { if (s && s.id) add(o, { id: s.id, kind: 'shipment', name: ordLabel(o), day: ordNum(s.on), ship: s }); });
       else (o.payments || []).forEach(function (p) { if (p && p.id) add(o, { id: p.id, kind: 'payment', name: ordLabel(o), day: ordNum(p.on), pay: p }); });
@@ -3856,6 +3901,13 @@
         var rdet = { n: ks.length, met: nMet, unit: ks[0].unit || '', target: ks[0].target, dir: ks[0].direction || null };
         if (measure === 'reqReading') {
           if (ks.length !== 1 || ks[0].targetType === 'binary') return no('notNumber', rdet);
+          if (it.units != null) {                                   // a total of an area or volume (November 14)
+            if (!(it.units > 0)) return no('noneShipped', rdet);
+            var one = ordUnitMean(ks[0], kAll, em);
+            if (one == null) return no('notTested', { n: ks.length });
+            rdet.each = one; rdet.units = it.units; rdet.on = it.day; rdet.uw = ordReqUnitWord(o, ordReqOf(o, it.req));
+            return { counts: true, num: Number((one * it.units).toPrecision(12)), det: rdet };
+          }
           return { counts: true, num: Number(vals[0]), det: rdet };
         }
         return { counts: true, state: met ? 'met' : 'missed', det: rdet };
@@ -3986,8 +4038,10 @@
         var ks = ordReqTargets(o, em, it.req);
         if (ks.length !== 1 || ks[0].targetType === 'binary') return null;
         var k0 = ks[0], tt = k0.target, d = k0.direction === 'down' ? 'down' : k0.direction === 'range' ? 'range' : 'up';
-        if (d === 'range') return tt && typeof tt === 'object' && ordNum(tt.lo) != null && ordNum(tt.hi) != null ? { t: { lo: tt.lo, hi: tt.hi }, dir: 'range' } : null;
-        return ordNum(tt) != null ? { t: tt, dir: d } : null;
+        if (it.units != null && !(it.units > 0)) return null;      // a total of an area: nothing shipped, nothing due from it
+        var x = function (v) { return it.units != null ? Number((v * it.units).toPrecision(12)) : v; };   // one unit's, for each unit shipped
+        if (d === 'range') return tt && typeof tt === 'object' && ordNum(tt.lo) != null && ordNum(tt.hi) != null ? { t: { lo: x(tt.lo), hi: x(tt.hi) }, dir: 'range' } : null;
+        return ordNum(tt) != null ? { t: x(tt), dir: d } : null;
       }
       case 'lead': { var r = ordNum(o.receivedOn), h = ordCommittedShip(o); return r == null || h == null ? null : { t: ordWdBetween(r, h) }; }
       case 'agree': {
@@ -4313,7 +4367,7 @@
     blankCause: blankCause,
     migrateProblem: migrateProblem,
     // pulled KPIs
-    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn,
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal,
     PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
     pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
