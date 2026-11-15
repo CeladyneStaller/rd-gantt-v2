@@ -2922,7 +2922,10 @@
     forecastSlip: ['order', 'number'], leadTime: ['order', 'number'], daysToAgree: ['order', 'number'],
     reqReading: ['order', 'number'], reqMet: ['order', 'state'], received: ['order', 'event'],
     // the product-type spec (November 14): a line's spec value, or one worked out from it
-    spec: ['order', 'number'], specCalc: ['order', 'number']
+    spec: ['order', 'number'], specCalc: ['order', 'number'],
+    // the two kinds (November 14, row 7): units on the POs; value, units and spec amounts made, shipped, delivered
+    unitsOrdered: ['order', 'number'], valueMade: ['order', 'number'], unitsMade: ['order', 'number'], valueDelivered: ['order', 'number'],
+    unitsDelivered: ['order', 'number'], specMade: ['order', 'number'], specShipped: ['order', 'number'], specDelivered: ['order', 'number']
   };
   var PULL_STATES = {                              // each status reading's states, and the default pick
     status: [['on-track', 'at-risk', 'off-track'], ['on-track']],
@@ -3314,9 +3317,24 @@
   //                    counts every unit: one unit's value × the units on its line (its rolls for roll goods, else its
   //                    quantity; none, it waits, "noQty"); a value for the line in all (m² for the order, test cells)
   //                    counts once, and every other statistic reads one value a line
+  // The two kinds (November 14, row 7): on the POs (what the POs ask for, when each arrives: booked, received,
+  // unitsOrdered, spec) or delivering them (how much of it has reached a stage, against what the orders due in the
+  // period call for):
+  //   each 'order'     unitsOrdered (the units on its PO, dated by the PO); valueMade, unitsMade, valueDelivered,
+  //                    unitsDelivered (each order: its value or units made or delivered in the period); specMade,
+  //                    specShipped, specDelivered (each line of the types picked, as spec: its amount made, shipped
+  //                    or delivered in the period). Made: technical's count in each update, kept with its date
+  //                    (line.made.log [{ on, count }]; before it, the count as of its update), never less than what
+  //                    has shipped; shipped: each shipment; delivered: the shipped units once the delivery is accepted;
+  //                    each at most the line's quantity. An order (or line) is listed when it is due in the period
+  //                    (held to a date by its end, any time: dated at all) or reached the stage in it; its target,
+  //                    left blank, is what it has due less what reached the stage before the period
   // Cancelled orders never count.
   var PULL_ORDER_EACH = { order: 1, shipment: 1, payment: 1 };
-  var ORD_SPEC_MS = { spec: 1, specCalc: 1 };
+  var ORD_SPEC_MS = { spec: 1, specCalc: 1, specMade: 1, specShipped: 1, specDelivered: 1 };
+  // delivering them: [amount, stage] (November 14, row 7)
+  var ORD_PROG = { valueMade: ['value', 'made'], unitsMade: ['units', 'made'], valueDelivered: ['value', 'delivered'], unitsDelivered: ['units', 'delivered'],
+    specMade: ['spec', 'made'], specShipped: ['spec', 'shipped'], specDelivered: ['spec', 'delivered'] };
   var ORD_KINDS = { membrane: 1, ccm: 1, uccm: 1, mea: 1, stack: 1, system: 1 };
   var ORD_F = 96485.33212, ORD_MH2 = 2.01588, ORD_MH2O = 18.01528;   // kit/orders.js FARADAY, M_H2, M_H2O
   // values for the line in all, not one unit's (kit/orders.js specNumFields and calcFields, per 'line')
@@ -3761,13 +3779,14 @@
     var list = Object.keys(doc.orders).map(function (k) { return doc.orders[k]; }).filter(function (o) { return o && typeof o === 'object' && !Array.isArray(o); })
       .sort(function (a, b) { return (ordNum(a.no) || 0) - (ordNum(b.no) || 0); });
     var out = [];
+    var qr = want ? quarterRange(want) : null, qStart = qr ? pullDayOfIso(qr.start) : null, qEnd = qr ? pullDayOfIso(qr.end) : null, prog = ORD_PROG[measure];
     function add(o, x) {
       if (snap) x.day = today;
-      else if (want && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
+      else if (want && !x.keep && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
       x.ord = o; x.n = pull.n; x.host = false; x.divId = '';
       if (reqM) x.req = req;
       x.objId = o.id; x.objName = ordLabel(o);                  // grouped by order (its shipments, its payments)
-      x.quarter = x.day != null ? pullQuarterOf(pullIsoOfDay(x.day)) : '';
+      x.quarter = x.keep && want ? want : x.day != null ? pullQuarterOf(pullIsoOfDay(x.day)) : '';
       out.push(x);
     }
     list.forEach(function (o) {
@@ -3777,6 +3796,22 @@
         add(o, { id: o.id + '/' + iv.id, kind: 'order', name: ordLabel(o) + ' · ' + (iv.number ? iv.number + ', ' : '') + iv.share + '% ' + iv.name.charAt(0).toLowerCase() + iv.name.slice(1),
           day: measure === 'paidInTerms' ? iv.dueOn : measure === 'invoiced' ? iv.on : measure === 'daysToPaid' ? iv.paidOn : ordNum(o.receivedOn), inv: iv });
       });
+      else if (each === 'order' && measure === 'unitsOrdered') {     // on the POs: the units on it (row 7)
+        var lsU = ordLinesIn(o, sc, src), prodU = lsU.some(ordUnitLine), nU = 0;
+        lsU.forEach(function (l) { if (!prodU || ordUnitLine(l)) nU += ordNum(l.qty) || 0; });
+        add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: ordNum(o.receivedOn), unitsIn: nU });
+      }
+      else if (each === 'order' && prog && prog[0] !== 'spec') {     // delivering them: the order's value or units at a stage (row 7)
+        var lsP = ordLinesIn(o, sc, src), prod = prog[0] === 'units' && lsP.some(ordUnitLine), pv = { done: 0, before: 0, due: 0, ordered: 0, last: null, held: null, dq: 0, bq: 0, qq: 0 };
+        lsP.forEach(function (l) {
+          if (prod && !ordUnitLine(l)) return;
+          var g = ordLineProg(o, l, prog[1], qStart, qEnd, today), w = prog[0] === 'value' ? ordNum(l.unitPrice) || 0 : 1;
+          pv.done += g.done * w; pv.before += g.before * w; pv.due += g.due * w; pv.ordered += g.qty * w; pv.dq += g.done; pv.bq += g.before; pv.qq += g.qty; pv.held = g.held;
+          if (g.last != null && (pv.last == null || g.last > pv.last)) pv.last = g.last;
+        });
+        ['done', 'before', 'due', 'ordered'].forEach(function (k) { pv[k] = prog[0] === 'value' ? ordR2(pv[k]) : Number(pv[k].toPrecision(12)); });
+        if (pv.due > 0.0005 || pv.done > 0.0005) add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: pv.last != null ? pv.last : pv.held, keep: true, prog: pv });
+      }
       else if (each === 'order' && ORD_SPEC_MS[measure]) {           // each line of the types picked (November 14)
         var fds = ordSpecFields(pull) || {}, km = ordKindsOf(src), ls = o.lines || [], sf = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
         var total = (PULL_STATS.number.indexOf(kpi.statistic) >= 0 ? kpi.statistic : PULL_STATS.number[0]) === 'sum';
@@ -3784,7 +3819,13 @@
           var lk = l && l.id ? ordLineKind(l, km) : '', fd = lk ? fds[lk] : null;
           if (!fd) return;
           if (sf && sf.kind === lk && !ordSpecIs(l, sf)) return;   // a spec value of a type read keeps to its lines; of another, to its orders
-          add(o, { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1, total: total });
+          var it = { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1, total: total };
+          if (prog) {                                              // delivering them: the line's amount at a stage (row 7)
+            var g = ordLineProg(o, l, prog[1], qStart, qEnd, today);
+            if (!(g.due > 0 || g.done > 0)) return;
+            it.keep = true; it.prog = g; it.day = g.last != null ? g.last : g.held;
+          }
+          add(o, it);
         });
       }
       else if (each === 'order' && perShip) {
@@ -3879,6 +3920,60 @@
     if (kind === 'membrane' && l && ordRec(l.spec) && l.spec.form === 'roll') { var n = ordSpecNum(l, 'rolls', 'V'); return n != null && n > 0 ? n : 1; }
     var q = ordNum(l && l.qty);
     return q != null && q > 0 ? q : null;
+  }
+  // ---- delivering the orders (November 14, row 7): a line's units at a stage by a day ----
+  // the lines a measure added on November 14 counts: with a type or spec value picked, only the lines with it
+  function ordLinesIn(o, sc, src) {
+    var ls = (o.lines || []).filter(function (l) { return l && l.id; });
+    if (!ordTypeScoped(sc)) return ls;
+    var km = ordKindsOf(src);
+    return ls.filter(function (l) { return ordLineFits(l, sc, km); });
+  }
+  // what technical made: each update's count with its date (line.made.log); a record from before the log counts as of
+  // the order's finished date, else the day it was recorded
+  function ordMadeLog(o, l) {
+    var m = l && ordRec(l.made) ? l.made : null, out = [];
+    if (!m) return out;
+    if (Array.isArray(m.log)) m.log.forEach(function (e) { if (ordRec(e) && ordNum(e.on) != null && ordNum(e.count) != null) out.push({ on: e.on, count: e.count }); });
+    if (!out.length && ordNum(m.count) != null) {
+      var on = o && ordRec(o.made) && ordNum(o.made.finishedOn) != null ? o.made.finishedOn : ordNum(m.at) != null ? Math.floor((m.at - PULL_EPOCH) / 86400000) : null;
+      if (on != null) out.push({ on: on, count: m.count });
+    }
+    return out.sort(function (a, b) { return a.on - b.on; });
+  }
+  function ordShippedBy(o, l, day) {
+    var n = 0;
+    (o.shipments || []).forEach(function (s) { if (s && ordNum(s.on) != null && s.on <= day) (s.lines || []).forEach(function (x) { if (x && x.lineId === l.id) n += ordNum(x.qty) || 0; }); });
+    return n;
+  }
+  // a line's units made, shipped or delivered by a day (null: none yet), at most its quantity: made, the latest count by
+  // then and never less than what has shipped; delivered, what had shipped when the delivery was received and accepted
+  function ordLineDone(o, l, stage, day) {
+    var q = ordNum(l && l.qty);
+    if (q == null || !(q > 0) || day == null) return 0;
+    var n = 0;
+    if (stage === 'made') { ordMadeLog(o, l).forEach(function (e) { if (e.on <= day) n = e.count; }); n = Math.max(n, ordShippedBy(o, l, day)); }
+    else if (stage === 'shipped') n = ordShippedBy(o, l, day);
+    else if (stage === 'delivered') n = ordDelivered(o) && o.acceptance.on <= day ? ordShippedBy(o, l, o.acceptance.on) : 0;
+    return Math.max(0, Math.min(q, n));
+  }
+  // the days a line moved at a stage, in order
+  function ordLineDays(o, l, stage) {
+    var ds = [];
+    if (stage === 'made') ordMadeLog(o, l).forEach(function (e) { ds.push(e.on); });
+    if (stage === 'made' || stage === 'shipped') (o.shipments || []).forEach(function (s) { if (s && ordNum(s.on) != null && (s.lines || []).some(function (x) { return x && x.lineId === l.id; })) ds.push(s.on); });
+    if (stage === 'delivered' && ordDelivered(o)) ds.push(o.acceptance.on);
+    return ds.sort(function (a, b) { return a - b; });
+  }
+  // a line's progress in a period (start, end: days; start null: from the first): units done in it, before it, and
+  // what it has due (its quantity less what was done before, when the order is held to a date by the period's end)
+  function ordLineProg(o, l, stage, start, end, today) {
+    var q = ordNum(l && l.qty) || 0, upto = end == null ? today : Math.min(end, today);
+    var before = start == null ? 0 : ordLineDone(o, l, stage, start - 1), now = ordLineDone(o, l, stage, upto);
+    var held = ordCommittedShip(o), due = held != null && (end == null || held <= end) ? Math.max(0, q - before) : 0;
+    var last = null;
+    ordLineDays(o, l, stage).forEach(function (d) { if ((start == null || d >= start) && d <= upto) last = d; });
+    return { qty: q, before: before, done: Math.max(0, now - before), now: now, due: due, last: last, held: held };
   }
   // a value worked out from a line's spec, as kit/orders.js calcNum (and its specCalcs show): sizes in mm make areas in
   // cm²; a loading in mg/cm² times the active area makes mg each; current is A/cm² times cm²; hydrogen is I·N/2F
@@ -4048,6 +4143,21 @@
         return { counts: true, state: met ? 'met' : 'missed', det: rdet };
       }
       case 'received': return { counts: true, det: { on: ordNum(o.receivedOn) } };
+      case 'unitsOrdered': return { counts: true, num: it.unitsIn, det: { on: ordNum(o.receivedOn) } };
+      case 'valueMade': case 'unitsMade': case 'valueDelivered': case 'unitsDelivered': {
+        var pv = it.prog;                                          // delivering them: worked out with the items (row 7)
+        return { counts: true, num: pv.done, det: { stage: ORD_PROG[measure][1], amt: ORD_PROG[measure][0], done: pv.done, before: pv.before, due: pv.due, ordered: pv.ordered, units: pv.dq, unitsBefore: pv.bq, unitsOrdered: pv.qq, last: pv.last, held: pv.held } };
+      }
+      case 'specMade': case 'specShipped': case 'specDelivered': {
+        var fp = it.field || {}, lp = it.line, gp = it.prog, vp = fp.calc ? ordCalc(fp.kind, lp, fp.calc) : ordSpecShown(fp.kind, lp && lp.spec, fp.key) ? ordSpecNum(lp, fp.key, fp.axis) : null;
+        if (vp == null) return no('noSpec');
+        var amtAll = vp;                                           // the line's amount: one unit's × its units, or the line's
+        if (ordSpecPer(fp) === 'unit') { var up = ordSpecUnits(fp.kind, lp); if (up == null) return no('noQty'); amtAll = vp * up; }
+        if (!(gp.qty > 0)) return no('noQty');
+        var share = function (u) { return Number((amtAll * u / gp.qty).toPrecision(12)); };
+        return { counts: true, num: share(gp.done), det: { stage: ORD_PROG[measure][1], amt: 'spec', kind: fp.kind, done: share(gp.done), before: share(gp.before), due: share(gp.due), ordered: Number(amtAll.toPrecision(12)),
+          units: gp.done, unitsBefore: gp.before, unitsNow: gp.now, unitsOrdered: gp.qty, uw: String(lp.unit || ''), last: gp.last, held: gp.held, line: it.lineNo } };
+      }
       case 'spec': case 'specCalc': {                               // a line's spec value, or one worked out from it (November 14)
         var fl = it.field || {}, lsp = it.line && it.line.spec;
         var lv = fl.calc ? ordCalc(fl.kind, it.line, fl.calc) : ordSpecShown(fl.kind, lsp, fl.key) ? ordSpecNum(it.line, fl.key, fl.axis) : null;
@@ -4086,8 +4196,10 @@
   //   -> { target: number | { lo, hi }, direction: 'up' | 'down' | 'range', how, n } | null
   //      how: 'req' | 'zero' | 'lead' | 'agree' | 'terms' | 'owedOk' | 'due' | 'all' | 'none'; n: the orders,
   //      invoices or items it came from
-  var ORD_TGT = { reqReading: 'req', wdLate: 'zero', forecastSlip: 'zero', overdue: 'zero', leadTime: 'lead', daysToAgree: 'agree', daysToPaid: 'terms', owed: 'owedOk', valueShipped: 'due', unitsShipped: 'due', invoiced: 'due', cash: 'due' };
-  var ORD_TGT_DIR = { wdLate: 'down', forecastSlip: 'down', overdue: 'down', leadTime: 'down', daysToAgree: 'down', daysToPaid: 'down', owed: 'down', valueShipped: 'up', unitsShipped: 'up', invoiced: 'up', cash: 'up' };
+  var ORD_TGT = { reqReading: 'req', wdLate: 'zero', forecastSlip: 'zero', overdue: 'zero', leadTime: 'lead', daysToAgree: 'agree', daysToPaid: 'terms', owed: 'owedOk', valueShipped: 'due', unitsShipped: 'due', invoiced: 'due', cash: 'due',
+    valueMade: 'prog', unitsMade: 'prog', valueDelivered: 'prog', unitsDelivered: 'prog', specMade: 'prog', specShipped: 'prog', specDelivered: 'prog' };
+  var ORD_TGT_DIR = { wdLate: 'down', forecastSlip: 'down', overdue: 'down', leadTime: 'down', daysToAgree: 'down', daysToPaid: 'down', owed: 'down', valueShipped: 'up', unitsShipped: 'up', invoiced: 'up', cash: 'up',
+    valueMade: 'up', unitsMade: 'up', valueDelivered: 'up', unitsDelivered: 'up', specMade: 'up', specShipped: 'up', specDelivered: 'up' };
   var ORD_GOOD = { agreedIn: 'within', paidInTerms: 'interms', shipOnTime: 'ontime', completeOnTime: 'ontime', reqMet: 'met' };
   function pullTargetBlank(kpi) { return !!(kpi && kpi.pull && typeof kpi.pull === 'object' && PULL_ORDER_EACH[kpi.pull.each] && (kpi.target == null || kpi.target === '')); }
   function ordRuleDue(r, anchors, o) {                         // kit/orders.js ruleDue
@@ -4223,7 +4335,16 @@
     }
     var mode = ORD_TGT[measure];
     if (res.kind !== 'number' || !mode || stat === 'count' || stat === 'stddev' || stat === 'cv' || stat === 'range') return null;
-    return mode === 'due' && stat !== 'sum' ? null : mode;
+    return (mode === 'due' || mode === 'prog') && stat !== 'sum' ? null : mode;
+  }
+  // delivering them (row 7): what the items listed have due, those left out by hand or not picked apart
+  function ordProgTarget(res) {
+    var sum = 0, n = 0;
+    (res.items || []).forEach(function (it) {
+      if (it.host || it.hand || it.why === 'notPicked' || !it.det || it.det.due == null) return;
+      if (it.det.due > 0) { sum += it.det.due; n++; }
+    });
+    return n ? { target: Number(sum.toPrecision(12)), direction: 'up', how: 'due', n: n } : null;
   }
   function pulledTargetCompute(kpi, src, c, opts) {
     var pull = kpi.pull, measure = pull.measure, ms = PULL_MEASURES[measure];
@@ -4236,6 +4357,7 @@
     if (!mode) return null;
     if (kind === 'state') return { target: mode === 'all' ? (stat === 'count' ? res.n : 100) : 0, direction: mode === 'all' ? 'up' : 'down', how: mode, n: res.n };
     if (mode === 'due') return ordDueTarget(kpi, src, measure);
+    if (mode === 'prog') return ordProgTarget(res);
     var em = mode === 'req' ? pullEm(src, c) : null, today = pullToday(src), ts = [], dirs = [];
     (res.items || []).forEach(function (it) {
       if (it.host || it.hand || it.why === 'notPicked') return;
@@ -4515,7 +4637,7 @@
     blankCause: blankCause,
     migrateProblem: migrateProblem,
     // pulled KPIs
-    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind, ordSpecFields: ordSpecFields, ordSpecPer: ordSpecPer, ordSpecUnits: ordSpecUnits,
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind, ordSpecFields: ordSpecFields, ordSpecPer: ordSpecPer, ordSpecUnits: ordSpecUnits, ordMadeLog: ordMadeLog, ordLineDone: ordLineDone, ordLineProg: ordLineProg,
     PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
     pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
