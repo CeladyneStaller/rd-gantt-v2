@@ -3784,7 +3784,7 @@
       if (snap) x.day = today;
       else if (want && !x.keep && (x.day == null || pullQuarterOf(pullIsoOfDay(x.day)) !== want)) return;
       x.ord = o; x.n = pull.n; x.host = false; x.divId = '';
-      if (reqM) x.req = req;
+      if (reqM) { x.req = req; x.unitK = { k: pull.k, unit: typeof pull.unit === 'string' ? pull.unit : '' }; }   // a requirement's reading in the KPI's unit (November 15)
       x.objId = o.id; x.objName = ordLabel(o);                  // grouped by order (its shipments, its payments)
       x.quarter = x.keep && want ? want : x.day != null ? pullQuarterOf(pullIsoOfDay(x.day)) : '';
       out.push(x);
@@ -3975,6 +3975,28 @@
     ordLineDays(o, l, stage).forEach(function (d) { if ((start == null || d >= start) && d <= upto) last = d; });
     return { qty: q, before: before, done: Math.max(0, now - before), now: now, due: due, last: last, held: held };
   }
+  // a line ordered in an area unit (November 15, as kit/orders.js areaQty): its quantity in m², else null. The units and
+  // the way people type them are the kit's (unitKey), for areas
+  var ORD_AREA_U = { 'mm²': 1e-6, 'cm²': 1e-4, 'm²': 1, 'in²': 0.00064516, 'ft²': 0.09290304 };
+  var ORD_AREA_ALIAS = { m2: 'm²', sqm: 'm²', 'sq m': 'm²', 'sq. m': 'm²', 'm^2': 'm²', 'square meter': 'm²', 'square meters': 'm²', 'square metre': 'm²', 'square metres': 'm²', 'sq meters': 'm²', 'sq metres': 'm²',
+    cm2: 'cm²', 'cm^2': 'cm²', 'sq cm': 'cm²', mm2: 'mm²', 'mm^2': 'mm²', in2: 'in²', 'sq in': 'in²', ft2: 'ft²', 'sq ft': 'ft²', sqft: 'ft²', 'sq. ft': 'ft²', 'square foot': 'ft²', 'square feet': 'ft²', 'sq feet': 'ft²' };
+  function ordAreaUnit(u) {
+    var t = String(u == null ? '' : u).trim();
+    if (!t) return '';
+    if (ORD_AREA_U.hasOwnProperty(t)) return t;
+    var lo = t.toLowerCase().replace(/\s+/g, ' '), a = ORD_AREA_ALIAS[lo] || ORD_AREA_ALIAS[lo.replace(/ /g, '')];
+    if (a) return a;
+    for (var k in ORD_AREA_U) if (ORD_AREA_U.hasOwnProperty(k) && k.toLowerCase() === lo) return k;
+    return '';
+  }
+  function ordAreaQty(l) {
+    var u = ordAreaUnit(l && l.unit), q = ordNum(l && l.qty);
+    return u && q != null && q > 0 ? Number((q * ORD_AREA_U[u]).toPrecision(12)) : null;
+  }
+  // a KPI's values in another unit (November 15): each type's value times its field's k, a requirement's reading times
+  // pull.k (what kit/orders.js unitFactor gave when the KPI was saved); 1 when none
+  function ordUnitK(x) { return x && typeof x.k === 'number' && isFinite(x.k) && x.k > 0 ? x.k : 1; }
+  function ordTimesK(x, k) { return k === 1 || x == null ? x : typeof x === 'number' ? Number((x * k).toPrecision(12)) : ordRec(x) && x.lo != null && x.hi != null ? { lo: Number((x.lo * k).toPrecision(12)), hi: Number((x.hi * k).toPrecision(12)) } : x; }
   // a value worked out from a line's spec, as kit/orders.js calcNum (and its specCalcs show): sizes in mm make areas in
   // cm²; a loading in mg/cm² times the active area makes mg each; current is A/cm² times cm²; hydrogen is I·N/2F
   function ordCalc(kind, l, key) {
@@ -3984,8 +4006,13 @@
     var area = function (k) { var x = lw(k); return x ? Number((x.L * x.W / 100).toPrecision(12)) : null; };   // as the kit's dimArea
     var perQ = function (x, f) { return x != null && q > 0 ? x * q / f : null; };
     if (kind === 'membrane') {
-      if (sp.form === 'roll') { if (key === 'm2') { var w = v('rollW'), len = v('rollL'), n = v('rolls'); r = w != null && len != null ? w / 1000 * len * (n || 1) : null; } }
-      else { var a = area('size'); r = key === 'areaEach' ? a : key === 'm2' ? perQ(a, 10000) : null; }
+      // the membrane for the order in m²: roll goods' rolls, samples' size × their number, else (November 15) a quantity
+      // ordered in an area unit; one sample's area, or one roll's, in cm²
+      var each = null, m2 = null;
+      if (sp.form === 'roll') { var w = v('rollW'), len = v('rollL'), n = v('rolls'); if (w != null && len != null) { each = w * len * 10; m2 = w / 1000 * len * (n || 1); } }
+      else { each = area('size'); m2 = perQ(each, 10000); }
+      if (m2 == null) m2 = ordAreaQty(l);
+      r = key === 'areaEach' ? each : key === 'm2' ? m2 : null;
     } else if (kind === 'ccm' || kind === 'uccm' || kind === 'mea') {
       var am = area('membrane'), aa = area('active'), m = lw('membrane'), ac = lw('active');
       if (key === 'memArea') r = am;
@@ -4127,7 +4154,7 @@
           vals.push(v); scores.push(sp.raw);
         }
         var met = scores.every(function (x) { return x != null && x >= 100 - 1e-9; }), nMet = scores.filter(function (x) { return x != null && x >= 100 - 1e-9; }).length;
-        var rdet = { n: ks.length, met: nMet, unit: ks[0].unit || '', target: ks[0].target, dir: ks[0].direction || null };
+        var rk = ordUnitK(it.unitK), rdet = { n: ks.length, met: nMet, unit: (rk !== 1 && it.unitK.unit) || ks[0].unit || '', target: ordTimesK(ks[0].target, rk), dir: ks[0].direction || null };
         if (part) rdet.part = { n: readN, of: readOf };
         if (measure === 'reqReading') {
           if (ks.length !== 1 || ks[0].targetType === 'binary') return no('notNumber', rdet);
@@ -4135,10 +4162,10 @@
             if (!(it.units > 0)) return no('noneShipped', rdet);
             var one = ordUnitMean(ks[0], kAll, em);
             if (one == null) return no('notTested', { n: ks.length });
-            rdet.each = one; rdet.units = it.units; rdet.on = it.day; rdet.uw = ordReqUnitWord(o, ordReqOf(o, it.req));
-            return { counts: true, num: Number((one * it.units).toPrecision(12)), det: rdet };
+            rdet.each = ordTimesK(one, rk); rdet.units = it.units; rdet.on = it.day; rdet.uw = ordReqUnitWord(o, ordReqOf(o, it.req));
+            return { counts: true, num: ordTimesK(Number((one * it.units).toPrecision(12)), rk), det: rdet };
           }
-          return { counts: true, num: Number(vals[0]), det: rdet };
+          return { counts: true, num: ordTimesK(Number(vals[0]), rk), det: rdet };
         }
         return { counts: true, state: met ? 'met' : 'missed', det: rdet };
       }
@@ -4151,6 +4178,7 @@
       case 'specMade': case 'specShipped': case 'specDelivered': {
         var fp = it.field || {}, lp = it.line, gp = it.prog, vp = fp.calc ? ordCalc(fp.kind, lp, fp.calc) : ordSpecShown(fp.kind, lp && lp.spec, fp.key) ? ordSpecNum(lp, fp.key, fp.axis) : null;
         if (vp == null) return no('noSpec');
+        vp = ordTimesK(vp, ordUnitK(fp));                          // in the KPI's unit (November 15)
         var amtAll = vp;                                           // the line's amount: one unit's × its units, or the line's
         if (ordSpecPer(fp) === 'unit') { var up = ordSpecUnits(fp.kind, lp); if (up == null) return no('noQty'); amtAll = vp * up; }
         if (!(gp.qty > 0)) return no('noQty');
@@ -4162,6 +4190,7 @@
         var fl = it.field || {}, lsp = it.line && it.line.spec;
         var lv = fl.calc ? ordCalc(fl.kind, it.line, fl.calc) : ordSpecShown(fl.kind, lsp, fl.key) ? ordSpecNum(it.line, fl.key, fl.axis) : null;
         if (lv == null) return no('noSpec');
+        lv = ordTimesK(lv, ordUnitK(fl));                          // in the KPI's unit (November 15)
         var sd = { on: ordNum(o.receivedOn), line: it.lineNo, kind: fl.kind };
         if (it.total && ordSpecPer(fl) === 'unit') {                 // a Total counts every unit: one unit's value × the units on the line
           var u = ordSpecUnits(fl.kind, it.line), roll = fl.kind === 'membrane' && ordRec(lsp) && lsp.form === 'roll';
@@ -4363,7 +4392,7 @@
       if (it.host || it.hand || it.why === 'notPicked') return;
       var t = ordItemTarget(it, mode, em, today);
       if (t == null) return;
-      ts.push(t.t);
+      ts.push(mode === 'req' ? ordTimesK(t.t, ordUnitK(pull)) : t.t);
       var d = mode === 'req' ? t.dir : ORD_TGT_DIR[measure];
       if (dirs.indexOf(d) < 0) dirs.push(d);
     });
@@ -4637,7 +4666,7 @@
     blankCause: blankCause,
     migrateProblem: migrateProblem,
     // pulled KPIs
-    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind, ordSpecFields: ordSpecFields, ordSpecPer: ordSpecPer, ordSpecUnits: ordSpecUnits, ordMadeLog: ordMadeLog, ordLineDone: ordLineDone, ordLineProg: ordLineProg,
+    setPullSource: setPullSource, pulledResult: pulledResult, pulledValue: pulledValue, pulledTarget: pulledTarget, pulledTargetRule: pulledTargetRule, ordStepDueOn: ordStepDueOn, ordAreaTotal: ordAreaTotal, ordAreaQty: ordAreaQty, ordAreaUnit: ordAreaUnit, ordCalc: ordCalc, ordSpecNum: ordSpecNum, ordSpecShown: ordSpecShown, ordLineKind: ordLineKind, ordSpecFields: ordSpecFields, ordSpecPer: ordSpecPer, ordSpecUnits: ordSpecUnits, ordMadeLog: ordMadeLog, ordLineDone: ordLineDone, ordLineProg: ordLineProg,
     PULL_MEASURES: PULL_MEASURES, PULL_STATES: PULL_STATES, PULL_STATS: PULL_STATS,
     pullDayOfIso: pullDayOfIso, pullIsoOfDay: pullIsoOfDay, pullTreeEnd: pullTreeEnd,
     // exposed for tests / shells
