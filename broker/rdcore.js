@@ -3318,17 +3318,18 @@
   //                    quantity; none, it waits, "noQty"); a value for the line in all (m² for the order, test cells)
   //                    counts once, and every other statistic reads one value a line
   // The two kinds (November 14, row 7): on the POs (what the POs ask for, when each arrives: booked, received,
-  // unitsOrdered, spec) or delivering them (how much of it has reached a stage, against what the orders due in the
-  // period call for):
+  // unitsOrdered, spec) or delivering them (how much of it has reached a stage, against what the POs received in the
+  // period ask for: the figure on the POs gives, November 18):
   //   each 'order'     unitsOrdered (the units on its PO, dated by the PO); valueMade, unitsMade, valueDelivered,
   //                    unitsDelivered (each order: its value or units made or delivered in the period); specMade,
   //                    specShipped, specDelivered (each line of the types picked, as spec: its amount made, shipped
   //                    or delivered in the period). Made: technical's count in each update, kept with its date
   //                    (line.made.log [{ on, count }]; before it, the count as of its update), never less than what
   //                    has shipped; shipped: each shipment; delivered: the shipped units once the delivery is accepted;
-  //                    each at most the line's quantity. An order (or line) is listed when it is due in the period
-  //                    (held to a date by its end, any time: dated at all) or reached the stage in it; its target,
-  //                    left blank, is what it has due less what reached the stage before the period
+  //                    each at most the line's quantity. An order (or line) is listed when its PO arrived in the
+  //                    period (any time: every PO, dated or not) or it reached the stage in it; its target, left
+  //                    blank, is what those POs ask for, as on the POs counts it (Corey, November 18: "These numbers
+  //                    should be the same")
   // Cancelled orders never count.
   var PULL_ORDER_EACH = { order: 1, shipment: 1, payment: 1 };
   var ORD_SPEC_MS = { spec: 1, specCalc: 1, specMade: 1, specShipped: 1, specDelivered: 1 };
@@ -3802,15 +3803,17 @@
         add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: ordNum(o.receivedOn), unitsIn: nU });
       }
       else if (each === 'order' && prog && prog[0] !== 'spec') {     // delivering them: the order's value or units at a stage (row 7)
-        var lsP = ordLinesIn(o, sc, src), prod = prog[0] === 'units' && lsP.some(ordUnitLine), pv = { done: 0, before: 0, due: 0, ordered: 0, last: null, held: null, dq: 0, bq: 0, qq: 0 };
+        var lsP = ordLinesIn(o, sc, src), prod = prog[0] === 'units' && lsP.some(ordUnitLine), pv = { done: 0, before: 0, due: 0, ordered: 0, last: null, on: ordNum(o.receivedOn), dq: 0, bq: 0, qq: 0 };
         lsP.forEach(function (l) {
           if (prod && !ordUnitLine(l)) return;
           var g = ordLineProg(o, l, prog[1], qStart, qEnd, today), w = prog[0] === 'value' ? ordNum(l.unitPrice) || 0 : 1;
-          pv.done += g.done * w; pv.before += g.before * w; pv.due += g.due * w; pv.ordered += g.qty * w; pv.dq += g.done; pv.bq += g.before; pv.qq += g.qty; pv.held = g.held;
+          /* what the PO asks for, line by line as on the POs prices it (to the cent) */
+          var val = function (u) { return prog[0] === 'value' ? ordLineTotal(u, w) : u * w; };
+          pv.done += g.done * w; pv.before += g.before * w; pv.due += val(g.due); pv.ordered += val(g.qty); pv.dq += g.done; pv.bq += g.before; pv.qq += g.qty;
           if (g.last != null && (pv.last == null || g.last > pv.last)) pv.last = g.last;
         });
         ['done', 'before', 'due', 'ordered'].forEach(function (k) { pv[k] = prog[0] === 'value' ? ordR2(pv[k]) : Number(pv[k].toPrecision(12)); });
-        if (pv.due > 0.0005 || pv.done > 0.0005) add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: pv.last != null ? pv.last : pv.held, keep: true, prog: pv });
+        if (pv.due > 0.0005 || pv.done > 0.0005) add(o, { id: o.id, kind: 'order', name: ordLabel(o), day: pv.last != null ? pv.last : pv.on, keep: true, prog: pv });
       }
       else if (each === 'order' && ORD_SPEC_MS[measure]) {           // each line of the types picked (November 14)
         var fds = ordSpecFields(pull) || {}, km = ordKindsOf(src), ls = o.lines || [], sf = ordRec(sc.spec) && sc.spec.key ? sc.spec : null;
@@ -3822,8 +3825,8 @@
           var it = { id: o.id + '/' + l.id, kind: 'order', name: ordLabel(o) + (ls.length > 1 ? ' · line ' + (li + 1) : ''), day: ordNum(o.receivedOn), line: l, field: fd, lineNo: li + 1, total: total };
           if (prog) {                                              // delivering them: the line's amount at a stage (row 7)
             var g = ordLineProg(o, l, prog[1], qStart, qEnd, today);
-            if (!(g.due > 0 || g.done > 0)) return;
-            it.keep = true; it.prog = g; it.day = g.last != null ? g.last : g.held;
+            if (!(g.inP || g.done > 0)) return;                    // its PO arrived in the period, or it moved in it
+            it.keep = true; it.prog = g; it.day = g.last != null ? g.last : g.on;
           }
           add(o, it);
         });
@@ -3965,15 +3968,23 @@
     if (stage === 'delivered' && ordDelivered(o)) ds.push(o.acceptance.on);
     return ds.sort(function (a, b) { return a - b; });
   }
+  // did the order's PO arrive in the period (start, end: days; both null: any time, every PO, dated or not), as on the
+  // POs dates it?
+  function ordPoIn(o, start, end) {
+    if (start == null && end == null) return true;
+    var on = ordNum(o && o.receivedOn);
+    return on != null && (start == null || on >= start) && (end == null || on <= end);
+  }
   // a line's progress in a period (start, end: days; start null: from the first): units done in it, before it, and
-  // what it has due (its quantity less what was done before, when the order is held to a date by the period's end)
+  // what its PO asks for when the PO arrived in the period: its quantity, the same on the POs counts (November 18;
+  // before, what it had due by the period's end less what was done before it)
   function ordLineProg(o, l, stage, start, end, today) {
     var q = ordNum(l && l.qty) || 0, upto = end == null ? today : Math.min(end, today);
     var before = start == null ? 0 : ordLineDone(o, l, stage, start - 1), now = ordLineDone(o, l, stage, upto);
-    var held = ordCommittedShip(o), due = held != null && (end == null || held <= end) ? Math.max(0, q - before) : 0;
+    var inP = ordPoIn(o, start, end), due = inP ? q : 0;
     var last = null;
     ordLineDays(o, l, stage).forEach(function (d) { if ((start == null || d >= start) && d <= upto) last = d; });
-    return { qty: q, before: before, done: Math.max(0, now - before), now: now, due: due, last: last, held: held };
+    return { qty: q, before: before, done: Math.max(0, now - before), now: now, due: due, last: last, on: ordNum(o && o.receivedOn), inP: inP };
   }
   // a line ordered in an area unit (November 15, as kit/orders.js areaQty): its quantity in m², else null. The units and
   // the way people type them are the kit's (unitKey), for areas
@@ -4173,7 +4184,7 @@
       case 'unitsOrdered': return { counts: true, num: it.unitsIn, det: { on: ordNum(o.receivedOn) } };
       case 'valueMade': case 'unitsMade': case 'valueDelivered': case 'unitsDelivered': {
         var pv = it.prog;                                          // delivering them: worked out with the items (row 7)
-        return { counts: true, num: pv.done, det: { stage: ORD_PROG[measure][1], amt: ORD_PROG[measure][0], done: pv.done, before: pv.before, due: pv.due, ordered: pv.ordered, units: pv.dq, unitsBefore: pv.bq, unitsOrdered: pv.qq, last: pv.last, held: pv.held } };
+        return { counts: true, num: pv.done, det: { stage: ORD_PROG[measure][1], amt: ORD_PROG[measure][0], done: pv.done, before: pv.before, due: pv.due, ordered: pv.ordered, units: pv.dq, unitsBefore: pv.bq, unitsOrdered: pv.qq, last: pv.last, on: pv.on } };
       }
       case 'specMade': case 'specShipped': case 'specDelivered': {
         var fp = it.field || {}, lp = it.line, gp = it.prog, vp = fp.calc ? ordCalc(fp.kind, lp, fp.calc) : ordSpecShown(fp.kind, lp && lp.spec, fp.key) ? ordSpecNum(lp, fp.key, fp.axis) : null;
@@ -4181,10 +4192,12 @@
         vp = ordTimesK(vp, ordUnitK(fp));                          // in the KPI's unit (November 15)
         var amtAll = vp;                                           // the line's amount: one unit's × its units, or the line's
         if (ordSpecPer(fp) === 'unit') { var up = ordSpecUnits(fp.kind, lp); if (up == null) return no('noQty'); amtAll = vp * up; }
-        if (!(gp.qty > 0)) return no('noQty');
+        /* what its PO asks for, the amount on the POs counts for the line (November 18) */
+        var asks = gp.inP ? (ordSpecPer(fp) === 'unit' ? Number(amtAll.toPrecision(12)) : amtAll) : 0;
+        if (!(gp.qty > 0)) return no('noQty', { due: asks });     // no quantity to count it made against; its PO still asks for it
         var share = function (u) { return Number((amtAll * u / gp.qty).toPrecision(12)); };
-        return { counts: true, num: share(gp.done), det: { stage: ORD_PROG[measure][1], amt: 'spec', kind: fp.kind, done: share(gp.done), before: share(gp.before), due: share(gp.due), ordered: Number(amtAll.toPrecision(12)),
-          units: gp.done, unitsBefore: gp.before, unitsNow: gp.now, unitsOrdered: gp.qty, uw: String(lp.unit || ''), last: gp.last, held: gp.held, line: it.lineNo } };
+        return { counts: true, num: share(gp.done), det: { stage: ORD_PROG[measure][1], amt: 'spec', kind: fp.kind, done: share(gp.done), before: share(gp.before), due: asks, ordered: Number(amtAll.toPrecision(12)),
+          units: gp.done, unitsBefore: gp.before, unitsNow: gp.now, unitsOrdered: gp.qty, uw: String(lp.unit || ''), last: gp.last, on: gp.on, line: it.lineNo } };
       }
       case 'spec': case 'specCalc': {                               // a line's spec value, or one worked out from it (November 14)
         var fl = it.field || {}, lsp = it.line && it.line.spec;
@@ -4211,11 +4224,12 @@
   //     days to agree, those to its agreement step's due date; days to get paid, the invoice's terms; amount owed,
   //     what is owed and not yet due; working days late, forecast slip and amount overdue, 0. Every order the KPI
   //     lists counts, read yet or not, save those left out by hand.
-  //   A total of value or units shipped, value invoiced or cash collected: what its orders have due in its period.
-  //     An order held to a date by the period's end owes its value (its units) less what it shipped before the
-  //     period began; one whose Invoiced step is due by then and not invoiced before it, its value (the invoice's
-  //     amount once sent); one whose invoice (else its Paid step) is due by then, the amount less what was paid
-  //     before the period. Nothing due: no target.
+  //   A total of what reaches a stage, delivering them (value or units made, shipped or delivered, value invoiced,
+  //     cash collected, a spec amount made, shipped or delivered): what the POs received in its period ask for, the
+  //     figure on the POs gives for the same orders (Corey, November 18: "These numbers should be the same"). Each
+  //     order counts its value (units: its units) when its PO arrived in the period, any time every PO, dated or
+  //     not; made and delivered, and a spec amount, count the lines they read. No PO in the period: no target.
+  //     (Before, what the orders held to a date by the period's end had due, less what reached the stage before it.)
   //   A share or count of a status: every one in the good state (100%, or all of them) when the good state is the
   //     one counted, none (0) when only bad ones are; a count or share above or below a threshold the same way,
   //     by which side the target's direction makes the good one.
@@ -4223,9 +4237,9 @@
   // none. It carries its direction: a requirement's own (at least, at most, within; orders whose targets point
   // different ways give none), else the measure's.
   //   -> { target: number | { lo, hi }, direction: 'up' | 'down' | 'range', how, n } | null
-  //      how: 'req' | 'zero' | 'lead' | 'agree' | 'terms' | 'owedOk' | 'due' | 'all' | 'none'; n: the orders,
+  //      how: 'req' | 'zero' | 'lead' | 'agree' | 'terms' | 'owedOk' | 'po' | 'all' | 'none'; n: the orders,
   //      invoices or items it came from
-  var ORD_TGT = { reqReading: 'req', wdLate: 'zero', forecastSlip: 'zero', overdue: 'zero', leadTime: 'lead', daysToAgree: 'agree', daysToPaid: 'terms', owed: 'owedOk', valueShipped: 'due', unitsShipped: 'due', invoiced: 'due', cash: 'due',
+  var ORD_TGT = { reqReading: 'req', wdLate: 'zero', forecastSlip: 'zero', overdue: 'zero', leadTime: 'lead', daysToAgree: 'agree', daysToPaid: 'terms', owed: 'owedOk', valueShipped: 'po', unitsShipped: 'po', invoiced: 'po', cash: 'po',
     valueMade: 'prog', unitsMade: 'prog', valueDelivered: 'prog', unitsDelivered: 'prog', specMade: 'prog', specShipped: 'prog', specDelivered: 'prog' };
   var ORD_TGT_DIR = { wdLate: 'down', forecastSlip: 'down', overdue: 'down', leadTime: 'down', daysToAgree: 'down', daysToPaid: 'down', owed: 'down', valueShipped: 'up', unitsShipped: 'up', invoiced: 'up', cash: 'up',
     valueMade: 'up', unitsMade: 'up', valueDelivered: 'up', unitsDelivered: 'up', specMade: 'up', specShipped: 'up', specDelivered: 'up' };
@@ -4263,45 +4277,16 @@
     (o.lines || []).forEach(function (l) { var q = ordNum(l && l.qty) || 0; all += q; if (ordUnitLine(l)) { prod = true; units += q; } });
     return prod ? units : all;
   }
-  // what one order has due in the period (day counts start..end; null: any time) for a total
-  function ordDueIn(o, measure, start, end) {
-    var before = function (d) { return start != null && d != null && d < start; };
-    if (measure === 'valueShipped' || measure === 'unitsShipped') {
-      var held = ordCommittedShip(o);
-      if (held == null || (end != null && held > end)) return 0;
-      var sent = 0;
-      (o.shipments || []).forEach(function (s) { if (s && before(ordNum(s.on))) sent += measure === 'valueShipped' ? ordShipValue(o, s) : ordShipUnits(o, s); });
-      return Math.max(0, (measure === 'valueShipped' ? ordValue(o) : ordUnits(o)) - sent);
-    }
-    var list = o.steps || [], stepOf = function (k) { for (var i = 0; i < list.length; i++) if (list[i] && list[i].done === k) return list[i]; return null; };
-    if (ordHasPlan(o) && (measure === 'invoiced' || measure === 'cash')) {
-      /* a schedule (Patch 3): each invoice sent (or planned) by the period's end and not before it; collected, each one
-         due by then, less what was paid on it before the period */
-      var ivs = ordInvoices(o), alS = measure === 'cash' && start != null ? ordAllocate(o, start) : null, sumD = 0;
-      ivs.forEach(function (iv) {
-        if (measure === 'invoiced') { if (before(iv.on) || iv.plannedOn == null || (end != null && iv.plannedOn > end)) return; sumD += iv.amount; return; }
-        if (iv.plannedDue == null || (end != null && iv.plannedDue > end)) return;
-        sumD += Math.max(0, iv.amount - ((alS && alS.paid[iv.id]) || 0));
-      });
-      return ordR2(sumD);
-    }
-    var amt = o.invoice && ordNum(o.invoice.amount) != null ? o.invoice.amount : ordValue(o);
-    if (measure === 'invoiced') {
-      var ist = stepOf('invoiced');
-      if (!ist || before(o.invoice ? ordNum(o.invoice.on) : null)) return 0;
-      var due = ordStepDueOn(o, ist);
-      return due == null || (end != null && due > end) ? 0 : amt;
-    }
-    if (measure === 'cash') {
-      var pst = stepOf('paid'), due2 = o.invoice && ordNum(o.invoice.dueOn) != null ? o.invoice.dueOn : pst ? ordStepDueOn(o, pst) : null;
-      if (due2 == null || (end != null && due2 > end)) return 0;
-      var paid = 0;
-      (o.payments || []).forEach(function (p) { if (p && before(ordNum(p.on))) paid += ordNum(p.amount) || 0; });
-      return Math.max(0, amt - paid);
-    }
-    return 0;
+  // picked by hand, a KPI that keeps to what was picked: the order itself, or one of its shipments, payments or
+  // invoices (as the result counts an order's shipments when the order is picked)
+  function ordPicked(o, only) {
+    if (only.indexOf(o.id) >= 0) return true;
+    var mine = function (xs) { return (xs || []).some(function (x) { return !!x && x.id != null && only.indexOf(x.id) >= 0; }); };
+    return mine(o.shipments) || mine(o.payments) || only.some(function (id) { return typeof id === 'string' && id.indexOf(o.id + '/') === 0; });
   }
-  function ordDueTarget(kpi, src, measure) {
+  // a total of value or units shipped, value invoiced or cash collected, left blank: what the POs received in its
+  // period ask for, as on the POs counts them, each order's value (units shipped: its units) (November 18)
+  function ordPoTarget(kpi, src, measure) {
     var pull = kpi.pull || {}, doc = src.orders && src.orders.orders && typeof src.orders.orders === 'object' ? src.orders.orders : null;
     if (!doc) return null;
     var q = pullOrderQuarter(pull.scope || {}, src), qr = q ? quarterRange(q) : null;
@@ -4311,11 +4296,12 @@
     Object.keys(doc).forEach(function (id) {
       var o = doc[id];
       if (!o || typeof o !== 'object' || Array.isArray(o) || !pullOrderKeeps(kpi, o, src)) return;
-      if (only ? only.indexOf(o.id) < 0 : ex.indexOf(o.id) >= 0) return;
-      var d = ordDueIn(o, measure, start, end);
+      if (only ? !ordPicked(o, only) : ex.indexOf(o.id) >= 0) return;
+      if (!ordPoIn(o, start, end)) return;
+      var d = measure === 'unitsShipped' ? ordUnits(o) : ordValue(o);
       if (d > 0.005) { sum += d; n++; }
     });
-    return n ? { target: Math.round(sum * 100) / 100, direction: 'up', how: 'due', n: n } : null;
+    return n ? { target: Math.round(sum * 100) / 100, direction: 'up', how: 'po', n: n } : null;
   }
   // one listed item's own target: { t: number | { lo, hi }, dir? } | null
   function ordItemTarget(it, mode, em, today) {
@@ -4364,16 +4350,16 @@
     }
     var mode = ORD_TGT[measure];
     if (res.kind !== 'number' || !mode || stat === 'count' || stat === 'stddev' || stat === 'cv' || stat === 'range') return null;
-    return (mode === 'due' || mode === 'prog') && stat !== 'sum' ? null : mode;
+    return (mode === 'po' || mode === 'prog') && stat !== 'sum' ? null : mode;
   }
-  // delivering them (row 7): what the items listed have due, those left out by hand or not picked apart
+  // delivering them (row 7): what the POs of the items listed ask for, those left out by hand or not picked apart
   function ordProgTarget(res) {
     var sum = 0, n = 0;
     (res.items || []).forEach(function (it) {
       if (it.host || it.hand || it.why === 'notPicked' || !it.det || it.det.due == null) return;
       if (it.det.due > 0) { sum += it.det.due; n++; }
     });
-    return n ? { target: Number(sum.toPrecision(12)), direction: 'up', how: 'due', n: n } : null;
+    return n ? { target: Number(sum.toPrecision(12)), direction: 'up', how: 'po', n: n } : null;
   }
   function pulledTargetCompute(kpi, src, c, opts) {
     var pull = kpi.pull, measure = pull.measure, ms = PULL_MEASURES[measure];
@@ -4385,7 +4371,7 @@
     var stat = res.stat, kind = res.kind, mode = ordTargetRule(kpi, res);
     if (!mode) return null;
     if (kind === 'state') return { target: mode === 'all' ? (stat === 'count' ? res.n : 100) : 0, direction: mode === 'all' ? 'up' : 'down', how: mode, n: res.n };
-    if (mode === 'due') return ordDueTarget(kpi, src, measure);
+    if (mode === 'po') return ordPoTarget(kpi, src, measure);
     if (mode === 'prog') return ordProgTarget(res);
     var em = mode === 'req' ? pullEm(src, c) : null, today = pullToday(src), ts = [], dirs = [];
     (res.items || []).forEach(function (it) {
@@ -4424,7 +4410,7 @@
     return t;
   }
   // pulledTargetRule(kpi, src?, opts?) -> true where the orders set this KPI's target when it is left blank, though they may give
-  //   none yet (pulledTarget is null until one they read does: no order shipped complete, nothing due); false where they never do
+  //   none yet (pulledTarget is null until one they read does: no order shipped complete, no PO in the period); false where they never do
   function pulledTargetRule(kpi, src, opts) {
     if (!kpi || !kpi.pull || typeof kpi.pull !== 'object') return false;
     var ms = PULL_MEASURES[kpi.pull.measure];
